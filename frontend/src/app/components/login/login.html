@@ -1,0 +1,66 @@
+<div class="login-container">
+  <div class="login-card">
+    <!-- Header minimalista -->
+    <div class="login-header">
+      <h1 class="login-title">Bem-vindo</h1>
+      <p class="login-subtitle">Entre com suas credenciais</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      
+      <!-- Campo Email -->
+      <div class="input-group">
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email"
+          class="form-input"
+          [class.error]="email?.invalid && email?.touched"
+          placeholder="Email"
+          required
+        >
+        <label for="email" class="form-label">Email</label>
+        <div class="error-message" *ngIf="email?.invalid && email?.touched">
+          <span *ngIf="email?.errors?.['required']">Email é obrigatório</span>
+          <span *ngIf="email?.errors?.['email']">Email inválido</span>
+        </div>
+      </div>
+
+      <!-- Campo Senha -->
+      <div class="input-group">
+        <input 
+          type="password" 
+          id="password" 
+          formControlName="password"
+          class="form-input"
+          [class.error]="password?.invalid && password?.touched"
+          placeholder="Senha"
+          required
+        >
+        <label for="password" class="form-label">Senha</label>
+        <div class="error-message" *ngIf="password?.invalid && password?.touched">
+          <span *ngIf="password?.errors?.['required']">Senha é obrigatória</span>
+        </div>
+      </div>
+
+      <!-- Mensagem de Erro Geral -->
+      <div class="alert-error" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Botão de Login -->
+      <button 
+        type="submit" 
+        class="login-button"
+        [disabled]="loginForm.invalid || isLoading"
+      >
+        <span class="button-text" *ngIf="!isLoading">Entrar</span>
+        <span class="button-text" *ngIf="isLoading">
+          <i class="loading-spinner"></i>
+          Entrando...
+        </span>
+      </button>
+
+    </form>
+  </div>
+</div>

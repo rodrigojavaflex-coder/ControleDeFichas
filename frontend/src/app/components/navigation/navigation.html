@@ -1,0 +1,73 @@
+<nav 
+  class="sidebar" 
+  *ngIf="currentUser"
+  [class.collapsed]="!shouldShowExpanded"
+  [class.pinned]="isPinned"
+  [class.floating]="!isPinned"
+  (mouseenter)="onMouseEnter()"
+  (mouseleave)="onMouseLeave()"
+>
+  <!-- Controles -->
+  <div class="sidebar-controls">
+    <button 
+      class="control-btn toggle-btn"
+      (click)="toggleExpanded()"
+      [attr.aria-label]="shouldShowExpanded ? 'Colapsar menu' : 'Expandir menu'"
+    >
+      <i class="icon">{{ shouldShowExpanded ? '‹' : '›' }}</i>
+    </button>
+
+    <button 
+      class="control-btn pin-btn"
+      (click)="togglePinned()"
+      [class.active]="isPinned"
+      [attr.aria-label]="isPinned ? 'Desafixar menu' : 'Fixar menu'"
+    >
+      <i class="icon">{{ isPinned ? '📍' : '📌' }}</i>
+    </button>
+  </div>
+
+  <!-- Header do usuário -->
+  <div class="sidebar-header">
+    <div class="user-profile">
+      <div class="user-avatar">
+        {{ currentUser.name.charAt(0).toUpperCase() }}
+      </div>
+      <div class="user-info" *ngIf="shouldShowExpanded">
+        <span class="user-name">{{ currentUser.name }}</span>
+        <span class="user-role">Usuário</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menu principal -->
+  <div class="sidebar-content">
+    <nav class="main-nav">
+      <ul class="nav-list">
+        <li *ngFor="let item of visibleMenuItems" class="nav-item">
+          <a 
+            [routerLink]="item.route" 
+            [class.active]="isRouteActive(item.route)"
+            class="nav-link"
+            [attr.title]="!shouldShowExpanded ? item.label : null"
+          >
+            <span class="nav-icon">{{ item.icon }}</span>
+            <span class="nav-text" *ngIf="shouldShowExpanded">{{ item.label }}</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- Footer -->
+  <div class="sidebar-footer">
+    <button 
+      (click)="logout()" 
+      class="logout-btn"
+      [attr.title]="!shouldShowExpanded ? 'Sair' : null"
+    >
+      <span class="logout-icon">⏻</span>
+      <span class="logout-text" *ngIf="shouldShowExpanded">Sair</span>
+    </button>
+  </div>
+</nav>

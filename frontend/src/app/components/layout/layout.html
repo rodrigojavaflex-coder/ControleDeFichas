@@ -1,0 +1,10 @@
+<div class="layout-container" *ngIf="isAuthenticated">
+  <app-navigation class="layout-sidebar"></app-navigation>
+  <main class="layout-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>
+
+<div class="login-container" *ngIf="!isAuthenticated">
+  <router-outlet></router-outlet>
+</div>

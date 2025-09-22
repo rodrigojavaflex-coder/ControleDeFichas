@@ -1,0 +1,252 @@
+<div class="ficha-tecnica-list-container">
+  <header class="page-header">
+    <div class="header-content">
+      <h1>Fichas Técnicas</h1>
+      <div class="header-actions">
+        @if (hasPermission(Permission.FICHA_TECNICA_CREATE)) {
+          <a routerLink="/fichas-tecnicas/new" class="btn btn-primary">
+            <i class="icon">➕</i>
+            Nova Ficha Técnica
+          </a>
+        }
+      </div>
+    </div>
+  </header>
+
+  <!-- Filtros de Pesquisa -->
+  <section class="filters-section">
+    <div class="filters-container">
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label for="produto">Produto</label>
+          <input
+            id="produto"
+            type="text"
+            [(ngModel)]="searchFilters.produto"
+            placeholder="Buscar por produto..."
+            class="form-input"
+            (keyup.enter)="applyFilters()"
+          />
+        </div>
+
+        <div class="filter-group">
+          <label for="codigoFormulaCerta">Código Fórmula Certa</label>
+          <input
+            id="codigoFormulaCerta"
+            type="text"
+            [(ngModel)]="searchFilters.codigoFormulaCerta"
+            placeholder="Ex: 12345"
+            class="form-input"
+            (keyup.enter)="applyFilters()"
+          />
+        </div>
+
+        <div class="filter-group">
+          <label for="dcb">DCB</label>
+          <input
+            id="dcb"
+            type="text"
+            [(ngModel)]="searchFilters.dcb"
+            placeholder="Buscar por DCB..."
+            class="form-input"
+            (keyup.enter)="applyFilters()"
+          />
+        </div>
+
+        <div class="filter-group">
+          <label for="nomeCientifico">Nome Científico</label>
+          <input
+            id="nomeCientifico"
+            type="text"
+            [(ngModel)]="searchFilters.nomeCientifico"
+            placeholder="Buscar por nome científico..."
+            class="form-input"
+            (keyup.enter)="applyFilters()"
+          />
+        </div>
+      </div>
+
+      <div class="filters-actions">
+        <button type="button" class="btn btn-primary" (click)="applyFilters()" [disabled]="loading()">
+          <i class="icon">🔍</i>
+          Pesquisar
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="clearFilters()" [disabled]="loading()">
+          <i class="icon">🗑️</i>
+          Limpar
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Estado de Carregamento -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Carregando fichas técnicas...</p>
+    </div>
+  }
+
+  <!-- Estado de Erro -->
+  @if (error()) {
+    <div class="error-state">
+      <div class="error-message">
+        <i class="icon">⚠️</i>
+        <p>{{ error() }}</p>
+      </div>
+      <button class="btn btn-primary" (click)="loadFichasTecnicas()">
+        Tentar Novamente
+      </button>
+    </div>
+  }
+
+  <!-- Lista de Fichas Técnicas -->
+  @if (!loading() && !error()) {
+    <section class="results-section">
+      <div class="results-header">
+        <p class="results-count">
+          Exibindo {{ fichasTecnicas().length }} de {{ totalItems }} fichas técnicas
+        </p>
+      </div>
+
+      @if (fichasTecnicas().length === 0) {
+        <div class="empty-state">
+          <i class="icon">📋</i>
+          <h3>Nenhuma ficha técnica encontrada</h3>
+          <p>Não há fichas técnicas que correspondam aos filtros aplicados.</p>
+          @if (hasPermission(Permission.FICHA_TECNICA_CREATE)) {
+            <a routerLink="/fichas-tecnicas/new" class="btn btn-primary">
+              Criar Primeira Ficha Técnica
+            </a>
+          }
+        </div>
+      } @else {
+        <!-- Tabela de Fichas Técnicas -->
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Produto</th>
+                <th>DCB</th>
+                <th>Nome Científico</th>
+                <th>Revisão</th>
+                <th>Data de Análise</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (ficha of fichasTecnicas(); track ficha.id) {
+                <tr>
+                  <td>{{ ficha.codigoFormulaCerta }}</td>
+                  <td class="product-cell">
+                    <div class="product-info">
+                      <span class="product-name">{{ ficha.produto }}</span>
+                      @if (ficha.formulaMolecular) {
+                        <span class="formula">{{ ficha.formulaMolecular }}</span>
+                      }
+                    </div>
+                  </td>
+                  <td>{{ ficha.dcb || '-' }}</td>
+                  <td>{{ ficha.nomeCientifico || '-' }}</td>
+                  <td>{{ ficha.revisao || '-' }}</td>
+                  <td>{{ formatDate(ficha.dataDeAnalise) }}</td>
+                  <td>
+                    <div class="action-buttons">
+                      @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
+                        <button 
+                          type="button"
+                          class="btn btn-small btn-info"
+                          title="Visualizar"
+                          (click)="viewFicha(ficha)"
+                        >
+                          Visualizar
+                        </button>
+                      }
+                      @if (hasPermission(Permission.FICHA_TECNICA_UPDATE)) {
+                        <button 
+                          type="button"
+                          class="btn btn-small btn-primary"
+                          title="Editar"
+                          (click)="editFicha(ficha)"
+                        >
+                          Editar
+                        </button>
+                      }
+                      <button 
+                        type="button"
+                        class="btn btn-small btn-secondary"
+                        title="Imprimir"
+                        (click)="printFicha(ficha)"
+                      >
+                        Imprimir
+                      </button>
+                      @if (hasPermission(Permission.FICHA_TECNICA_DELETE)) {
+                        <button 
+                          type="button"
+                          class="btn btn-small btn-danger"
+                          title="Excluir"
+                          (click)="openDeleteModal(ficha)"
+                        >
+                          Excluir
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paginação -->
+        @if (totalPages > 1) {
+          <div class="pagination-container">
+            <div class="pagination">
+              <button 
+                class="btn-pagination"
+                [disabled]="!hasPreviousPage"
+                (click)="goToPage(currentPage - 1)"
+              >
+                ‹ Anterior
+              </button>
+
+              @for (page of pageNumbers; track page) {
+                <button 
+                  class="btn-pagination"
+                  [class.active]="page === currentPage"
+                  (click)="goToPage(page)"
+                >
+                  {{ page }}
+                </button>
+              }
+
+              <button 
+                class="btn-pagination"
+                [disabled]="!hasNextPage"
+                (click)="goToPage(currentPage + 1)"
+              >
+                Próxima ›
+              </button>
+            </div>
+
+            <div class="pagination-info">
+              Página {{ currentPage }} de {{ totalPages }}
+            </div>
+          </div>
+        }
+      }
+    </section>
+  }
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<app-confirmation-modal 
+  [isVisible]="showDeleteModal" 
+  title="Confirmar Exclusão" 
+  message="Tem certeza de que deseja excluir esta ficha técnica? Esta ação não pode ser desfeita." 
+  confirmText="Excluir" 
+  cancelText="Cancelar" 
+  (confirmed)="confirmDelete()" 
+  (cancelled)="closeDeleteModal()">
+</app-confirmation-modal>

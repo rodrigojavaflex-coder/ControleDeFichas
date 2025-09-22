@@ -1,0 +1,218 @@
+/* Estilos gerais para o relatório */
+.print-container {
+  max-width: 21cm; /* A4 width */
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: white;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* Cabeçalho do relatório */
+.print-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 3px solid #007bff;
+}
+
+.print-header h1 {
+  margin: 0;
+  color: #007bff;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.print-date {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Seção de informações do usuário */
+.user-info-section {
+  margin-bottom: 2rem;
+}
+
+.user-info-section h2 {
+  color: #007bff;
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0.5rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.info-item label {
+  font-weight: 600;
+  margin-right: 0.5rem;
+  min-width: 120px;
+  color: #495057;
+}
+
+.info-item span {
+  color: #212529;
+}
+
+.status-active {
+  color: #28a745 !important;
+  font-weight: 600;
+}
+
+.status-inactive {
+  color: #dc3545 !important;
+  font-weight: 600;
+}
+
+/* Seção de permissões */
+.permissions-section {
+  margin-bottom: 2rem;
+}
+
+.permissions-section h2 {
+  color: #007bff;
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0.5rem;
+}
+
+.permissions-groups {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.permission-group {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  border-left: 4px solid #28a745;
+}
+
+.permission-group h3 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.permission-group ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style-type: disc;
+}
+
+.permission-group li {
+  margin-bottom: 0.5rem;
+  color: #212529;
+}
+
+.no-permissions {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #dee2e6;
+}
+
+/* Rodapé do relatório */
+.print-footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+}
+
+.footer-line {
+  height: 2px;
+  background: #dee2e6;
+  margin-bottom: 1rem;
+}
+
+.print-footer p {
+  text-align: center;
+  color: #6c757d;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Estilos específicos para impressão */
+@media print {
+  .print-container {
+    margin: 0;
+    padding: 1cm;
+    max-width: none;
+    box-shadow: none;
+  }
+  
+  .print-header {
+    border-bottom: 2px solid #000;
+  }
+  
+  .print-header h1 {
+    color: #000;
+  }
+  
+  .user-info-section h2,
+  .permissions-section h2 {
+    color: #000;
+    border-bottom: 1px solid #000;
+  }
+  
+  .info-item {
+    background: transparent;
+    border-left: 2px solid #000;
+    border-radius: 0;
+  }
+  
+  .permission-group {
+    background: transparent;
+    border-left: 2px solid #000;
+    border-radius: 0;
+    break-inside: avoid;
+  }
+  
+  .no-permissions {
+    background: transparent;
+    border: 1px solid #000;
+    border-radius: 0;
+  }
+  
+  .footer-line {
+    background: #000;
+  }
+  
+  /* Quebras de página apropriadas */
+  .user-info-section,
+  .permissions-section {
+    break-inside: avoid;
+  }
+  
+  .permission-group {
+    page-break-inside: avoid;
+  }
+}
+
+/* Estilos para tela (visualização antes da impressão) */
+@media screen {
+  .print-container {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin: 2rem auto;
+  }
+}

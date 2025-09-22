@@ -1,0 +1,172 @@
+<div class="user-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar Usuário' : 'Novo Usuário' }}</h2>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    Carregando dados do usuário...
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+  </div>
+
+  <!-- Formulário -->
+  <form *ngIf="!loading" [formGroup]="userForm" (ngSubmit)="onSubmit()" class="user-form">
+    
+    <!-- Nome -->
+    <div class="form-group">
+      <label for="name">Nome *</label>
+      <input
+        id="name"
+        type="text"
+        formControlName="name"
+        class="form-control"
+        [class.error]="name?.invalid && name?.touched"
+        placeholder="Digite o nome completo"
+      >
+      <div *ngIf="name?.invalid && name?.touched" class="error-message">
+        {{ getErrorMessage('name') }}
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="form-group">
+      <label for="email">Email *</label>
+      <input
+        id="email"
+        type="email"
+        formControlName="email"
+        class="form-control"
+        [class.error]="email?.invalid && email?.touched"
+        placeholder="usuario@exemplo.com"
+      >
+      <div *ngIf="email?.invalid && email?.touched" class="error-message">
+        {{ getErrorMessage('email') }}
+      </div>
+    </div>
+
+    <!-- Senha -->
+    <div class="form-group">
+      <label for="password">
+        Senha {{ isEditMode ? '(deixe em branco para não alterar)' : '*' }}
+      </label>
+      <input
+        id="password"
+        type="password"
+        formControlName="password"
+        class="form-control"
+        [class.error]="password?.invalid && password?.touched"
+        [placeholder]="isEditMode ? 'Nova senha (opcional)' : 'Digite uma senha segura'"
+      >
+      <div *ngIf="password?.invalid && password?.touched" class="error-message">
+        {{ getErrorMessage('password') }}
+      </div>
+      <div class="form-help">
+        A senha deve ter pelo menos 6 caracteres
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="form-group">
+      <div class="checkbox-group">
+        <input
+          id="isActive"
+          type="checkbox"
+          formControlName="isActive"
+          class="form-checkbox"
+        >
+        <label for="isActive" class="checkbox-label">
+          Usuário ativo
+        </label>
+      </div>
+      <div class="form-help">
+        Usuários inativos não podem acessar o sistema
+      </div>
+    </div>
+
+    <!-- Permissões -->
+    <div class="form-group">
+      <label class="form-label">Permissões do Usuário</label>
+      <div class="form-help">
+        Selecione as permissões que este usuário terá no sistema
+      </div>
+      
+      <div class="permissions-container" *ngIf="permissionGroups.length > 0">
+        <div 
+          *ngFor="let groupName of permissionGroups" 
+          class="permission-group"
+        >
+          <div class="permission-group-header">
+            <h4>{{ groupName }}</h4>
+            <div class="group-actions">
+              <button 
+                type="button" 
+                class="btn-link"
+                (click)="selectAllPermissions(groupName)"
+              >
+                Selecionar todos
+              </button>
+              <button 
+                type="button" 
+                class="btn-link"
+                (click)="deselectAllPermissions(groupName)"
+              >
+                Desmarcar todos
+              </button>
+            </div>
+          </div>
+          
+          <div class="permissions-list">
+            <div 
+              *ngFor="let permission of availablePermissions[groupName]" 
+              class="permission-item"
+            >
+              <input
+                type="checkbox"
+                [id]="'perm-' + permission.key"
+                [checked]="isPermissionSelected(permission.key)"
+                (change)="togglePermission(permission.key)"
+                class="form-checkbox"
+              >
+              <label 
+                [for]="'perm-' + permission.key" 
+                class="checkbox-label"
+              >
+                {{ permission.label }}
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botões -->
+    <div class="form-actions">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="onCancel()"
+        [disabled]="isSubmitting"
+      >
+        Cancelar
+      </button>
+      
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="userForm.invalid || isSubmitting"
+      >
+        <span *ngIf="isSubmitting">
+          {{ isEditMode ? 'Atualizando...' : 'Criando...' }}
+        </span>
+        <span *ngIf="!isSubmitting">
+          {{ isEditMode ? 'Atualizar' : 'Criar' }}
+        </span>
+      </button>
+    </div>
+
+  </form>
+</div>

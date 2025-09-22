@@ -1,0 +1,121 @@
+<div class="user-list-container">
+  <div class="header">
+    <h2>Lista de Usuários</h2>
+    <button class="btn btn-primary" (click)="createUser()" *ngIf="canCreateUser()">
+      Novo Usuário
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters">
+    <div class="filter-group">
+      <input 
+        type="text" 
+        placeholder="Filtrar por nome"
+        [(ngModel)]="nameFilter"
+        (input)="onFilterChange()"
+        class="form-control"
+      >
+    </div>
+    <div class="filter-group">
+      <input 
+        type="email" 
+        placeholder="Filtrar por email"
+        [(ngModel)]="emailFilter"
+        (input)="onFilterChange()"
+        class="form-control"
+      >
+    </div>
+    <button class="btn btn-secondary" (click)="clearFilters()">
+      Limpar Filtros
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    Carregando usuários...
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+  </div>
+
+  <!-- Tabela de usuários -->
+  <div *ngIf="!loading && !error" class="table-container">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Criado em</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users">
+          <td>{{ user.name }}</td>
+          <td>{{ user.email }}</td>
+          <td>
+            <span [class]="user.isActive ? 'status-active' : 'status-inactive'">
+              {{ user.isActive ? 'Ativo' : 'Inativo' }}
+            </span>
+          </td>
+          <td>{{ user.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>
+            <button class="btn btn-small btn-primary" (click)="editUser(user)" *ngIf="canEditUser()">
+              Editar
+            </button>
+            <button class="btn btn-small btn-info" (click)="printUser(user)" *ngIf="canPrintUser()">
+              Imprimir
+            </button>
+            <button class="btn btn-small btn-danger" (click)="deleteUser(user)" *ngIf="canDeleteUser()">
+              Excluir
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Mensagem quando não há usuários -->
+    <div *ngIf="users.length === 0" class="no-users">
+      Nenhum usuário encontrado.
+    </div>
+  </div>
+
+  <!-- Paginação -->
+  <div *ngIf="totalPages > 1" class="pagination">
+    <button 
+      class="btn btn-secondary" 
+      (click)="onPageChange(currentPage - 1)"
+      [disabled]="currentPage <= 1"
+    >
+      Anterior
+    </button>
+    
+    <span class="page-info">
+      Página {{ currentPage }} de {{ totalPages }} 
+      ({{ totalItems }} usuários)
+    </span>
+    
+    <button 
+      class="btn btn-secondary" 
+      (click)="onPageChange(currentPage + 1)"
+      [disabled]="currentPage >= totalPages"
+    >
+      Próxima
+    </button>
+  </div>
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<app-confirmation-modal
+  [isVisible]="showDeleteModal"
+  [title]="deleteModalTitle"
+  [message]="deleteModalMessage"
+  confirmText="Excluir"
+  cancelText="Cancelar"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+></app-confirmation-modal>

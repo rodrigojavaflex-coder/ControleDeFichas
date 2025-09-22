@@ -1,0 +1,308 @@
+/* Estilos do formulário de fichas técnicas */
+.ficha-form-container {
+  padding: 1rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Header */
+.page-header {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 1rem;
+}
+
+.header-content h1 {
+  margin: 0;
+  color: #333;
+  font-size: 1.75rem;
+}
+
+/* Estados */
+.loading-state, .error-state {
+  text-align: center;
+  padding: 2rem;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Formulário */
+.ficha-form {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+/* Seções do Formulário */
+.form-section {
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.form-section:last-of-type {
+  border-bottom: none;
+}
+
+.form-section h2 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.75rem 1rem;
+  margin: 0 0 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Cores específicas para cada bloco */
+.form-section:nth-child(1) h2 {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);
+}
+
+.form-section:nth-child(2) h2 {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  box-shadow: 0 2px 8px rgba(67, 233, 123, 0.3);
+}
+
+.form-section:nth-child(3) h2 {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  box-shadow: 0 2px 8px rgba(250, 112, 154, 0.3);
+}
+
+/* Conteúdo das seções */
+.form-grid {
+  padding: 1.5rem;
+}
+
+/* Grid do Formulário */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+/* Labels */
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.875rem;
+}
+
+.form-group label::after {
+  content: ' *';
+  color: #dc3545;
+  display: none;
+}
+
+.form-group:has(input[required]) label::after,
+.form-group:has(textarea[required]) label::after,
+.form-group:has(select[required]) label::after {
+  display: inline;
+}
+
+/* Inputs */
+.form-input,
+.form-textarea {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-input.error,
+.form-textarea.error {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 3rem;
+}
+
+/* Mensagens de Erro */
+.error-text {
+  color: #dc3545;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Ações do Formulário */
+.form-actions {
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Botões */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 120px;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .ficha-form-container {
+    padding: 0.5rem;
+  }
+  
+  .form-section {
+    padding: 1rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-actions {
+    padding: 1rem;
+    flex-direction: column-reverse;
+  }
+  
+  .form-actions .btn {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* Estados de validação visual */
+.form-group:has(.form-input:valid) label::before,
+.form-group:has(.form-textarea:valid) label::before {
+  content: '✓ ';
+  color: #28a745;
+  font-weight: bold;
+}
+
+.form-group:has(.form-input.error) label {
+  color: #dc3545;
+}
+
+.form-group:has(.form-textarea.error) label {
+  color: #dc3545;
+}
+
+/* Animações */
+.form-input,
+.form-textarea {
+  transform: translateY(0);
+  transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  transform: translateY(-1px);
+}
+
+/* Indicador de campos obrigatórios */
+.form-section::before {
+  content: '* Campos obrigatórios';
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+/* Melhorias para campos de data */
+.form-input[type="date"] {
+  position: relative;
+}
+
+.form-input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 4px;
+  margin-right: 2px;
+  opacity: 0.6;
+  filter: invert(0.8);
+}
+
+.form-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}

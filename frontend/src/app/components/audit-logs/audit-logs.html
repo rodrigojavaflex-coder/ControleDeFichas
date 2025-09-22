@@ -1,0 +1,323 @@
+<div class="audit-logs-container">
+  <!-- Cabeçalho -->
+  <div class="header">
+    <h1 class="title">Logs de Auditoria</h1>
+    <div class="header-actions">
+      <button 
+        class="btn btn-outline" 
+        (click)="toggleFilters()"
+        [class.active]="showFilters">
+        <span class="icon">🔍</span>
+        Filtros
+      </button>
+    </div>
+  </div>
+
+  <!-- Barra de busca -->
+  <div class="search-bar">
+    <input 
+      type="text" 
+      class="search-input"
+      placeholder="Buscar por descrição, usuário, IP..." 
+      [(ngModel)]="searchText" 
+      (ngModelChange)="onSearchChange()">
+  </div>
+
+  <!-- Painel de filtros -->
+  <div class="filters-panel" [class.show]="showFilters">
+    <div class="filters-grid">
+      <!-- Usuário -->
+      <div class="filter-group">
+        <label>Usuário:</label>
+        <select [(ngModel)]="selectedUserId" class="filter-select">
+          <option value="">Todos os usuários</option>
+          <option *ngFor="let user of users" [value]="user.id">
+            {{user.name}}
+          </option>
+        </select>
+      </div>
+
+      <!-- Ação -->
+      <div class="filter-group">
+        <label>Ação:</label>
+        <select [(ngModel)]="selectedAction" class="filter-select">
+          <option value="">Todas as ações</option>
+          <option *ngFor="let action of auditActions" [value]="action">
+            {{actionDescriptions[action]}}
+          </option>
+        </select>
+      </div>
+
+      <!-- Nível -->
+      <div class="filter-group">
+        <label>Nível:</label>
+        <select [(ngModel)]="selectedLevel" class="filter-select">
+          <option value="">Todos os níveis</option>
+          <option *ngFor="let level of auditLevels" [value]="level">
+            {{levelDescriptions[level]}}
+          </option>
+        </select>
+      </div>
+
+      <!-- Status -->
+      <div class="filter-group">
+        <label>Status:</label>
+        <select [(ngModel)]="selectedSuccess" class="filter-select">
+          <option value="">Todos</option>
+          <option value="true">Sucesso</option>
+          <option value="false">Erro</option>
+        </select>
+      </div>
+
+      <!-- Tipo de Entidade -->
+      <div class="filter-group">
+        <label>Tipo:</label>
+        <input 
+          type="text" 
+          [(ngModel)]="selectedEntityType" 
+          class="filter-input"
+          placeholder="Ex: User">
+      </div>
+
+      <!-- Data Início -->
+      <div class="filter-group">
+        <label>Data Início:</label>
+        <input 
+          type="datetime-local" 
+          [(ngModel)]="startDate" 
+          class="filter-input">
+      </div>
+
+      <!-- Data Fim -->
+      <div class="filter-group">
+        <label>Data Fim:</label>
+        <input 
+          type="datetime-local" 
+          [(ngModel)]="endDate" 
+          class="filter-input">
+      </div>
+
+      <!-- Botões de ação -->
+      <div class="filter-actions">
+        <button class="btn btn-primary" (click)="applyFilters()">
+          Aplicar
+        </button>
+        <button class="btn btn-outline" (click)="clearFilters()">
+          Limpar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    <span class="spinner"></span>
+    Carregando logs...
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="error">
+    {{error}}
+  </div>
+
+  <!-- Tabela de logs -->
+  <div *ngIf="!loading && !error" class="table-container">
+    <table class="audit-table">
+      <thead>
+        <tr>
+          <th>Data/Hora</th>
+          <th>Usuário</th>
+          <th>Ação</th>
+          <th>IP</th>
+          <th>Descrição</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of auditLogs" class="audit-row">
+          <td class="date-cell">
+            {{formatDate(log.createdAt)}}
+          </td>
+          
+          <td class="user-cell">
+            {{getUserName(log)}}
+          </td>
+          
+          <td class="action-cell">
+            <span class="action-badge">
+              {{actionDescriptions[log.action]}}
+            </span>
+          </td>
+          
+          <td class="ip-cell">
+            {{log.ipAddress || '-'}}
+          </td>
+          
+          <td class="description-cell">
+            <span class="description-text" [title]="log.description">
+              {{log.description}}
+            </span>
+          </td>
+          
+          <td class="actions-cell">
+            <button 
+              class="btn-icon btn-view" 
+              (click)="showDetails(log)"
+              title="Ver detalhes">
+              →
+            </button>
+          </td>
+        </tr>
+        
+        <!-- Empty state -->
+        <tr *ngIf="auditLogs.length === 0">
+          <td colspan="6" class="empty-state">
+            Nenhum log de auditoria encontrado
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Paginação -->
+  <div *ngIf="!loading && totalPages > 1" class="pagination">
+    <div class="pagination-info">
+      Mostrando {{(currentPage - 1) * itemsPerPage + 1}} - 
+      {{currentPage * itemsPerPage > totalItems ? totalItems : currentPage * itemsPerPage}} de {{totalItems}} registros
+    </div>
+    
+    <div class="pagination-controls">
+      <button 
+        class="btn-page" 
+        [disabled]="currentPage === 1"
+        (click)="changePage(1)">
+        ««
+      </button>
+      
+      <button 
+        class="btn-page" 
+        [disabled]="currentPage === 1"
+        (click)="changePage(currentPage - 1)">
+        «
+      </button>
+      
+      <button 
+        *ngFor="let page of getPageNumbers()" 
+        class="btn-page"
+        [class.active]="page === currentPage"
+        (click)="changePage(page)">
+        {{page}}
+      </button>
+      
+      <button 
+        class="btn-page" 
+        [disabled]="currentPage === totalPages"
+        (click)="changePage(currentPage + 1)">
+        »
+      </button>
+      
+      <button 
+        class="btn-page" 
+        [disabled]="currentPage === totalPages"
+        (click)="changePage(totalPages)">
+        »»
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de detalhes -->
+<div *ngIf="showLogDetails && selectedLog" class="modal-overlay" (click)="closeDetails()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Detalhes do Log</h3>
+      <button class="btn-close" (click)="closeDetails()">×</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-item">
+          <label>ID:</label>
+          <span>{{selectedLog.id}}</span>
+        </div>
+        
+        <div class="detail-item">
+          <label>Data/Hora:</label>
+          <span>{{formatDate(selectedLog.createdAt)}}</span>
+        </div>
+        
+        <div class="detail-item">
+          <label>Usuário:</label>
+          <span>{{getUserName(selectedLog)}}</span>
+        </div>
+        
+        <div class="detail-item">
+          <label>Ação:</label>
+          <span>{{actionDescriptions[selectedLog.action]}}</span>
+        </div>
+        
+        <div class="detail-item">
+          <label>Nível:</label>
+          <span [ngClass]="levelColors[selectedLog.level]">
+            {{levelDescriptions[selectedLog.level]}}
+          </span>
+        </div>
+        
+        <div class="detail-item">
+          <label>Status:</label>
+          <span [class]="selectedLog.success ? 'success' : 'error'">
+            {{selectedLog.success ? 'Sucesso' : 'Erro'}}
+          </span>
+        </div>
+        
+        <div class="detail-item" *ngIf="selectedLog.ipAddress">
+          <label>IP:</label>
+          <span>{{selectedLog.ipAddress}}</span>
+        </div>
+        
+        <div class="detail-item" *ngIf="selectedLog.userAgent">
+          <label>User Agent:</label>
+          <span class="break-word">{{selectedLog.userAgent}}</span>
+        </div>
+        
+        <div class="detail-item" *ngIf="selectedLog.endpoint">
+          <label>Endpoint:</label>
+          <span>{{selectedLog.httpMethod}} {{selectedLog.endpoint}}</span>
+        </div>
+        
+        <div class="detail-item" *ngIf="selectedLog.executionTime">
+          <label>Tempo de Execução:</label>
+          <span>{{selectedLog.executionTime}}ms</span>
+        </div>
+        
+        <div class="detail-item full-width">
+          <label>Descrição:</label>
+          <span>{{selectedLog.description}}</span>
+        </div>
+        
+        <div class="detail-item full-width" *ngIf="selectedLog.errorMessage">
+          <label>Erro:</label>
+          <span class="error">{{selectedLog.errorMessage}}</span>
+        </div>
+      </div>
+      
+      <!-- Dados anteriores -->
+      <div *ngIf="selectedLog.previousData" class="data-section">
+        <h4>Dados Anteriores:</h4>
+        <pre class="json-data">{{formatJson(selectedLog.previousData)}}</pre>
+      </div>
+      
+      <!-- Novos dados -->
+      <div *ngIf="selectedLog.newData" class="data-section">
+        <h4>Novos Dados:</h4>
+        <pre class="json-data">{{formatJson(selectedLog.newData)}}</pre>
+      </div>
+      
+      <!-- Metadata -->
+      <div *ngIf="selectedLog.metadata" class="data-section">
+        <h4>Metadados:</h4>
+        <pre class="json-data">{{formatJson(selectedLog.metadata)}}</pre>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,470 @@
+<div class="ficha-form-container">
+  <header class="page-header">
+    <div class="header-content">
+      <h1>{{ isEditMode ? 'Editar' : 'Nova' }} Ficha Técnica</h1>
+    </div>
+  </header>
+
+  <!-- Estado de Carregamento -->
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>{{ isEditMode ? 'Carregando ficha técnica...' : 'Salvando...' }}</p>
+    </div>
+  }
+
+  <!-- Estado de Erro -->
+  @if (error) {
+    <div class="error-state">
+      <div class="error-message">
+        <i class="icon">⚠️</i>
+        <p>{{ error }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- Formulário -->
+  @if (!loading) {
+    <form [formGroup]="fichaForm" (ngSubmit)="onSubmit()" class="ficha-form">
+      
+      <!-- =================================================================== -->
+      <!-- BLOCO 1: INFORMAÇÕES BÁSICAS -->
+      <!-- =================================================================== -->
+      <section class="form-section">
+        <h2>📋 INFORMAÇÕES BÁSICAS</h2>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="codigoFormulaCerta">Código Fórmula Certa *</label>
+            <input
+              id="codigoFormulaCerta"
+              type="text"
+              formControlName="codigoFormulaCerta"
+              class="form-input"
+              [class.error]="hasError('codigoFormulaCerta')"
+              placeholder="Código único da fórmula (ex: FC001)"
+            />
+            @if (hasError('codigoFormulaCerta')) {
+              <span class="error-text">{{ getError('codigoFormulaCerta') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="produto">Produto *</label>
+            <input
+              id="produto"
+              type="text"
+              formControlName="produto"
+              class="form-input"
+              [class.error]="hasError('produto')"
+              placeholder="Nome do produto"
+            />
+            @if (hasError('produto')) {
+              <span class="error-text">{{ getError('produto') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="pesoMolecular">Peso Molecular</label>
+            <input
+              id="pesoMolecular"
+              type="text"
+              formControlName="pesoMolecular"
+              class="form-input"
+              [class.error]="hasError('pesoMolecular')"
+              placeholder="Ex: 151,16 g/mol"
+            />
+            @if (hasError('pesoMolecular')) {
+              <span class="error-text">{{ getError('pesoMolecular') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="formulaMolecular">Fórmula Molecular</label>
+            <input
+              id="formulaMolecular"
+              type="text"
+              formControlName="formulaMolecular"
+              class="form-input"
+              [class.error]="hasError('formulaMolecular')"
+              placeholder="Ex: C8H9NO2"
+            />
+            @if (hasError('formulaMolecular')) {
+              <span class="error-text">{{ getError('formulaMolecular') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="dcb">DCB</label>
+            <input
+              id="dcb"
+              type="text"
+              formControlName="dcb"
+              class="form-input"
+              [class.error]="hasError('dcb')"
+              placeholder="Denominação Comum Brasileira"
+            />
+            @if (hasError('dcb')) {
+              <span class="error-text">{{ getError('dcb') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="nomeCientifico">Nome Científico</label>
+            <input
+              id="nomeCientifico"
+              type="text"
+              formControlName="nomeCientifico"
+              class="form-input"
+              [class.error]="hasError('nomeCientifico')"
+              placeholder="Nome científico do princípio ativo"
+            />
+            @if (hasError('nomeCientifico')) {
+              <span class="error-text">{{ getError('nomeCientifico') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="revisao">Revisão</label>
+            <input
+              id="revisao"
+              type="text"
+              formControlName="revisao"
+              class="form-input"
+              [class.error]="hasError('revisao')"
+              placeholder="Número da revisão"
+            />
+            @if (hasError('revisao')) {
+              <span class="error-text">{{ getError('revisao') }}</span>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- BLOCO 2: TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10 -->
+      <!-- =================================================================== -->
+      <section class="form-section">
+        <h2>🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10</h2>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="analise">Análise</label>
+            <input
+              id="analise"
+              type="text"
+              formControlName="analise"
+              class="form-input"
+              [class.error]="hasError('analise')"
+              placeholder="Tipo de análise realizada"
+            />
+            @if (hasError('analise')) {
+              <span class="error-text">{{ getError('analise') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="caracteristicasOrganolepticas">Características Organolépticas</label>
+            <input
+              id="caracteristicasOrganolepticas"
+              type="text"
+              formControlName="caracteristicasOrganolepticas"
+              class="form-input"
+              [class.error]="hasError('caracteristicasOrganolepticas')"
+              placeholder="Cor, odor, textura"
+            />
+            @if (hasError('caracteristicasOrganolepticas')) {
+              <span class="error-text">{{ getError('caracteristicasOrganolepticas') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="solubilidade">Solubilidade</label>
+            <input
+              id="solubilidade"
+              type="text"
+              formControlName="solubilidade"
+              class="form-input"
+              [class.error]="hasError('solubilidade')"
+              placeholder="Solubilidade em diferentes solventes"
+            />
+            @if (hasError('solubilidade')) {
+              <span class="error-text">{{ getError('solubilidade') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="faixaPh">Faixa de pH</label>
+            <input
+              id="faixaPh"
+              type="text"
+              formControlName="faixaPh"
+              class="form-input"
+              [class.error]="hasError('faixaPh')"
+              placeholder="Ex: 5.3 - 6.5"
+            />
+            @if (hasError('faixaPh')) {
+              <span class="error-text">{{ getError('faixaPh') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="faixaFusao">Faixa de Fusão</label>
+            <input
+              id="faixaFusao"
+              type="text"
+              formControlName="faixaFusao"
+              class="form-input"
+              [class.error]="hasError('faixaFusao')"
+              placeholder="Ex: 168-172°C"
+            />
+            @if (hasError('faixaFusao')) {
+              <span class="error-text">{{ getError('faixaFusao') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="peso">Peso</label>
+            <input
+              id="peso"
+              type="text"
+              formControlName="peso"
+              class="form-input"
+              [class.error]="hasError('peso')"
+              placeholder="Ex: 1.5 kg"
+            />
+            @if (hasError('peso')) {
+              <span class="error-text">{{ getError('peso') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="volume">Volume</label>
+            <input
+              id="volume"
+              type="text"
+              formControlName="volume"
+              class="form-input"
+              [class.error]="hasError('volume')"
+              placeholder="Ex: 500 mL"
+            />
+            @if (hasError('volume')) {
+              <span class="error-text">{{ getError('volume') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="densidadeComCompactacao">Densidade com Compactação (±10%)</label>
+            <input
+              id="densidadeComCompactacao"
+              type="text"
+              formControlName="densidadeComCompactacao"
+              class="form-input"
+              [class.error]="hasError('densidadeComCompactacao')"
+              placeholder="Ex: 0.85 g/cm³ (±10%)"
+            />
+            @if (hasError('densidadeComCompactacao')) {
+              <span class="error-text">{{ getError('densidadeComCompactacao') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="avaliacaoDoLaudo">Avaliação do Laudo</label>
+            <input
+              id="avaliacaoDoLaudo"
+              type="text"
+              formControlName="avaliacaoDoLaudo"
+              class="form-input"
+              [class.error]="hasError('avaliacaoDoLaudo')"
+              placeholder="Ex: Aprovado, Reprovado"
+            />
+            @if (hasError('avaliacaoDoLaudo')) {
+              <span class="error-text">{{ getError('avaliacaoDoLaudo') }}</span>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- BLOCO 3: INFORMAÇÕES ADICIONAIS - TRANSCRITOS DAS REFERÊNCIAS - ITEM 7.3.11 -->
+      <!-- =================================================================== -->
+      <section class="form-section">
+        <h2>📊 INFORMAÇÕES ADICIONAIS - TRANSCRITOS DAS REFERÊNCIAS - ITEM 7.3.11</h2>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="cinzas">Cinzas</label>
+            <input
+              id="cinzas"
+              type="text"
+              formControlName="cinzas"
+              class="form-input"
+              [class.error]="hasError('cinzas')"
+              placeholder="Ex: < 0.1%"
+            />
+            @if (hasError('cinzas')) {
+              <span class="error-text">{{ getError('cinzas') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="perdaPorSecagem">Perda por Secagem</label>
+            <input
+              id="perdaPorSecagem"
+              type="text"
+              formControlName="perdaPorSecagem"
+              class="form-input"
+              [class.error]="hasError('perdaPorSecagem')"
+              placeholder="Ex: < 0.5%"
+            />
+            @if (hasError('perdaPorSecagem')) {
+              <span class="error-text">{{ getError('perdaPorSecagem') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="infraVermelho">Infravermelho</label>
+            <input
+              id="infraVermelho"
+              type="text"
+              formControlName="infraVermelho"
+              class="form-input"
+              [class.error]="hasError('infraVermelho')"
+              placeholder="Conforme padrão"
+            />
+            @if (hasError('infraVermelho')) {
+              <span class="error-text">{{ getError('infraVermelho') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="ultraVioleta">Ultravioleta</label>
+            <input
+              id="ultraVioleta"
+              type="text"
+              formControlName="ultraVioleta"
+              class="form-input"
+              [class.error]="hasError('ultraVioleta')"
+              placeholder="Conforme padrão"
+            />
+            @if (hasError('ultraVioleta')) {
+              <span class="error-text">{{ getError('ultraVioleta') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="teor">Teor</label>
+            <input
+              id="teor"
+              type="text"
+              formControlName="teor"
+              class="form-input"
+              [class.error]="hasError('teor')"
+              placeholder="Ex: 99.0 - 101.0%"
+            />
+            @if (hasError('teor')) {
+              <span class="error-text">{{ getError('teor') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="conservacao">Conservação</label>
+            <input
+              id="conservacao"
+              type="text"
+              formControlName="conservacao"
+              class="form-input"
+              [class.error]="hasError('conservacao')"
+              placeholder="Ex: Ambiente seco e arejado"
+            />
+            @if (hasError('conservacao')) {
+              <span class="error-text">{{ getError('conservacao') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="observacao01">Observação 01</label>
+            <input
+              id="observacao01"
+              type="text"
+              formControlName="observacao01"
+              class="form-input"
+              [class.error]="hasError('observacao01')"
+              placeholder="Ex: Material higroscópico"
+            />
+            @if (hasError('observacao01')) {
+              <span class="error-text">{{ getError('observacao01') }}</span>
+            }
+          </div>
+
+          <div class="form-group full-width">
+            <label for="amostragem">Amostragem</label>
+            <textarea
+              id="amostragem"
+              formControlName="amostragem"
+              class="form-input"
+              [class.error]="hasError('amostragem')"
+              placeholder="Descrição detalhada da amostragem..."
+              rows="3"
+            ></textarea>
+            @if (hasError('amostragem')) {
+              <span class="error-text">{{ getError('amostragem') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="referenciaBibliografica">Referência Bibliográfica</label>
+            <input
+              id="referenciaBibliografica"
+              type="text"
+              formControlName="referenciaBibliografica"
+              class="form-input"
+              [class.error]="hasError('referenciaBibliografica')"
+              placeholder="Ex: Farmacopeia Brasileira 6ª Ed."
+            />
+            @if (hasError('referenciaBibliografica')) {
+              <span class="error-text">{{ getError('referenciaBibliografica') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="dataDeAnalise">Data de Análise</label>
+            <input
+              id="dataDeAnalise"
+              type="date"
+              formControlName="dataDeAnalise"
+              class="form-input"
+              [class.error]="hasError('dataDeAnalise')"
+            />
+            @if (hasError('dataDeAnalise')) {
+              <span class="error-text">{{ getError('dataDeAnalise') }}</span>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Botões de Ação -->
+      <div class="form-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary"
+          (click)="cancel()"
+          [disabled]="loading"
+        >
+          Cancelar
+        </button>
+        <button 
+          type="submit" 
+          class="btn btn-primary"
+          [disabled]="loading || fichaForm.invalid"
+        >
+          @if (loading) {
+            Salvando...
+          } @else {
+            {{ isEditMode ? 'Atualizar' : 'Criar' }} Ficha Técnica
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>
