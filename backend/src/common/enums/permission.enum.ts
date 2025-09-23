@@ -1,4 +1,5 @@
 export enum Permission {
+  CONFIGURACAO_ACCESS = 'configuracao:access',
   // Usuários
   USER_CREATE = 'user:create',
   USER_READ = 'user:read',
@@ -29,6 +30,9 @@ export enum Permission {
 }
 
 export const PERMISSION_GROUPS = {
+  'Configuração': [
+    { key: Permission.CONFIGURACAO_ACCESS, label: 'Acessar tela de configuração' }
+  ],
   'Usuários': [
     { key: Permission.USER_CREATE, label: 'Criar usuários' },
     { key: Permission.USER_READ, label: 'Visualizar usuários' },

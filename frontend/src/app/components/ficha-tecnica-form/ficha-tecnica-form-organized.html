@@ -145,7 +145,7 @@
       <!-- BLOCO 2: TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10 -->
       <!-- =================================================================== -->
       <section class="form-section">
-        <h2>🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10</h2>
+  <h2>🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10<span *ngIf="form.get('tipoDaFicha')?.value === 'FITOTERÁPICO'"> E 7.3.13</span></h2>
         
         <div class="form-grid">
           <div class="form-group">
@@ -254,7 +254,7 @@
           </div>
 
           <div class="form-group">
-            <label for="densidadeComCompactacao">Densidade com Compactação (±10%)</label>
+            <label for="densidadeComCompactacao">Densidade sem Compactação (±10%)</label>
             <input
               id="densidadeComCompactacao"
               type="text"

@@ -1,4 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { ConfiguracaoService } from '../../services/configuracao.service';
+import { Configuracao } from '../../models/configuracao.model';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -26,7 +28,7 @@ import { Permission } from '../../models/user.model';
 })
 export class FichaTecnicaListComponent implements OnInit {
   private fichaTecnicaService = inject(FichaTecnicaService);
-  private authService = inject(AuthService);
+  public authService = inject(AuthService);
   private router = inject(Router);
 
   // Exportar Permission para uso no template
@@ -53,8 +55,20 @@ export class FichaTecnicaListComponent implements OnInit {
   showDeleteModal = false;
   fichaToDelete: FichaTecnica | null = null;
 
+  private configuracaoService = inject(ConfiguracaoService);
+  configuracao: Configuracao | null = null;
+
   ngOnInit() {
     this.loadFichasTecnicas();
+    // Buscar configuração para o logo do relatório
+    this.configuracaoService.getConfiguracao().subscribe({
+      next: (config) => {
+        this.configuracao = config;
+      },
+      error: () => {
+        this.configuracao = null;
+      }
+    });
   }
 
   /**
@@ -115,8 +129,18 @@ export class FichaTecnicaListComponent implements OnInit {
   /**
    * Navega para visualização de ficha técnica
    */
+
+  // Visualiza o relatório em tela maximizada, sem opção de impressão
   viewFicha(ficha: FichaTecnica) {
-    this.router.navigate(['/fichas-tecnicas/view', ficha.id]);
+    const reportHtml = this.generatePrintContentWithUser(ficha, { hidePrint: true });
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(reportHtml);
+      win.document.close();
+      win.focus();
+      win.moveTo(0, 0);
+      win.resizeTo(screen.availWidth, screen.availHeight);
+    }
   }
 
   /**
@@ -130,8 +154,8 @@ export class FichaTecnicaListComponent implements OnInit {
    * Imprime ficha técnica
    */
   printFicha(ficha: FichaTecnica) {
-    // Criar conteúdo HTML para impressão
-    const printContent = this.generatePrintContent(ficha);
+  // Criar conteúdo HTML para impressão com nome do usuário
+  const printContent = this.generatePrintContentWithUser(ficha);
     
     // Abrir nova janela para impressão
     const printWindow = window.open('', '_blank', 'width=800,height=600');
@@ -151,28 +175,67 @@ export class FichaTecnicaListComponent implements OnInit {
   /**
    * Gera conteúdo HTML para impressão
    */
-  private generatePrintContent(ficha: FichaTecnica): string {
-    return `
-      <!DOCTYPE html>
+
+
+  /**
+   * Gera o conteúdo de impressão com nome do usuário
+   */
+  public generatePrintContentWithUser(ficha: FichaTecnica, opts?: { hidePrint?: boolean }): string {
+    let logoHtml = '';
+    if (this.configuracao?.logoRelatorio) {
+      const backendUrl = 'http://localhost:3000';
+      const logoUrl = this.configuracao.logoRelatorio.startsWith('/uploads')
+        ? backendUrl + this.configuracao.logoRelatorio
+        : this.configuracao.logoRelatorio;
+      logoHtml = `<img src="${logoUrl}" alt="Logo" style="max-height: 80px; max-width: 120px; display: block;" />`;
+    }
+    const user = this.authService.getCurrentUser();
+    const userName = user?.name || 'Usuário';
+    const dataAnalise = this.formatDate(ficha.dataDeAnalise);
+
+    // Garante que o <body> começa diretamente pelo header, sem nada antes
+    // Define nome do relatório para impressão/salvar
+    const hidePrint = opts?.hidePrint;
+    const tipo = ficha.tipoDaFicha ? ficha.tipoDaFicha.toLowerCase().replace('é', 'e').replace('á', 'a') : 'ficha';
+    const tipoNome = tipo === 'fitoterapico' ? 'fitoterapico' : 'materia-prima';
+    const codigo = ficha.codigoFormulaCerta || '';
+    const nomeRelatorio = `ficha-tecnica-${tipoNome}${codigo ? '-' + codigo : ''}`;
+    return `<!DOCTYPE html>
       <html>
       <head>
-        <title>Ficha Técnica - ${ficha.codigoFormulaCerta}</title>
+        <title>${nomeRelatorio}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
-          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 15px; }
+          .header { display: flex; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 30px; }
+          .logo-box { flex: 0 0 auto; margin-right: 24px; }
+          .header-content { flex: 1 1 auto; }
+          .header-title { margin: 0; font-size: 1.7em; font-weight: bold; }
+          .header-row { display: flex; gap: 32px; margin-top: 8px; font-size: 1.1em; }
+          .header-row span { font-weight: bold; }
           .section { margin-bottom: 25px; }
           .section-title { background: #f0f0f0; padding: 8px; font-weight: bold; border-left: 4px solid #007bff; margin-bottom: 10px; }
           .field { margin-bottom: 8px; }
           .field-label { font-weight: bold; display: inline-block; width: 200px; }
           .field-value { display: inline-block; }
-          @media print { body { margin: 0; } }
+          .footer-print { font-size: 0.95em; color: #444; margin-top: 30px; text-align: center; ${hidePrint ? 'display:none;' : ''} }
+          ${hidePrint ? '' : `@media print {
+            @page {
+              size: auto;
+              margin-bottom: 60px;
+            }
+          }`}
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>FICHA TÉCNICA</h1>
-          <h2>${ficha.produto}</h2>
-          <p><strong>Código:</strong> ${ficha.codigoFormulaCerta}</p>
+          <div class="logo-box">${logoHtml}</div>
+          <div class="header-content">
+            <h1 class="header-title">FICHA TÉCNICA${ficha.tipoDaFicha ? ' - ' + (ficha.tipoDaFicha === 'FITOTERÁPICO' ? 'FITOTERÁPICO' : 'MATÉRIA PRIMA') : ''}</h1>
+            <div class="header-row">
+              ${ficha.codigoFormulaCerta ? `<div><span>Código:</span> ${ficha.codigoFormulaCerta}</div>` : ''}
+              ${ficha.produto ? `<div><span>Produto:</span> ${ficha.produto}</div>` : ''}
+            </div>
+          </div>
         </div>
 
         <div class="section">
@@ -187,21 +250,29 @@ export class FichaTecnicaListComponent implements OnInit {
 
         <div class="section">
           <div class="section-title">🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10</div>
-          <div class="field"><span class="field-label">Análise:</span> <span class="field-value">${ficha.analise || '-'}</span></div>
           <div class="field"><span class="field-label">Características Organolépticas:</span> <span class="field-value">${ficha.caracteristicasOrganolepticas || '-'}</span></div>
           <div class="field"><span class="field-label">Solubilidade:</span> <span class="field-value">${ficha.solubilidade || '-'}</span></div>
           <div class="field"><span class="field-label">Faixa de pH:</span> <span class="field-value">${ficha.faixaPh || '-'}</span></div>
           <div class="field"><span class="field-label">Faixa de Fusão:</span> <span class="field-value">${ficha.faixaFusao || '-'}</span></div>
           <div class="field"><span class="field-label">Peso:</span> <span class="field-value">${ficha.peso || '-'}</span></div>
           <div class="field"><span class="field-label">Volume:</span> <span class="field-value">${ficha.volume || '-'}</span></div>
-          <div class="field"><span class="field-label">Densidade com Compactação:</span> <span class="field-value">${ficha.densidadeComCompactacao || '-'}</span></div>
+          <div class="field"><span class="field-label">Densidade sem Compactação:</span> <span class="field-value">${ficha.densidadeComCompactacao || '-'}</span></div>
+          ${ficha.tipoDaFicha === 'FITOTERÁPICO' ? `
+            <div class="field"><span class="field-label">Determinação de Materiais Estranhos:</span> <span class="field-value">${ficha.determinacaoMateriaisEstranhos || '-'}</span></div>
+            <div class="field"><span class="field-label">Pesquisas de Contaminação Microbiológica:</span> <span class="field-value">${ficha.pesquisasDeContaminacaoMicrobiologica || '-'}</span></div>
+            <div class="field"><span class="field-label">Umidade:</span> <span class="field-value">${ficha.umidade || '-'}</span></div>
+            <div class="field"><span class="field-label">Cinzas:</span> <span class="field-value">${ficha.cinzas || '-'}</span></div>
+            <div class="field"><span class="field-label">Caracteres Microscópicos:</span> <span class="field-value">${ficha.caracteresMicroscopicos || '-'}</span></div>
+          ` : ''}
           <div class="field"><span class="field-label">Avaliação do Laudo:</span> <span class="field-value">${ficha.avaliacaoDoLaudo || '-'}</span></div>
         </div>
 
         <div class="section">
           <div class="section-title">📊 INFORMAÇÕES ADICIONAIS - ITEM 7.3.11</div>
-          <div class="field"><span class="field-label">Cinzas:</span> <span class="field-value">${ficha.cinzas || '-'}</span></div>
-          <div class="field"><span class="field-label">Perda por Secagem:</span> <span class="field-value">${ficha.perdaPorSecagem || '-'}</span></div>
+          ${ficha.tipoDaFicha !== 'FITOTERÁPICO' ? `
+            <div class="field"><span class="field-label">Cinzas:</span> <span class="field-value">${ficha.cinzas || '-'}</span></div>
+            <div class="field"><span class="field-label">Perda por Secagem:</span> <span class="field-value">${ficha.perdaPorSecagem || '-'}</span></div>
+          ` : ''}
           <div class="field"><span class="field-label">Infravermelho:</span> <span class="field-value">${ficha.infraVermelho || '-'}</span></div>
           <div class="field"><span class="field-label">Ultravioleta:</span> <span class="field-value">${ficha.ultraVioleta || '-'}</span></div>
           <div class="field"><span class="field-label">Teor:</span> <span class="field-value">${ficha.teor || '-'}</span></div>
@@ -209,21 +280,42 @@ export class FichaTecnicaListComponent implements OnInit {
           <div class="field"><span class="field-label">Observação:</span> <span class="field-value">${ficha.observacao01 || '-'}</span></div>
           <div class="field"><span class="field-label">Amostragem:</span> <span class="field-value">${ficha.amostragem || '-'}</span></div>
           <div class="field"><span class="field-label">Referência Bibliográfica:</span> <span class="field-value">${ficha.referenciaBibliografica || '-'}</span></div>
-          <div class="field"><span class="field-label">Data de Análise:</span> <span class="field-value">${this.formatDate(ficha.dataDeAnalise)}</span></div>
+          <div class="field"><span class="field-label">Data de Análise:</span> <span class="field-value">${dataAnalise}</span></div>
         </div>
-
-        <div class="section" style="margin-top: 30px; text-align: center; font-size: 0.9em; color: #666;">
-          <p>Documento gerado automaticamente em ${new Date().toLocaleString('pt-BR')}</p>
+        <div style="height: 80px;"></div>
+        <hr style="margin: 0 auto 12px auto; border: none; border-top: 1.5px solid #888; width: 70%;" />
+        <div style="text-align: center; font-size: 1.08em; margin-bottom: 2px;">
+          ${this.configuracao?.farmaceuticoResponsavel || ''}
         </div>
+        <div style="text-align: center; font-size: 1em; color: #444;">
+          Farmacêutico Responsável
+        </div>
+        <div class="footer-print">
+          Documento gerado em ${new Date().toLocaleString('pt-BR')}  Impresso por: ${userName}
+        </div>
+        <style>
+          @media print {
+            .footer-print {
+              position: fixed;
+              bottom: 0;
+              left: 0;
+              width: 100vw;
+              font-size: 0.72em !important;
+              color: #444;
+              text-align: center;
+              z-index: 1000;
+            }
+          }
+        </style>
       </body>
-      </html>
-    `;
+      </html>`;
   }
+
 
   /**
    * Abre modal de confirmação para exclusão
    */
-  openDeleteModal(ficha: FichaTecnica) {
+  public openDeleteModal(ficha: FichaTecnica) {
     this.fichaToDelete = ficha;
     this.showDeleteModal = true;
   }
@@ -231,7 +323,7 @@ export class FichaTecnicaListComponent implements OnInit {
   /**
    * Fecha modal de confirmação
    */
-  closeDeleteModal() {
+  public closeDeleteModal() {
     this.showDeleteModal = false;
     this.fichaToDelete = null;
   }
@@ -239,11 +331,9 @@ export class FichaTecnicaListComponent implements OnInit {
   /**
    * Confirma e executa a exclusão
    */
-  confirmDelete() {
+  public confirmDelete() {
     if (!this.fichaToDelete) return;
-
     this.loading.set(true);
-    
     this.fichaTecnicaService.remove(this.fichaToDelete.id).subscribe({
       next: () => {
         this.closeDeleteModal();
@@ -260,14 +350,14 @@ export class FichaTecnicaListComponent implements OnInit {
   /**
    * Verifica se o usuário tem uma permissão específica
    */
-  hasPermission(permission: Permission): boolean {
+  public hasPermission(permission: Permission): boolean {
     return this.authService.hasPermission(permission);
   }
 
   /**
    * Formata data para exibição
    */
-  formatDate(dateString: string | undefined): string {
+  public formatDate(dateString: string | undefined): string {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR');
@@ -276,29 +366,27 @@ export class FichaTecnicaListComponent implements OnInit {
   /**
    * Gera array de páginas para paginação
    */
-  get pageNumbers(): number[] {
+  public get pageNumbers(): number[] {
     const pages: number[] = [];
     const startPage = Math.max(1, this.currentPage - 2);
     const endPage = Math.min(this.totalPages, this.currentPage + 2);
-
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-
     return pages;
   }
 
   /**
    * Verifica se há página anterior
    */
-  get hasPreviousPage(): boolean {
+  public get hasPreviousPage(): boolean {
     return this.currentPage > 1;
   }
 
   /**
    * Verifica se há próxima página
    */
-  get hasNextPage(): boolean {
+  public get hasNextPage(): boolean {
     return this.currentPage < this.totalPages;
   }
 }

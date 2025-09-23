@@ -3,6 +3,7 @@ export interface FichaTecnica {
   // =============================================================================
   // BLOCO 1: INFORMAÇÕES BÁSICAS
   // =============================================================================
+  tipoDaFicha: string;
   codigoFormulaCerta: string;
   produto: string;
   pesoMolecular?: string;
@@ -14,10 +15,13 @@ export interface FichaTecnica {
   // =============================================================================
   // BLOCO 2: TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10
   // =============================================================================
-  analise?: string;
   caracteristicasOrganolepticas?: string;
   solubilidade?: string;
   faixaPh?: string;
+  determinacaoMateriaisEstranhos?: string;
+  pesquisasDeContaminacaoMicrobiologica?: string;
+  umidade?: string;
+  caracteresMicroscopicos?: string;
   faixaFusao?: string;
   peso?: string;
   volume?: string;
@@ -46,6 +50,7 @@ export interface CreateFichaTecnicaDto {
   // =============================================================================
   // BLOCO 1: INFORMAÇÕES BÁSICAS
   // =============================================================================
+  tipoDaFicha: string;
   codigoFormulaCerta: string;
   produto: string;
   pesoMolecular?: string;
@@ -61,6 +66,10 @@ export interface CreateFichaTecnicaDto {
   caracteristicasOrganolepticas?: string;
   solubilidade?: string;
   faixaPh?: string;
+  determinacaoMateriaisEstranhos?: string;
+  pesquisasDeContaminacaoMicrobiologica?: string;
+  umidade?: string;
+  caracteresMicroscopicos?: string;
   faixaFusao?: string;
   peso?: string;
   volume?: string;
@@ -89,8 +98,7 @@ export interface FindFichaTecnicaDto {
   limit?: number;
   codigoFormulaCerta?: string;
   produto?: string;
-  dcb?: string;
-  nomeCientifico?: string;
+  tipoDaFicha?: string;
   revisao?: string;
   dataInicialAnalise?: string;
   dataFinalAnalise?: string;

@@ -27,6 +27,13 @@ export class FichaTecnicaService {
       
       const queryBuilder = this.fichaTecnicaRepository.createQueryBuilder('ficha');
 
+      // Filtro por tipoDaFicha
+      if (filters.tipoDaFicha) {
+        queryBuilder.andWhere('ficha.tipoDaFicha = :tipoDaFicha', {
+          tipoDaFicha: filters.tipoDaFicha,
+        });
+      }
+
       // Filtros por campos específicos
       if (filters.codigoFormulaCerta) {
         queryBuilder.andWhere('ficha.codigoFormulaCerta = :codigoFormulaCerta', {
@@ -46,11 +53,6 @@ export class FichaTecnicaService {
         });
       }
 
-      if (filters.nomeCientifico) {
-        queryBuilder.andWhere('LOWER(ficha.nomeCientifico) LIKE LOWER(:nomeCientifico)', {
-          nomeCientifico: `%${filters.nomeCientifico}%`,
-        });
-      }
 
       if (filters.revisao) {
         queryBuilder.andWhere('LOWER(ficha.revisao) LIKE LOWER(:revisao)', {

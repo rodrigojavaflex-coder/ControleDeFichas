@@ -198,14 +198,22 @@
 
 .sidebar.collapsed .nav-link {
   justify-content: center;
-  padding: 12px 8px;
+  padding: 12px 4px;
+  gap: 0;
 }
 
 .nav-icon {
-  font-size: 20px;
-  width: 24px;
+  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .nav-text {
@@ -237,8 +245,18 @@
   color: #64748b;
   cursor: pointer;
   font-weight: 500;
-  font-size: 14px;
-  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  vertical-align: middle;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.nav-link:hover .nav-icon svg {
+  stroke: #3b82f6;
+  opacity: 1;
 }
 
 .logout-btn:hover {
@@ -252,11 +270,13 @@
   padding: 12px 8px;
 }
 
+
 .logout-icon {
   font-size: 18px;
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
 }
 
 .logout-text {

@@ -17,7 +17,7 @@ interface MenuItem {
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './navigation.html',
-  styleUrl: './navigation.css'
+  styleUrls: ['./navigation.css']
 })
 export class NavigationComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
@@ -36,40 +36,35 @@ export class NavigationComponent implements OnInit, OnDestroy {
   // Definir todos os itens de menu disponíveis
   private allMenuItems: MenuItem[] = [
     {
-      label: 'Dashboard',
-      route: '/dashboard',
-      icon: '📊',
-      requiredPermissions: []
+      label: 'Configuração',
+      route: '/configuracao',
+      icon: 'feather-settings',
+      requiredPermissions: [Permission.CONFIGURACAO_ACCESS]
     },
+      // Dashboard removido do menu
     {
       label: 'Usuários',
       route: '/users',
-      icon: '👥',
+      icon: 'feather-users',
       requiredPermissions: [Permission.USER_CREATE, Permission.USER_READ, Permission.USER_UPDATE, Permission.USER_DELETE]
     },
-    {
-      label: 'Fichas Técnicas',
-      route: '/fichas-tecnicas',
-      icon: '📋',
-      requiredPermissions: [Permission.FICHA_TECNICA_CREATE, Permission.FICHA_TECNICA_READ, Permission.FICHA_TECNICA_UPDATE, Permission.FICHA_TECNICA_DELETE]
-    },
-    {
-      label: 'Auditoria',
-      route: '/audit',
-      icon: '🔍',
-      requiredPermissions: [Permission.AUDIT_VIEW, Permission.AUDIT_MANAGE]
-    },
+      {
+        label: 'Fichas Técnicas',
+        route: '/fichas-tecnicas',
+        icon: 'feather-file-text',
+        requiredPermissions: [Permission.FICHA_TECNICA_CREATE, Permission.FICHA_TECNICA_READ, Permission.FICHA_TECNICA_UPDATE, Permission.FICHA_TECNICA_DELETE]
+      },
+      {
+        label: 'Auditoria',
+        route: '/audit',
+        icon: 'feather-search',
+        requiredPermissions: [Permission.AUDIT_VIEW, Permission.AUDIT_MANAGE]
+      },
     {
       label: 'Relatórios',
       route: '/reports',
-      icon: '📈',
+      icon: 'feather-bar-chart-2',
       requiredPermissions: [Permission.REPORTS_VIEW, Permission.REPORTS_EXPORT]
-    },
-    {
-      label: 'Configurações',
-      route: '/settings',
-      icon: '⚙️',
-      requiredPermissions: [Permission.SYSTEM_CONFIG, Permission.ADMIN_FULL]
     }
   ];
 

@@ -17,7 +17,9 @@
   @if (error) {
     <div class="error-state">
       <div class="error-message">
-        <i class="icon">⚠️</i>
+        <span class="nav-icon">
+          <svg width="22" height="22" fill="none" stroke="rgba(239,68,68,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12" y2="16"></line></svg>
+        </span>
         <p>{{ error }}</p>
       </div>
     </div>
@@ -31,9 +33,25 @@
       <!-- BLOCO 1: INFORMAÇÕES BÁSICAS -->
       <!-- =================================================================== -->
       <section class="form-section">
-        <h2>📋 INFORMAÇÕES BÁSICAS</h2>
+        <h2>
+          <span class="nav-icon">
+            <svg width="22" height="22" fill="none" stroke="rgba(100,116,139,0.6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          </span>
+          INFORMAÇÕES BÁSICAS
+        </h2>
         
         <div class="form-grid">
+          <div class="form-group">
+            <label for="tipoDaFicha">Tipo de Ficha *</label>
+            <select id="tipoDaFicha" formControlName="tipoDaFicha" class="form-input">
+              <option value="">Selecione...</option>
+              <option value="MATÉRIA PRIMA">MATÉRIA PRIMA</option>
+              <option value="FITOTERÁPICO">FITOTERÁPICO</option>
+            </select>
+            @if (hasError('tipoDaFicha')) {
+              <span class="error-text">{{ getError('tipoDaFicha') }}</span>
+            }
+          </div>
           <div class="form-group">
             <label for="codigoFormulaCerta">Código Fórmula Certa *</label>
             <input
@@ -145,23 +163,9 @@
       <!-- BLOCO 2: TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10 -->
       <!-- =================================================================== -->
       <section class="form-section">
-        <h2>🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10</h2>
+  <h2>🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10<span *ngIf="fichaForm.get('tipoDaFicha')?.value === 'FITOTERÁPICO'"> E 7.3.13</span></h2>
         
         <div class="form-grid">
-          <div class="form-group">
-            <label for="analise">Análise</label>
-            <input
-              id="analise"
-              type="text"
-              formControlName="analise"
-              class="form-input"
-              [class.error]="hasError('analise')"
-              placeholder="Tipo de análise realizada"
-            />
-            @if (hasError('analise')) {
-              <span class="error-text">{{ getError('analise') }}</span>
-            }
-          </div>
 
           <div class="form-group">
             <label for="caracteristicasOrganolepticas">Características Organolépticas</label>
@@ -254,7 +258,7 @@
           </div>
 
           <div class="form-group">
-            <label for="densidadeComCompactacao">Densidade com Compactação (±10%)</label>
+            <label for="densidadeComCompactacao">Densidade sem Compactação (±10%)</label>
             <input
               id="densidadeComCompactacao"
               type="text"
@@ -267,6 +271,82 @@
               <span class="error-text">{{ getError('densidadeComCompactacao') }}</span>
             }
           </div>
+
+          <!-- CAMPOS EXTRAS DE ACORDO COM O TIPO DA FICHA -->
+          @if (fichaForm.get('tipoDaFicha')?.value === 'FITOTERÁPICO') {
+            <div class="form-group">
+              <label for="determinacaoMateriaisEstranhos">Determinação de Materiais Estranhos</label>
+              <input
+                id="determinacaoMateriaisEstranhos"
+                type="text"
+                formControlName="determinacaoMateriaisEstranhos"
+                class="form-input"
+                [class.error]="hasError('determinacaoMateriaisEstranhos')"
+                placeholder="Ex: Ausente"
+              />
+              @if (hasError('determinacaoMateriaisEstranhos')) {
+                <span class="error-text">{{ getError('determinacaoMateriaisEstranhos') }}</span>
+              }
+            </div>
+            <div class="form-group">
+              <label for="pesquisasDeContaminacaoMicrobiologica">Pesquisas de Contaminação Microbiológica</label>
+              <input
+                id="pesquisasDeContaminacaoMicrobiologica"
+                type="text"
+                formControlName="pesquisasDeContaminacaoMicrobiologica"
+                class="form-input"
+                [class.error]="hasError('pesquisasDeContaminacaoMicrobiologica')"
+                placeholder="Ex: Ausente"
+              />
+              @if (hasError('pesquisasDeContaminacaoMicrobiologica')) {
+                <span class="error-text">{{ getError('pesquisasDeContaminacaoMicrobiologica') }}</span>
+              }
+            </div>
+            <div class="form-group">
+              <label for="umidade">Umidade</label>
+              <input
+                id="umidade"
+                type="text"
+                formControlName="umidade"
+                class="form-input"
+                [class.error]="hasError('umidade')"
+                placeholder="Ex: 8%"
+              />
+              @if (hasError('umidade')) {
+                <span class="error-text">{{ getError('umidade') }}</span>
+              }
+            </div>
+            @if (fichaForm.get('tipoDaFicha')?.value === 'FITOTERÁPICO') {
+              <div class="form-group">
+                <label for="cinzas">Cinzas</label>
+                <input
+                  id="cinzas"
+                  type="text"
+                  formControlName="cinzas"
+                  class="form-input"
+                  [class.error]="hasError('cinzas')"
+                  placeholder="Ex: < 0.1%"
+                />
+                @if (hasError('cinzas')) {
+                  <span class="error-text">{{ getError('cinzas') }}</span>
+                }
+              </div>
+            }
+            <div class="form-group">
+              <label for="caracteresMicroscopicos">Caracteres Microscópicos</label>
+              <input
+                id="caracteresMicroscopicos"
+                type="text"
+                formControlName="caracteresMicroscopicos"
+                class="form-input"
+                [class.error]="hasError('caracteresMicroscopicos')"
+                placeholder="Ex: Ausente"
+              />
+              @if (hasError('caracteresMicroscopicos')) {
+                <span class="error-text">{{ getError('caracteresMicroscopicos') }}</span>
+              }
+            </div>
+          }
 
           <div class="form-group">
             <label for="avaliacaoDoLaudo">Avaliação do Laudo</label>
@@ -292,35 +372,36 @@
         <h2>📊 INFORMAÇÕES ADICIONAIS - TRANSCRITOS DAS REFERÊNCIAS - ITEM 7.3.11</h2>
         
         <div class="form-grid">
-          <div class="form-group">
-            <label for="cinzas">Cinzas</label>
-            <input
-              id="cinzas"
-              type="text"
-              formControlName="cinzas"
-              class="form-input"
-              [class.error]="hasError('cinzas')"
-              placeholder="Ex: < 0.1%"
-            />
-            @if (hasError('cinzas')) {
-              <span class="error-text">{{ getError('cinzas') }}</span>
-            }
-          </div>
-
-          <div class="form-group">
-            <label for="perdaPorSecagem">Perda por Secagem</label>
-            <input
-              id="perdaPorSecagem"
-              type="text"
-              formControlName="perdaPorSecagem"
-              class="form-input"
-              [class.error]="hasError('perdaPorSecagem')"
-              placeholder="Ex: < 0.5%"
-            />
-            @if (hasError('perdaPorSecagem')) {
-              <span class="error-text">{{ getError('perdaPorSecagem') }}</span>
-            }
-          </div>
+          @if (fichaForm.get('tipoDaFicha')?.value !== 'FITOTERÁPICO') {
+            <div class="form-group">
+              <label for="cinzas">Cinzas</label>
+              <input
+                id="cinzas"
+                type="text"
+                formControlName="cinzas"
+                class="form-input"
+                [class.error]="hasError('cinzas')"
+                placeholder="Ex: < 0.1%"
+              />
+              @if (hasError('cinzas')) {
+                <span class="error-text">{{ getError('cinzas') }}</span>
+              }
+            </div>
+            <div class="form-group">
+              <label for="perdaPorSecagem">Perda por Secagem</label>
+              <input
+                id="perdaPorSecagem"
+                type="text"
+                formControlName="perdaPorSecagem"
+                class="form-input"
+                [class.error]="hasError('perdaPorSecagem')"
+                placeholder="Ex: < 0.5%"
+              />
+              @if (hasError('perdaPorSecagem')) {
+                <span class="error-text">{{ getError('perdaPorSecagem') }}</span>
+              }
+            </div>
+          }
 
           <div class="form-group">
             <label for="infraVermelho">Infravermelho</label>

@@ -4,6 +4,10 @@ import { Transform } from 'class-transformer';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class FindFichaTecnicaDto extends PaginationDto {
+  @ApiPropertyOptional({ description: 'Filtrar por tipo de ficha', example: 'MATÉRIA PRIMA' })
+  @IsOptional()
+  @IsString({ message: 'Tipo de ficha deve ser texto' })
+  tipoDaFicha?: string;
   @ApiPropertyOptional({ description: 'Buscar por código da fórmula', example: 'FC001' })
   @IsOptional()
   @IsString({ message: 'Código deve ser texto' })
@@ -19,10 +23,6 @@ export class FindFichaTecnicaDto extends PaginationDto {
   @IsString({ message: 'DCB deve ser texto' })
   dcb?: string;
 
-  @ApiPropertyOptional({ description: 'Buscar por nome científico', example: 'N-(4-hydroxyphenyl)acetamide' })
-  @IsOptional()
-  @IsString({ message: 'Nome científico deve ser texto' })
-  nomeCientifico?: string;
 
   @ApiPropertyOptional({ description: 'Buscar por revisão', example: 'Rev. 01' })
   @IsOptional()

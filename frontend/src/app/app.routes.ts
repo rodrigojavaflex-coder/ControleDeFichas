@@ -1,14 +1,21 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login';
-import { DashboardComponent } from './components/dashboard/dashboard';
 import { UserListComponent } from './components/user-list/user-list';
 import { UserFormComponent } from './components/user-form/user-form';
 import { AuditLogsComponent } from './components/audit-logs/audit-logs';
 import { FichaTecnicaListComponent } from './components/ficha-tecnica-list/ficha-tecnica-list';
 import { FichaTecnicaFormComponent } from './components/ficha-tecnica-form/ficha-tecnica-form';
 import { authGuard } from './guards/auth.guard';
+import { ConfiguracaoComponent } from './modules/configuracao/configuracao.component';
+import { HomeComponent } from './components/home/home';
 
 export const routes: Routes = [
+  // Rota de configuração
+  {
+    path: 'configuracao',
+    component: ConfiguracaoComponent,
+    canActivate: [authGuard]
+  },
   // Rota de login (sem guard)
   {
     path: 'login',
@@ -16,11 +23,6 @@ export const routes: Routes = [
   },
   
   // Rotas protegidas
-  {
-    path: 'dashboard',
-    component: DashboardComponent,
-    canActivate: [authGuard]
-  },
   {
     path: 'users',
     component: UserListComponent,
@@ -62,16 +64,15 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   
-  // Redirecionamento padrão
+  // Home padrão
   {
     path: '',
-    redirectTo: '/dashboard',
-    pathMatch: 'full'
+    component: HomeComponent,
+    canActivate: [authGuard]
   },
-  
   // Rota wildcard
   {
     path: '**',
-    redirectTo: '/dashboard'
+    redirectTo: ''
   }
 ];

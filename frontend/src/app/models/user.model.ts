@@ -1,4 +1,5 @@
 export enum Permission {
+  CONFIGURACAO_ACCESS = 'configuracao:access',
   // Usuários
   USER_CREATE = 'user:create',
   USER_READ = 'user:read',

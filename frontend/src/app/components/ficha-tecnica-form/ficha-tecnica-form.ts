@@ -54,6 +54,7 @@ export class FichaTecnicaFormComponent implements OnInit {
    */
   private createForm(): FormGroup {
     return this.fb.group({
+      tipoDaFicha: ['', Validators.required],
       codigoFormulaCerta: ['', [Validators.required, Validators.maxLength(100)]],
       produto: ['', [Validators.required, Validators.maxLength(255)]],
       pesoMolecular: ['', Validators.maxLength(100)],
@@ -61,15 +62,18 @@ export class FichaTecnicaFormComponent implements OnInit {
       dcb: ['', Validators.maxLength(100)],
       nomeCientifico: ['', Validators.maxLength(255)],
       revisao: ['', Validators.maxLength(50)],
-      analise: ['', Validators.maxLength(500)],
       caracteristicasOrganolepticas: [''],
       solubilidade: [''],
       faixaPh: ['', Validators.maxLength(50)],
       faixaFusao: ['', Validators.maxLength(50)],
       peso: ['', Validators.maxLength(50)],
       volume: ['', Validators.maxLength(50)],
-      densidadeComCompactacao: ['', Validators.maxLength(50)],
-      avaliacaoDoLaudo: [''],
+  densidadeComCompactacao: ['', Validators.maxLength(50)],
+  determinacaoMateriaisEstranhos: ['', Validators.maxLength(200)],
+  pesquisasDeContaminacaoMicrobiologica: ['', Validators.maxLength(200)],
+  umidade: ['', Validators.maxLength(200)],
+  caracteresMicroscopicos: ['', Validators.maxLength(200)],
+  avaliacaoDoLaudo: [''],
       cinzas: ['', Validators.maxLength(50)],
       perdaPorSecagem: ['', Validators.maxLength(50)],
       infraVermelho: [''],
@@ -109,13 +113,13 @@ export class FichaTecnicaFormComponent implements OnInit {
    */
   private patchFormWithFicha(ficha: FichaTecnica) {
     this.fichaForm.patchValue({
+      tipoDaFicha: ficha.tipoDaFicha,
       produto: ficha.produto,
       pesoMolecular: ficha.pesoMolecular,
       formulaMolecular: ficha.formulaMolecular,
       dcb: ficha.dcb,
       nomeCientifico: ficha.nomeCientifico,
       revisao: ficha.revisao,
-      analise: ficha.analise,
       caracteristicasOrganolepticas: ficha.caracteristicasOrganolepticas,
       solubilidade: ficha.solubilidade,
       faixaPh: ficha.faixaPh,
@@ -237,7 +241,6 @@ export class FichaTecnicaFormComponent implements OnInit {
       dcb: 'DCB',
       nomeCientifico: 'Nome Científico',
       revisao: 'Revisão',
-      analise: 'Análise',
       caracteristicasOrganolepticas: 'Características Organolépticas',
       solubilidade: 'Solubilidade',
       faixaPh: 'Faixa de pH',

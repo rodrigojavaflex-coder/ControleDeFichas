@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { FichaTecnicaModule } from './modules/ficha-tecnica/ficha-tecnica.module';
+import { ConfiguracaoModule } from './modules/configuracao/configuracao.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 
@@ -26,7 +27,8 @@ import appConfig from './config/app.config';
     UsersModule,
     AuthModule,
     AuditModule,
-    FichaTecnicaModule,
+  FichaTecnicaModule,
+  ConfiguracaoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
