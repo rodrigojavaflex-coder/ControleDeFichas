@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { User } from '../models/user.model';
 import { Permission } from '../models/user.model';
+import { environment } from '../../environments/environment';
 
 export interface LoginRequest {
   email: string;
@@ -20,7 +21,7 @@ export interface AuthResponse {
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3000/api/auth';
+  private apiUrl = `${environment.apiUrl}/auth`;
 
   // Estado da autenticação
   private currentUserSubject = new BehaviorSubject<User | null>(null);

@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { environment } from '../../../environments/environment';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
 import { CommonModule } from '@angular/common';
@@ -183,7 +184,7 @@ export class FichaTecnicaListComponent implements OnInit {
   public generatePrintContentWithUser(ficha: FichaTecnica, opts?: { hidePrint?: boolean }): string {
     let logoHtml = '';
     if (this.configuracao?.logoRelatorio) {
-      const backendUrl = 'http://localhost:3000';
+      const backendUrl = environment.apiUrl.replace(/\/api$/, '');
       const logoUrl = this.configuracao.logoRelatorio.startsWith('/uploads')
         ? backendUrl + this.configuracao.logoRelatorio
         : this.configuracao.logoRelatorio;

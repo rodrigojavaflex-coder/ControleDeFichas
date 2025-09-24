@@ -9,11 +9,12 @@ import {
   AuditLevel 
 } from '../models/audit.model';
 
+import { environment } from '../../environments/environment';
 @Injectable({
   providedIn: 'root'
 })
 export class AuditService {
-  private readonly apiUrl = 'http://localhost:3000/api/audit';
+  private readonly apiUrl = `${environment.apiUrl}/audit`;
 
   constructor(private http: HttpClient) {}
 

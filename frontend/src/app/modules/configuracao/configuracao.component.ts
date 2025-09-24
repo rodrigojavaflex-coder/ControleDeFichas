@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
@@ -41,7 +42,7 @@ export class ConfiguracaoComponent implements OnInit {
           farmaceuticoResponsavel: config.farmaceuticoResponsavel || ''
         });
         if (config.logoRelatorio) {
-          const backendUrl = 'http://localhost:3000';
+          const backendUrl = environment.apiUrl.replace(/\/api$/, '');
           this.logoPreview = config.logoRelatorio.startsWith('http')
             ? config.logoRelatorio
             : `${backendUrl}${config.logoRelatorio}`;
@@ -90,7 +91,7 @@ export class ConfiguracaoComponent implements OnInit {
     const handleSuccess = (config: Configuracao) => {
       this.configuracao = config;
       if (config.logoRelatorio) {
-        const backendUrl = 'http://localhost:3000';
+        const backendUrl = environment.apiUrl.replace(/\/api$/, '');
         this.logoPreview = config.logoRelatorio.startsWith('http')
           ? config.logoRelatorio
           : `${backendUrl}${config.logoRelatorio}`;

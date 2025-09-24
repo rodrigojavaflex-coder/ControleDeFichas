@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -153,7 +154,7 @@ export class UserListComponent implements OnInit {
           <div id="print-content"></div>
           <script>
             // Carregar dados do usuário
-            fetch('http://localhost:3000/api/users/${user.id}/print', {
+            fetch(environment.apiUrl + '/users/' + user.id + '/print', {
               headers: {
                 'Authorization': 'Bearer ' + localStorage.getItem('access_token')
               }

@@ -8,12 +8,13 @@ import {
   FindFichaTecnicaDto,
   FichaTecnicaPaginatedResponse
 } from '../models/ficha-tecnica.model';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FichaTecnicaService {
-  private readonly apiUrl = 'http://localhost:3000/api/fichas-tecnicas';
+  private readonly apiUrl = `${environment.apiUrl}/fichas-tecnicas`;
 
   constructor(private http: HttpClient) {}
 
