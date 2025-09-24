@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { Request, Response } from 'express';
 
 async function bootstrap() {
 
@@ -13,6 +14,17 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useStaticAssets(join(__dirname, '..', '..', 'frontend', 'dist'));
   app.setBaseViewsDir(join(__dirname, '..', '..', 'frontend', 'dist'));
+
+  // Redireciona todas as rotas não-API para o index.html do Angular
+  const angularDistPath = join(__dirname, '..', '..', 'frontend', 'dist');
+  app.getHttpAdapter().get('*', (req: Request, res: Response) => {
+    // Não sobrescreve rotas da API
+    if (req.originalUrl.startsWith('/api')) {
+      res.status(404).json({ statusCode: 404, message: 'Not Found' });
+    } else {
+      res.sendFile(join(angularDistPath, 'index.html'));
+    }
+  });
 
 
  // const app = await NestFactory.create<NestExpressApplication>(AppModule);
