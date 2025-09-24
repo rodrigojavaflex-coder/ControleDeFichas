@@ -12,17 +12,22 @@ async function bootstrap() {
 
 //configurações pra gerar versão de produção do front-end
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.useStaticAssets(join(__dirname, '..', '..', 'frontend', 'dist'));
-  app.setBaseViewsDir(join(__dirname, '..', '..', 'frontend', 'dist'));
-
-  // Redireciona todas as rotas não-API para o index.html do Angular
   const angularDistPath = join(__dirname, '..', '..', 'frontend', 'dist');
-  app.getHttpAdapter().get('*', (req: Request, res: Response) => {
-    // Não sobrescreve rotas da API
-    if (req.originalUrl.startsWith('/api')) {
-      res.status(404).json({ statusCode: 404, message: 'Not Found' });
-    } else {
+  app.useStaticAssets(angularDistPath);
+  app.setBaseViewsDir(angularDistPath);
+
+  // Middleware para servir index.html do Angular em rotas não-API
+  app.use((req: Request, res: Response, next) => {
+    if (
+      req.method === 'GET' &&
+      !req.path.startsWith('/api') &&
+      !req.path.startsWith('/uploads') &&
+      !req.path.startsWith('/swagger') &&
+      !req.path.startsWith('/docs')
+    ) {
       res.sendFile(join(angularDistPath, 'index.html'));
+    } else {
+      next();
     }
   });
 
