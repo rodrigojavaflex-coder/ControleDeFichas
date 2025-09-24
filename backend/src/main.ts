@@ -21,7 +21,9 @@ async function bootstrap() {
 
   //configurações pra gerar versão de produção do front-end
   // Usar process.cwd() para garantir compatibilidade com Render
-  const angularDistPath = join(process.cwd(), 'frontend', 'dist', 'frontend');
+  // Corrigir para apontar para a subpasta 'browser', onde está o index.html
+  // Corrigir caminho para subir um nível na estrutura
+  const angularDistPath = join(process.cwd(), '..', 'frontend', 'dist', 'frontend', 'browser');
   app.useStaticAssets(angularDistPath);
   app.setBaseViewsDir(angularDistPath);
 
