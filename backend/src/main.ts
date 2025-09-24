@@ -12,7 +12,7 @@ async function bootstrap() {
 
 //configurações pra gerar versão de produção do front-end
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  const angularDistPath = join(__dirname, '..', '..', 'frontend', 'dist');
+  const angularDistPath = join(__dirname, '..', '..', 'frontend', 'dist', 'frontend');
   app.useStaticAssets(angularDistPath);
   app.setBaseViewsDir(angularDistPath);
 
