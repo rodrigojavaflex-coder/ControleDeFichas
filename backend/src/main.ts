@@ -18,20 +18,8 @@ async function bootstrap() {
       next();
     }
   });
-import { NestFactory } from '@nestjs/core';
-import { join } from 'path';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
-import { Request, Response } from 'express';
 
-async function bootstrap() {
-
-//configurações pra gerar versão de produção do front-end
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  //configurações pra gerar versão de produção do front-end
   const angularDistPath = join(__dirname, '..', '..', 'frontend', 'dist', 'frontend');
   app.useStaticAssets(angularDistPath);
   app.setBaseViewsDir(angularDistPath);
@@ -51,8 +39,6 @@ async function bootstrap() {
     }
   });
 
-
- // const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // Servir arquivos estáticos da pasta uploads
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
@@ -98,4 +84,5 @@ async function bootstrap() {
   console.log(`🚀 Aplicação rodando na porta ${port}`);
   console.log(`📚 Documentação Swagger disponível em: http://localhost:${port}/api/docs`);
 }
+
 bootstrap();
