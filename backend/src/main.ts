@@ -9,6 +9,26 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { Request, Response } from 'express';
 
 async function bootstrap() {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // Middleware para HEAD /
+  app.use((req: Request, res: Response, next) => {
+    if (req.method === 'HEAD' && req.path === '/') {
+      res.status(200).end();
+    } else {
+      next();
+    }
+  });
+import { NestFactory } from '@nestjs/core';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { Request, Response } from 'express';
+
+async function bootstrap() {
 
 //configurações pra gerar versão de produção do front-end
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
