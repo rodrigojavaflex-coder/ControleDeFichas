@@ -8,7 +8,14 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
+
+//configurações pra gerar versão de produção do front-end
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useStaticAssets(join(__dirname, '..', '..', 'frontend', 'dist'));
+  app.setBaseViewsDir(join(__dirname, '..', '..', 'frontend', 'dist'));
+
+
+ // const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // Servir arquivos estáticos da pasta uploads
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
@@ -49,9 +56,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = configService.get('app.port');
-  await app.listen(port);
-  
+  const port = process.env.PORT || configService.get('app.port') || 10000;
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Aplicação rodando na porta ${port}`);
   console.log(`📚 Documentação Swagger disponível em: http://localhost:${port}/api/docs`);
 }
