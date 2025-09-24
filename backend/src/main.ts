@@ -20,7 +20,8 @@ async function bootstrap() {
   });
 
   //configurações pra gerar versão de produção do front-end
-  const angularDistPath = join(__dirname, '..', '..', 'frontend', 'dist', 'frontend');
+  // Usar process.cwd() para garantir compatibilidade com Render
+  const angularDistPath = join(process.cwd(), 'frontend', 'dist', 'frontend');
   app.useStaticAssets(angularDistPath);
   app.setBaseViewsDir(angularDistPath);
 
