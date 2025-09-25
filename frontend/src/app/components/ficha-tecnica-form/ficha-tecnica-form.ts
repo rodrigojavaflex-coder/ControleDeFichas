@@ -40,10 +40,13 @@ export class FichaTecnicaFormComponent implements OnInit {
   }
 
   ngOnInit() {
+    //console.log('PASSO 1: Componente do formulário iniciado (ngOnInit)');
     this.route.params.subscribe(params => {
+      //console.log('PASSO 2: Parâmetros da rota recebidos:', params);
       if (params['id']) {
         this.isEditMode = true;
         this.fichaId = params['id'];
+        //console.log('PASSO 3: Modo de edição. ID da ficha:', this.fichaId);
         this.loadFichaTecnica();
       }
     });
@@ -93,16 +96,18 @@ export class FichaTecnicaFormComponent implements OnInit {
   private loadFichaTecnica() {
     if (!this.fichaId) return;
 
+     //console.log('PASSO 4: Carregando dados da ficha...');
     this.loading = true;
     this.fichaTecnicaService.findOne(this.fichaId).subscribe({
       next: (ficha) => {
+        //console.log('PASSO 5: SUCESSO! Dados recebidos da API:', ficha);
         this.currentFicha = ficha;
         this.patchFormWithFicha(ficha);
         this.loading = false;
       },
-      error: (error) => {
-        console.error('Erro ao carregar ficha técnica:', error);
-        this.error = 'Erro ao carregar ficha técnica. Tente novamente.';
+      error: (err) => {
+        console.error('ERRO: Falha ao buscar dados da ficha!', err);
+        this.error = 'Falha ao carregar a ficha técnica. Verifique o console para mais detalhes.';
         this.loading = false;
       }
     });
@@ -114,6 +119,7 @@ export class FichaTecnicaFormComponent implements OnInit {
   private patchFormWithFicha(ficha: FichaTecnica) {
     this.fichaForm.patchValue({
       tipoDaFicha: ficha.tipoDaFicha,
+      codigoFormulaCerta: ficha.codigoFormulaCerta, // Adicionado para garantir que o campo seja preenchido
       produto: ficha.produto,
       pesoMolecular: ficha.pesoMolecular,
       formulaMolecular: ficha.formulaMolecular,
