@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://controledefichas.onrender.com/api'
+  apiUrl: 'https://controledefichas-backend.onrender.com/api'
+    
 };
