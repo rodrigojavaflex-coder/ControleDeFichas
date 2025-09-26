@@ -29,8 +29,6 @@ export class NavigationComponent implements OnInit, OnDestroy {
   visibleMenuItems: MenuItem[] = [];
 
   // Estados do menu através do serviço
-  get isExpanded() { return this.navigationService.isExpanded; }
-  get isPinned() { return this.navigationService.isPinned; }
   get isMobileOpen() { return this.navigationService.isMobileOpen; }
 
   // Definir todos os itens de menu disponíveis
@@ -84,42 +82,10 @@ export class NavigationComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Alterna entre expandido/colapsado
-   */
-  toggleExpanded() {
-    this.navigationService.toggleExpanded();
-  }
-
-  /**
-   * Alterna entre fixado/não fixado
-   */
-  togglePinned() {
-    this.navigationService.togglePinned();
-  }
-
-  /**
-   * Controle de hover para menu não fixado
-   */
-  onMouseEnter() {
-    if (!this.isPinned) {
-      this.navigationService.setExpanded(true);
-    }
-  }
-
-  /**
-   * Controle de hover para menu não fixado
-   */
-  onMouseLeave() {
-    if (!this.isPinned) {
-      this.navigationService.setExpanded(false);
-    }
-  }
-
-  /**
-   * Verifica se o menu deve estar visível (expandido)
+   * Verifica se o menu deve estar visível (sempre true agora)
    */
   get shouldShowExpanded(): boolean {
-    return this.isPinned ? this.isExpanded : this.isExpanded;
+    return true; // Menu sempre expandido quando visível
   }
 
   /**

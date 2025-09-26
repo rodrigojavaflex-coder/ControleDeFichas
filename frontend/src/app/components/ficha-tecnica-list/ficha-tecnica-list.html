@@ -38,7 +38,7 @@
             [(ngModel)]="searchFilters.produto"
             placeholder="Buscar por produto..."
             class="form-input"
-            (keyup.enter)="applyFilters()"
+            (input)="onProductSearch()"
           />
         </div>
 
@@ -64,6 +64,7 @@
             (change)="applyFilters()"
           />
         </div>
+
         <div class="filter-group">
           <label for="dataFinalAnalise">Data Análise Fim</label>
           <input
@@ -74,15 +75,18 @@
             (change)="applyFilters()"
           />
         </div>
-      </div>
 
-      <div class="filters-actions">
-        <button type="button" class="btn btn-primary" (click)="applyFilters()" [disabled]="loading()">
-          Pesquisar
-        </button>
-        <button type="button" class="btn btn-secondary" (click)="clearFilters()" [disabled]="loading()">
-          Limpar
-        </button>
+        <div class="filter-group filter-actions">
+          <label>&nbsp;</label>
+          <div class="buttons-container">
+            <button type="button" class="btn btn-primary" (click)="applyFilters()" [disabled]="loading()">
+              Pesquisar
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="clearFilters()" [disabled]="loading()">
+              Limpar
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -137,7 +141,6 @@
                 <th>Código</th>
                 <th>Tipo da Ficha</th>
                 <th>Produto</th>
-                <th>DCB</th>
                 <th>Nome Científico</th>
                 <th>Revisão</th>
                 <th>Data de Análise</th>
@@ -157,7 +160,6 @@
                       }
                     </div>
                   </td>
-                  <td>{{ ficha.dcb || '-' }}</td>
                   <td>{{ ficha.nomeCientifico || '-' }}</td>
                   <td>{{ ficha.revisao || '-' }}</td>
                   <td>{{ formatDate(ficha.dataDeAnalise) }}</td>

@@ -1,45 +1,7 @@
 <nav 
   class="sidebar" 
   *ngIf="currentUser"
-  [class.collapsed]="!shouldShowExpanded"
-  [class.pinned]="isPinned"
-  [class.floating]="!isPinned"
-  (mouseenter)="onMouseEnter()"
-  (mouseleave)="onMouseLeave()"
 >
-  <!-- Controles -->
-  <div class="sidebar-controls">
-    <button 
-      class="control-btn toggle-btn"
-      (click)="toggleExpanded()"
-      [attr.aria-label]="shouldShowExpanded ? 'Colapsar menu' : 'Expandir menu'"
-    >
-      <i class="icon">{{ shouldShowExpanded ? '‹' : '›' }}</i>
-    </button>
-
-    <button 
-      class="control-btn pin-btn"
-      (click)="togglePinned()"
-      [class.active]="isPinned"
-      [attr.aria-label]="isPinned ? 'Desafixar menu' : 'Fixar menu'"
-    >
-      <i class="icon">{{ isPinned ? '📍' : '📌' }}</i>
-    </button>
-  </div>
-
-  <!-- Header do usuário -->
-  <div class="sidebar-header">
-    <div class="user-profile">
-      <div class="user-avatar">
-        {{ currentUser.name.charAt(0).toUpperCase() }}
-      </div>
-      <div class="user-info" *ngIf="shouldShowExpanded">
-        <span class="user-name">{{ currentUser.name }}</span>
-        <span class="user-role">Usuário</span>
-      </div>
-    </div>
-  </div>
-
   <!-- Menu principal -->
   <div class="sidebar-content">
     <nav class="main-nav">

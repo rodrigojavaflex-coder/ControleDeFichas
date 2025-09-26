@@ -9,16 +9,16 @@
 }
 /* Estilos do componente de listagem de fichas técnicas */
 .ficha-tecnica-list-container {
-  padding: 1rem;
-  max-width: 1200px;
+  padding: 0.5rem;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
 /* Header */
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 1rem;
+  padding-bottom: 0.5rem;
 }
 
 .header-content {
@@ -32,22 +32,34 @@
 .header-content h1 {
   margin: 0;
   color: #333;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
 }
 
 /* Filtros */
 .filters-section {
   background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
 .filters-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
-  margin-bottom: 1rem;
+  align-items: end;
+}
+
+@media (min-width: 1200px) {
+  .filters-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .filter-group {
@@ -81,6 +93,24 @@
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.filter-actions {
+  justify-content: flex-end;
+  align-self: end;
+}
+
+.filter-actions label {
+  visibility: hidden;
+  height: 0;
+  margin: 0;
+}
+
+.buttons-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: auto;
 }
 
 .filters-actions {
@@ -154,7 +184,7 @@
 /* Estados */
 .loading-state, .error-state, .empty-state {
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 1.5rem 1rem;
 }
 
 .spinner {
@@ -193,13 +223,14 @@
 /* Resultados */
 .results-section {
   background: white;
-  border-radius: 8px;
+  border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   overflow: hidden;
+  margin-top: 0.5rem;
 }
 
 .results-header {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
   background: #f8f9fa;
   border-bottom: 1px solid #e0e0e0;
 }
@@ -222,9 +253,10 @@
 
 .data-table th,
 .data-table td {
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.75rem;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
+  font-size: 0.875rem;
 }
 
 .data-table th {

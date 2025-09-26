@@ -20,10 +20,16 @@
           required
         >
         <label for="email" class="form-label">Email</label>
-        <div class="error-message" *ngIf="email?.invalid && email?.touched">
-          <span *ngIf="email?.errors?.['required']">Email é obrigatório</span>
-          <span *ngIf="email?.errors?.['email']">Email inválido</span>
-        </div>
+        @if (email?.invalid && email?.touched) {
+          <div class="error-message">
+            @if (email?.errors?.['required']) {
+              <span>Email é obrigatório</span>
+            }
+            @if (email?.errors?.['email']) {
+              <span>Email inválido</span>
+            }
+          </div>
+        }
       </div>
 
       <!-- Campo Senha -->
@@ -38,15 +44,21 @@
           required
         >
         <label for="password" class="form-label">Senha</label>
-        <div class="error-message" *ngIf="password?.invalid && password?.touched">
-          <span *ngIf="password?.errors?.['required']">Senha é obrigatória</span>
-        </div>
+        @if (password?.invalid && password?.touched) {
+          <div class="error-message">
+            @if (password?.errors?.['required']) {
+              <span>Senha é obrigatória</span>
+            }
+          </div>
+        }
       </div>
 
       <!-- Mensagem de Erro Geral -->
-      <div class="alert-error" *ngIf="errorMessage">
-        {{ errorMessage }}
-      </div>
+      @if (errorMessage) {
+        <div class="alert-error">
+          {{ errorMessage }}
+        </div>
+      }
 
       <!-- Botão de Login -->
       <button 
@@ -54,11 +66,15 @@
         class="login-button"
         [disabled]="loginForm.invalid || isLoading"
       >
-        <span class="button-text" *ngIf="!isLoading">Entrar</span>
-        <span class="button-text" *ngIf="isLoading">
-          <i class="loading-spinner"></i>
-          Entrando...
-        </span>
+        @if (!isLoading) {
+          <span class="button-text">Entrar</span>
+        }
+        @if (isLoading) {
+          <span class="button-text">
+            <i class="loading-spinner"></i>
+            Entrando...
+          </span>
+        }
       </button>
 
     </form>

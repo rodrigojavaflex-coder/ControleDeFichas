@@ -1,8 +1,16 @@
 <div class="layout-container" *ngIf="isAuthenticated">
-  <app-navigation class="layout-sidebar"></app-navigation>
-  <main class="layout-content">
-    <router-outlet></router-outlet>
-  </main>
+  <app-header></app-header>
+  <div class="main-content-wrapper">
+    <app-navigation 
+      class="layout-sidebar"
+      [class.is-open]="isMenuOpen"
+      [class.is-collapsed]="!isMenuOpen">
+    </app-navigation>
+    <main class="layout-content" [class.menu-collapsed]="!isMenuOpen">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+  <div class="mobile-overlay" [class.active]="isMenuOpen" (click)="closeMenu()"></div>
 </div>
 
 <div class="login-container" *ngIf="!isAuthenticated">

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { User } from '../models/user.model';
 import { Permission } from '../models/user.model';
@@ -21,6 +22,7 @@ export interface AuthResponse {
 })
 export class AuthService {
   private http = inject(HttpClient);
+  private router = inject(Router);
   private apiUrl = `${environment.apiUrl}/auth`;
 
   // Estado da autenticação
@@ -67,6 +69,9 @@ export class AuthService {
 
     // Limpar dados locais
     this.clearAuthData();
+    
+    // Redirecionar para login
+    this.router.navigate(['/login']);
   }
 
   /**

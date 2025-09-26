@@ -1,0 +1,212 @@
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  height: 64px;
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  border-bottom: 1px solid #e0e0e0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  margin-right: 16px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background-color: #f8f9fa;
+}
+
+.menu-toggle:hover {
+  background-color: #e9ecef;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transform: translateY(-0.5px);
+}
+
+.menu-toggle:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.menu-toggle span {
+  font-size: 18px;
+  color: #495057;
+  font-weight: 500;
+}
+
+.app-title {
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+}
+
+.user-name {
+  margin-right: 12px;
+  font-weight: 500;
+  color: #495057;
+  font-size: 14px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #673ab7, #512da8);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 500;
+  margin-right: 12px;
+  box-shadow: 0 1px 4px rgba(103, 58, 183, 0.25);
+  transition: all 0.2s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.user-avatar:hover {
+  transform: scale(1.03);
+  box-shadow: 0 2px 6px rgba(103, 58, 183, 0.3);
+}
+
+.user-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgba(33, 37, 41, 0.7);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 10px 12px;
+  min-width: 180px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s ease;
+  z-index: 1100;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+}
+
+.user-avatar:hover .user-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.tooltip-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 6px;
+}
+
+.tooltip-item {
+  text-align: center;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.tooltip-item:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-value {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 400;
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Seta do tooltip */
+.user-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  background: rgba(33, 37, 41, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  border-right: none;
+  transform: rotate(45deg);
+}
+
+.logout-button {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: #6c757d;
+  font-weight: 500;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.logout-button:hover {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  border-color: #dc3545;
+  color: white;
+  box-shadow: 0 3px 8px rgba(220, 53, 69, 0.3);
+  transform: translateY(-1px);
+}
+
+.logout-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.logout-button span {
+  font-size: 12px;
+}
+
+/* Fallback se os ícones Feather não carregarem */
+.feather-log-out::before {
+  content: "🚪";
+  font-size: 18px;
+}
+
+.feather-menu::before {
+  content: "☰";
+  font-size: 20px;
+}

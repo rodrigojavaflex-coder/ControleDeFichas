@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, OnDestroy } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
@@ -14,6 +14,7 @@ import {
   FichaTecnicaPaginatedResponse
 } from '../../models/ficha-tecnica.model';
 import { Permission } from '../../models/user.model';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-ficha-tecnica-list',
@@ -27,13 +28,17 @@ import { Permission } from '../../models/user.model';
   templateUrl: './ficha-tecnica-list.html',
   styleUrl: './ficha-tecnica-list.css'
 })
-export class FichaTecnicaListComponent implements OnInit {
+export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   private fichaTecnicaService = inject(FichaTecnicaService);
   public authService = inject(AuthService);
   private router = inject(Router);
 
   // Exportar Permission para uso no template
   Permission = Permission;
+
+  // Subject para debounce da pesquisa
+  private searchSubject = new Subject<string>();
+  private destroy$ = new Subject<void>();
 
   // Signals para estado reativo
   fichasTecnicas = signal<FichaTecnica[]>([]);
@@ -61,6 +66,18 @@ export class FichaTecnicaListComponent implements OnInit {
 
   ngOnInit() {
     this.loadFichasTecnicas();
+    
+    // Configurar debounce para pesquisa por produto
+    this.searchSubject
+      .pipe(
+        debounceTime(500), // Aguarda 500ms após parar de digitar
+        distinctUntilChanged(), // Só executa se o valor mudou
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+      });
+    
     // Buscar configuração para o logo do relatório
     this.configuracaoService.getConfiguracao().subscribe({
       next: (config) => {
@@ -70,6 +87,11 @@ export class FichaTecnicaListComponent implements OnInit {
         this.configuracao = null;
       }
     });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /**
@@ -102,6 +124,13 @@ export class FichaTecnicaListComponent implements OnInit {
     this.searchFilters.page = 1;
     this.currentPage = 1;
     this.loadFichasTecnicas();
+  }
+
+  /**
+   * Pesquisa por produto com debounce
+   */
+  onProductSearch() {
+    this.searchSubject.next(this.searchFilters.produto || '');
   }
 
   /**

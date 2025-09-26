@@ -14,11 +14,11 @@
 /* Card de login - Design limpo */
 .login-card {
   background: white;
-  padding: 1.5rem;
+  padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   width: 100%;
-  max-width: 800px;
+  max-width: 1200px;
   max-height: 90vh;
   border: 1px solid #e2e8f0;
   overflow-y: auto;
@@ -50,24 +50,44 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 /* Grupos de input com labels flutuantes */
 .input-group {
   position: relative;
+  width: 100%;
 }
 
-.form-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
+.input-group .form-input {
+  width: 100% !important;
+  padding: 0.8rem 1.2rem !important;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1.1rem !important;
   transition: all 0.2s ease-in-out;
   background: #ffffff;
   color: #1a202c;
   box-sizing: border-box;
+  min-height: 45px !important;
+  height: auto !important;
+}
+
+.form-input {
+  width: 100% !important;
+  padding: 0.8rem 1.2rem !important;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1.1rem !important;
+  transition: all 0.2s ease-in-out;
+  background: #ffffff;
+  color: #1a202c;
+  box-sizing: border-box;
+  min-height: 45px !important;
+  height: auto !important;
 }
 
 .form-input:focus {
@@ -114,21 +134,22 @@
 
 /* Botão de login */
 .login-button {
-  width: 100%;
-  padding: 0.75rem;
+  width: 100% !important;
+  padding: 0.8rem !important;
   background: #3b82f6;
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 1.1rem !important;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
-  min-height: 2.5rem;
+  min-height: 45px !important;
+  height: auto !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 0.5rem;
+  margin-top: 1rem;
 }
 
 .login-button:hover:not(:disabled) {
@@ -271,5 +292,34 @@
   
   .form-input::placeholder {
     color: #94a3b8;
+  }
+}
+
+/* Media queries para largura dos campos */
+@media (min-width: 768px) {
+  .login-form {
+    max-width: 900px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .login-form {
+    max-width: 1100px;
+  }
+  
+  .login-card {
+    max-width: 1400px;
+    padding: 3rem 4rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .login-form {
+    max-width: 1200px;
+  }
+  
+  .login-card {
+    max-width: 1600px;
+    padding: 4rem 5rem;
   }
 }

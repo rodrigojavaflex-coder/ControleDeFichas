@@ -1,33 +1,42 @@
 .layout-container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
-  overflow: visible;
+  background-color: #f8fafc;
+}
+
+.main-content-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  padding-top: 64px; /* Altura do header */
   position: relative;
 }
 
 .layout-sidebar {
-  flex-shrink: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-  position: relative;
-  overflow: visible;
+  width: 256px;
+  background-color: #fff;
+  border-right: 1px solid #e0e0e0;
+  position: fixed;
+  top: 64px;
+  bottom: 0;
+  left: 0;
+  transition: transform 0.3s ease-in-out;
+  z-index: 998;
+  transform: translateX(0);
 }
 
 .layout-content {
   flex: 1;
   overflow-y: auto;
-  background: #f8fafc;
   padding: 2rem;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-  margin-left: 0;
+  transition: margin-left 0.3s ease-in-out;
+  margin-left: 256px; /* Espaço para o menu por padrão */
 }
 
-.layout-content.with-collapsed-sidebar {
-  margin-left: 0;
-}
-
-.layout-content.with-floating-sidebar {
-  margin-left: 0;
-  width: 100%;
+/* Estado quando menu está colapsado - aplicado globalmente primeiro */
+.layout-content.menu-collapsed {
+  margin-left: 0 !important;
 }
 
 .login-container {
@@ -39,15 +48,14 @@
   justify-content: center;
 }
 
-/* Mobile overlay para menu flutuante */
 .mobile-overlay {
   position: fixed;
-  top: 0;
+  top: 64px;
   left: 0;
   width: 100vw;
-  height: 100vh;
+  height: calc(100vh - 64px);
   background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  z-index: 997;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -58,60 +66,42 @@
   pointer-events: all;
 }
 
-/* Botão de menu mobile */
-.mobile-menu-btn {
-  display: none;
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 1200;
-  width: 50px;
-  height: 50px;
-  background: #3b82f6;
-  border: none;
-  border-radius: 50%;
-  color: white;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+/* --- Responsividade --- */
+
+/* Desktop */
+@media (min-width: 769px) {
+  .layout-sidebar.is-collapsed {
+    transform: translateX(-256px); /* Move o menu para fora da tela */
+  }
+  
+  /* Quando o menu está colapsado, o conteúdo não precisa de margem */
+  .layout-content.menu-collapsed {
+    margin-left: 0 !important; /* Força a remoção da margem */
+  }
+  
+  .mobile-overlay {
+    display: none;
+  }
 }
 
-.mobile-menu-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-}
-
-.mobile-menu-icon {
-  font-size: 1.5rem;
-}
-
-/* Responsivo */
+/* Mobile */
 @media (max-width: 768px) {
-  .layout-content {
-    padding: 1rem;
-    margin-left: 0 !important;
-  }
-
   .layout-sidebar {
-    position: absolute !important;
+    position: fixed;
+    left: 0;
+    top: 64px;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 1001;
   }
 
-  .mobile-menu-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .layout-sidebar.is-open {
+    transform: translateX(0);
   }
-}
-
-@media (max-width: 480px) {
+  
   .layout-content {
-    padding: 0.5rem;
-  }
-
-  .mobile-menu-btn {
-    width: 45px;
-    height: 45px;
-    top: 0.5rem;
-    left: 0.5rem;
+    margin-left: 0; /* Em mobile, sem margem */
+    padding: 1rem;
   }
 }
