@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, EventEmitter } from '@angular/core';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { UserService } from './user.service';
 
@@ -15,6 +15,9 @@ export class ThemeService {
   private userService = inject(UserService);
   
   currentTheme$ = this.themeSubject.asObservable();
+  
+  // EventEmitter para notificar mudança de tema
+  themeChanged = new EventEmitter<{theme: Theme, message: string}>();
   
   constructor() {
     // Não inicializar tema automaticamente - será iniciado após login
@@ -49,7 +52,7 @@ export class ThemeService {
     this.setTheme(theme, false);
     this.isInitialized = true;
     
-    console.log(`🎨 Tema inicializado: ${userTema || 'padrão'} → ${theme}`);
+    //console.log(`🎨 Tema inicializado: ${userTema || 'padrão'} → ${theme}`);
   }
 
   private convertTemaToTheme(tema?: string): Theme | null {
@@ -83,7 +86,9 @@ export class ThemeService {
     this.updateBodyClass(theme);
     
     if (this.isInitialized) {
-      this.showThemeChangeNotification(theme);
+      // Emitir evento para mostrar notificação via componente
+      const message = `Tema ${theme === 'dark' ? 'Escuro' : 'Claro'} ativado`;
+      this.themeChanged.emit({ theme, message });
       
       // Salvar tema no servidor se usuário estiver logado
       if (saveToServer && this.currentUserId) {
@@ -103,7 +108,7 @@ export class ThemeService {
       
       // Usar firstValueFrom ao invés de toPromise (deprecated)
       await firstValueFrom(this.userService.updateTema(this.currentUserId, tema));
-      console.log('✅ Tema salvo no servidor:', tema);
+      //console.log('✅ Tema salvo no servidor:', tema);
       
       // CORREÇÃO: Atualizar o usuário no localStorage com o novo tema
       this.updateUserThemeInLocalStorage(tema);
@@ -129,7 +134,7 @@ export class ThemeService {
         const user = JSON.parse(userStr);
         user.tema = tema;
         localStorage.setItem('user', JSON.stringify(user));
-        console.log('📱 localStorage atualizado com tema:', tema);
+        //console.log('📱 localStorage atualizado com tema:', tema);
         
         // Também atualizar o current user do AuthService se disponível
         this.updateAuthServiceCurrentUser(tema);
@@ -184,51 +189,5 @@ export class ThemeService {
     const body = document.body;
     body.classList.remove('theme-light', 'theme-dark');
     body.classList.add(`theme-${theme}`);
-  }
-  
-  private showThemeChangeNotification(theme: Theme): void {
-    // Criar notificação sutil para feedback visual
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${theme === 'dark' ? '#2d3748' : '#ffffff'};
-      color: ${theme === 'dark' ? '#f7fafc' : '#1a202c'};
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 10000;
-      opacity: 0;
-      transform: translateX(100px);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid ${theme === 'dark' ? '#4a5568' : '#e2e8f0'};
-    `;
-    
-    notification.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 16px;">${theme === 'dark' ? '🌙' : '☀️'}</span>
-        <span>Tema ${theme === 'dark' ? 'escuro' : 'claro'} ativado</span>
-      </div>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Animar entrada
-    setTimeout(() => {
-      notification.style.opacity = '1';
-      notification.style.transform = 'translateX(0)';
-    }, 10);
-    
-    // Remover após 2 segundos
-    setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transform = 'translateX(100px)';
-      setTimeout(() => {
-        document.body.removeChild(notification);
-      }, 300);
-    }, 2000);
   }
 }

@@ -11,6 +11,7 @@ import {
   HttpStatus,
   UseGuards,
   UseInterceptors,
+  ConflictException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -18,6 +19,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FindUsersDto } from './dto/find-users.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { User } from './entities/user.entity';
 import { PERMISSION_GROUPS, Permission } from '../../common/enums/permission.enum';
 import { AuditAction } from '../../common/enums/audit.enum';
@@ -188,5 +190,40 @@ export class UsersController {
   })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.remove(id);
+  }
+
+  @Post(':id/change-password')
+  @UseGuards(AuthGuard('jwt'))
+  @AuditLog(AuditAction.USER_UPDATE, 'User')
+  @ApiOperation({ summary: 'Alterar senha do usuário' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Senha alterada com sucesso'
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Dados inválidos ou senhas não conferem'
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Usuário não encontrado'
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Senha atual incorreta'
+  })
+  async changePassword(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() changePasswordDto: ChangePasswordDto
+  ): Promise<void> {
+    if (changePasswordDto.newPassword !== changePasswordDto.confirmPassword) {
+      throw new ConflictException('As senhas não conferem');
+    }
+    
+    return this.usersService.changePassword(
+      id,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword
+    );
   }
 }

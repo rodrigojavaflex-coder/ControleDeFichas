@@ -8,6 +8,7 @@ import { FichaTecnicaFormComponent } from './components/ficha-tecnica-form/ficha
 import { authGuard } from './guards/auth.guard';
 import { ConfiguracaoComponent } from './modules/configuracao/configuracao.component';
 import { HomeComponent } from './components/home/home';
+import { ChangePasswordComponent } from './components/change-password/change-password';
 
 export const routes: Routes = [
   // Rota de configuração
@@ -36,6 +37,11 @@ export const routes: Routes = [
   {
     path: 'users/edit/:id',
     component: UserFormComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'users/:id/change-password',
+    component: ChangePasswordComponent,
     canActivate: [authGuard]
   },
   {

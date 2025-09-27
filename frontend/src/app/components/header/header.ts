@@ -1,22 +1,25 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService, NavigationService, ThemeService } from '../../services/index';
 import { User } from '../../models/user.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+import { ChangePasswordModalComponent } from '../change-password-modal/change-password-modal';
+import { ToastNotificationComponent } from '../toast-notification/toast-notification';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, ConfirmationModalComponent],
+  imports: [CommonModule, RouterModule, ConfirmationModalComponent, ChangePasswordModalComponent, ToastNotificationComponent],
   templateUrl: './header.html',
-  styleUrls: ['./header.css']
+  styleUrls: ['./header.css', './dropdown-item.css']
 })
 export class HeaderComponent {
   private authService = inject(AuthService);
   private navigationService = inject(NavigationService);
   private themeService = inject(ThemeService);
+  private router = inject(Router);
   private destroy$ = new Subject<void>();
   
   currentUser$ = this.authService.currentUser$;
@@ -28,8 +31,19 @@ export class HeaderComponent {
   // Propriedade para controlar o dropdown do avatar
   showUserDropdown = false;
 
+  // Propriedade para controlar o modal de alteração de senha
+  showChangePasswordModal = false;
+
+  // Propriedades para notificações
+  showToast = false;
+  toastMessage = '';
+  toastType: 'success' | 'error' | 'info' = 'info';
+
   ngOnInit() {
-    // Observar mudanças nos estados do menu se necessário
+    // Observar mudanças de tema para mostrar notificação
+    this.themeService.themeChanged.subscribe(({ message }) => {
+      this.showToastMessage(message, 'info');
+    });
   }
 
   ngOnDestroy() {
@@ -65,9 +79,45 @@ export class HeaderComponent {
   
   setTheme(theme: 'light' | 'dark') {
     this.themeService.setTheme(theme);
-    this.closeUserDropdown();
+    // Fechar o dropdown após alterar o tema
+    this.showUserDropdown = false;
   }
-  
+
+  changePassword() {
+    // Fechar o dropdown antes de abrir o modal
+    this.showUserDropdown = false;
+    this.showChangePasswordModal = true;
+  }
+
+  onChangePasswordClosed() {
+    this.showChangePasswordModal = false;
+  }
+
+  onPasswordChanged() {
+    this.showChangePasswordModal = false;
+  }
+
+  onSuccessMessage(message: string) {
+    this.toastMessage = message;
+    this.toastType = 'success';
+    this.showToast = true;
+  }
+
+  onErrorMessage(message: string) {
+    this.toastMessage = message;
+    this.toastType = 'error';
+    this.showToast = true;
+  }
+
+  showToastMessage(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
+  }
+
+  onToastClosed() {
+    this.showToast = false;
+  }
   toggleTheme() {
     this.themeService.toggleTheme();
   }

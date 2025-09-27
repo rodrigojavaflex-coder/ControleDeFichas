@@ -24,9 +24,15 @@
               <div class="user-email">{{ user.email }}</div>
             </div>
           </div>
-          
           <div class="dropdown-divider"></div>
-          
+          <!-- Alterar Senha -->
+          <div class="dropdown-section">
+            <button class="dropdown-item" (click)="changePassword()">
+              <i class="fas fa-key"></i>
+              Alterar Senha
+            </button>
+          </div>
+          <div class="dropdown-divider"></div>
           <!-- Seleção de Tema -->
           <div class="dropdown-section">
             <span class="dropdown-section-title">Tema do Sistema</span>
@@ -77,5 +83,23 @@
   confirmText="Sair"
   cancelText="Cancelar"
   (confirmed)="confirmLogout()"
-  (cancelled)="cancelLogout()">
-</app-confirmation-modal>
+  (cancelled)="cancelLogout()"
+></app-confirmation-modal>
+
+<!-- Modal de alteração de senha -->
+<app-change-password-modal
+  [isVisible]="showChangePasswordModal"
+  [userId]="(currentUser$ | async)?.id || ''"
+  (closed)="onChangePasswordClosed()"
+  (passwordChanged)="onPasswordChanged()"
+  (successMessage)="onSuccessMessage($event)"
+  (errorMessage)="onErrorMessage($event)"
+></app-change-password-modal>
+
+<!-- Notificações Toast -->
+<app-toast-notification
+  [isVisible]="showToast"
+  [message]="toastMessage"
+  [type]="toastType"
+  (closed)="onToastClosed()"
+></app-toast-notification>

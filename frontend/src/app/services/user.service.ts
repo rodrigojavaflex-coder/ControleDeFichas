@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { User, CreateUserDto, UpdateUserDto, FindUsersDto, PaginatedResponse, PermissionGroup } from '../models/user.model';
+import { User, CreateUserDto, UpdateUserDto, FindUsersDto, PaginatedResponse, PermissionGroup, ChangePasswordDto } from '../models/user.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -83,5 +83,12 @@ export class UserService {
    */
   getPermissions(): Observable<PermissionGroup> {
     return this.http.get<PermissionGroup>(`${this.apiUrl}/permissions`);
+  }
+
+  /**
+   * Alterar senha do usuário
+   */
+  changePassword(userId: string, changePasswordDto: ChangePasswordDto): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${userId}/change-password`, changePasswordDto);
   }
 }

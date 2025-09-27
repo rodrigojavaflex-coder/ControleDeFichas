@@ -216,4 +216,29 @@ export class UsersService {
     const user = await this.findOne(id);
     await this.userRepository.remove(user);
   }
+
+  async changePassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.findOne(id);
+    
+    // Verificar se a senha atual está correta
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new ConflictException('Senha atual incorreta');
+    }
+
+    // Hash da nova senha
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Atualizar senha
+    user.password = hashedPassword;
+    
+    try {
+      await this.userRepository.save(user);
+      this.logger.log('Senha atualizada com sucesso', { userId: user.id });
+    } catch (error) {
+      this.logger.error('Erro ao atualizar senha:', error);
+      throw error;
+    }
+  }
 }

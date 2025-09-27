@@ -47,6 +47,12 @@ export interface User {
   tema?: string; // Tema preferido do usuário (Claro ou Escuro)
 }
 
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface CreateUserDto {
   name: string;
   email: string;
