@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
 import { User } from '../models/user.model';
 import { Permission } from '../models/user.model';
+import { ThemeService } from './theme.service';
 import { environment } from '../../environments/environment';
 
 export interface LoginRequest {
@@ -23,6 +24,7 @@ export interface AuthResponse {
 export class AuthService {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private themeService = inject(ThemeService);
   private apiUrl = `${environment.apiUrl}/auth`;
 
   // Estado da autenticação
@@ -35,6 +37,9 @@ export class AuthService {
   constructor() {
     // Verificar se há token salvo no localStorage
     this.checkStoredAuth();
+    
+    // Expor referência para uso interno (evita dependência circular)
+    (window as any).__authService = this;
   }
 
   /**
@@ -53,6 +58,9 @@ export class AuthService {
     // Atualizar estado
     this.currentUserSubject.next(response.user);
     this.isAuthenticatedSubject.next(true);
+    
+    // Inicializar tema com preferência do usuário após login
+    this.themeService.initializeTheme(response.user.id, response.user.tema, false);
   }
 
   /**
@@ -81,7 +89,7 @@ export class AuthService {
     const refreshToken = localStorage.getItem('refresh_token');
     
     if (!refreshToken) {
-      this.clearAuthData();
+      this.clearAuthData(true);
       return null;
     }
 
@@ -96,7 +104,7 @@ export class AuthService {
       return response.access_token;
     } catch (error) {
       // Se refresh falhar, fazer logout
-      this.clearAuthData();
+      this.clearAuthData(true);
       return null;
     }
   }
@@ -147,17 +155,67 @@ export class AuthService {
   }
 
   /**
+   * Verifica se token ainda é válido no servidor
+   */
+  async validateToken(): Promise<boolean> {
+    const token = this.getAccessToken();
+    
+    if (!token) {
+      return false;
+    }
+
+    try {
+      // Tenta buscar o perfil para validar o token
+      const user = await this.getProfile();
+      this.currentUserSubject.next(user);
+      this.isAuthenticatedSubject.next(true);
+      return true;
+    } catch (error) {
+      // Se falhar, tenta refresh token
+      const newToken = await this.refreshToken();
+      
+      if (newToken) {
+        try {
+          const user = await this.getProfile();
+          this.currentUserSubject.next(user);
+          this.isAuthenticatedSubject.next(true);
+          return true;
+        } catch (refreshError) {
+          this.clearAuthData(true);
+          return false;
+        }
+      }
+      
+      this.clearAuthData(true);
+      return false;
+    }
+  }
+
+  /**
    * Verifica autenticação armazenada no localStorage
    */
-  private checkStoredAuth(): void {
+  private async checkStoredAuth(): Promise<void> {
     const token = localStorage.getItem('access_token');
     const userStr = localStorage.getItem('user');
 
     if (token && userStr) {
       try {
         const user: User = JSON.parse(userStr);
+        
         this.currentUserSubject.next(user);
         this.isAuthenticatedSubject.next(true);
+        
+        // Inicializar tema com preferência do usuário (forçar reset no refresh)
+        this.themeService.initializeTheme(user.id, user.tema, true);
+        
+        // Validar token no servidor em background
+        setTimeout(async () => {
+          const isValid = await this.validateToken();
+          if (!isValid) {
+            console.log('Token expirado, redirecionando para login');
+          }
+        }, 100);
+        
       } catch (error) {
         // Se der erro ao parsear, limpar dados
         this.clearAuthData();
@@ -168,12 +226,31 @@ export class AuthService {
   /**
    * Limpa dados de autenticação
    */
-  private clearAuthData(): void {
+  /**
+   * Atualiza o tema do usuário atual
+   * Usado quando o tema é alterado para manter consistência
+   */
+  updateCurrentUserTheme(tema: string): void {
+    const currentUser = this.currentUserSubject.value;
+    if (currentUser) {
+      const updatedUser = { ...currentUser, tema };
+      this.currentUserSubject.next(updatedUser);
+    }
+  }
+
+  private clearAuthData(shouldRedirect: boolean = false): void {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
+    
+    // Resetar o tema para permitir nova inicialização no próximo login
+    this.themeService.resetTheme();
+    
+    if (shouldRedirect && !this.router.url.includes('/login')) {
+      this.router.navigate(['/login']);
+    }
   }
 }

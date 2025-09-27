@@ -133,36 +133,59 @@
           }
         </div>
       } @else {
+        <!-- Paginação (Posicionada acima da tabela) -->
+        @if (totalPages > 1) {
+          <div class="pagination-container">
+            <div class="pagination">
+              <button 
+                class="btn-pagination"
+                [disabled]="!hasPreviousPage"
+                (click)="goToPage(currentPage - 1)"
+              >
+                ‹ Anterior
+              </button>
+
+              @for (page of pageNumbers; track page) {
+                <button 
+                  class="btn-pagination"
+                  [class.active]="page === currentPage"
+                  (click)="goToPage(page)"
+                >
+                  {{ page }}
+                </button>
+              }
+
+              <button 
+                class="btn-pagination"
+                [disabled]="!hasNextPage"
+                (click)="goToPage(currentPage + 1)"
+              >
+                Próxima ›
+              </button>
+            </div>
+
+            <div class="pagination-info">
+              Página {{ currentPage }} de {{ totalPages }}
+            </div>
+          </div>
+        }
+
         <!-- Tabela de Fichas Técnicas -->
         <div class="table-container">
           <table class="data-table">
             <thead>
               <tr>
+                <th>Ações</th>
                 <th>Código</th>
                 <th>Tipo da Ficha</th>
                 <th>Produto</th>
-                <th>Nome Científico</th>
                 <th>Revisão</th>
                 <th>Data de Análise</th>
-                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               @for (ficha of fichasTecnicas(); track ficha.id) {
                 <tr>
-                  <td>{{ ficha.codigoFormulaCerta }}</td>
-                  <td>{{ ficha.tipoDaFicha || '-' }}</td>
-                  <td class="product-cell">
-                    <div class="product-info">
-                      <span class="product-name">{{ ficha.produto }}</span>
-                      @if (ficha.formulaMolecular) {
-                        <span class="formula">{{ ficha.formulaMolecular }}</span>
-                      }
-                    </div>
-                  </td>
-                  <td>{{ ficha.nomeCientifico || '-' }}</td>
-                  <td>{{ ficha.revisao || '-' }}</td>
-                  <td>{{ formatDate(ficha.dataDeAnalise) }}</td>
                   <td>
                     <div class="action-buttons">
                       @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
@@ -205,48 +228,23 @@
                       }
                     </div>
                   </td>
+                  <td>{{ ficha.codigoFormulaCerta }}</td>
+                  <td>{{ ficha.tipoDaFicha || '-' }}</td>
+                  <td class="product-cell">
+                    <div class="product-info">
+                      <span class="product-name">{{ ficha.produto }}</span>
+                      @if (ficha.formulaMolecular) {
+                        <span class="formula">{{ ficha.formulaMolecular }}</span>
+                      }
+                    </div>
+                  </td>
+                  <td>{{ ficha.revisao || '-' }}</td>
+                  <td>{{ formatDate(ficha.dataDeAnalise) }}</td>
                 </tr>
               }
             </tbody>
           </table>
         </div>
-
-        <!-- Paginação -->
-        @if (totalPages > 1) {
-          <div class="pagination-container">
-            <div class="pagination">
-              <button 
-                class="btn-pagination"
-                [disabled]="!hasPreviousPage"
-                (click)="goToPage(currentPage - 1)"
-              >
-                ‹ Anterior
-              </button>
-
-              @for (page of pageNumbers; track page) {
-                <button 
-                  class="btn-pagination"
-                  [class.active]="page === currentPage"
-                  (click)="goToPage(page)"
-                >
-                  {{ page }}
-                </button>
-              }
-
-              <button 
-                class="btn-pagination"
-                [disabled]="!hasNextPage"
-                (click)="goToPage(currentPage + 1)"
-              >
-                Próxima ›
-              </button>
-            </div>
-
-            <div class="pagination-info">
-              Página {{ currentPage }} de {{ totalPages }}
-            </div>
-          </div>
-        }
       }
     </section>
   }

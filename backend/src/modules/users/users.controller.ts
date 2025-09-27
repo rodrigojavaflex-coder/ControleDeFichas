@@ -145,6 +145,30 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @Patch(':id/tema')
+  @UseGuards(AuthGuard('jwt'))
+  @AuditLog(AuditAction.USER_UPDATE, 'User')
+  @ApiOperation({ summary: 'Atualizar tema do usuário' })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: 'Tema atualizado com sucesso',
+    type: User,
+  })
+  @ApiResponse({ 
+    status: HttpStatus.NOT_FOUND, 
+    description: 'Usuário não encontrado' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.BAD_REQUEST, 
+    description: 'Tema inválido' 
+  })
+  updateTema(
+    @Param('id', ParseUUIDPipe) id: string, 
+    @Body('tema') tema: string
+  ) {
+    return this.usersService.updateTema(id, tema);
+  }
+
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(Permission.USER_DELETE)

@@ -1,14 +1,13 @@
-/* Container principal - Background minimalista */
-.login-container {
-  height: 100vh;
+/* Wrapper interno do componente de login */
+.login-wrapper {
+  padding: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
-  padding: 1rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  overflow: hidden;
-  box-sizing: border-box;
 }
 
 /* Card de login - Design limpo */
@@ -264,37 +263,6 @@
   }
 }
 
-/* Dark mode support (opcional) */
-@media (prefers-color-scheme: dark) {
-  .login-container {
-    background: #0f172a;
-  }
-  
-  .login-card {
-    background: #1e293b;
-    border-color: #334155;
-    color: #f1f5f9;
-  }
-  
-  .login-title {
-    color: #f1f5f9;
-  }
-  
-  .login-subtitle {
-    color: #94a3b8;
-  }
-  
-  .form-input {
-    background: #334155;
-    border-color: #475569;
-    color: #f1f5f9;
-  }
-  
-  .form-input::placeholder {
-    color: #94a3b8;
-  }
-}
-
 /* Media queries para largura dos campos */
 @media (min-width: 768px) {
   .login-form {
@@ -321,5 +289,62 @@
   .login-card {
     max-width: 1600px;
     padding: 4rem 5rem;
+  }
+}
+
+/* Tema escuro baseado na preferência do navegador */
+@media (prefers-color-scheme: dark) {
+  .login-card {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-color: #475569;
+    color: #f1f5f9;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  .login-title {
+    color: #f1f5f9;
+  }
+  
+  .login-subtitle {
+    color: #cbd5e0;
+  }
+  
+  .form-input {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .form-input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+  }
+  
+  .form-input::placeholder {
+    color: #9ca3af;
+  }
+  
+  .form-input.error {
+    border-color: #f87171;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+  }
+  
+  .error-message {
+    color: #fca5a5;
+  }
+  
+  .alert-error {
+    background-color: #7f1d1d;
+    border-color: #991b1b;
+    color: #fecaca;
+  }
+  
+  .login-button {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  }
+  
+  .login-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
   }
 }

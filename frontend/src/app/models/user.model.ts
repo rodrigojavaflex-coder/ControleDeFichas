@@ -44,6 +44,7 @@ export interface User {
   permissions: Permission[];
   createdAt: Date;
   updatedAt: Date;
+  tema?: string; // Tema preferido do usuário (Claro ou Escuro)
 }
 
 export interface CreateUserDto {
@@ -52,6 +53,7 @@ export interface CreateUserDto {
   password: string;
   isActive?: boolean;
   permissions?: Permission[];
+  tema?: string; // Tema preferido (Claro ou Escuro)
 }
 
 export interface UpdateUserDto {
@@ -60,6 +62,7 @@ export interface UpdateUserDto {
   password?: string;
   isActive?: boolean;
   permissions?: Permission[];
+  tema?: string; // Permitir atualizar tema do usuário (Claro ou Escuro)
 }
 
 export interface FindUsersDto {

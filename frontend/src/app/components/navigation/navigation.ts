@@ -112,6 +112,9 @@ export class NavigationComponent implements OnInit, OnDestroy {
    * Realiza logout do usuário
    */
   async logout() {
+    // Fechar o menu antes de fazer logout
+    this.navigationService.closeOnNavigation();
+    
     try {
       await this.authService.logout();
       this.router.navigate(['/login']);
@@ -127,5 +130,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
    */
   isRouteActive(route: string): boolean {
     return this.router.url === route;
+  }
+
+  /**
+   * Manipula o clique em um item do menu
+   */
+  onMenuItemClick(): void {
+    this.navigationService.closeOnNavigation();
   }
 }

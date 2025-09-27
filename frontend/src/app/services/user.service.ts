@@ -65,6 +65,13 @@ export class UserService {
   }
 
   /**
+   * Atualizar tema do usuário
+   */
+  updateTema(id: string, tema: string): Observable<User> {
+    return this.http.patch<User>(`${this.apiUrl}/${id}/tema`, { tema });
+  }
+
+  /**
    * Remover usuário
    */
   deleteUser(id: string): Observable<void> {

@@ -181,6 +181,14 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Formata texto convertendo quebras de linha para HTML
+   */
+  private formatTextForHtml(text: string | null | undefined): string {
+    if (!text) return '-';
+    return text.replace(/\n/g, '<br>');
+  }
+
+  /**
    * Imprime ficha técnica
    */
   printFicha(ficha: FichaTecnica) {
@@ -235,24 +243,27 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
       <head>
         <title>${nomeRelatorio}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
-          .header { display: flex; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 30px; }
-          .logo-box { flex: 0 0 auto; margin-right: 24px; }
+          body { font-family: Arial, sans-serif; margin: 15px; line-height: 1.3; }
+          .header { display: flex; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+          .logo-box { flex: 0 0 auto; margin-right: 20px; }
           .header-content { flex: 1 1 auto; }
-          .header-title { margin: 0; font-size: 1.7em; font-weight: bold; }
-          .header-row { display: flex; gap: 32px; margin-top: 8px; font-size: 1.1em; }
+          .header-title { margin: 0; font-size: 1.6em; font-weight: bold; }
+          .header-row { display: flex; gap: 24px; margin-top: 6px; font-size: 1em; }
           .header-row span { font-weight: bold; }
-          .section { margin-bottom: 25px; }
-          .section-title { background: #f0f0f0; padding: 8px; font-weight: bold; border-left: 4px solid #007bff; margin-bottom: 10px; }
-          .field { margin-bottom: 8px; }
-          .field-label { font-weight: bold; display: inline-block; width: 200px; }
-          .field-value { display: inline-block; }
-          .footer-print { font-size: 0.95em; color: #444; margin-top: 30px; text-align: center; ${hidePrint ? 'display:none;' : ''} }
+          .section { margin-bottom: 18px; }
+          .section-title { background: #f0f0f0; padding: 6px; font-weight: bold; border-left: 4px solid #007bff; margin-bottom: 8px; font-size: 0.95em; }
+          .field { margin-bottom: 5px; }
+          .field-label { font-weight: bold; display: inline-block; width: 180px; font-size: 0.9em; }
+          .field-value { display: inline-block; font-size: 0.9em; }
+          .footer-print { font-size: 0.9em; color: #444; margin-top: 25px; text-align: center; ${hidePrint ? 'display:none;' : ''} }
           ${hidePrint ? '' : `@media print {
             @page {
               size: auto;
-              margin-bottom: 60px;
+              margin: 15mm 10mm 40px 10mm;
             }
+            body { margin: 10px; }
+            .section { margin-bottom: 15px; }
+            .field { margin-bottom: 4px; }
           }`}
         </style>
       </head>
@@ -280,21 +291,21 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
 
         <div class="section">
           <div class="section-title">🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10</div>
-          <div class="field"><span class="field-label">Características Organolépticas:</span> <span class="field-value">${ficha.caracteristicasOrganolepticas || '-'}</span></div>
-          <div class="field"><span class="field-label">Solubilidade:</span> <span class="field-value">${ficha.solubilidade || '-'}</span></div>
+          <div class="field"><span class="field-label">Características Organolépticas:</span> <span class="field-value">${this.formatTextForHtml(ficha.caracteristicasOrganolepticas)}</span></div>
+          <div class="field"><span class="field-label">Solubilidade:</span> <span class="field-value">${ficha.solubilidade ? ficha.solubilidade.replace(/\n/g, '<br>') : '-'}</span></div>
           <div class="field"><span class="field-label">Faixa de pH:</span> <span class="field-value">${ficha.faixaPh || '-'}</span></div>
           <div class="field"><span class="field-label">Faixa de Fusão:</span> <span class="field-value">${ficha.faixaFusao || '-'}</span></div>
           <div class="field"><span class="field-label">Peso:</span> <span class="field-value">${ficha.peso || '-'}</span></div>
           <div class="field"><span class="field-label">Volume:</span> <span class="field-value">${ficha.volume || '-'}</span></div>
           <div class="field"><span class="field-label">Densidade sem Compactação:</span> <span class="field-value">${ficha.densidadeComCompactacao || '-'}</span></div>
           ${ficha.tipoDaFicha === 'FITOTERÁPICO' ? `
-            <div class="field"><span class="field-label">Determinação de Materiais Estranhos:</span> <span class="field-value">${ficha.determinacaoMateriaisEstranhos || '-'}</span></div>
-            <div class="field"><span class="field-label">Pesquisas de Contaminação Microbiológica:</span> <span class="field-value">${ficha.pesquisasDeContaminacaoMicrobiologica || '-'}</span></div>
+            <div class="field"><span class="field-label">Determinação de Materiais Estranhos:</span> <span class="field-value">${ficha.determinacaoMateriaisEstranhos ? ficha.determinacaoMateriaisEstranhos.replace(/\n/g, '<br>') : '-'}</span></div>
+            <div class="field"><span class="field-label">Pesquisas de Contaminação Microbiológica:</span> <span class="field-value">${ficha.pesquisasDeContaminacaoMicrobiologica ? ficha.pesquisasDeContaminacaoMicrobiologica.replace(/\n/g, '<br>') : '-'}</span></div>
             <div class="field"><span class="field-label">Umidade:</span> <span class="field-value">${ficha.umidade || '-'}</span></div>
             <div class="field"><span class="field-label">Cinzas:</span> <span class="field-value">${ficha.cinzas || '-'}</span></div>
-            <div class="field"><span class="field-label">Caracteres Microscópicos:</span> <span class="field-value">${ficha.caracteresMicroscopicos || '-'}</span></div>
+            <div class="field"><span class="field-label">Caracteres Microscópicos:</span> <span class="field-value">${ficha.caracteresMicroscopicos ? ficha.caracteresMicroscopicos.replace(/\n/g, '<br>') : '-'}</span></div>
           ` : ''}
-          <div class="field"><span class="field-label">Avaliação do Laudo:</span> <span class="field-value">${ficha.avaliacaoDoLaudo || '-'}</span></div>
+          <div class="field"><span class="field-label">Avaliação do Laudo:</span> <span class="field-value">${ficha.avaliacaoDoLaudo ? ficha.avaliacaoDoLaudo.replace(/\n/g, '<br>') : '-'}</span></div>
         </div>
 
         <div class="section">
@@ -303,21 +314,21 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
             <div class="field"><span class="field-label">Cinzas:</span> <span class="field-value">${ficha.cinzas || '-'}</span></div>
             <div class="field"><span class="field-label">Perda por Secagem:</span> <span class="field-value">${ficha.perdaPorSecagem || '-'}</span></div>
           ` : ''}
-          <div class="field"><span class="field-label">Infravermelho:</span> <span class="field-value">${ficha.infraVermelho || '-'}</span></div>
-          <div class="field"><span class="field-label">Ultravioleta:</span> <span class="field-value">${ficha.ultraVioleta || '-'}</span></div>
-          <div class="field"><span class="field-label">Teor:</span> <span class="field-value">${ficha.teor || '-'}</span></div>
-          <div class="field"><span class="field-label">Conservação:</span> <span class="field-value">${ficha.conservacao || '-'}</span></div>
-          <div class="field"><span class="field-label">Observação:</span> <span class="field-value">${ficha.observacao01 || '-'}</span></div>
-          <div class="field"><span class="field-label">Amostragem:</span> <span class="field-value">${ficha.amostragem || '-'}</span></div>
-          <div class="field"><span class="field-label">Referência Bibliográfica:</span> <span class="field-value">${ficha.referenciaBibliografica || '-'}</span></div>
+          <div class="field"><span class="field-label">Infravermelho:</span> <span class="field-value">${ficha.infraVermelho ? ficha.infraVermelho.replace(/\n/g, '<br>') : '-'}</span></div>
+          <div class="field"><span class="field-label">Ultravioleta:</span> <span class="field-value">${ficha.ultraVioleta ? ficha.ultraVioleta.replace(/\n/g, '<br>') : '-'}</span></div>
+          <div class="field"><span class="field-label">Teor:</span> <span class="field-value">${ficha.teor ? ficha.teor.replace(/\n/g, '<br>') : '-'}</span></div>
+          <div class="field"><span class="field-label">Conservação:</span> <span class="field-value">${ficha.conservacao ? ficha.conservacao.replace(/\n/g, '<br>') : '-'}</span></div>
+          <div class="field"><span class="field-label">Observação:</span> <span class="field-value">${this.formatTextForHtml(ficha.observacao01)}</span></div>
+          <div class="field"><span class="field-label">Amostragem:</span> <span class="field-value">${this.formatTextForHtml(ficha.amostragem)}</span></div>
+          <div class="field"><span class="field-label">Referência Bibliográfica:</span> <span class="field-value">${this.formatTextForHtml(ficha.referenciaBibliografica)}</span></div>
           <div class="field"><span class="field-label">Data de Análise:</span> <span class="field-value">${dataAnalise}</span></div>
         </div>
-        <div style="height: 80px;"></div>
-        <hr style="margin: 0 auto 12px auto; border: none; border-top: 1.5px solid #888; width: 70%;" />
-        <div style="text-align: center; font-size: 1.08em; margin-bottom: 2px;">
+        <div style="height: 50px;"></div>
+        <hr style="margin: 0 auto 8px auto; border: none; border-top: 1.5px solid #888; width: 60%;" />
+        <div style="text-align: center; font-size: 1em; margin-bottom: 2px;">
           ${this.configuracao?.farmaceuticoResponsavel || ''}
         </div>
-        <div style="text-align: center; font-size: 1em; color: #444;">
+        <div style="text-align: center; font-size: 0.9em; color: #444;">
           Farmacêutico Responsável
         </div>
         <div class="footer-print">

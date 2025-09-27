@@ -50,6 +50,15 @@ export class User {
   permissions: Permission[];
 
   @ApiProperty({
+    description: 'Tema preferido do usuário',
+    example: 'Claro',
+    default: 'Claro',
+    enum: ['Claro', 'Escuro'],
+  })
+  @Column({ default: 'Claro', length: 10 })
+  tema: string;
+
+  @ApiProperty({
     description: 'Data de criação',
   })
   @CreateDateColumn({

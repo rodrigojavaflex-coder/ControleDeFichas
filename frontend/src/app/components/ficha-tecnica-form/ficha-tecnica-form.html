@@ -1,7 +1,33 @@
-<div class="ficha-form-container">
+<div class="ficha-form-container" [class.edit-mode]="isEditMode">
   <header class="page-header">
     <div class="header-content">
       <h1>{{ isEditMode ? 'Editar' : 'Nova' }} Ficha Técnica</h1>
+      
+      <!-- Botões de Ação no Header -->
+      @if (!loading) {
+        <div class="header-actions">
+          <button 
+            type="button" 
+            class="btn btn-secondary"
+            (click)="cancel()"
+            [disabled]="loading"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit" 
+            class="btn btn-primary"
+            [disabled]="loading || fichaForm.invalid"
+            form="ficha-form"
+          >
+            @if (loading) {
+              Salvando...
+            } @else {
+              {{ isEditMode ? 'Atualizar' : 'Salvar' }} Ficha Técnica
+            }
+          </button>
+        </div>
+      }
     </div>
   </header>
 
@@ -27,7 +53,7 @@
 
   <!-- Formulário -->
   @if (!loading) {
-    <form [formGroup]="fichaForm" (ngSubmit)="onSubmit()" class="ficha-form">
+    <form id="ficha-form" [formGroup]="fichaForm" (ngSubmit)="onSubmit()" class="ficha-form">
       
       <!-- =================================================================== -->
       <!-- BLOCO 1: INFORMAÇÕES BÁSICAS -->
@@ -163,9 +189,7 @@
       <!-- BLOCO 2: TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10 -->
       <!-- =================================================================== -->
       <section class="form-section">
-  <h2>🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10<span *ngIf="fichaForm.get('tipoDaFicha')?.value === 'FITOTERÁPICO'"> E 7.3.13</span></h2>
-        
-        <div class="form-grid">
+        <h2>🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10@if (fichaForm.get('tipoDaFicha')?.value === 'FITOTERÁPICO') { E 7.3.13}</h2>        <div class="form-grid">
 
           <div class="form-group">
             <label for="caracteristicasOrganolepticas">Características Organolépticas</label>
@@ -486,7 +510,7 @@
               class="form-input"
               [class.error]="hasError('amostragem')"
               placeholder="Descrição detalhada da amostragem..."
-              rows="3"
+              rows="9"
             ></textarea>
             @if (hasError('amostragem')) {
               <span class="error-text">{{ getError('amostragem') }}</span>
@@ -542,7 +566,7 @@
           @if (loading) {
             Salvando...
           } @else {
-            {{ isEditMode ? 'Atualizar' : 'Criar' }} Ficha Técnica
+            {{ isEditMode ? 'Atualizar' : 'Salvar' }} Ficha Técnica
           }
         </button>
       </div>

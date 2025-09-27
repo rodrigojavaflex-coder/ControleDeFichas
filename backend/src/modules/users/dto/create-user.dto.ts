@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MaxLength, IsBoolean, IsOptional, MinLength, IsArray, IsEnum } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength, IsBoolean, IsOptional, MinLength, IsArray, IsEnum, IsIn } from 'class-validator';
 import { Permission } from '../../../common/enums/permission.enum';
 
 export class CreateUserDto {
@@ -52,4 +52,15 @@ export class CreateUserDto {
   @IsArray({ message: 'Permissões devem ser um array' })
   @IsEnum(Permission, { each: true, message: 'Permissão inválida' })
   permissions?: Permission[] = [];
+
+  @ApiProperty({
+    description: 'Tema preferido do usuário',
+    example: 'Claro',
+    default: 'Claro',
+    enum: ['Claro', 'Escuro'],
+  })
+  @IsOptional()
+  @IsString({ message: 'Tema deve ser uma string' })
+  @IsIn(['Claro', 'Escuro'], { message: 'Tema deve ser Claro ou Escuro' })
+  tema?: string = 'Claro';
 }

@@ -36,6 +36,7 @@ export class AuthResponseDto {
     email: string;
     isActive: boolean;
     permissions: Permission[];
+    tema: string;
     createdAt: Date;
     updatedAt: Date;
   };

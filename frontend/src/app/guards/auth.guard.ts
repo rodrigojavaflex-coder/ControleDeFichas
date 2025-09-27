@@ -2,14 +2,24 @@ import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-export const authGuard: CanActivateFn = (route, state) => {
+export const authGuard: CanActivateFn = async (route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  if (authService.isAuthenticated()) {
-    return true;
-  } else {
+  // Verificar se está autenticado localmente
+  if (!authService.isAuthenticated()) {
     router.navigate(['/login']);
     return false;
   }
+
+  // Verificar se o token ainda é válido no servidor
+  const isTokenValid = await authService.validateToken();
+  
+  if (!isTokenValid) {
+    console.log('Token inválido ou expirado, redirecionando para login');
+    router.navigate(['/login']);
+    return false;
+  }
+
+  return true;
 };

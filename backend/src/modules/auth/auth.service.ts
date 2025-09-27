@@ -91,6 +91,7 @@ export class AuthService {
         email: user.email,
         isActive: user.isActive,
         permissions: user.permissions || [],
+        tema: user.tema || 'Claro', // Incluir tema do usuário
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },

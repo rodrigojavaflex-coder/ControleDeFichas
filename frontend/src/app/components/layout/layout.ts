@@ -17,7 +17,7 @@ export class LayoutComponent implements OnInit {
   private navigationService = inject(NavigationService);
   
   isAuthenticated = false;
-  isMenuOpen = true;
+  isMenuOpen = false; // Menu inicia fechado por padrão
   isDesktop = window.innerWidth > 768;
 
   ngOnInit() {

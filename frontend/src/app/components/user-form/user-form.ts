@@ -7,6 +7,7 @@ import { CreateUserDto, UpdateUserDto, User, PermissionGroup, Permission } from 
 
 @Component({
   selector: 'app-user-form',
+  standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './user-form.html',
   styleUrl: './user-form.css'

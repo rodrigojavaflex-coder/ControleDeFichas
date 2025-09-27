@@ -3,11 +3,13 @@
   opacity: 0.7;
   transition: opacity 0.2s, stroke 0.2s;
 }
+
 .nav-icon:hover svg {
   opacity: 1;
   stroke: #3b82f6;
 }
-/* Estilos do componente de listagem de fichas técnicas */
+
+/* Container principal */
 .ficha-tecnica-list-container {
   padding: 0.5rem;
   max-width: 1400px;
@@ -17,8 +19,10 @@
 /* Header */
 .page-header {
   margin-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
   padding-bottom: 0.5rem;
+  background: transparent;
+  transition: border-color 0.3s ease;
 }
 
 .header-content {
@@ -31,16 +35,19 @@
 
 .header-content h1 {
   margin: 0;
-  color: #333;
+  color: var(--text-primary, #333);
   font-size: 1.5rem;
+  transition: color 0.3s ease;
 }
 
-/* Filtros */
+/* Seção de filtros */
 .filters-section {
-  background: #f8f9fa;
+  background: var(--bg-primary, #f8f9fa);
+  border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 6px;
   padding: 1rem;
   margin-bottom: 1rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .filters-grid {
@@ -70,15 +77,9 @@
 .filter-group label {
   margin-bottom: 0.25rem;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary, #333);
   font-size: 0.875rem;
-  /* Alterar rótulo dos filtros */
-  &.data-analise-inicio {
-    content: 'Data Análise Início';
-  }
-  &.data-analise-fim {
-    content: 'Data Análise Fim';
-  }
+  transition: color 0.3s ease;
 }
 
 .form-input {
@@ -181,8 +182,10 @@
   cursor: not-allowed;
 }
 
-/* Estados */
-.loading-state, .error-state, .empty-state {
+/* Estados de loading e error */
+.loading-state,
+.error-state,
+.empty-state {
   text-align: center;
   padding: 1.5rem 1rem;
 }
@@ -220,51 +223,66 @@
   opacity: 0.5;
 }
 
-/* Resultados */
+/* Seção de resultados */
 .results-section {
-  background: white;
+  background: var(--bg-primary, white);
   border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   overflow: hidden;
   margin-top: 0.5rem;
+  transition: background-color 0.3s ease;
 }
 
 .results-header {
   padding: 0.75rem 1rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--bg-secondary, #f8f9fa);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  transition: all 0.3s ease;
 }
 
 .results-count {
   margin: 0;
-  color: #666;
+  color: var(--text-secondary, #666);
   font-size: 0.875rem;
+  transition: color 0.3s ease;
 }
 
 /* Tabela */
 .table-container {
   overflow-x: auto;
+  border-top: none;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
+  border: none;
+}
+
+.data-table thead tr:first-child th:first-child {
+  border-top: none;
+}
+
+.data-table thead tr:first-child th {
+  border-top: none;
 }
 
 .data-table th,
 .data-table td {
   padding: 0.6rem 0.75rem;
   text-align: left;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
   font-size: 0.875rem;
+  transition: border-color 0.3s ease;
 }
 
 .data-table th {
-  background-color: #f8f9fa;
+  background-color: var(--bg-secondary, #f8f9fa);
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary, #333);
   font-size: 0.875rem;
   white-space: nowrap;
+  transition: all 0.3s ease;
 }
 
 .data-table td {
@@ -283,20 +301,35 @@
 
 .product-name {
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary, #333);
+  transition: color 0.3s ease;
 }
 
 .formula {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--text-secondary, #666);
   font-family: monospace;
+  transition: color 0.3s ease;
 }
 
-/* Ações */
 .action-buttons {
   display: flex;
   gap: 0.25rem;
   flex-wrap: wrap;
+  min-width: 280px;
+}
+
+/* Primeira coluna (Ações) */
+.data-table th:first-child,
+.data-table td:first-child {
+  min-width: 300px;
+  white-space: nowrap;
+}
+
+/* Segunda coluna (Código) */
+.data-table th:nth-child(2),
+.data-table td:nth-child(2) {
+  min-width: 120px;
 }
 
 /* Paginação */
@@ -305,10 +338,12 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: #f8f9fa;
-  border-top: 1px solid #e0e0e0;
+  background: var(--bg-primary, #f8f9fa);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
   flex-wrap: wrap;
   gap: 1rem;
+  margin-bottom: 0.5rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .pagination {
@@ -318,9 +353,9 @@
 
 .btn-pagination {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
-  background: white;
-  color: #333;
+  border: 1px solid var(--border-color, #ddd);
+  background: var(--bg-primary, white);
+  color: var(--text-primary, #333);
   cursor: pointer;
   border-radius: 4px;
   font-size: 0.875rem;
@@ -328,8 +363,8 @@
 }
 
 .btn-pagination:hover:not(:disabled) {
-  background-color: #f8f9fa;
-  border-color: #adb5bd;
+  background-color: var(--bg-secondary, #f8f9fa);
+  border-color: var(--text-muted, #adb5bd);
 }
 
 .btn-pagination:disabled {
@@ -344,8 +379,9 @@
 }
 
 .pagination-info {
-  color: #666;
+  color: var(--text-secondary, #666);
   font-size: 0.875rem;
+  transition: color 0.3s ease;
 }
 
 /* Responsividade */
@@ -353,33 +389,33 @@
   .ficha-tecnica-list-container {
     padding: 0.5rem;
   }
-  
+
   .header-content {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filters-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .filters-actions {
     justify-content: stretch;
   }
-  
+
   .filters-actions .btn {
     flex: 1;
   }
-  
+
   .data-table {
     font-size: 0.75rem;
   }
-  
+
   .data-table th,
   .data-table td {
     padding: 0.5rem;
   }
-  
+
   .pagination-container {
     flex-direction: column;
     text-align: center;

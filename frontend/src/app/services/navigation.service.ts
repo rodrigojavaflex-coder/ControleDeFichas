@@ -6,7 +6,7 @@ import { BehaviorSubject } from 'rxjs';
 })
 
 export class NavigationService {
-  private isMobileOpenSubject = new BehaviorSubject<boolean>(false);
+  private isMobileOpenSubject = new BehaviorSubject<boolean>(false); // Menu sempre inicia fechado
 
   public isMobileOpen$ = this.isMobileOpenSubject.asObservable();
 
@@ -38,6 +38,13 @@ export class NavigationService {
     }
   }
 
+  /**
+   * Fecha o menu ao navegar (funciona tanto em mobile quanto desktop)
+   */
+  closeOnNavigation(): void {
+    this.isMobileOpenSubject.next(false);
+  }
+
   private setupMobileDetection(): void {
     // Detectar mudanças de tamanho da tela
     if (typeof window !== 'undefined') {
@@ -48,8 +55,8 @@ export class NavigationService {
           // Modo mobile - fechar menu mobile por padrão
           this.isMobileOpenSubject.next(false);
         } else {
-          // Modo desktop - abrir menu por padrão
-          this.isMobileOpenSubject.next(true);
+          // Modo desktop - manter menu fechado por padrão
+          this.isMobileOpenSubject.next(false);
         }
       };
 

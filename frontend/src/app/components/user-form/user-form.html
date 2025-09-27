@@ -18,7 +18,7 @@
     
     <!-- Nome -->
     <div class="form-group">
-      <label for="name">Nome *</label>
+      <label for="name" class="form-label">Nome *</label>
       <input
         id="name"
         type="text"
@@ -34,7 +34,7 @@
 
     <!-- Email -->
     <div class="form-group">
-      <label for="email">Email *</label>
+      <label for="email" class="form-label">Email *</label>
       <input
         id="email"
         type="email"
@@ -50,7 +50,7 @@
 
     <!-- Senha -->
     <div class="form-group">
-      <label for="password">
+      <label for="password" class="form-label">
         Senha {{ isEditMode ? '(deixe em branco para não alterar)' : '*' }}
       </label>
       <input
@@ -160,10 +160,10 @@
         [disabled]="userForm.invalid || isSubmitting"
       >
         <span *ngIf="isSubmitting">
-          {{ isEditMode ? 'Atualizando...' : 'Criando...' }}
+          {{ isEditMode ? 'Atualizando...' : 'Salvando...' }}
         </span>
         <span *ngIf="!isSubmitting">
-          {{ isEditMode ? 'Atualizar' : 'Criar' }}
+          {{ isEditMode ? 'Atualizar Usuário' : 'Criar Usuário' }}
         </span>
       </button>
     </div>

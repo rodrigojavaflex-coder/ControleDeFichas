@@ -10,6 +10,7 @@ import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-m
 
 @Component({
   selector: 'app-user-list',
+  standalone: true,
   imports: [CommonModule, FormsModule, ConfirmationModalComponent],
   templateUrl: './user-list.html',
   styleUrl: './user-list.css'

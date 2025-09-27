@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -11,13 +11,15 @@ import { PERMISSION_GROUPS } from '../../common/enums/permission.enum';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    console.log('UserService.create called with:', createUserDto);
+    this.logger.debug('UserService.create called with:', createUserDto);
     try {
       // Verificar se já existe um usuário com este email
       const existingUser = await this.userRepository.findOneBy({ email: createUserDto.email });
@@ -36,17 +38,17 @@ export class UsersService {
         isActive: createUserDto.isActive ?? true
       };
       
-      console.log('Processed user data:', { ...userData, password: '[HASHED]' });
+      this.logger.debug('Processed user data:', { ...userData, password: '[HASHED]' });
       
       const user = this.userRepository.create(userData);
-      console.log('User entity created:', { ...user, password: '[HASHED]' });
+      this.logger.debug('User entity created:', { ...user, password: '[HASHED]' });
       
       const savedUser = await this.userRepository.save(user);
-      console.log('User saved successfully:', { ...savedUser, password: '[HASHED]' });
+      this.logger.log('User saved successfully:', { id: savedUser.id, name: savedUser.name, email: savedUser.email });
       
       return savedUser;
     } catch (error) {
-      console.error('Error creating user:', error);
+      this.logger.error('Error creating user:', error);
       
       // Se já capturamos o erro de unicidade acima, re-lançar
       if (error instanceof ConflictException) {
@@ -63,12 +65,12 @@ export class UsersService {
           }
         } catch (findError) {
           // Se não conseguir buscar o usuário, usar mensagem genérica
-          console.warn('Não foi possível buscar usuário existente:', findError);
+          this.logger.warn('Não foi possível buscar usuário existente:', findError);
         }
         throw new ConflictException('Já existe um usuário cadastrado com este email');
       }
       
-      console.error('Error details:', {
+      this.logger.error('Error details:', {
         name: error.name,
         message: error.message,
         stack: error.stack
@@ -142,10 +144,28 @@ export class UsersService {
           }
         } catch (findError) {
           // Se não conseguir buscar o usuário, usar mensagem genérica
-          console.warn('Não foi possível buscar usuário existente:', findError);
+          this.logger.warn('Não foi possível buscar usuário existente:', findError);
         }
         throw new ConflictException('Já existe um usuário cadastrado com este email');
       }
+      throw error;
+    }
+  }
+
+  async updateTema(id: string, tema: string): Promise<User> {
+    const user = await this.findOne(id);
+    
+    // Validar tema
+    if (!['Claro', 'Escuro'].includes(tema)) {
+      throw new ConflictException('Tema deve ser Claro ou Escuro');
+    }
+    
+    user.tema = tema;
+    
+    try {
+      return await this.userRepository.save(user);
+    } catch (error) {
+      this.logger.error('Erro ao atualizar tema do usuário:', error);
       throw error;
     }
   }

@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +10,8 @@ import { User } from '../../modules/users/entities/user.entity';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
+  private readonly logger = new Logger(PermissionsGuard.name);
+
   constructor(
     private reflector: Reflector,
     private jwtService: JwtService,
@@ -68,7 +70,7 @@ export class PermissionsGuard implements CanActivate {
         throw error;
       }
       // Log do erro para debug
-      console.error('Erro na verificação do token:', error.message);
+      this.logger.error('Erro na verificação do token:', error.message);
       throw new ForbiddenException('Token inválido');
     }
   }

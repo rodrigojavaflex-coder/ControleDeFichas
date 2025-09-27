@@ -1,9 +1,11 @@
 <div class="user-list-container">
   <div class="header">
     <h2>Lista de Usuários</h2>
-    <button class="btn btn-primary" (click)="createUser()" *ngIf="canCreateUser()">
-      Novo Usuário
-    </button>
+    @if (canCreateUser()) {
+      <button class="btn btn-primary" (click)="createUser()">
+        Novo Usuário
+      </button>
+    }
   </div>
 
   <!-- Filtros -->
@@ -32,17 +34,22 @@
   </div>
 
   <!-- Loading -->
-  <div *ngIf="loading" class="loading">
-    Carregando usuários...
-  </div>
+  @if (loading) {
+    <div class="loading">
+      Carregando usuários...
+    </div>
+  }
 
   <!-- Error -->
-  <div *ngIf="error" class="alert alert-error">
-    {{ error }}
-  </div>
+  @if (error) {
+    <div class="alert alert-error">
+      {{ error }}
+    </div>
+  }
 
   <!-- Tabela de usuários -->
-  <div *ngIf="!loading && !error" class="table-container">
+  @if (!loading && !error) {
+    <div class="table-container">
     <table class="users-table">
       <thead>
         <tr>
@@ -64,28 +71,38 @@
           </td>
           <td>{{ user.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
           <td>
-            <button class="btn btn-small btn-primary" (click)="editUser(user)" *ngIf="canEditUser()">
-              Editar
-            </button>
-            <button class="btn btn-small btn-info" (click)="printUser(user)" *ngIf="canPrintUser()">
-              Imprimir
-            </button>
-            <button class="btn btn-small btn-danger" (click)="deleteUser(user)" *ngIf="canDeleteUser()">
-              Excluir
-            </button>
+            @if (canEditUser()) {
+              <button class="btn btn-small btn-primary" (click)="editUser(user)">
+                Editar
+              </button>
+            }
+            @if (canPrintUser()) {
+              <button class="btn btn-small btn-info" (click)="printUser(user)">
+                Imprimir
+              </button>
+            }
+            @if (canDeleteUser()) {
+              <button class="btn btn-small btn-danger" (click)="deleteUser(user)">
+                Excluir
+              </button>
+            }
           </td>
         </tr>
       </tbody>
     </table>
 
     <!-- Mensagem quando não há usuários -->
-    <div *ngIf="users.length === 0" class="no-users">
-      Nenhum usuário encontrado.
-    </div>
+    @if (users.length === 0) {
+      <div class="no-users">
+        Nenhum usuário encontrado.
+      </div>
+    }
   </div>
+  }
 
   <!-- Paginação -->
-  <div *ngIf="totalPages > 1" class="pagination">
+  @if (totalPages > 1) {
+    <div class="pagination">
     <button 
       class="btn btn-secondary" 
       (click)="onPageChange(currentPage - 1)"
@@ -106,7 +123,8 @@
     >
       Próxima
     </button>
-  </div>
+    </div>
+  }
 </div>
 
 <!-- Modal de confirmação de exclusão -->

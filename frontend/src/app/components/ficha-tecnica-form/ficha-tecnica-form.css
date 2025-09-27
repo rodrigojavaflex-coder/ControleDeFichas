@@ -3,32 +3,78 @@
   opacity: 0.7;
   transition: opacity 0.2s, stroke 0.2s;
 }
+
 .nav-icon:hover svg {
   opacity: 1;
   stroke: #3b82f6;
 }
-/* Estilos do formulário de fichas técnicas */
+
+/* Container principal - Melhor aproveitamento do espaço */
 .ficha-form-container {
   padding: 1rem;
-  max-width: 1000px;
+  max-width: 1400px; /* Aumentado de 1000px para 1400px */
   margin: 0 auto;
+  width: 100%;
+}
+
+/* Garantir que o modo de edição tenha o mesmo layout */
+.ficha-form-container.edit-mode {
+  padding: 1rem !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
 }
 
 /* Header */
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem; /* Reduzido de 2rem para 1.5rem */
   border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 1rem;
+  padding-bottom: 0.75rem; /* Reduzido de 1rem para 0.75rem */
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .header-content h1 {
   margin: 0;
   color: #333;
   font-size: 1.75rem;
+  flex: 1;
 }
 
-/* Estados */
-.loading-state, .error-state {
+/* Botões de ação no header */
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Responsividade do header */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .header-actions {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .header-actions .btn {
+    flex: 1;
+    max-width: 150px;
+  }
+}
+
+/* Estados de loading e error */
+.loading-state,
+.error-state {
   text-align: center;
   padding: 2rem;
 }
@@ -59,22 +105,26 @@
   gap: 0.5rem;
 }
 
-/* Formulário */
+/* Formulário principal */
 .ficha-form {
-  background: white;
+  background: var(--bg-primary, white);
+  color: var(--text-primary, #1a202c);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-sm, 0 2px 4px rgba(0,0,0,0.1));
   overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Seções do Formulário */
+/* Seções do formulário */
 .form-section {
-  background: white;
-  border: 1px solid #e1e5e9;
+  background: var(--bg-primary, white);
+  border: 1px solid var(--border-color, #e1e5e9);
+  color: var(--text-primary, #1a202c);
   border-radius: 8px;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1.25rem; /* Reduzido de 2rem para 1.25rem */
+  box-shadow: var(--shadow-md, 0 2px 12px rgba(0, 0, 0, 0.08));
   overflow: hidden;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 .form-section:last-of-type {
@@ -84,15 +134,14 @@
 .form-section h2 {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 0.75rem 1rem;
-  margin: 0 0 0 0;
+  padding: 0.625rem 1rem; /* Reduzido de 0.75rem para 0.625rem */
+  margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
-/* Cores específicas para cada bloco */
 .form-section:nth-child(1) h2 {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);
@@ -108,19 +157,43 @@
   box-shadow: 0 2px 8px rgba(250, 112, 154, 0.3);
 }
 
-/* Conteúdo das seções */
+/* Grid do formulário - Melhor distribuição */
 .form-grid {
-  padding: 1.5rem;
-}
-
-/* Grid do Formulário */
-.form-grid {
+  padding: 1rem; /* Reduzido de 1.5rem para 1rem */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Aumentado de 250px para 300px */
+  gap: 1rem; /* Reduzido de 1.5rem para 1rem */
+  margin-bottom: 0.5rem; /* Reduzido de 1rem para 0.5rem */
 }
 
+/* Adaptação responsiva melhorada */
+@media (min-width: 1200px) {
+  .form-grid {
+    grid-template-columns: repeat(3, 1fr); /* 3 colunas em telas grandes */
+    gap: 1.25rem; /* Reduzido de 2rem para 1.25rem */
+  }
+  
+  /* Garantir layout consistente no modo de edição */
+  .edit-mode .form-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 1.25rem !important;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr); /* 2 colunas em telas médias */
+    gap: 1rem; /* Reduzido de 1.5rem para 1rem */
+  }
+  
+  /* Garantir layout consistente no modo de edição */
+  .edit-mode .form-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+}
+
+/* Grupos de formulário */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -130,12 +203,12 @@
   grid-column: 1 / -1;
 }
 
-/* Labels */
 .form-group label {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.375rem; /* Reduzido de 0.5rem para 0.375rem */
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary, #333);
   font-size: 0.875rem;
+  transition: color 0.3s ease;
 }
 
 .form-group label::after {
@@ -150,15 +223,19 @@
   display: inline;
 }
 
-/* Inputs */
+/* Campos de input */
 .form-input,
 .form-textarea {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
+  padding: 0.625rem; /* Reduzido de 0.75rem para 0.625rem */
+  border: 1px solid var(--border-color, #ddd);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #1a202c);
   border-radius: 4px;
   font-size: 0.875rem;
   transition: all 0.2s;
   font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-input:focus,
@@ -166,6 +243,7 @@
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  transform: translateY(-1px);
 }
 
 .form-input.error,
@@ -179,7 +257,6 @@
   min-height: 3rem;
 }
 
-/* Mensagens de Erro */
 .error-text {
   color: #dc3545;
   font-size: 0.75rem;
@@ -187,17 +264,17 @@
   display: block;
 }
 
-/* Ações do Formulário */
+/* Ações do formulário */
 .form-actions {
-  padding: 1.5rem;
-  background-color: #f8f9fa;
+  padding: 1rem; /* Reduzido de 1.5rem para 1rem */
+  background-color: var(--bg-secondary, #f8f9fa);
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  transition: all 0.3s ease;
 }
 
-/* Botões */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -236,32 +313,7 @@
   cursor: not-allowed;
 }
 
-/* Responsividade */
-@media (max-width: 768px) {
-  .ficha-form-container {
-    padding: 0.5rem;
-  }
-  
-  .form-section {
-    padding: 1rem;
-  }
-  
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .form-actions {
-    padding: 1rem;
-    flex-direction: column-reverse;
-  }
-  
-  .form-actions .btn {
-    width: 100%;
-    margin: 0;
-  }
-}
-
-/* Estados de validação visual */
+/* Elementos de validação visual */
 .form-group:has(.form-input:valid) label::before,
 .form-group:has(.form-textarea:valid) label::before {
   content: '✓ ';
@@ -277,16 +329,11 @@
   color: #dc3545;
 }
 
-/* Animações */
+/* Efeitos de transição */
 .form-input,
 .form-textarea {
   transform: translateY(0);
   transition: all 0.2s ease;
-}
-
-.form-input:focus,
-.form-textarea:focus {
-  transform: translateY(-1px);
 }
 
 /* Indicador de campos obrigatórios */
@@ -294,12 +341,15 @@
   content: '* Campos obrigatórios';
   display: block;
   font-size: 0.75rem;
-  color: #666;
-  margin-bottom: 1rem;
+  color: var(--text-secondary, #666);
+  margin-bottom: 0.75rem; /* Reduzido de 1rem para 0.75rem */
   font-style: italic;
+  padding: 0 1rem; /* Reduzido de 1.5rem para 1rem */
+  padding-top: 0.75rem; /* Reduzido de 1rem para 0.75rem */
+  transition: color 0.3s ease;
 }
 
-/* Melhorias para campos de data */
+/* Estilização para campos de data */
 .form-input[type="date"] {
   position: relative;
 }
@@ -314,4 +364,72 @@
 
 .form-input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+}
+
+/* Responsividade mobile */
+@media (max-width: 768px) {
+  .ficha-form-container {
+    padding: 0.5rem;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem; /* Reduzido de 1rem para 0.75rem */
+    padding: 0.75rem; /* Reduzido de 1rem para 0.75rem */
+  }
+  
+  .form-actions {
+    padding: 0.75rem; /* Reduzido de 1rem para 0.75rem */
+    flex-direction: column-reverse;
+  }
+  
+  .form-actions .btn {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* Regras específicas para modo de edição - Garantir layout consistente */
+.edit-mode .form-section {
+  margin-bottom: 1.25rem !important;
+}
+
+.edit-mode .form-section h2 {
+  padding: 0.625rem 1rem !important;
+}
+
+.edit-mode .form-grid {
+  padding: 1rem !important;
+  gap: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.edit-mode .form-group label {
+  margin-bottom: 0.375rem !important;
+}
+
+.edit-mode .form-input,
+.edit-mode .form-textarea {
+  padding: 0.625rem !important;
+}
+
+.edit-mode .form-actions {
+  padding: 1rem !important;
+}
+
+.edit-mode .page-header {
+  margin-bottom: 1.5rem !important;
+  padding-bottom: 0.75rem !important;
+}
+
+/* Mobile específico para modo de edição */
+@media (max-width: 768px) {
+  .edit-mode .form-grid {
+    gap: 0.75rem !important;
+    padding: 0.75rem !important;
+  }
+  
+  .edit-mode .form-actions {
+    padding: 0.75rem !important;
+  }
 }

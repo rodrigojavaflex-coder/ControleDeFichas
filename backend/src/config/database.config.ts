@@ -10,7 +10,8 @@ export default registerAs('database', () => ({
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
   synchronize: process.env.NODE_ENV === 'development',
-  logging: process.env.NODE_ENV === 'development',
+  // Configuração de logging otimizada
+  logging: process.env.DATABASE_LOGGING === 'true' ? true : ['error', 'warn', 'migration'],
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   timezone: 'UTC',
 }));

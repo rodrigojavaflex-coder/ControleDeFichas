@@ -2,7 +2,8 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f8fafc;
+  background-color: var(--bg-secondary, #f8fafc);
+  transition: background-color 0.3s ease;
 }
 
 .main-content-wrapper {
@@ -11,19 +12,23 @@
   overflow: hidden;
   padding-top: 64px; /* Altura do header */
   position: relative;
+  background-color: var(--bg-secondary, #f8fafc);
+  transition: background-color 0.3s ease;
 }
 
 .layout-sidebar {
   width: 256px;
-  background-color: #fff;
-  border-right: 1px solid #e0e0e0;
+  background-color: var(--bg-primary, #fff);
+  border-right: 1px solid var(--border-color, #e0e0e0);
   position: fixed;
   top: 64px;
   bottom: 0;
   left: 0;
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, visibility 0.3s ease-in-out, background-color 0.3s ease, border-color 0.3s ease;
   z-index: 998;
   transform: translateX(0);
+  visibility: visible;
+  opacity: 1;
 }
 
 .layout-content {
@@ -42,10 +47,17 @@
 .login-container {
   width: 100%;
   height: 100vh;
-  background: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Tema escuro para o container de login baseado na preferência do navegador */
+@media (prefers-color-scheme: dark) {
+  .login-container {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  }
 }
 
 .mobile-overlay {
@@ -70,8 +82,16 @@
 
 /* Desktop */
 @media (min-width: 769px) {
+  .layout-sidebar.is-open {
+    transform: translateX(0);
+    visibility: visible;
+    opacity: 1;
+  }
+  
   .layout-sidebar.is-collapsed {
-    transform: translateX(-256px); /* Move o menu para fora da tela */
+    transform: translateX(-260px); /* Move o menu completamente para fora da tela */
+    visibility: hidden; /* Oculta completamente */
+    opacity: 0; /* Torna transparente */
   }
   
   /* Quando o menu está colapsado, o conteúdo não precisa de margem */
