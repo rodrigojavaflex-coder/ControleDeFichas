@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Body, Param, Put, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Put,
+  UseInterceptors,
+  UploadedFile,
+  Req,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { ConfiguracaoService } from './configuracao.service';
 import { CreateConfiguracaoDto } from './dto/create-configuracao.dto';
@@ -13,25 +23,39 @@ export class ConfiguracaoController {
   constructor(private readonly configuracaoService: ConfiguracaoService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor('logoRelatorio', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + extname(file.originalname));
-      }
-    })
-  }))
+  @UseInterceptors(
+    FileInterceptor('logoRelatorio', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, uniqueSuffix + extname(file.originalname));
+        },
+      }),
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateConfiguracaoDto })
   async create(
-  @Body() body: CreateConfiguracaoDto,
-  @UploadedFile() file?: any
+    @UploadedFile() file?: any,
+    @Req() req?: any,
   ) {
-    if (file) {
-      body.logoRelatorio = `/uploads/${file.filename}`;
-    }
-    return this.configuracaoService.create(body);
+    // Processar FormData manualmente
+    const body: CreateConfiguracaoDto = {
+      nomeCliente: req.body.nomeCliente,
+      farmaceuticoResponsavel: req.body.farmaceuticoResponsavel,
+      logoRelatorio: file ? `/uploads/${file.filename}` : undefined,
+      // Processar campos booleanos - converter strings para booleanos
+      auditarConsultas: req.body.auditarConsultas ? req.body.auditarConsultas === 'true' : true,
+      auditarLoginLogOff: req.body.auditarLoginLogOff ? req.body.auditarLoginLogOff === 'true' : true,
+      auditarCriacao: req.body.auditarCriacao ? req.body.auditarCriacao === 'true' : true,
+      auditarAlteracao: req.body.auditarAlteracao ? req.body.auditarAlteracao === 'true' : true,
+      auditarExclusao: req.body.auditarExclusao ? req.body.auditarExclusao === 'true' : true,
+      auditarSenhaAlterada: req.body.auditarSenhaAlterada ? req.body.auditarSenhaAlterada === 'true' : true,
+    };
+
+    return this.configuracaoService.create(body, req?.user?.id);
   }
 
   @Get()
@@ -41,25 +65,43 @@ export class ConfiguracaoController {
   }
 
   @Put(':id')
-  @UseInterceptors(FileInterceptor('logoRelatorio', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + extname(file.originalname));
-      }
-    })
-  }))
+  @UseInterceptors(
+    FileInterceptor('logoRelatorio', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, uniqueSuffix + extname(file.originalname));
+        },
+      }),
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UpdateConfiguracaoDto })
   async update(
-  @Param('id') id: string,
-  @Body() body: UpdateConfiguracaoDto,
-  @UploadedFile() file?: any
+    @Param('id') id: string,
+    @UploadedFile() file?: any,
+    @Req() req?: any,
   ) {
-    if (file) {
-      body.logoRelatorio = `/uploads/${file.filename}`;
-    }
-    return this.configuracaoService.update(id, body);
+    // Capturar dados anteriores para auditoria
+    const previousConfig = await this.configuracaoService.findOne();
+    (req as any).previousUserData = previousConfig;
+    
+    // Processar FormData manualmente
+    const body: UpdateConfiguracaoDto = {
+      nomeCliente: req.body.nomeCliente,
+      farmaceuticoResponsavel: req.body.farmaceuticoResponsavel,
+      logoRelatorio: file ? `/uploads/${file.filename}` : undefined,
+      // Processar campos booleanos - converter strings para booleanos
+      auditarConsultas: req.body.auditarConsultas ? req.body.auditarConsultas === 'true' : undefined,
+      auditarLoginLogOff: req.body.auditarLoginLogOff ? req.body.auditarLoginLogOff === 'true' : undefined,
+      auditarCriacao: req.body.auditarCriacao ? req.body.auditarCriacao === 'true' : undefined,
+      auditarAlteracao: req.body.auditarAlteracao ? req.body.auditarAlteracao === 'true' : undefined,
+      auditarExclusao: req.body.auditarExclusao ? req.body.auditarExclusao === 'true' : undefined,
+      auditarSenhaAlterada: req.body.auditarSenhaAlterada ? req.body.auditarSenhaAlterada === 'true' : undefined,
+    };
+
+    return this.configuracaoService.update(id, body, req?.user?.id);
   }
 }

@@ -10,6 +10,63 @@
       <label for="farmaceuticoResponsavel" class="form-label">Farmacêutico Responsável</label>
       <input id="farmaceuticoResponsavel" type="text" formControlName="farmaceuticoResponsavel" class="form-input" placeholder="Digite o nome do farmacêutico" />
     </div>
+
+    <!-- Seção de Configurações de Auditoria -->
+    <div class="audit-section">
+      <h3 class="section-title">Configurações de Auditoria</h3>
+      <p class="section-description">Configure quais tipos de operações serão auditadas no sistema</p>
+
+      <div class="audit-grid">
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="auditarConsultas" class="checkbox-input" />
+            <span class="checkbox-text">Auditar Consultas</span>
+          </label>
+          <small class="field-description">Registra quando usuários consultam dados (operações READ)</small>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="auditarLoginLogOff" class="checkbox-input" />
+            <span class="checkbox-text">Auditar Login/Logout</span>
+          </label>
+          <small class="field-description">Registra quando usuários fazem login e logout</small>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="auditarCriacao" class="checkbox-input" />
+            <span class="checkbox-text">Auditar Criações</span>
+          </label>
+          <small class="field-description">Registra quando novos registros são criados</small>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="auditarAlteracao" class="checkbox-input" />
+            <span class="checkbox-text">Auditar Alterações</span>
+          </label>
+          <small class="field-description">Registra quando registros são modificados</small>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="auditarExclusao" class="checkbox-input" />
+            <span class="checkbox-text">Auditar Exclusões</span>
+          </label>
+          <small class="field-description">Registra quando registros são removidos</small>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" formControlName="auditarSenhaAlterada" class="checkbox-input" />
+            <span class="checkbox-text">Auditar Alteração de Senha</span>
+          </label>
+          <small class="field-description">Registra quando senhas são alteradas</small>
+        </div>
+      </div>
+    </div>
+
     <div class="form-group">
       <label for="logoRelatorio" class="form-label">Logo do Relatório</label>
       <input id="logoRelatorio" type="file" (change)="onLogoChange($event)" accept="image/png" class="form-input" />

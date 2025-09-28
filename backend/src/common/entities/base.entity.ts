@@ -12,12 +12,20 @@ export abstract class BaseEntity {
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
   })
-  createdAt: Date;
+  criadoEm: Date;
 
   @UpdateDateColumn({
     type: 'timestamp',
     default: () => 'CURRENT_TIMESTAMP(6)',
     onUpdate: 'CURRENT_TIMESTAMP(6)',
   })
-  updatedAt: Date;
+  atualizadoEm: Date;
+
+  /**
+   * Nome amigável da entidade para uso em logs de auditoria
+   * Deve ser definido nas classes filhas
+   */
+  static get nomeAmigavel(): string {
+    return 'entidade';
+  }
 }

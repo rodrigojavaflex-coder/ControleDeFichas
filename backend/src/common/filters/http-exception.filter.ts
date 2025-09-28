@@ -19,10 +19,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception.getStatus();
 
     const errorResponse = exception.getResponse();
-    
+
     // Estruturar a resposta de erro
     let message: string | string[];
-    
+
     if (typeof errorResponse === 'string') {
       message = errorResponse;
     } else if (typeof errorResponse === 'object' && errorResponse !== null) {

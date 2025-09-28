@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './components/login/login';
 import { UserListComponent } from './components/user-list/user-list';
 import { UserFormComponent } from './components/user-form/user-form';
-import { AuditLogsComponent } from './components/audit-logs/audit-logs';
+import { AuditoriaComponent } from './components/auditoria/auditoria';
 import { FichaTecnicaListComponent } from './components/ficha-tecnica-list/ficha-tecnica-list';
 import { FichaTecnicaFormComponent } from './components/ficha-tecnica-form/ficha-tecnica-form';
 import { authGuard } from './guards/auth.guard';
@@ -45,8 +45,8 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'audit',
-    component: AuditLogsComponent,
+    path: 'auditoria',
+    component: AuditoriaComponent,
     canActivate: [authGuard]
   },
   {

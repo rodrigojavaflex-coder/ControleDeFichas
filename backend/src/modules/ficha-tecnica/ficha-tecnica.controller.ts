@@ -12,6 +12,7 @@ import {
   HttpStatus,
   ValidationPipe,
   UseInterceptors,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -23,26 +24,27 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { FichaTecnicaService } from './ficha-tecnica.service';
-import { CreateFichaTecnicaDto, UpdateFichaTecnicaDto, FindFichaTecnicaDto } from './dto';
+import {
+  CreateFichaTecnicaDto,
+  UpdateFichaTecnicaDto,
+  FindFichaTecnicaDto,
+} from './dto';
 import { FichaTecnica } from './entities/ficha-tecnica.entity';
+import type { Request } from 'express';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Permission } from '../../common/enums/permission.enum';
-import { AuditAction } from '../../common/enums/audit.enum';
-import { AuditLog, AuditInterceptor } from '../../common/interceptors/audit.interceptor';
 
 @ApiTags('fichas-tecnicas')
 @Controller('fichas-tecnicas')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-@UseInterceptors(AuditInterceptor)
 export class FichaTecnicaController {
   constructor(private readonly fichaTecnicaService: FichaTecnicaService) {}
 
   @Post()
   @Permissions(Permission.FICHA_TECNICA_CREATE)
-  @AuditLog(AuditAction.FICHA_TECNICA_CREATE, 'FichaTecnica')
   @ApiOperation({ summary: 'Criar nova ficha técnica' })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -57,7 +59,9 @@ export class FichaTecnicaController {
     status: HttpStatus.FORBIDDEN,
     description: 'Permissão insuficiente',
   })
-  async create(@Body() createFichaTecnicaDto: CreateFichaTecnicaDto): Promise<FichaTecnica> {
+  async create(
+    @Body() createFichaTecnicaDto: CreateFichaTecnicaDto,
+  ): Promise<FichaTecnica> {
     return await this.fichaTecnicaService.create(createFichaTecnicaDto);
   }
 
@@ -104,7 +108,9 @@ export class FichaTecnicaController {
     description: 'Filtrar por DCB',
     example: 'Paracetamol',
   })
-  async findAll(@Query(ValidationPipe) query: FindFichaTecnicaDto): Promise<PaginatedResponseDto<FichaTecnica>> {
+  async findAll(
+    @Query(ValidationPipe) query: FindFichaTecnicaDto,
+  ): Promise<PaginatedResponseDto<FichaTecnica>> {
     return await this.fichaTecnicaService.findAll(query);
   }
 
@@ -136,13 +142,14 @@ export class FichaTecnicaController {
     description: 'Fichas técnicas mais recentes',
     type: [FichaTecnica],
   })
-  async findRecent(@Query('limit', new ParseIntPipe({ optional: true })) limit?: number): Promise<FichaTecnica[]> {
+  async findRecent(
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+  ): Promise<FichaTecnica[]> {
     return await this.fichaTecnicaService.findRecentFichas(limit || 5);
   }
 
   @Get(':id')
   @Permissions(Permission.FICHA_TECNICA_READ)
-  @AuditLog(AuditAction.FICHA_TECNICA_READ, 'FichaTecnica')
   @ApiOperation({ summary: 'Buscar ficha técnica por ID' })
   @ApiParam({
     name: 'id',
@@ -165,7 +172,6 @@ export class FichaTecnicaController {
 
   @Patch(':id')
   @Permissions(Permission.FICHA_TECNICA_UPDATE)
-  @AuditLog(AuditAction.FICHA_TECNICA_UPDATE, 'FichaTecnica')
   @ApiOperation({ summary: 'Atualizar ficha técnica' })
   @ApiParam({
     name: 'id',
@@ -189,13 +195,17 @@ export class FichaTecnicaController {
   async update(
     @Param('id') id: string,
     @Body() updateFichaTecnicaDto: UpdateFichaTecnicaDto,
+    @Req() req: Request,
   ): Promise<FichaTecnica> {
+    // Capturar dados anteriores para auditoria
+    const previousFicha = await this.fichaTecnicaService.findOne(id);
+    (req as any).previousUserData = previousFicha;
+    
     return await this.fichaTecnicaService.update(id, updateFichaTecnicaDto);
   }
 
   @Delete(':id')
   @Permissions(Permission.FICHA_TECNICA_DELETE)
-  @AuditLog(AuditAction.FICHA_TECNICA_DELETE, 'FichaTecnica')
   @ApiOperation({ summary: 'Remover ficha técnica' })
   @ApiParam({
     name: 'id',
@@ -215,7 +225,11 @@ export class FichaTecnicaController {
     status: HttpStatus.FORBIDDEN,
     description: 'Permissão insuficiente',
   })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(@Param('id') id: string, @Req() req: Request): Promise<void> {
+    // Buscar ficha técnica antes da deleção para auditoria
+    const fichaTecnica = await this.fichaTecnicaService.findOne(id);
+    (req as any).entityToDelete = fichaTecnica;
+    
     return await this.fichaTecnicaService.remove(id);
   }
 }

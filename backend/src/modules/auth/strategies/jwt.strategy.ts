@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+import { Usuario } from '../../usuarios/entities/usuario.entity';
 
 export interface JwtPayload {
   sub: string; // user id
@@ -17,8 +17,8 @@ export interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly configService: ConfigService,
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(Usuario)
+    private readonly userRepository: Repository<Usuario>,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -27,15 +27,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<User> {
+  async validate(payload: JwtPayload): Promise<Usuario> {
     const user = await this.userRepository.findOne({
-      where: { id: payload.sub, isActive: true }
+      where: { id: payload.sub, ativo: true },
     });
-    
+
     if (!user) {
       throw new UnauthorizedException('Token inválido');
     }
-    
+
     return user;
   }
 }

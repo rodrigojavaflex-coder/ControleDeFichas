@@ -1,9 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FichaTecnica } from './entities/ficha-tecnica.entity';
-import { CreateFichaTecnicaDto, UpdateFichaTecnicaDto, FindFichaTecnicaDto } from './dto';
-import { PaginatedResponseDto, PaginationMetaDto } from '../../common/dto/paginated-response.dto';
+import {
+  CreateFichaTecnicaDto,
+  UpdateFichaTecnicaDto,
+  FindFichaTecnicaDto,
+} from './dto';
+import {
+  PaginatedResponseDto,
+  PaginationMetaDto,
+} from '../../common/dto/paginated-response.dto';
 
 @Injectable()
 export class FichaTecnicaService {
@@ -12,20 +23,29 @@ export class FichaTecnicaService {
     private readonly fichaTecnicaRepository: Repository<FichaTecnica>,
   ) {}
 
-  async create(createFichaTecnicaDto: CreateFichaTecnicaDto): Promise<FichaTecnica> {
+  async create(
+    createFichaTecnicaDto: CreateFichaTecnicaDto,
+  ): Promise<FichaTecnica> {
     try {
-      const fichaTecnica = this.fichaTecnicaRepository.create(createFichaTecnicaDto);
+      const fichaTecnica = this.fichaTecnicaRepository.create(
+        createFichaTecnicaDto,
+      );
       return await this.fichaTecnicaRepository.save(fichaTecnica);
     } catch (error) {
-      throw new BadRequestException('Erro ao criar ficha técnica: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao criar ficha técnica: ' + error.message,
+      );
     }
   }
 
-  async findAll(query: FindFichaTecnicaDto): Promise<PaginatedResponseDto<FichaTecnica>> {
+  async findAll(
+    query: FindFichaTecnicaDto,
+  ): Promise<PaginatedResponseDto<FichaTecnica>> {
     try {
       const { page = 1, limit = 10, ...filters } = query;
-      
-      const queryBuilder = this.fichaTecnicaRepository.createQueryBuilder('ficha');
+
+      const queryBuilder =
+        this.fichaTecnicaRepository.createQueryBuilder('ficha');
 
       // Filtro por tipoDaFicha
       if (filters.tipoDaFicha) {
@@ -36,9 +56,12 @@ export class FichaTecnicaService {
 
       // Filtros por campos específicos
       if (filters.codigoFormulaCerta) {
-        queryBuilder.andWhere('ficha.codigoFormulaCerta = :codigoFormulaCerta', {
-          codigoFormulaCerta: filters.codigoFormulaCerta,
-        });
+        queryBuilder.andWhere(
+          'ficha.codigoFormulaCerta = :codigoFormulaCerta',
+          {
+            codigoFormulaCerta: filters.codigoFormulaCerta,
+          },
+        );
       }
 
       if (filters.produto) {
@@ -52,7 +75,6 @@ export class FichaTecnicaService {
           dcb: `%${filters.dcb}%`,
         });
       }
-
 
       if (filters.revisao) {
         queryBuilder.andWhere('LOWER(ficha.revisao) LIKE LOWER(:revisao)', {
@@ -77,17 +99,17 @@ export class FichaTecnicaService {
       if (filters.search) {
         queryBuilder.andWhere(
           '(LOWER(ficha.produto) LIKE LOWER(:search) OR ' +
-          'LOWER(ficha.dcb) LIKE LOWER(:search) OR ' +
-          'LOWER(ficha.nomeCientifico) LIKE LOWER(:search) OR ' +
-          'LOWER(ficha.formulaMolecular) LIKE LOWER(:search) OR ' +
-          'LOWER(ficha.pesoMolecular) LIKE LOWER(:search) OR ' +
-          'CAST(ficha.codigoFormulaCerta AS TEXT) LIKE :search)',
-          { search: `%${filters.search}%` }
+            'LOWER(ficha.dcb) LIKE LOWER(:search) OR ' +
+            'LOWER(ficha.nomeCientifico) LIKE LOWER(:search) OR ' +
+            'LOWER(ficha.formulaMolecular) LIKE LOWER(:search) OR ' +
+            'LOWER(ficha.pesoMolecular) LIKE LOWER(:search) OR ' +
+            'CAST(ficha.codigoFormulaCerta AS TEXT) LIKE :search)',
+          { search: `%${filters.search}%` },
         );
       }
 
       // Ordenação padrão
-      queryBuilder.orderBy('ficha.createdAt', 'DESC');
+      queryBuilder.orderBy('ficha.criadoEm', 'DESC');
 
       // Paginação
       const skip = (page - 1) * limit;
@@ -96,10 +118,12 @@ export class FichaTecnicaService {
       const [data, total] = await queryBuilder.getManyAndCount();
 
       const meta = new PaginationMetaDto(page, limit, total);
-      
+
       return new PaginatedResponseDto(data, meta);
     } catch (error) {
-      throw new BadRequestException('Erro ao buscar fichas técnicas: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao buscar fichas técnicas: ' + error.message,
+      );
     }
   }
 
@@ -118,18 +142,24 @@ export class FichaTecnicaService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao buscar ficha técnica: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao buscar ficha técnica: ' + error.message,
+      );
     }
   }
 
-  async findByCodigoFormulaCerta(codigoFormulaCerta: string): Promise<FichaTecnica> {
+  async findByCodigoFormulaCerta(
+    codigoFormulaCerta: string,
+  ): Promise<FichaTecnica> {
     try {
       const fichaTecnica = await this.fichaTecnicaRepository.findOne({
         where: { codigoFormulaCerta },
       });
 
       if (!fichaTecnica) {
-        throw new NotFoundException(`Ficha técnica com código ${codigoFormulaCerta} não encontrada`);
+        throw new NotFoundException(
+          `Ficha técnica com código ${codigoFormulaCerta} não encontrada`,
+        );
       }
 
       return fichaTecnica;
@@ -137,22 +167,29 @@ export class FichaTecnicaService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao buscar ficha técnica: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao buscar ficha técnica: ' + error.message,
+      );
     }
   }
 
-  async update(id: string, updateFichaTecnicaDto: UpdateFichaTecnicaDto): Promise<FichaTecnica> {
+  async update(
+    id: string,
+    updateFichaTecnicaDto: UpdateFichaTecnicaDto,
+  ): Promise<FichaTecnica> {
     try {
       const fichaTecnica = await this.findOne(id);
-      
+
       Object.assign(fichaTecnica, updateFichaTecnicaDto);
-      
+
       return await this.fichaTecnicaRepository.save(fichaTecnica);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao atualizar ficha técnica: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao atualizar ficha técnica: ' + error.message,
+      );
     }
   }
 
@@ -164,7 +201,9 @@ export class FichaTecnicaService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException('Erro ao remover ficha técnica: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao remover ficha técnica: ' + error.message,
+      );
     }
   }
 
@@ -172,18 +211,22 @@ export class FichaTecnicaService {
     try {
       return await this.fichaTecnicaRepository.count();
     } catch (error) {
-      throw new BadRequestException('Erro ao contar fichas técnicas: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao contar fichas técnicas: ' + error.message,
+      );
     }
   }
 
   async findRecentFichas(limit: number = 5): Promise<FichaTecnica[]> {
     try {
       return await this.fichaTecnicaRepository.find({
-        order: { createdAt: 'DESC' },
+        order: { criadoEm: 'DESC' },
         take: limit,
       });
     } catch (error) {
-      throw new BadRequestException('Erro ao buscar fichas técnicas recentes: ' + error.message);
+      throw new BadRequestException(
+        'Erro ao buscar fichas técnicas recentes: ' + error.message,
+      );
     }
   }
 }

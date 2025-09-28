@@ -28,7 +28,14 @@ export class ConfiguracaoComponent implements OnInit {
     this.form = this.fb.group({
       nomeCliente: ['', Validators.required],
       logoRelatorio: [null],
-      farmaceuticoResponsavel: ['']
+      farmaceuticoResponsavel: [''],
+      // Configurações de Auditoria
+      auditarConsultas: [true],
+      auditarLoginLogOff: [true],
+      auditarCriacao: [true],
+      auditarAlteracao: [true],
+      auditarExclusao: [true],
+      auditarSenhaAlterada: [true]
     });
   }
 
@@ -39,7 +46,14 @@ export class ConfiguracaoComponent implements OnInit {
         this.configuracao = config;
         this.form.patchValue({
           nomeCliente: config.nomeCliente,
-          farmaceuticoResponsavel: config.farmaceuticoResponsavel || ''
+          farmaceuticoResponsavel: config.farmaceuticoResponsavel || '',
+          // Configurações de Auditoria
+          auditarConsultas: config.auditarConsultas ?? true,
+          auditarLoginLogOff: config.auditarLoginLogOff ?? true,
+          auditarCriacao: config.auditarCriacao ?? true,
+          auditarAlteracao: config.auditarAlteracao ?? true,
+          auditarExclusao: config.auditarExclusao ?? true,
+          auditarSenhaAlterada: config.auditarSenhaAlterada ?? true
         });
         if (config.logoRelatorio) {
           const backendUrl = environment.apiUrl.replace(/\/api$/, '');
@@ -83,6 +97,13 @@ export class ConfiguracaoComponent implements OnInit {
     if (this.form.value.farmaceuticoResponsavel) {
       formData.append('farmaceuticoResponsavel', this.form.value.farmaceuticoResponsavel);
     }
+    // Configurações de Auditoria
+    formData.append('auditarConsultas', this.form.value.auditarConsultas.toString());
+    formData.append('auditarLoginLogOff', this.form.value.auditarLoginLogOff.toString());
+    formData.append('auditarCriacao', this.form.value.auditarCriacao.toString());
+    formData.append('auditarAlteracao', this.form.value.auditarAlteracao.toString());
+    formData.append('auditarExclusao', this.form.value.auditarExclusao.toString());
+    formData.append('auditarSenhaAlterada', this.form.value.auditarSenhaAlterada.toString());
     const handleError = (err: any) => {
       this.loading = false;
       this.success = null;

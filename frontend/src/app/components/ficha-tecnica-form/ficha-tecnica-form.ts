@@ -9,7 +9,7 @@ import {
   CreateFichaTecnicaDto, 
   UpdateFichaTecnicaDto 
 } from '../../models/ficha-tecnica.model';
-import { Permission } from '../../models/user.model';
+import { Permission } from '../../models/usuario.model';
 
 @Component({
   selector: 'app-ficha-tecnica-form',

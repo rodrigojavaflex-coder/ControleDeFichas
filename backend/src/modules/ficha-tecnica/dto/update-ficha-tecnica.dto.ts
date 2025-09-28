@@ -4,16 +4,18 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateFichaTecnicaDto extends PartialType(
-  OmitType(CreateFichaTecnicaDto, ['codigoFormulaCerta'] as const)
+  OmitType(CreateFichaTecnicaDto, ['codigoFormulaCerta'] as const),
 ) {
-  @ApiProperty({ 
-    description: 'Código único da fórmula inserido pelo usuário', 
-    maxLength: 100, 
+  @ApiProperty({
+    description: 'Código único da fórmula inserido pelo usuário',
+    maxLength: 100,
     example: 'FC001',
-    required: false 
+    required: false,
   })
   @IsOptional()
   @IsString({ message: 'Código da fórmula certa deve ser texto' })
-  @MaxLength(100, { message: 'Código da fórmula certa deve ter no máximo 100 caracteres' })
+  @MaxLength(100, {
+    message: 'Código da fórmula certa deve ter no máximo 100 caracteres',
+  })
   codigoFormulaCerta?: string;
 }

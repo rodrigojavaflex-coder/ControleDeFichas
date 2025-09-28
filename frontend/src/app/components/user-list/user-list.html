@@ -62,14 +62,14 @@
       </thead>
       <tbody>
         <tr *ngFor="let user of users">
-          <td>{{ user.name }}</td>
+          <td>{{ user.nome }}</td>
           <td>{{ user.email }}</td>
           <td>
-            <span [class]="user.isActive ? 'status-active' : 'status-inactive'">
-              {{ user.isActive ? 'Ativo' : 'Inativo' }}
+            <span [class]="user.ativo ? 'status-active' : 'status-inactive'">
+              {{ user.ativo ? 'Ativo' : 'Inativo' }}
             </span>
           </td>
-          <td>{{ user.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ user.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td>
           <td>
             @if (canEditUser()) {
               <button class="btn btn-small btn-primary" (click)="editUser(user)">

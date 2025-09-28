@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService, NavigationService, ThemeService } from '../../services/index';
-import { User } from '../../models/user.model';
+import { Usuario, Permission } from '../../models/usuario.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { ChangePasswordModalComponent } from '../change-password-modal/change-password-modal';
 import { ToastNotificationComponent } from '../toast-notification/toast-notification';

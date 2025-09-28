@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
-import { CreateUserDto, UpdateUserDto, User, PermissionGroup, Permission } from '../../models/user.model';
+import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, PermissionGroup, Permission } from '../../models/usuario.model';
 
 @Component({
   selector: 'app-user-form',
@@ -89,12 +89,13 @@ export class UserFormComponent implements OnInit {
 
     this.userService.getUserById(id).subscribe({
       next: (user) => {
+        console.log('Usuário carregado:', user);
         this.userForm.patchValue({
-          name: user.name,
-          email: user.email,
-          isActive: user.isActive
+          name: user.nome,        // ✅ Campo correto do form
+          email: user.email,      // ✅ Correto
+          isActive: user.ativo    // ✅ Campo correto do form
         });
-        this.selectedPermissions = user.permissions || [];
+        this.selectedPermissions = user.permissoes || [];
         this.loading = false;
       },
       error: (error) => {
@@ -134,18 +135,18 @@ export class UserFormComponent implements OnInit {
 
   private createUser(formValue: any): void {
     console.log('createUser method called with:', formValue);
-    
-    const createUserDto: CreateUserDto = {
-      name: formValue.name,
-      email: formValue.email,
-      password: formValue.password,
-      isActive: formValue.isActive,
-      permissions: this.selectedPermissions
+
+    const createUsuarioDto: CreateUsuarioDto = {
+      nome: formValue.name,        // ✅ Campo correto do form
+      email: formValue.email,      // ✅ Correto
+      senha: formValue.password,   // ✅ Campo correto do form
+      ativo: formValue.isActive,   // ✅ Campo correto do form
+      permissoes: this.selectedPermissions
     };
 
-    console.log('Sending createUserDto:', createUserDto);
+    console.log('Sending createUsuarioDto:', createUsuarioDto);
 
-    this.userService.createUser(createUserDto).subscribe({
+    this.userService.createUser(createUsuarioDto).subscribe({
       next: (user) => {
         console.log('Usuário criado:', user);
         this.router.navigate(['/users']);
@@ -158,19 +159,19 @@ export class UserFormComponent implements OnInit {
   }
 
   private updateUser(formValue: any): void {
-    const updateUserDto: UpdateUserDto = {
-      name: formValue.name,
-      email: formValue.email,
-      isActive: formValue.isActive,
-      permissions: this.selectedPermissions
+    const updateUsuarioDto: UpdateUsuarioDto = {
+      nome: formValue.name,        // ✅ Campo correto do form
+      email: formValue.email,      // ✅ Correto
+      ativo: formValue.isActive,   // ✅ Campo correto do form
+      permissoes: this.selectedPermissions
     };
 
     // Adiciona senha apenas se foi informada
     if (formValue.password && formValue.password.trim()) {
-      updateUserDto.password = formValue.password;
+      updateUsuarioDto.senha = formValue.password;
     }
 
-    this.userService.updateUser(this.userId!, updateUserDto).subscribe({
+    this.userService.updateUser(this.userId!, updateUsuarioDto).subscribe({
       next: (user) => {
         console.log('Usuário atualizado:', user);
         this.router.navigate(['/users']);

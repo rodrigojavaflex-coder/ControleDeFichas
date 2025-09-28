@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { User, CreateUserDto, UpdateUserDto, FindUsersDto, PaginatedResponse, PermissionGroup, ChangePasswordDto } from '../models/user.model';
+import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, FindUsuariosDto, PaginatedResponse, PermissionGroup, ChangePasswordDto } from '../models/usuario.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -15,39 +15,39 @@ export class UserService {
   /**
    * Criar novo usuário
    */
-  createUser(createUserDto: CreateUserDto): Observable<User> {
-    return this.http.post<User>(this.apiUrl, createUserDto);
+  createUser(createUsuarioDto: CreateUsuarioDto): Observable<Usuario> {
+    return this.http.post<Usuario>(this.apiUrl, createUsuarioDto);
   }
 
   /**
    * Listar usuários com paginação e filtros
    */
-  getUsers(findUsersDto?: FindUsersDto): Observable<PaginatedResponse<User>> {
+  getUsers(findUsuariosDto?: FindUsuariosDto): Observable<PaginatedResponse<Usuario>> {
     let params = new HttpParams();
     
-    if (findUsersDto) {
-      if (findUsersDto.page) {
-        params = params.set('page', findUsersDto.page.toString());
+    if (findUsuariosDto) {
+      if (findUsuariosDto.page) {
+        params = params.set('page', findUsuariosDto.page.toString());
       }
-      if (findUsersDto.limit) {
-        params = params.set('limit', findUsersDto.limit.toString());
+      if (findUsuariosDto.limit) {
+        params = params.set('limit', findUsuariosDto.limit.toString());
       }
-      if (findUsersDto.name) {
-        params = params.set('name', findUsersDto.name);
+      if (findUsuariosDto.nome) {
+        params = params.set('nome', findUsuariosDto.nome);
       }
-      if (findUsersDto.email) {
-        params = params.set('email', findUsersDto.email);
+      if (findUsuariosDto.email) {
+        params = params.set('email', findUsuariosDto.email);
       }
     }
 
-    return this.http.get<PaginatedResponse<User>>(this.apiUrl, { params });
+    return this.http.get<PaginatedResponse<Usuario>>(this.apiUrl, { params });
   }
 
   /**
    * Buscar usuário por ID
    */
-  getUserById(id: string): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/${id}`);
+  getUserById(id: string): Observable<Usuario> {
+    return this.http.get<Usuario>(`${this.apiUrl}/${id}`);
   }
 
   /**
@@ -60,15 +60,15 @@ export class UserService {
   /**
    * Atualizar usuário
    */
-  updateUser(id: string, updateUserDto: UpdateUserDto): Observable<User> {
-    return this.http.patch<User>(`${this.apiUrl}/${id}`, updateUserDto);
+  updateUser(id: string, updateUsuarioDto: UpdateUsuarioDto): Observable<Usuario> {
+    return this.http.patch<Usuario>(`${this.apiUrl}/${id}`, updateUsuarioDto);
   }
 
   /**
    * Atualizar tema do usuário
    */
-  updateTema(id: string, tema: string): Observable<User> {
-    return this.http.patch<User>(`${this.apiUrl}/${id}/tema`, { tema });
+  updateTema(id: string, tema: string): Observable<Usuario> {
+    return this.http.patch<Usuario>(`${this.apiUrl}/${id}/tema`, { tema });
   }
 
   /**

@@ -8,26 +8,26 @@
   </div>
   <div class="header-right">
     <div *ngIf="currentUser$ | async as user" class="user-profile">
-      <span class="user-name">{{ user.name }}</span>
+      <span class="user-name">{{ user.nome }}</span>
       
       <!-- Dropdown do usuário -->
       <div class="user-dropdown-container">
         <div class="user-avatar" (click)="toggleUserDropdown()">
-          <span>{{ user.name | slice:0:1 }}</span>
+          <span>{{ user.nome | slice:0:1 }}</span>
         </div>
         
         <!-- Dropdown Menu -->
         <div class="user-dropdown" [class.show]="showUserDropdown">
           <div class="dropdown-header">
             <div class="user-info">
-              <div class="user-name-horizontal">{{ user.name }}</div>
+              <div class="user-name-horizontal">{{ user.nome }}</div>
               <div class="user-email">{{ user.email }}</div>
             </div>
           </div>
           <div class="dropdown-divider"></div>
           <!-- Alterar Senha -->
           <div class="dropdown-section">
-            <button class="dropdown-item" (click)="changePassword()">
+            <button class="dropdown-item change-password-btn" (click)="changePassword()">
               <i class="fas fa-key"></i>
               Alterar Senha
             </button>
@@ -35,7 +35,7 @@
           <div class="dropdown-divider"></div>
           <!-- Seleção de Tema -->
           <div class="dropdown-section">
-            <span class="dropdown-section-title">Tema do Sistema</span>
+            <span class="dropdown-section-title">Selecione o tema:</span>
             <div class="theme-options">
               <button 
                 class="theme-option" 

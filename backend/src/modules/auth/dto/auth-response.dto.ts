@@ -37,7 +37,7 @@ export class AuthResponseDto {
     isActive: boolean;
     permissions: Permission[];
     tema: string;
-    createdAt: Date;
-    updatedAt: Date;
+    criadoEm: Date;
+    atualizadoEm: Date;
   };
 }

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService, NavigationService } from '../../services/index';
-import { User, Permission } from '../../models/user.model';
+import { Usuario, Permission } from '../../models/usuario.model';
 
 interface MenuItem {
   label: string;
@@ -25,7 +25,7 @@ export class NavigationComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private destroy$ = new Subject<void>();
 
-  currentUser: User | null = null;
+  currentUser: Usuario | null = null;
   visibleMenuItems: MenuItem[] = [];
 
   // Estados do menu através do serviço
@@ -54,7 +54,7 @@ export class NavigationComponent implements OnInit, OnDestroy {
       },
       {
         label: 'Auditoria',
-        route: '/audit',
+        route: '/auditoria',
         icon: 'feather-search',
         requiredPermissions: [Permission.AUDIT_VIEW, Permission.AUDIT_MANAGE]
       },

@@ -1,16 +1,16 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserService } from '../../services/user.service';
-import { User } from '../../models/user.model';
+import { Usuario } from '../../models/usuario.model';
 
 interface UserPrintData {
   id: string;
-  name: string;
+  nome: string;
   email: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  permissions: Array<{
+  ativo: boolean;
+  criadoEm: string;
+  atualizadoEm: string;
+  permissoes: Array<{
     group: string;
     permissions: string[];
   }>;
@@ -38,7 +38,7 @@ interface UserPrintData {
           </div>
           <div class="info-item">
             <label>Nome:</label>
-            <span>{{ userPrintData.name }}</span>
+            <span>{{ userPrintData.nome }}</span>
           </div>
           <div class="info-item">
             <label>Email:</label>
@@ -46,25 +46,25 @@ interface UserPrintData {
           </div>
           <div class="info-item">
             <label>Status:</label>
-            <span [class]="userPrintData.isActive ? 'status-active' : 'status-inactive'">
-              {{ userPrintData.isActive ? 'Ativo' : 'Inativo' }}
+            <span [class]="userPrintData.ativo ? 'status-active' : 'status-inactive'">
+              {{ userPrintData.ativo ? 'Ativo' : 'Inativo' }}
             </span>
           </div>
           <div class="info-item">
             <label>Criado em:</label>
-            <span>{{ formatDate(userPrintData.createdAt) }}</span>
+            <span>{{ formatDate(userPrintData.criadoEm) }}</span>
           </div>
           <div class="info-item">
             <label>Atualizado em:</label>
-            <span>{{ formatDate(userPrintData.updatedAt) }}</span>
+            <span>{{ formatDate(userPrintData.atualizadoEm) }}</span>
           </div>
         </div>
       </div>
 
       <div class="permissions-section">
         <h2>Permissões ({{ userPrintData.totalPermissions }} total)</h2>
-        <div class="permissions-groups" *ngIf="userPrintData.permissions.length > 0; else noPermissions">
-          <div class="permission-group" *ngFor="let group of userPrintData.permissions">
+        <div class="permissions-groups" *ngIf="userPrintData.permissoes.length > 0; else noPermissions">
+          <div class="permission-group" *ngFor="let group of userPrintData.permissoes">
             <h3>{{ group.group }}</h3>
             <ul>
               <li *ngFor="let permission of group.permissions">{{ permission }}</li>

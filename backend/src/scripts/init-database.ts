@@ -1,118 +1,68 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
-import { UsersService } from '../modules/users/users.service';
-import { CreateUserDto } from '../modules/users/dto/create-user.dto';
+import { AppDataSource } from '../data-source';
+import { Usuario } from '../modules/usuarios/entities/usuario.entity';
 import { Permission } from '../common/enums/permission.enum';
+import * as bcrypt from 'bcrypt';
 
-async function initializeDatabase() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-  
+async function initDatabase() {
   try {
-    const usersService = app.get(UsersService);
-    
-    console.log('🚀 Criando usuário administrador...');
-    console.log('');
-    
-    // Criar usuário administrador com todas as permissões
-    const adminUserDto: CreateUserDto = {
-      name: 'Administrador',
-      email: 'admin@sistema.com',
-      password: 'Ro112543*',
-      isActive: true,
-      permissions: [
-        // Permissões de usuários
-        Permission.USER_CREATE,
-        Permission.USER_READ,
-        Permission.USER_UPDATE,
-        Permission.USER_DELETE,
-        
-        // Permissão administrativa completa
-        Permission.ADMIN_FULL,
-        
-        // Permissões de sistema
-        Permission.SYSTEM_CONFIG,
-        Permission.SYSTEM_LOGS,
-        
-        // Permissões de relatórios
-        Permission.REPORTS_VIEW,
-        Permission.REPORTS_EXPORT,
-      ]
-    };
-    
-    console.log('👤 Verificando se usuário administrador já existe...');
-    
-    // Verificar se já existe um usuário com este email
-    try {
-      const existingUsers = await usersService.findAll({ email: adminUserDto.email, page: 1, limit: 1 });
-      if (existingUsers.data.length > 0) {
-        console.log('⚠️  Usuário administrador já existe!');
-        console.log(`👤 Nome: ${existingUsers.data[0].name}`);
-        console.log(`📧 Email: ${existingUsers.data[0].email}`);
-        console.log('');
-        console.log('📋 Credenciais para login:');
-        console.log(`   📧 Email: ${adminUserDto.email}`);
-        console.log(`   🔑 Senha: ${adminUserDto.password}`);
-        console.log('');
-        console.log('🌐 Acesse o sistema em: http://localhost:4201');
-        return;
-      }
-    } catch (error) {
-      // Usuário não existe, pode criar
+    // Inicializar conexão com o banco
+    await AppDataSource.initialize();
+    console.log('✅ Conexão com banco de dados estabelecida');
+
+    const usuarioRepository = AppDataSource.getRepository(Usuario);
+
+    // Verificar se já existe um administrador
+    const adminExistente = await usuarioRepository.findOne({
+      where: { email: 'admin@sistema.com' }
+    });
+
+    if (adminExistente) {
+      console.log('ℹ️  Usuário administrador já existe');
+      return;
     }
-    
-    console.log(`📧 Email: ${adminUserDto.email}`);
-    console.log(`🔑 Senha: ${adminUserDto.password}`);
-    console.log(`🎯 Permissões: ${adminUserDto.permissions?.join(', ')}`);
-    console.log('');
-    
-    const adminUser = await usersService.create(adminUserDto);
-    
+
+    // Criar hash da senha
+    const saltRounds = 10;
+    const senhaHash = await bcrypt.hash('Ro112543*', saltRounds);
+
+    // Criar usuário administrador
+    const admin = new Usuario();
+    admin.nome = 'Administrador';
+    admin.email = 'admin@sistema.com';
+    admin.senha = senhaHash;
+    admin.ativo = true;
+    admin.permissoes = [
+      Permission.USER_CREATE,
+      Permission.USER_READ,
+      Permission.USER_UPDATE,
+      Permission.USER_DELETE,
+      Permission.USER_PRINT,
+      Permission.ADMIN_FULL,
+      Permission.SYSTEM_CONFIG,
+      Permission.SYSTEM_LOGS,
+      Permission.REPORTS_VIEW,
+      Permission.REPORTS_EXPORT,
+      Permission.CONFIGURACAO_ACCESS,
+      Permission.FICHA_TECNICA_CREATE,
+      Permission.FICHA_TECNICA_READ,
+      Permission.FICHA_TECNICA_UPDATE,
+      Permission.FICHA_TECNICA_DELETE,
+      Permission.AUDIT_VIEW,
+      Permission.AUDIT_MANAGE
+    ];
+
+    await usuarioRepository.save(admin);
     console.log('✅ Usuário administrador criado com sucesso!');
-    console.log(`👤 ID: ${adminUser.id}`);
-    console.log(`👑 Nome: ${adminUser.name}`);
-    console.log(`📧 Email: ${adminUser.email}`);
-    console.log(`🔐 Senha: ${adminUserDto.password} (criptografada no banco)`);
-    console.log('');
-    
-    // Resumo da criação
-    console.log('🎉 Usuário administrador configurado com sucesso!');
-    console.log('');
-    console.log('📋 Credenciais do Administrador:');
-    console.log(`   📧 Email: ${adminUserDto.email}`);
-    console.log(`   🔑 Senha: ${adminUserDto.password}`);
-    console.log('');
-    console.log('🌐 Acesse o sistema em: http://localhost:4201');
-    console.log('');
-    console.log('🛡️  Permissões do Administrador:');
-    console.log('   ✅ Criar, visualizar, editar e excluir usuários');
-    console.log('   ✅ Administração completa do sistema');
-    console.log('   ✅ Configurações do sistema');
-    console.log('   ✅ Visualização de logs');
-    console.log('   ✅ Visualização e exportação de relatórios');
-    console.log('');
-    
+    console.log('📧 Email: admin@sistema.com');
+    console.log('🔑 Senha: Ro112543*');
+
   } catch (error) {
-    if (error.message?.includes('Já existe um usuário cadastrado')) {
-      console.log('⚠️  Usuário administrador já existe!');
-      console.log('');
-      console.log('📋 Credenciais para login:');
-      console.log(`   📧 Email: admin@sistema.com`);
-      console.log(`   🔑 Senha: Ro112543*`);
-      console.log('');
-      console.log('🌐 Acesse o sistema em: http://localhost:4201');
-    } else {
-      console.error('❌ Erro ao criar usuário administrador:', error.message);
-      console.error('');
-      console.error('💡 Dicas para resolver:');
-      console.error('   1. Verifique se o PostgreSQL está rodando');
-      console.error('   2. Confirme as configurações de conexão no .env');
-      console.error('   3. Verifique se o banco de dados existe');
-      console.error('');
-    }
+    console.error('❌ Erro ao inicializar banco de dados:', error);
+    process.exit(1);
   } finally {
-    await app.close();
+    await AppDataSource.destroy();
   }
 }
 
-// Executar o script
-initializeDatabase();
+// Executar script
+initDatabase();

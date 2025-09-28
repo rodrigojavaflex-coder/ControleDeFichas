@@ -13,7 +13,7 @@ import {
   FindFichaTecnicaDto,
   FichaTecnicaPaginatedResponse
 } from '../../models/ficha-tecnica.model';
-import { Permission } from '../../models/user.model';
+import { Permission } from '../../models/usuario.model';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 
 @Component({
@@ -228,7 +228,7 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
       logoHtml = `<img src="${logoUrl}" alt="Logo" style="max-height: 80px; max-width: 120px; display: block;" />`;
     }
     const user = this.authService.getCurrentUser();
-    const userName = user?.name || 'Usuário';
+    const userName = user?.nome || 'Usuário';
     const dataAnalise = this.formatDate(ficha.dataDeAnalise);
 
     // Garante que o <body> começa diretamente pelo header, sem nada antes

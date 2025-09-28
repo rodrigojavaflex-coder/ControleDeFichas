@@ -5,13 +5,19 @@ export default registerAs('database', () => ({
   host: process.env.DATABASE_HOST || 'localhost',
   port: parseInt(process.env.DATABASE_PORT || '5432', 10),
   username: process.env.DATABASE_USERNAME || 'postgres',
-  password: process.env.DATABASE_PASSWORD || 'password',
-  database: process.env.DATABASE_NAME || 'nestjs_angular_db',
+  password: process.env.DATABASE_PASSWORD || 'Ro112543*',
+  database: process.env.DATABASE_NAME || 'metrobus',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-  synchronize: process.env.NODE_ENV === 'development',
+  synchronize: true, // Habilitado para desenvolvimento
   // Configuração de logging otimizada
-  logging: process.env.DATABASE_LOGGING === 'true' ? true : ['error', 'warn', 'migration'],
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  logging:
+    process.env.DATABASE_LOGGING === 'true'
+      ? true
+      : ['error', 'warn', 'migration'],
+  ssl:
+    process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
   timezone: 'UTC',
 }));

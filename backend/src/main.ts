@@ -23,7 +23,14 @@ async function bootstrap() {
   // Usar process.cwd() para garantir compatibilidade com Render
   // Corrigir para apontar para a subpasta 'browser', onde está o index.html
   // Corrigir caminho para subir um nível na estrutura
-  const angularDistPath = join(process.cwd(), '..', 'frontend', 'dist', 'frontend', 'browser');
+  const angularDistPath = join(
+    process.cwd(),
+    '..',
+    'frontend',
+    'dist',
+    'frontend',
+    'browser',
+  );
   app.useStaticAssets(angularDistPath);
   app.setBaseViewsDir(angularDistPath);
 
@@ -65,7 +72,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:4200',
       'http://localhost:3000',
-      'https://controledefichas.onrender.com'
+      'https://controledefichas.onrender.com',
     ], // Angular dev server + API docs + produção
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
@@ -82,14 +89,16 @@ async function bootstrap() {
     .setVersion(swaggerConfig.version)
     .addBearerAuth()
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || configService.get('app.port') || 10000;
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Aplicação rodando na porta ${port}`);
-  console.log(`📚 Documentação Swagger disponível em: http://localhost:${port}/api/docs`);
+  console.log(
+    `📚 Documentação Swagger disponível em: http://localhost:${port}/api/docs`,
+  );
 }
 
 bootstrap();

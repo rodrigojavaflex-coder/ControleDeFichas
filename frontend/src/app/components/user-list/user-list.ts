@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
-import { User, PaginatedResponse, FindUsersDto, Permission } from '../../models/user.model';
+import { Usuario, PaginatedResponse, FindUsuariosDto, Permission } from '../../models/usuario.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 
 @Component({
@@ -16,7 +16,7 @@ import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-m
   styleUrl: './user-list.css'
 })
 export class UserListComponent implements OnInit {
-  users: User[] = [];
+  users: Usuario[] = [];
   loading = false;
   error: string | null = null;
 
@@ -32,7 +32,7 @@ export class UserListComponent implements OnInit {
 
   // Modal de confirmação
   showDeleteModal = false;
-  userToDelete: User | null = null;
+  userToDelete: Usuario | null = null;
   deleteModalTitle = 'Confirmação de Exclusão';
   deleteModalMessage = '';
 
@@ -50,13 +50,13 @@ export class UserListComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    const filters: FindUsersDto = {
+    const filters: FindUsuariosDto = {
       page: this.currentPage,
       limit: this.pageSize
     };
 
     if (this.nameFilter.trim()) {
-      filters.name = this.nameFilter.trim();
+      filters.nome = this.nameFilter.trim();
     }
 
     if (this.emailFilter.trim()) {
@@ -64,7 +64,7 @@ export class UserListComponent implements OnInit {
     }
 
     this.userService.getUsers(filters).subscribe({
-      next: (response: PaginatedResponse<User>) => {
+      next: (response: PaginatedResponse<Usuario>) => {
         this.users = response.data;
         this.totalItems = response.meta.total;
         this.totalPages = response.meta.totalPages;
@@ -95,13 +95,13 @@ export class UserListComponent implements OnInit {
     this.loadUsers();
   }
 
-  editUser(user: User): void {
+  editUser(user: Usuario): void {
     this.router.navigate(['/users/edit', user.id]);
   }
 
-  deleteUser(user: User): void {
+  deleteUser(user: Usuario): void {
     this.userToDelete = user;
-    this.deleteModalMessage = `Tem certeza que deseja excluir o usuário "${user.name}"?\n\nEsta ação não pode ser desfeita.`;
+    this.deleteModalMessage = `Tem certeza que deseja excluir o usuário "${user.nome}"?\n\nEsta ação não pode ser desfeita.`;
     this.showDeleteModal = true;
   }
 
@@ -136,7 +136,7 @@ export class UserListComponent implements OnInit {
     this.router.navigate(['/users/new']);
   }
 
-  printUser(user: User): void {
+  printUser(user: Usuario): void {
     // Abrir nova janela com o componente de impressão
     const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
     if (printWindow) {
@@ -144,7 +144,7 @@ export class UserListComponent implements OnInit {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Relatório de Usuário - ${user.name}</title>
+          <title>Relatório de Usuário - ${user.nome}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
             .loading { text-align: center; padding: 50px; }
@@ -172,7 +172,7 @@ export class UserListComponent implements OnInit {
 
             function generatePrintHTML(userData) {
               let permissionsHTML = '';
-              if (userData.permissions && userData.permissions.length > 0) {
+              if (userData.permissoes && userData.permissoes.length > 0) {
                 permissionsHTML = userData.permissions.map(group => {
                   return '<div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-left: 4px solid #28a745;">' +
                     '<h3 style="margin: 0 0 10px 0; color: #495057;">' + group.group + '</h3>' +
@@ -193,11 +193,11 @@ export class UserListComponent implements OnInit {
                   '<h2 style="color: #007bff; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">Informações do Usuário</h2>' +
                   '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">' +
                     '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>ID:</strong> ' + userData.id + '</div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Nome:</strong> ' + userData.name + '</div>' +
+                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Nome:</strong> ' + userData.nome + '</div>' +
                     '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Email:</strong> ' + userData.email + '</div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Status:</strong> <span style="color: ' + (userData.isActive ? '#28a745' : '#dc3545') + '; font-weight: bold;">' + (userData.isActive ? 'Ativo' : 'Inativo') + '</span></div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Criado em:</strong> ' + new Date(userData.createdAt).toLocaleString('pt-BR') + '</div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Atualizado em:</strong> ' + new Date(userData.updatedAt).toLocaleString('pt-BR') + '</div>' +
+                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Status:</strong> <span style="color: ' + (userData.ativo ? '#28a745' : '#dc3545') + '; font-weight: bold;">' + (userData.ativo ? 'Ativo' : 'Inativo') + '</span></div>' +
+                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Criado em:</strong> ' + new Date(userData.criadoEm).toLocaleString('pt-BR') + '</div>' +
+                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Atualizado em:</strong> ' + new Date(userData.atualizadoEm).toLocaleString('pt-BR') + '</div>' +
                   '</div>' +
                 '</div>' +
                 '<div style="margin-bottom: 30px;">' +

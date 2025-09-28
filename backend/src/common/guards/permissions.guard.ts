@@ -1,4 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -6,7 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Permission } from '../enums/permission.enum';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
-import { User } from '../../modules/users/entities/user.entity';
+import { Usuario } from '../../modules/usuarios/entities/usuario.entity';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -16,15 +22,15 @@ export class PermissionsGuard implements CanActivate {
     private reflector: Reflector,
     private jwtService: JwtService,
     private configService: ConfigService,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
+    @InjectRepository(Usuario)
+    private userRepository: Repository<Usuario>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!requiredPermissions) {
       return true;
@@ -48,23 +54,24 @@ export class PermissionsGuard implements CanActivate {
         throw new ForbiddenException('Usuário não encontrado');
       }
 
-      if (!user.isActive) {
+      if (!user.ativo) {
         throw new ForbiddenException('Usuário inativo');
       }
 
       // Verificar se o usuário tem pelo menos uma das permissões necessárias
-      const hasPermission = requiredPermissions.some(permission => 
-        user.permissions.includes(permission)
+      const hasPermission = requiredPermissions.some((permission) =>
+        user.permissoes.includes(permission),
       );
 
       if (!hasPermission) {
-        throw new ForbiddenException(`Acesso negado. Permissões necessárias: ${requiredPermissions.join(', ')}`);
+        throw new ForbiddenException(
+          `Acesso negado. Permissões necessárias: ${requiredPermissions.join(', ')}`,
+        );
       }
 
       // Adicionar usuário ao request para uso posterior
       request.user = user;
       return true;
-
     } catch (error) {
       if (error instanceof ForbiddenException) {
         throw error;

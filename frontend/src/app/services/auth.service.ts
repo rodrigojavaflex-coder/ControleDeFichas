@@ -2,8 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
-import { User } from '../models/user.model';
-import { Permission } from '../models/user.model';
+import { Usuario, Permission } from '../models/usuario.model';
 import { ThemeService } from './theme.service';
 import { environment } from '../../environments/environment';
 
@@ -15,7 +14,7 @@ export interface LoginRequest {
 export interface AuthResponse {
   access_token: string;
   refresh_token: string;
-  user: User;
+  user: Usuario;
 }
 
 @Injectable({
@@ -28,7 +27,7 @@ export class AuthService {
   private apiUrl = `${environment.apiUrl}/auth`;
 
   // Estado da autenticação
-  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  private currentUserSubject = new BehaviorSubject<Usuario | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
@@ -112,9 +111,9 @@ export class AuthService {
   /**
    * Busca o perfil do usuário atual
    */
-  async getProfile(): Promise<User> {
+  async getProfile(): Promise<Usuario> {
     return firstValueFrom(
-      this.http.get<User>(`${this.apiUrl}/profile`)
+      this.http.get<Usuario>(`${this.apiUrl}/profile`)
     );
   }
 
@@ -123,7 +122,7 @@ export class AuthService {
    */
   hasPermission(permission: Permission): boolean {
     const user = this.currentUserSubject.value;
-    return user?.permissions?.includes(permission) || false;
+    return user?.permissoes?.includes(permission) || false;
   }
 
   /**
@@ -136,7 +135,7 @@ export class AuthService {
   /**
    * Obtém usuário atual
    */
-  getCurrentUser(): User | null {
+  getCurrentUser(): Usuario | null {
     return this.currentUserSubject.value;
   }
 
@@ -200,7 +199,7 @@ export class AuthService {
 
     if (token && userStr) {
       try {
-        const user: User = JSON.parse(userStr);
+        const user: Usuario = JSON.parse(userStr);
         
         this.currentUserSubject.next(user);
         this.isAuthenticatedSubject.next(true);

@@ -176,7 +176,6 @@
             <thead>
               <tr>
                 <th>Ações</th>
-                <th>Código</th>
                 <th>Tipo da Ficha</th>
                 <th>Produto</th>
                 <th>Revisão</th>
@@ -188,6 +187,17 @@
                 <tr>
                   <td>
                     <div class="action-buttons">
+                      @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
+                        <button 
+                          type="button"
+                          class="btn btn-small btn-secondary"
+                        title="Ficha Técnica"
+                        (click)="printFicha(ficha)"
+                        >
+                          Ficha Técnica
+                        </button>
+                      }
+
                       @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
                         <button 
                           type="button"
@@ -208,14 +218,7 @@
                           Editar
                         </button>
                       }
-                      <button 
-                        type="button"
-                        class="btn btn-small btn-secondary"
-                        title="Imprimir"
-                        (click)="printFicha(ficha)"
-                      >
-                        Imprimir
-                      </button>
+
                       @if (hasPermission(Permission.FICHA_TECNICA_DELETE)) {
                         <button 
                           type="button"
@@ -228,11 +231,10 @@
                       }
                     </div>
                   </td>
-                  <td>{{ ficha.codigoFormulaCerta }}</td>
                   <td>{{ ficha.tipoDaFicha || '-' }}</td>
                   <td class="product-cell">
                     <div class="product-info">
-                      <span class="product-name">{{ ficha.produto }}</span>
+                      <span class="product-name">{{ ficha.codigoFormulaCerta }} - {{ ficha.produto }}</span>
                       @if (ficha.formulaMolecular) {
                         <span class="formula">{{ ficha.formulaMolecular }}</span>
                       }

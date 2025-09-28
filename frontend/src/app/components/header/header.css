@@ -209,7 +209,6 @@
   font-weight: 600;
   color: var(--text-secondary, #64748b);
   margin-bottom: 16px;
-  text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
@@ -221,13 +220,15 @@
   border-radius: 8px;
   border: 1px solid var(--border-color, #e9ecef);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  overflow: hidden;
+  position: relative;
 }
 
 .theme-option {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px;
+  padding: 4px 16px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -243,19 +244,19 @@
 .theme-option:hover {
   background-color: var(--bg-tertiary, #e2e8f0);
   color: var(--text-primary, #374151);
-  transform: translateY(-2px);
+  transform: translateY(0);
 }
 
 .theme-option.active {
   background-color: #3b82f6;
   color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  transform: translateY(0);
 }
 
 .theme-option.active:hover {
   background-color: #2563eb;
-  transform: translateY(-2px);
+  transform: translateY(0);
 }
 
 .theme-icon {
@@ -276,7 +277,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 24px;
+  padding: 6px 24px;
   border: none;
   background: none;
   cursor: pointer;
@@ -303,6 +304,11 @@
 .dropdown-item.logout-item:hover {
   background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
   color: #b91c1c;
+}
+
+/* Botão Alterar Senha - Altura reduzida */
+.change-password-btn {
+  padding: 4px 24px !important;
 }
 
 /* Dropdown Overlay */

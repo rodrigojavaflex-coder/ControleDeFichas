@@ -42,8 +42,8 @@ export interface FichaTecnica {
   referenciaBibliografica?: string;
   dataDeAnalise?: string;
   
-  createdAt: string;
-  updatedAt: string;
+  criadoEm: string;
+  atualizadoEm: string;
 }
 
 export interface CreateFichaTecnicaDto {

@@ -29,7 +29,8 @@
     "create:test-user": "ts-node -r tsconfig-paths/register src/scripts/create-test-user.ts",
     "init:database": "ts-node -r tsconfig-paths/register src/scripts/init-database.ts",
     "init:production": "node dist/scripts/init-production.js",
-    "update:user-permissions": "ts-node -r tsconfig-paths/register src/scripts/update-user-permissions.ts"
+    "update:user-permissions": "ts-node -r tsconfig-paths/register src/scripts/update-user-permissions.ts",
+    "create:admin-audit": "ts-node -r tsconfig-paths/register src/scripts/create-admin-with-audit.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
