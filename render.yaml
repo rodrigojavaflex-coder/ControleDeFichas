@@ -1,0 +1,21 @@
+# render.yaml
+services:
+  - type: web
+    name: controle-de-fichas-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: |
+      npm install
+      npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: "1d"

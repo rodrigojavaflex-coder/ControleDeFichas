@@ -69,11 +69,15 @@ async function bootstrap() {
 
   // Configuração de CORS
   app.enableCors({
-    origin: [
-      'http://localhost:4200',
-      'http://localhost:3000',
-      'https://controledefichas.onrender.com',
-    ], // Angular dev server + API docs + produção
+    origin: process.env.NODE_ENV === 'production' 
+      ? [
+          'https://controledefichas.onrender.com',
+          'https://controle-de-fichas-api.onrender.com'
+        ]
+      : [
+          'http://localhost:4200',
+          'http://localhost:3000'
+        ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
   });

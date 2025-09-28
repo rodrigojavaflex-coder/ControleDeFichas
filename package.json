@@ -1,0 +1,17 @@
+{
+  "name": "controle-de-fichas",
+  "version": "1.0.0",
+  "description": "Sistema de Controle de Fichas - Full Stack NestJS + Angular",
+  "scripts": {
+    "build": "cd backend && npm install && npm run build",
+    "start": "cd backend && npm run start:prod",
+    "install-all": "cd backend && npm install && cd ../frontend && npm install",
+    "build-frontend": "cd frontend && npm run build -- --configuration production",
+    "build-backend": "cd backend && npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Rodrigo Teixeira",
+  "license": "MIT"
+}

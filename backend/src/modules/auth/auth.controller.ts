@@ -79,19 +79,42 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
+  // ✅ REMOVIDO: @UseGuards(AuthGuard('jwt')) - não precisa de auth para logout
+  // ✅ REMOVIDO: @ApiBearerAuth() - não requer token
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Fazer logout (invalidar token no frontend)' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Logout realizado com sucesso',
   })
-  async logout(@Request() req): Promise<{ message: string }> {
-    // Auditar logout
-    await this.authService.logout(req.user.id, req);
-    
-    // Para JWT stateless, o logout é feito no frontend removendo o token
-    return { message: 'Logout realizado com sucesso' };
+  async logout(@Request() req, @Body() body?: { token?: string }): Promise<{ message: string; success: boolean }> {
+    try {
+      // Tentar extrair informações do usuário do token (mesmo se expirado)
+      const token = req.headers.authorization?.replace('Bearer ', '') || body?.token;
+      
+      if (token) {
+        try {
+          // Tentar fazer logout com o token disponível
+          const decoded = this.authService.decodeToken(token);
+          if (decoded?.sub) {
+            await this.authService.logout(decoded.sub, req);
+          }
+        } catch (error) {
+          // Se falhar ao decodificar, continua com logout simples
+          console.log('Logout sem decodificação de token:', error.message);
+        }
+      }
+      
+      return { 
+        message: 'Logout realizado com sucesso',
+        success: true 
+      };
+    } catch (error) {
+      // Sempre retorna sucesso para logout (mesmo com erro)
+      return { 
+        message: 'Logout realizado com sucesso',
+        success: true 
+      };
+    }
   }
 }

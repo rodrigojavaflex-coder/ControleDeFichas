@@ -236,6 +236,21 @@ export class AuthService {
     return user;
   }
 
+  /**
+   * Decodifica token JWT sem validar expiração
+   * Útil para logout de tokens expirados
+   */
+  decodeToken(token: string): any {
+    try {
+      // Importar jwt para decodificar sem verificar expiração
+      const jwt = require('jsonwebtoken');
+      return jwt.decode(token);
+    } catch (error) {
+      console.warn('Erro ao decodificar token:', error.message);
+      return null;
+    }
+  }
+
   async logout(userId: string, request?: any): Promise<void> {
     // Buscar usuário para obter informações
     const user = await this.userRepository.findOneBy({ id: userId });
