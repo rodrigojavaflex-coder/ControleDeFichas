@@ -43,7 +43,13 @@ async function bootstrap() {
       !req.path.startsWith('/swagger') &&
       !req.path.startsWith('/docs')
     ) {
-      res.sendFile(join(angularDistPath, 'index.html'));
+      const indexPath = join(angularDistPath, 'index.html');
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          console.error('Erro ao servir index.html:', indexPath, err);
+          res.status(404).send('index.html não encontrado');
+        }
+      });
     } else {
       next();
     }
