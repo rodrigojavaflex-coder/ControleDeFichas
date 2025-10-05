@@ -34,6 +34,7 @@ import {
 } from '../../common/enums/permission.enum';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Perfil } from '../perfil/entities/perfil.entity';
 
 @ApiTags('Usuários')
 @Controller('users')
@@ -71,6 +72,18 @@ export class UsuariosController {
   getPermissions() {
     return PERMISSION_GROUPS;
   }
+  
+  @Get('profiles')
+  @ApiOperation({ summary: 'Listar perfis disponíveis' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Lista de perfis retornada com sucesso',
+    type: [Perfil],
+  })
+  getProfiles(): Promise<Perfil[]> {
+    return this.usuariosService.getProfiles();
+  }
+  
 
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)

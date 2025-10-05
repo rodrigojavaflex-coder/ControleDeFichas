@@ -150,8 +150,9 @@ export class AuthService {
         name: user.nome,
         email: user.email,
         isActive: user.ativo,
-        permissions: user.permissoes || [],
-        tema: user.tema || 'Claro', // Incluir tema do usuário
+        // Permissões agora vêm do perfil associado
+        permissions: user.perfil?.permissoes || [],
+        tema: user.tema || 'Claro',
         criadoEm: user.criadoEm,
         atualizadoEm: user.atualizadoEm,
       },

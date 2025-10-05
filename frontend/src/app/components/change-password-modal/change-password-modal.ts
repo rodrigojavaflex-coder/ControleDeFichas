@@ -136,7 +136,7 @@ import { UserService } from '../../services/user.service';
       </div>
     </div>
   `,
-  styleUrls: ['./change-password-modal.css']
+    styleUrls: ['./change-password-modal.css']
 })
 export class ChangePasswordModalComponent implements OnInit {
   @Input() isVisible = false;

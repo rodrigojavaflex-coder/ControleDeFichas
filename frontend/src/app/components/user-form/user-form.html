@@ -87,59 +87,22 @@
       </div>
     </div>
 
-    <!-- Permissões -->
+    <!-- Perfil -->
     <div class="form-group">
-      <label class="form-label">Permissões do Usuário</label>
-      <div class="form-help">
-        Selecione as permissões que este usuário terá no sistema
-      </div>
-      
-      <div class="permissions-container" *ngIf="permissionGroups.length > 0">
-        <div 
-          *ngFor="let groupName of permissionGroups" 
-          class="permission-group"
-        >
-          <div class="permission-group-header">
-            <h4>{{ groupName }}</h4>
-            <div class="group-actions">
-              <button 
-                type="button" 
-                class="btn-link"
-                (click)="selectAllPermissions(groupName)"
-              >
-                Selecionar todos
-              </button>
-              <button 
-                type="button" 
-                class="btn-link"
-                (click)="deselectAllPermissions(groupName)"
-              >
-                Desmarcar todos
-              </button>
-            </div>
-          </div>
-          
-          <div class="permissions-list">
-            <div 
-              *ngFor="let permission of availablePermissions[groupName]" 
-              class="permission-item"
-            >
-              <input
-                type="checkbox"
-                [id]="'perm-' + permission.key"
-                [checked]="isPermissionSelected(permission.key)"
-                (change)="togglePermission(permission.key)"
-                class="form-checkbox"
-              >
-              <label 
-                [for]="'perm-' + permission.key" 
-                class="checkbox-label"
-              >
-                {{ permission.label }}
-              </label>
-            </div>
-          </div>
-        </div>
+      <label for="perfilId" class="form-label">Perfil *</label>
+      <select
+        id="perfilId"
+        class="form-control"
+        formControlName="perfilId"
+        [disabled]="isSubmitting"
+      >
+        <option value="" disabled>Selecione um perfil</option>
+        <option *ngFor="let perfil of availableProfiles" [value]="perfil.id">
+          {{ perfil.nomePerfil }}
+        </option>
+      </select>
+      <div *ngIf="userForm.get('perfilId')?.invalid && userForm.get('perfilId')?.touched" class="error-message">
+        Perfil é obrigatório
       </div>
     </div>
 

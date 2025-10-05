@@ -26,7 +26,13 @@ export enum Permission {
 
   // Auditoria
   AUDIT_VIEW = 'audit:view',
-  AUDIT_MANAGE = 'audit:manage'
+  AUDIT_MANAGE = 'audit:manage',
+
+  // Perfis
+  PROFILE_CREATE = 'perfil:create',
+  PROFILE_READ = 'perfil:read',
+  PROFILE_UPDATE = 'perfil:update',
+  PROFILE_DELETE = 'perfil:delete'
 }
 
 export interface PermissionGroup {
@@ -36,12 +42,18 @@ export interface PermissionGroup {
   }[];
 }
 
+export interface Perfil {
+  id: string;
+  nomePerfil: string;
+  permissoes: Permission[];
+}
+
 export interface Usuario {
   id: string;
   nome: string;
   email: string;
   ativo: boolean;
-  permissoes: Permission[];
+  perfil: Perfil;
   criadoEm: Date;
   atualizadoEm: Date;
   tema?: string; // Tema preferido do usuário (Claro ou Escuro)
@@ -58,8 +70,8 @@ export interface CreateUsuarioDto {
   email: string;
   senha: string;
   ativo?: boolean;
-  permissoes?: Permission[];
   tema?: string; // Tema preferido (Claro ou Escuro)
+  perfilId: string; // ID do perfil do usuário
 }
 
 export interface UpdateUsuarioDto {
@@ -67,8 +79,8 @@ export interface UpdateUsuarioDto {
   email?: string;
   senha?: string;
   ativo?: boolean;
-  permissoes?: Permission[];
   tema?: string; // Permitir atualizar tema do usuário (Claro ou Escuro)
+  perfilId?: string; // Atualizar perfil do usuário
 }
 
 export interface FindUsuariosDto {

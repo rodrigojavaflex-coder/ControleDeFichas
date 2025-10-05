@@ -122,7 +122,8 @@ export class AuthService {
    */
   hasPermission(permission: Permission): boolean {
     const user = this.currentUserSubject.value;
-    return user?.permissoes?.includes(permission) || false;
+    // Permissões agora vêm do perfil do usuário
+    return user?.perfil?.permissoes?.includes(permission) || false;
   }
 
   /**

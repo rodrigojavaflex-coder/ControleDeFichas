@@ -63,6 +63,17 @@ export class NavigationComponent implements OnInit, OnDestroy {
       route: '/reports',
       icon: 'feather-bar-chart-2',
       requiredPermissions: [Permission.REPORTS_VIEW, Permission.REPORTS_EXPORT]
+    },
+    {
+      label: 'Perfis',
+      route: '/perfil',
+      icon: 'feather-users',
+      requiredPermissions: [
+        Permission.PROFILE_CREATE,
+        Permission.PROFILE_READ,
+        Permission.PROFILE_UPDATE,
+        Permission.PROFILE_DELETE
+      ]
     }
   ];
 
@@ -103,8 +114,8 @@ export class NavigationComponent implements OnInit, OnDestroy {
         return true;
       }
 
-      // Verificar se usuário tem pelo menos uma das permissões necessárias
-      return this.authService.hasAnyPermission(menuItem.requiredPermissions);
+  // Verificar se usuário tem pelo menos uma das permissões necessárias (via perfil)
+  return this.authService.hasAnyPermission(menuItem.requiredPermissions);
     });
   }
 

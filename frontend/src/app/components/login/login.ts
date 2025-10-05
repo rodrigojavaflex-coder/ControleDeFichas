@@ -14,7 +14,7 @@ interface LoginForm {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login.html',
-  styleUrl: './login.css'
+  styleUrls: ['./login.css']
 })
 export class LoginComponent {
   private authService: AuthService = inject(AuthService);

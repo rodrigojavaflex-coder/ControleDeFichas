@@ -20,7 +20,14 @@ export class ThemeService {
   themeChanged = new EventEmitter<{theme: Theme, message: string}>();
   
   constructor() {
-    // Não inicializar tema automaticamente - será iniciado após login
+    // Inicializar tema no carregamento da aplicação
+    const stored = localStorage.getItem(this.THEME_STORAGE_KEY) as Theme | null;
+    if (stored === 'light' || stored === 'dark') {
+      this.setTheme(stored, false);
+    } else {
+      const preferred = this.detectPreferredTheme();
+      this.setTheme(preferred, false);
+    }
   }
   
   initializeTheme(userId?: string, userTema?: string, forceReset: boolean = false): void {
@@ -37,15 +44,14 @@ export class ThemeService {
     
     // Lógica de tema após login:
     // 1. Se usuário tem tema salvo (não nulo/vazio), usar esse tema
-    // 2. Se tema é nulo/vazio, usar 'light' (Claro) como padrão
-    let theme: Theme = 'light'; // padrão é sempre claro
-    
+    // 2. Senão, usar preferência de tema do navegador
+    let theme: Theme;
     if (userTema && userTema.trim()) {
       // Usuário tem tema definido - converter para formato interno
       const convertedTheme = this.convertTemaToTheme(userTema);
-      if (convertedTheme) {
-        theme = convertedTheme;
-      }
+      theme = convertedTheme || this.detectPreferredTheme();
+    } else {
+      theme = this.detectPreferredTheme();
     }
     
     // Aplicar o tema imediatamente (sem salvar no servidor)

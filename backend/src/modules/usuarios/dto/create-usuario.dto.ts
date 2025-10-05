@@ -54,15 +54,12 @@ export class CreateUsuarioDto {
   ativo?: boolean = true;
 
   @ApiProperty({
-    description: 'Permissões do usuário',
-    example: ['user:read', 'user:create'],
-    isArray: true,
-    enum: Permission,
+    description: 'ID do perfil do usuário',
+    example: '550e8400-e29b-41d4-a716-446655440000',
   })
-  @IsOptional()
-  @IsArray({ message: 'Permissões devem ser um array' })
-  @IsEnum(Permission, { each: true, message: 'Permissão inválida' })
-  permissoes?: Permission[] = [];
+  @IsNotEmpty({ message: 'perfilId é obrigatório' })
+  @IsString({ message: 'perfilId deve ser uma string UUID' })
+  perfilId: string;
 
   @ApiProperty({
     description: 'Tema preferido do usuário',

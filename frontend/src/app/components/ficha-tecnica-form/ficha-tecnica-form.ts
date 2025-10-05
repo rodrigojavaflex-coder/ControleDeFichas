@@ -16,7 +16,7 @@ import { Permission } from '../../models/usuario.model';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './ficha-tecnica-form.html',
-  styleUrl: './ficha-tecnica-form.css'
+  styleUrls: ['./ficha-tecnica-form.css']
 })
 export class FichaTecnicaFormComponent implements OnInit {
   private fb = inject(FormBuilder);

@@ -26,7 +26,7 @@ import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
     ConfirmationModalComponent
   ],
   templateUrl: './ficha-tecnica-list.html',
-  styleUrl: './ficha-tecnica-list.css'
+  styleUrls: ['./ficha-tecnica-list.css']
 })
 export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   private fichaTecnicaService = inject(FichaTecnicaService);

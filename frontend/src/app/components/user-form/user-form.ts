@@ -3,14 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
-import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, PermissionGroup, Permission } from '../../models/usuario.model';
+import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil } from '../../models/usuario.model';
 
 @Component({
   selector: 'app-user-form',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './user-form.html',
-  styleUrl: './user-form.css'
+  styleUrls: ['./user-form.css']
 })
 export class UserFormComponent implements OnInit {
   userForm: FormGroup;
@@ -20,10 +20,8 @@ export class UserFormComponent implements OnInit {
   error: string | null = null;
   isSubmitting = false;
 
-  // Permissões
-  availablePermissions: PermissionGroup = {};
-  permissionGroups: string[] = [];
-  selectedPermissions: Permission[] = [];
+  // Perfis
+  availableProfiles: Perfil[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -32,12 +30,12 @@ export class UserFormComponent implements OnInit {
     private route: ActivatedRoute
   ) {
     this.userForm = this.createForm();
+    this.availableProfiles = [];
   }
 
   ngOnInit(): void {
-    console.log('UserForm ngOnInit - checking edit mode');
-    this.loadPermissions();
-    this.checkEditMode();
+  console.log('UserForm ngOnInit - carregando perfis e verificando modo de edição');
+  this.loadProfiles();
   }
 
   private createForm(): FormGroup {
@@ -45,7 +43,8 @@ export class UserFormComponent implements OnInit {
       name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
       email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
       password: ['', [Validators.minLength(6)]],
-      isActive: [true]
+  isActive: [true],
+  perfilId: ['', Validators.required]
     });
   }
 
@@ -71,14 +70,17 @@ export class UserFormComponent implements OnInit {
     }
   }
 
-  private loadPermissions(): void {
-    this.userService.getPermissions().subscribe({
-      next: (permissions) => {
-        this.availablePermissions = permissions;
-        this.permissionGroups = Object.keys(permissions);
+  private loadProfiles(): void {
+    this.userService.getProfiles().subscribe({
+      next: (profiles) => {
+        this.availableProfiles = profiles;
+        // Após carregar perfis, prosseguir com checagem de modo (create/edit)
+        this.checkEditMode();
       },
       error: (error) => {
-        console.error('Erro ao carregar permissões:', error);
+        console.error('Erro ao carregar perfis:', error);
+        // Mesmo em caso de erro, verificar modo de edição
+        this.checkEditMode();
       }
     });
   }
@@ -91,11 +93,11 @@ export class UserFormComponent implements OnInit {
       next: (user) => {
         console.log('Usuário carregado:', user);
         this.userForm.patchValue({
-          name: user.nome,        // ✅ Campo correto do form
-          email: user.email,      // ✅ Correto
-          isActive: user.ativo    // ✅ Campo correto do form
+          name: user.nome,
+          email: user.email,
+          isActive: user.ativo,
+          perfilId: user.perfil?.id
         });
-        this.selectedPermissions = user.permissoes || [];
         this.loading = false;
       },
       error: (error) => {
@@ -137,11 +139,11 @@ export class UserFormComponent implements OnInit {
     console.log('createUser method called with:', formValue);
 
     const createUsuarioDto: CreateUsuarioDto = {
-      nome: formValue.name,        // ✅ Campo correto do form
-      email: formValue.email,      // ✅ Correto
-      senha: formValue.password,   // ✅ Campo correto do form
-      ativo: formValue.isActive,   // ✅ Campo correto do form
-      permissoes: this.selectedPermissions
+      nome: formValue.name,
+      email: formValue.email,
+      senha: formValue.password,
+      ativo: formValue.isActive,
+      perfilId: formValue.perfilId
     };
 
     console.log('Sending createUsuarioDto:', createUsuarioDto);
@@ -160,10 +162,10 @@ export class UserFormComponent implements OnInit {
 
   private updateUser(formValue: any): void {
     const updateUsuarioDto: UpdateUsuarioDto = {
-      nome: formValue.name,        // ✅ Campo correto do form
-      email: formValue.email,      // ✅ Correto
-      ativo: formValue.isActive,   // ✅ Campo correto do form
-      permissoes: this.selectedPermissions
+      nome: formValue.name,
+      email: formValue.email,
+      ativo: formValue.isActive,
+      perfilId: formValue.perfilId
     };
 
     // Adiciona senha apenas se foi informada
@@ -250,51 +252,6 @@ export class UserFormComponent implements OnInit {
     return 'Campo inválido';
   }
 
-  // Métodos para gerenciar permissões
-  togglePermission(permission: Permission): void {
-    const index = this.selectedPermissions.indexOf(permission);
-    if (index > -1) {
-      this.selectedPermissions.splice(index, 1);
-    } else {
-      this.selectedPermissions.push(permission);
-    }
-  }
-
-  isPermissionSelected(permission: Permission): boolean {
-    return this.selectedPermissions.includes(permission);
-  }
-
-  selectAllPermissions(groupName: string): void {
-    const groupPermissions = this.availablePermissions[groupName];
-    if (groupPermissions) {
-      groupPermissions.forEach(perm => {
-        if (!this.selectedPermissions.includes(perm.key)) {
-          this.selectedPermissions.push(perm.key);
-        }
-      });
-    }
-  }
-
-  deselectAllPermissions(groupName: string): void {
-    const groupPermissions = this.availablePermissions[groupName];
-    if (groupPermissions) {
-      groupPermissions.forEach(perm => {
-        const index = this.selectedPermissions.indexOf(perm.key);
-        if (index > -1) {
-          this.selectedPermissions.splice(index, 1);
-        }
-      });
-    }
-  }
-
-  isGroupFullySelected(groupName: string): boolean {
-    const groupPermissions = this.availablePermissions[groupName];
-    if (!groupPermissions) return false;
-    
-    return groupPermissions.every(perm => 
-      this.selectedPermissions.includes(perm.key)
-    );
-  }
 
   private getFieldName(controlName: string): string {
     const fieldNames: { [key: string]: string } = {

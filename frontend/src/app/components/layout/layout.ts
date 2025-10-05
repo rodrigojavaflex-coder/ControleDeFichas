@@ -10,7 +10,7 @@ import { AuthService, NavigationService } from '../../services/index';
   standalone: true,
   imports: [CommonModule, RouterOutlet, NavigationComponent, HeaderComponent], // Adicionar HeaderComponent
   templateUrl: './layout.html',
-  styleUrl: './layout.css'
+  styleUrls: ['./layout.css']
 })
 export class LayoutComponent implements OnInit {
   private authService = inject(AuthService);

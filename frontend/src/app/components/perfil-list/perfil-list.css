@@ -1,0 +1,16 @@
+/* Container de perfil list usa padding global via .perfil-list */
+/* Largura fixa para coluna de Ações */
+.perfil-list .data-table th:first-child,
+.perfil-list .data-table td:first-child {
+  width: 220px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.perfil-list h2 {
+  margin-bottom: 16px;
+}
+
+.perfil-list .action-buttons button:not(:last-child) {
+  margin-right: 0.5rem;
+}

@@ -13,7 +13,7 @@ import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-m
   standalone: true,
   imports: [CommonModule, FormsModule, ConfirmationModalComponent],
   templateUrl: './user-list.html',
-  styleUrl: './user-list.css'
+  styleUrls: ['./user-list.css']
 })
 export class UserListComponent implements OnInit {
   users: Usuario[] = [];

@@ -8,7 +8,7 @@ import { AuthService } from './services/auth.service';
   standalone: true,
   imports: [LayoutComponent],
   template: '<app-layout></app-layout>',
-  styleUrl: './app.css'
+  styleUrls: ['./app.css']
 })
 export class App implements OnInit {
   private authService = inject(AuthService);

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, FindUsuariosDto, PaginatedResponse, PermissionGroup, ChangePasswordDto } from '../models/usuario.model';
+import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, FindUsuariosDto, PaginatedResponse, PermissionGroup, ChangePasswordDto, Perfil } from '../models/usuario.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -83,6 +83,12 @@ export class UserService {
    */
   getPermissions(): Observable<PermissionGroup> {
     return this.http.get<PermissionGroup>(`${this.apiUrl}/permissions`);
+  }
+  /**
+   * Buscar perfis disponíveis
+   */
+  getProfiles(): Observable<Perfil[]> {
+    return this.http.get<Perfil[]>(`${this.apiUrl}/profiles`);
   }
 
   /**

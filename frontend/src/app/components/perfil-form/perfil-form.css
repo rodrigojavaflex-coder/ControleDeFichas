@@ -1,0 +1,20 @@
+/* Estilos específicos para layout inline no formulário de perfil */
+.form-group .inline-group {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5rem;
+}
+.form-group.inline-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem; /* maior espaçamento para filtro */
+}
+.form-group .inline-group .form-input {
+	flex: 1;
+}
+.form-group.inline-group .form-input {
+	flex: 1;
+	min-width: 200px;
+}

@@ -9,6 +9,8 @@ import { authGuard } from './guards/auth.guard';
 import { ConfiguracaoComponent } from './modules/configuracao/configuracao.component';
 import { HomeComponent } from './components/home/home';
 import { ChangePasswordComponent } from './components/change-password/change-password';
+import { PerfilListComponent } from './components/perfil-list/perfil-list';
+import { PerfilFormComponent } from './components/perfil-form/perfil-form';
 
 export const routes: Routes = [
   // Rota de configuração
@@ -68,6 +70,23 @@ export const routes: Routes = [
     path: 'fichas-tecnicas/view/:id',
     component: FichaTecnicaFormComponent,
     canActivate: [authGuard]
+  },
+  // Rotas de perfil: paths específicos antes da rota geral para evitar conflitos de prefixo
+  {
+    path: 'perfil/new',
+    component: PerfilFormComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'perfil/edit/:id',
+    component: PerfilFormComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'perfil',
+    component: PerfilListComponent,
+    canActivate: [authGuard],
+    pathMatch: 'full'
   },
   
   // Home padrão

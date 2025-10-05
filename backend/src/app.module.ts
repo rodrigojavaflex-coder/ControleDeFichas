@@ -9,6 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { FichaTecnicaModule } from './modules/ficha-tecnica/ficha-tecnica.module';
 import { ConfiguracaoModule } from './modules/configuracao/configuracao.module';
+import { PerfilModule } from './modules/perfil/perfil.module';
 import { AuditoriaInterceptor } from './common/interceptors/auditoria.interceptor';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
@@ -31,7 +32,8 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     AuthModule,
     AuditoriaModule,
     FichaTecnicaModule,
-    ConfiguracaoModule,
+  ConfiguracaoModule,
+  PerfilModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],

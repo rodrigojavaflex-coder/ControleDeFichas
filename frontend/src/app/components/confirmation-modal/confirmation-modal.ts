@@ -24,7 +24,7 @@ import { CommonModule } from '@angular/common';
       </div>
     </div>
   `,
-  styleUrl: './confirmation-modal.css'
+    styleUrls: ['./confirmation-modal.css']
 })
 export class ConfirmationModalComponent {
   @Input() isVisible = false;

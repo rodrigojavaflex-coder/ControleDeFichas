@@ -6,29 +6,48 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { QueryFailedError } from 'typeorm';
 import { Request, Response } from 'express';
 
-@Catch(HttpException)
+@Catch(HttpException, QueryFailedError)
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
 
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: HttpException | QueryFailedError, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    const status = exception.getStatus();
 
-    const errorResponse = exception.getResponse();
-
-    // Estruturar a resposta de erro
+    let status: number;
     let message: string | string[];
 
-    if (typeof errorResponse === 'string') {
-      message = errorResponse;
-    } else if (typeof errorResponse === 'object' && errorResponse !== null) {
-      message = (errorResponse as any).message || exception.message;
+    // Tratamento de erros de banco de dados (violação de foreign key, etc)
+    if (exception instanceof QueryFailedError) {
+      const err: any = exception;
+      // Código 23503 => foreign key violation
+      if (err.driverError && err.driverError.code === '23503') {
+        status = HttpStatus.BAD_REQUEST;
+        // Extrai tabela referenciada do detalhe do erro
+        const detail: string = (err.driverError.detail as string) || '';
+        const match = /referenced from table \"([^\"]+)\"/.exec(detail);
+        const tabela = match ? match[1] : 'outros registros';
+        const suggestion = `Por favor, exclua antes os registros em "${tabela}" que dependem deste item e tente novamente.`;
+        message = `Operação inválida: existem registros vinculados. ${suggestion}`;
+      } else {
+        status = HttpStatus.INTERNAL_SERVER_ERROR;
+        message = 'Erro interno de banco de dados.';
+      }
     } else {
-      message = exception.message;
+      // Erros HTTP do Nest
+      status = exception.getStatus();
+      const errorResponse = exception.getResponse();
+      if (typeof errorResponse === 'string') {
+        message = errorResponse;
+      } else if (typeof errorResponse === 'object' && errorResponse !== null) {
+        message = (errorResponse as any).message || exception.message;
+      } else {
+        message = exception.message;
+      }
     }
 
     const errorResponseBody = {
@@ -43,7 +62,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     this.logger.error(
       `${request.method} ${request.url}`,
       JSON.stringify(errorResponseBody),
-      exception.stack,
+      exception instanceof Error ? exception.stack : undefined,
     );
 
     response.status(status).json(errorResponseBody);

@@ -1,11 +1,12 @@
 import {
   Injectable,
-  NotFoundException,
   ConflictException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Perfil } from '../perfil/entities/perfil.entity';
 import * as bcrypt from 'bcrypt';
 import { Usuario } from './entities/usuario.entity';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
@@ -24,6 +25,8 @@ export class UsuariosService {
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
+    @InjectRepository(Perfil)
+    private readonly perfilRepository: Repository<Perfil>,
   ) {}
 
   async create(createUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
@@ -46,14 +49,23 @@ export class UsuariosService {
         saltRounds,
       );
 
-      // Garantir que senha seja o hash
+      // Buscar perfil pelo ID
+      const perfil = await this.perfilRepository.findOne({
+        where: { id: createUsuarioDto.perfilId },
+      });
+      if (!perfil) {
+        throw new NotFoundException(
+          `Perfil com ID ${createUsuarioDto.perfilId} não encontrado`,
+        );
+      }
+      // Montar dados do usuário
       const userData = {
         nome: createUsuarioDto.nome,
         email: createUsuarioDto.email,
         senha: hashedPassword,
         ativo: createUsuarioDto.ativo ?? true,
-        permissoes: createUsuarioDto.permissoes || [],
         tema: createUsuarioDto.tema || 'Claro',
+        perfil,
       };
 
       this.logger.debug('Processed user data:', {
@@ -147,7 +159,11 @@ export class UsuariosService {
   }
 
   async findOne(id: string): Promise<Usuario> {
-    const user = await this.usuarioRepository.findOneBy({ id });
+    // Carregar usuário incluindo a relação com Perfil para que user.perfil esteja disponível
+    const user = await this.usuarioRepository.findOne({
+      where: { id },
+      relations: ['perfil'],
+    });
 
     if (!user) {
       throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
@@ -190,8 +206,17 @@ export class UsuariosService {
       user.email = updateUsuarioDto.email;
     if (updateUsuarioDto.ativo !== undefined)
       user.ativo = updateUsuarioDto.ativo;
-    if (updateUsuarioDto.permissoes !== undefined)
-      user.permissoes = updateUsuarioDto.permissoes;
+    if (updateUsuarioDto.perfilId !== undefined) {
+      const perfil = await this.perfilRepository.findOne({
+        where: { id: updateUsuarioDto.perfilId },
+      });
+      if (!perfil) {
+        throw new NotFoundException(
+          `Perfil com ID ${updateUsuarioDto.perfilId} não encontrado`,
+        );
+      }
+      user.perfil = perfil;
+    }
     if (updateUsuarioDto.tema !== undefined) user.tema = updateUsuarioDto.tema;
 
     try {
@@ -250,8 +275,8 @@ export class UsuariosService {
   async getPrintData(id: string) {
     const user = await this.findOne(id);
 
-    // Formatar permissões para impressão
-    const userPermissions = user.permissoes || [];
+  // Formatar permissões para impressão (perfis)
+  const userPermissions = user.perfil?.permissoes || [];
     const formattedPermissions: Array<{
       group: string;
       permissions: string[];
@@ -330,5 +355,11 @@ export class UsuariosService {
       this.logger.error('Erro ao atualizar senha:', error);
       throw error;
     }
+  }
+  /**
+   * Listar perfis disponíveis
+   */
+  async getProfiles(): Promise<Perfil[]> {
+    return this.perfilRepository.find();
   }
 }

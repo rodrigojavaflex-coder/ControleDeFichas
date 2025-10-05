@@ -1,6 +1,6 @@
-import { Entity, Column, Index } from 'typeorm';
+import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { Permission } from '../../../common/enums/permission.enum';
+import { Perfil } from '../../perfil/entities/perfil.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
 @Entity('usuarios')
@@ -42,13 +42,10 @@ export class Usuario extends BaseEntity {
   @Column({ default: true })
   ativo: boolean;
 
-  @ApiProperty({
-    description: 'Permissões do usuário',
-    example: ['user:read', 'user:create'],
-    isArray: true,
-  })
-  @Column('simple-array', { default: '' })
-  permissoes: Permission[];
+  @ApiProperty({ description: 'Perfil do usuário', type: () => Perfil })
+  @ManyToOne(() => Perfil, { eager: true })
+  @JoinColumn({ name: 'perfilId' })
+  perfil: Perfil;
 
   @ApiProperty({
     description: 'Tema preferido do usuário',
