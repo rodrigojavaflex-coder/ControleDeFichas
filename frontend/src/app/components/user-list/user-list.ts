@@ -1,12 +1,13 @@
-import { Component, OnInit } from '@angular/core';
-import { environment } from '../../../environments/environment';
+import { Component, OnInit, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { UserService } from '../../services/user.service';
+import { UserService } from '../../services';
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { Usuario, PaginatedResponse, FindUsuariosDto, Permission } from '../../models/usuario.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+import { BaseListComponent } from '../base-list.component';
 
 @Component({
   selector: 'app-user-list',
@@ -15,10 +16,10 @@ import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-m
   templateUrl: './user-list.html',
   styleUrls: ['./user-list.css']
 })
-export class UserListComponent implements OnInit {
-  users: Usuario[] = [];
-  loading = false;
-  error: string | null = null;
+export class UserListComponent extends BaseListComponent<Usuario> {
+  private userService = inject(UserService);
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
   // Paginação
   currentPage = 1;
@@ -29,31 +30,18 @@ export class UserListComponent implements OnInit {
   // Filtros
   nameFilter = '';
   emailFilter = '';
-
-  // Modal de confirmação
-  showDeleteModal = false;
-  userToDelete: Usuario | null = null;
+  /** Título do modal de confirmação de exclusão */
   deleteModalTitle = 'Confirmação de Exclusão';
-  deleteModalMessage = '';
 
-  constructor(
-    private userService: UserService,
-    private authService: AuthService,
-    private router: Router
-  ) {}
-
-  ngOnInit(): void {
-    this.loadUsers();
+  override ngOnInit(): void {
+    super.ngOnInit();
   }
 
-  loadUsers(): void {
+  protected override loadItems(): void {
     this.loading = true;
-    this.error = null;
+    this.error = '';
 
-    const filters: FindUsuariosDto = {
-      page: this.currentPage,
-      limit: this.pageSize
-    };
+    const filters: FindUsuariosDto = { page: this.currentPage, limit: this.pageSize };
 
     if (this.nameFilter.trim()) {
       filters.nome = this.nameFilter.trim();
@@ -65,34 +53,33 @@ export class UserListComponent implements OnInit {
 
     this.userService.getUsers(filters).subscribe({
       next: (response: PaginatedResponse<Usuario>) => {
-        this.users = response.data;
+        this.items = response.data;
         this.totalItems = response.meta.total;
         this.totalPages = response.meta.totalPages;
         this.loading = false;
       },
-      error: (err) => {
-        this.error = 'Erro ao carregar usuários';
+      error: (_: any) => {
         this.loading = false;
-        console.error('Erro:', err);
+        this.errorModalService.show('Erro ao carregar usuários', 'Erro');
       }
     });
   }
 
   onPageChange(page: number): void {
     this.currentPage = page;
-    this.loadUsers();
+    this.loadItems();
   }
 
   onFilterChange(): void {
     this.currentPage = 1;
-    this.loadUsers();
+    this.loadItems();
   }
 
   clearFilters(): void {
     this.nameFilter = '';
     this.emailFilter = '';
     this.currentPage = 1;
-    this.loadUsers();
+    this.loadItems();
   }
 
   editUser(user: Usuario): void {
@@ -100,121 +87,22 @@ export class UserListComponent implements OnInit {
   }
 
   deleteUser(user: Usuario): void {
-    this.userToDelete = user;
-    this.deleteModalMessage = `Tem certeza que deseja excluir o usuário "${user.nome}"?\n\nEsta ação não pode ser desfeita.`;
-    this.showDeleteModal = true;
+    this.confirmDelete(user, `Tem certeza que deseja excluir o usuário "${user.nome}"?`);
   }
 
-  onDeleteConfirmed(): void {
-    if (this.userToDelete) {
-      this.userService.deleteUser(this.userToDelete.id).subscribe({
-        next: () => {
-          this.loadUsers();
-          this.closeDeleteModal();
-        },
-        error: (err) => {
-          this.error = 'Erro ao excluir usuário';
-          console.error('Erro:', err);
-          this.closeDeleteModal();
-        }
-      });
-    }
+  protected override deleteItem(id: string) {
+    return this.userService.deleteUser(id);
   }
-
-  onDeleteCancelled(): void {
-    this.closeDeleteModal();
+  protected override getId(item: Usuario): string {
+    return item.id;
   }
-
-  private closeDeleteModal(): void {
-    this.showDeleteModal = false;
-    this.userToDelete = null;
-    this.deleteModalMessage = '';
-  }
-
+  /** Navegar para criação de usuário */
   createUser(): void {
-    console.log('createUser called - navigating to /users/new');
     this.router.navigate(['/users/new']);
   }
-
+  /** Imprimir informações do usuário */
   printUser(user: Usuario): void {
-    // Abrir nova janela com o componente de impressão
-    const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-    if (printWindow) {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Relatório de Usuário - ${user.nome}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-            .loading { text-align: center; padding: 50px; }
-          </style>
-        </head>
-        <body>
-          <div class="loading">Carregando dados para impressão...</div>
-          <div id="print-content"></div>
-          <script>
-            // Carregar dados do usuário
-            fetch(environment.apiUrl + '/users/' + user.id + '/print', {
-              headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-              }
-            })
-            .then(response => response.json())
-            .then(data => {
-              document.querySelector('.loading').style.display = 'none';
-              document.getElementById('print-content').innerHTML = generatePrintHTML(data);
-              setTimeout(() => window.print(), 100);
-            })
-            .catch(error => {
-              document.querySelector('.loading').innerHTML = 'Erro ao carregar dados: ' + error.message;
-            });
-
-            function generatePrintHTML(userData) {
-              let permissionsHTML = '';
-              if (userData.permissoes && userData.permissoes.length > 0) {
-                permissionsHTML = userData.permissions.map(group => {
-                  return '<div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-left: 4px solid #28a745;">' +
-                    '<h3 style="margin: 0 0 10px 0; color: #495057;">' + group.group + '</h3>' +
-                    '<ul style="margin: 0; padding-left: 20px;">' +
-                    group.permissions.map(p => '<li style="margin-bottom: 5px;">' + p + '</li>').join('') +
-                    '</ul></div>';
-                }).join('');
-              } else {
-                permissionsHTML = '<p style="text-align: center; color: #666; font-style: italic; padding: 20px; background: #f8f9fa; border: 2px dashed #ddd;">Este usuário não possui permissões atribuídas.</p>';
-              }
-
-              return '<div style="max-width: 21cm; margin: 0 auto; font-family: Arial, sans-serif;">' +
-                '<div style="text-align: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 3px solid #007bff;">' +
-                  '<h1 style="color: #007bff; font-size: 28px; margin: 0;">Relatório de Usuário</h1>' +
-                  '<div style="margin-top: 10px; font-size: 14px; color: #666;">Impresso em: ' + new Date(userData.printedAt).toLocaleString('pt-BR') + '</div>' +
-                '</div>' +
-                '<div style="margin-bottom: 30px;">' +
-                  '<h2 style="color: #007bff; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">Informações do Usuário</h2>' +
-                  '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>ID:</strong> ' + userData.id + '</div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Nome:</strong> ' + userData.nome + '</div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Email:</strong> ' + userData.email + '</div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Status:</strong> <span style="color: ' + (userData.ativo ? '#28a745' : '#dc3545') + '; font-weight: bold;">' + (userData.ativo ? 'Ativo' : 'Inativo') + '</span></div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Criado em:</strong> ' + new Date(userData.criadoEm).toLocaleString('pt-BR') + '</div>' +
-                    '<div style="padding: 12px; background: #f8f9fa; border-left: 4px solid #007bff;"><strong>Atualizado em:</strong> ' + new Date(userData.atualizadoEm).toLocaleString('pt-BR') + '</div>' +
-                  '</div>' +
-                '</div>' +
-                '<div style="margin-bottom: 30px;">' +
-                  '<h2 style="color: #007bff; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">Permissões (' + userData.totalPermissions + ' total)</h2>' +
-                  permissionsHTML +
-                '</div>' +
-                '<div style="margin-top: 40px; padding-top: 15px; border-top: 2px solid #ddd; text-align: center;">' +
-                  '<p style="color: #666; font-size: 12px; margin: 0;">Este relatório foi gerado automaticamente pelo Sistema de Gestão de Usuários</p>' +
-                '</div>' +
-              '</div>';
-            }
-          </script>
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
-    }
+    window.open(`${environment.apiUrl}/users/${user.id}/print`, '_blank');
   }
 
   // Métodos para verificar permissões

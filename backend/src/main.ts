@@ -5,7 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { Request, Response } from 'express';
 
 async function bootstrap() {
@@ -70,8 +70,8 @@ async function bootstrap() {
     }),
   );
 
-  // Filtro global de exceções
-  app.useGlobalFilters(new HttpExceptionFilter());
+  // Filtro global de exceções genérico
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Configuração de CORS
   app.enableCors({

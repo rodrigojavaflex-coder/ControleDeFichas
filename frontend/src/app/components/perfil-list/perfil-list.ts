@@ -1,14 +1,16 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { PerfilService } from '../../services';
 import { AuthService } from '../../services/auth.service';
 import { UserService } from '../../services/user.service';
 import { Perfil, Permission } from '../../models/usuario.model';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, Observable } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+import { ErrorModalService } from '../../services';
 import { environment } from '../../../environments/environment';
+import { BaseListComponent } from '../base-list.component';
 
 @Component({
   selector: 'app-perfil-list',
@@ -17,41 +19,34 @@ import { environment } from '../../../environments/environment';
   templateUrl: './perfil-list.html',
   styleUrls: ['./perfil-list.css']
 })
-export class PerfilListComponent implements OnInit, OnDestroy {
+export class PerfilListComponent extends BaseListComponent<Perfil> implements OnDestroy {
   private perfilService = inject(PerfilService);
   public authService = inject(AuthService);
   private userService = inject(UserService);
   private router = inject(Router);
   private destroy$ = new Subject<void>();
+  // Serviço de modal de erro genérico
+  private errorModal: ErrorModalService = inject(ErrorModalService);
 
-  perfis: Perfil[] = [];
-  loading = false;
-  error: string | null = null;
 
   // Mapeamento de permissões e labels
   permissionGroups: Record<string, { key: Permission; label: string }[]> = {};
   formattedPermissoes: Record<string, string> = {};
 
   Permission = Permission;
-
-  // Modal de confirmação
-  showDeleteModal = false;
-  perfilToDelete: Perfil | null = null;
+  /** Título do modal de confirmação de exclusão */
   deleteModalTitle = 'Confirmação de Exclusão';
-  deleteModalMessage = '';
 
-  // Modal de erro
-  showErrorModal = false;
-  errorModalTitle = 'Erro ao excluir perfil';
-  errorModalMessage = '';
+  // Estados de erro local removidos, usando ErrorModalService
 
-  ngOnInit(): void {
-    // Carregar descrições de permissões antes de buscar perfis
+
+
+  override ngOnInit(): void {
     this.userService.getPermissions()
       .pipe(takeUntil(this.destroy$))
       .subscribe(groups => {
         this.permissionGroups = groups;
-        this.loadPerfis();
+        super.ngOnInit();
       });
   }
 
@@ -59,19 +54,27 @@ export class PerfilListComponent implements OnInit, OnDestroy {
     this.destroy$.next(); this.destroy$.complete();
   }
 
-  loadPerfis(): void {
-  this.loading = true;
-  this.error = null;
+  protected override loadItems(): void {
+    this.loading = true;
     this.perfilService.findAll()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (data) => {
-          this.perfis = data;
-          this.formatarPermissoes();
+        next: data => { this.items = data; this.formatarPermissoes(); this.loading = false; },
+        error: (_: any) => {
           this.loading = false;
-        },
-        error: () => { this.loading = false; this.error = 'Erro ao carregar perfis'; }
+          this.errorModal.show('Erro ao carregar perfis', 'Erro');
+        }
       });
+  }
+
+  /** Implementação de deleteItem abstrato do BaseListComponent */
+  protected override deleteItem(id: string): Observable<void> {
+    return this.perfilService.delete(id);
+  }
+
+  /** Implementação de getId abstrato do BaseListComponent */
+  protected override getId(item: Perfil): string {
+    return item.id;
   }
 
   createPerfil(): void {
@@ -82,46 +85,18 @@ export class PerfilListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/perfil/edit', perfil.id]);
   }
 
+  // Confirmar exclusão via BaseListComponent
   deletePerfil(perfil: Perfil): void {
-    this.perfilToDelete = perfil;
-    this.deleteModalMessage = `Tem certeza que deseja excluir o perfil "${perfil.nomePerfil}"?\n\nEsta ação não pode ser desfeita.`;
-    this.showDeleteModal = true;
+    this.confirmDelete(perfil, `Tem certeza que deseja excluir o perfil "${perfil.nomePerfil}"?`);
   }
 
-  onDeleteConfirmed(): void {
-    if (this.perfilToDelete) {
-      this.perfilService.delete(this.perfilToDelete.id)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            this.loadPerfis();
-            this.closeDeleteModal();
-          },
-          error: (err: HttpErrorResponse) => {
-            // Mostrar modal de erro com mensagem do backend
-            const m = err.error && err.error.message;
-            this.errorModalMessage = Array.isArray(m) ? m.join(', ') : (m || 'Erro ao excluir perfil');
-            this.closeDeleteModal();
-            this.showErrorModal = true;
-          }
-        });
-    }
-  }
 
-  onDeleteCancelled(): void {
-    this.closeDeleteModal();
+  // Navegação padrão
+  create(): void {
+    this.router.navigate(['/perfil/new']);
   }
-
-  private closeDeleteModal(): void {
-    this.showDeleteModal = false;
-    this.perfilToDelete = null;
-    this.deleteModalMessage = '';
-  }
-
-  // fecha modal de erro
-  closeErrorModal(): void {
-    this.showErrorModal = false;
-    this.errorModalMessage = '';
+  edit(item: Perfil): void {
+    this.router.navigate(['/perfil/edit', item.id]);
   }
 
   // Converte chaves de permissão em labels amigáveis para exibição
@@ -131,7 +106,7 @@ export class PerfilListComponent implements OnInit, OnDestroy {
       group.forEach(item => mapLabels.set(item.key, item.label));
     });
     this.formattedPermissoes = {};
-    this.perfis.forEach(perfil => {
+    this.items.forEach(perfil => {
       const labels = perfil.permissoes
         .map(p => mapLabels.get(p) || p)
         .join(', ');

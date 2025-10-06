@@ -1,3 +1,10 @@
+<app-error-modal
+  [visible]="(errorModalService.state$ | async)?.visible ?? false"
+  [title]="(errorModalService.state$ | async)?.title"
+  [message]="(errorModalService.state$ | async)?.message || ''"
+  (closed)="errorModalService.hide()">
+</app-error-modal>
+
 <div class="layout-container" *ngIf="isAuthenticated">
   <app-header></app-header>
   <div class="main-content-wrapper">

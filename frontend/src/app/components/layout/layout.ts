@@ -1,20 +1,23 @@
 import { Component, inject, OnInit } from '@angular/core';
+import { ErrorModalService, AuthService, NavigationService } from '../../services';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { NavigationComponent } from '../navigation/navigation';
 import { HeaderComponent } from '../header/header'; // Importar HeaderComponent
-import { AuthService, NavigationService } from '../../services/index';
+
+import { ErrorModalComponent } from '../error-modal/error-modal.component';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavigationComponent, HeaderComponent], // Adicionar HeaderComponent
+  imports: [CommonModule, RouterOutlet, NavigationComponent, HeaderComponent, ErrorModalComponent], // Adicionar HeaderComponent e ErrorModalComponent
   templateUrl: './layout.html',
   styleUrls: ['./layout.css']
 })
 export class LayoutComponent implements OnInit {
   private authService = inject(AuthService);
   private navigationService = inject(NavigationService);
+  public errorModalService = inject(ErrorModalService);
   
   isAuthenticated = false;
   isMenuOpen = false; // Menu inicia fechado por padrão

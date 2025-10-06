@@ -61,7 +61,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let user of users">
+  <tr *ngFor="let user of items">
           <td>{{ user.nome }}</td>
           <td>{{ user.email }}</td>
           <td>
@@ -92,7 +92,7 @@
     </table>
 
     <!-- Mensagem quando não há usuários -->
-    @if (users.length === 0) {
+  @if (items.length === 0) {
       <div class="no-users">
         Nenhum usuário encontrado.
       </div>

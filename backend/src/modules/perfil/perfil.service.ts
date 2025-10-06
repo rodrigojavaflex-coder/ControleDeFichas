@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PERMISSION_GROUPS, Permission } from '../../common/enums/permission.enum';
@@ -41,18 +41,6 @@ export class PerfilService {
 
   async remove(id: string): Promise<void> {
     const perfil = await this.findOne(id);
-    // Verificar usuários vinculados a este perfil
-    const usuarios = await this.usuarioRepository.find({
-      where: { perfil: { id } },
-      select: ['nome'],
-    });
-    if (usuarios.length > 0) {
-      const nomes = usuarios.map(u => u.nome).join(', ');
-      throw new BadRequestException(
-        `Não é possível excluir o perfil pois está atribuído ao(s) usuário(s): ${nomes}. ` +
-        'Por favor, exclua-os ou altere o perfil antes de prosseguir.'
-      );
-    }
     await this.perfilRepository.remove(perfil);
   }
   

@@ -25,7 +25,7 @@
         <i class="icon">⚠️</i>
         <p>{{ error }}</p>
       </div>
-      <button class="btn btn-primary" (click)="loadPerfis()">Tentar Novamente</button>
+  <button class="btn btn-primary" (click)="loadItems()">Tentar Novamente</button>
     </div>
   }
 
@@ -33,7 +33,7 @@
   @if (!loading && !error) {
     <section class="results-section">
       <div class="results-header">
-        <p class="results-count">Exibindo {{ perfis.length }} perfis</p>
+  <p class="results-count">Exibindo {{ items.length }} perfis</p>
       </div>
       <div class="table-container">
         <table class="data-table">
@@ -45,7 +45,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (perfil of perfis; track perfil.id) {
+            @for (perfil of items; track perfil.id) {
               <tr>
                 <td class="action-buttons">
                   @if (authService.hasPermission(Permission.PROFILE_UPDATE)) {
@@ -78,15 +78,4 @@
     cancelText="Cancelar"
     (confirmed)="onDeleteConfirmed()"
     (cancelled)="onDeleteCancelled()"
-  ></app-confirmation-modal>
-
-  <!-- Modal de erro ao excluir perfil -->
-  <app-confirmation-modal
-    [isVisible]="showErrorModal"
-    [title]="errorModalTitle"
-    [message]="errorModalMessage"
-    confirmText="OK"
-    cancelText="Fechar"
-    (confirmed)="closeErrorModal()"
-    (cancelled)="closeErrorModal()"
   ></app-confirmation-modal>

@@ -6,11 +6,22 @@
   white-space: nowrap;
   text-align: center;
 }
+/* Restaurar espaçamento padrão entre botões pequenos */
+.perfil-list .action-buttons .btn-small {
+  margin-right: 0.5rem;
+}
+.perfil-list .action-buttons .btn-info {
+  background-color: #17a2b8; 
+  color: #fff; /* texto em branco */
+}
+
+.perfil-list .action-buttons .btn-info:hover:not(:disabled) {
+  background-color: #17a2b8;
+}
+.perfil-list .action-buttons .btn-small:last-child {
+  margin-right: 0;
+}
 
 .perfil-list h2 {
   margin-bottom: 16px;
-}
-
-.perfil-list .action-buttons button:not(:last-child) {
-  margin-right: 0.5rem;
 }

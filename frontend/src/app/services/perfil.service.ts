@@ -26,7 +26,8 @@ export class PerfilService {
     return this.http.patch<Perfil>(`${this.apiUrl}/${id}`, data);
   }
 
-  delete(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  delete(id: string): Observable<any> {
+    // Retorna any para capturar corpo JSON de erro com message
+    return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 }
