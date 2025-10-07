@@ -34,7 +34,6 @@ export class UserFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-  console.log('UserForm ngOnInit - carregando perfis e verificando modo de edição');
   this.loadProfiles();
   }
 
@@ -50,19 +49,15 @@ export class UserFormComponent implements OnInit {
 
   private checkEditMode(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    console.log('checkEditMode - id from route:', id);
-    console.log('current route:', this.route.snapshot.url);
     
     if (id) {
       this.isEditMode = true;
       this.userId = id;
-      console.log('Edit mode - loading user:', id);
       this.loadUser(id);
       // Em modo de edição, senha não é obrigatória
       this.userForm.get('password')?.clearValidators();
       this.userForm.get('password')?.updateValueAndValidity();
     } else {
-      console.log('Create mode - new user');
       this.isEditMode = false;
       // Em modo de criação, senha é obrigatória
       this.userForm.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
@@ -91,7 +86,6 @@ export class UserFormComponent implements OnInit {
 
     this.userService.getUserById(id).subscribe({
       next: (user) => {
-        console.log('Usuário carregado:', user);
         this.userForm.patchValue({
           name: user.nome,
           email: user.email,
@@ -109,13 +103,7 @@ export class UserFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    console.log('onSubmit called');
-    console.log('Form valid:', this.userForm.valid);
-    console.log('Is edit mode:', this.isEditMode);
-    console.log('User ID:', this.userId);
-    
     if (this.userForm.invalid || this.isSubmitting) {
-      console.log('Form invalid or submitting, marking as touched');
       this.markFormGroupTouched();
       return;
     }
@@ -124,20 +112,15 @@ export class UserFormComponent implements OnInit {
     this.error = null;
 
     const formValue = this.userForm.value;
-    console.log('Form value:', formValue);
 
     if (this.isEditMode && this.userId) {
-      console.log('Calling updateUser');
       this.updateUser(formValue);
     } else {
-      console.log('Calling createUser');
       this.createUser(formValue);
     }
   }
 
   private createUser(formValue: any): void {
-    console.log('createUser method called with:', formValue);
-
     const createUsuarioDto: CreateUsuarioDto = {
       nome: formValue.name,
       email: formValue.email,
@@ -146,11 +129,8 @@ export class UserFormComponent implements OnInit {
       perfilId: formValue.perfilId
     };
 
-    console.log('Sending createUsuarioDto:', createUsuarioDto);
-
     this.userService.createUser(createUsuarioDto).subscribe({
       next: (user) => {
-        console.log('Usuário criado:', user);
         this.router.navigate(['/users']);
       },
       error: (error) => {
@@ -175,7 +155,6 @@ export class UserFormComponent implements OnInit {
 
     this.userService.updateUser(this.userId!, updateUsuarioDto).subscribe({
       next: (user) => {
-        console.log('Usuário atualizado:', user);
         this.router.navigate(['/users']);
       },
       error: (error) => {

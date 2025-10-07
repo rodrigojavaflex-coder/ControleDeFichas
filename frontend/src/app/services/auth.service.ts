@@ -212,7 +212,7 @@ export class AuthService {
         setTimeout(async () => {
           const isValid = await this.validateToken();
           if (!isValid) {
-            console.log('Token expirado, redirecionando para login');
+            // Token expirado - será tratado pelo guard
           }
         }, 100);
         

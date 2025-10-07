@@ -94,7 +94,7 @@
         id="perfilId"
         class="form-control"
         formControlName="perfilId"
-        [disabled]="isSubmitting"
+        [attr.disabled]="isSubmitting ? '' : null"
       >
         <option value="" disabled>Selecione um perfil</option>
         <option *ngFor="let perfil of availableProfiles" [value]="perfil.id">

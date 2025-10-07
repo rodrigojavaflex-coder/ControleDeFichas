@@ -24,7 +24,6 @@ export class App implements OnInit {
       const isValid = await this.authService.validateToken();
       
       if (!isValid) {
-        console.log('Token expirado detectado na inicialização, redirecionando para login');
         this.router.navigate(['/login']);
       }
     }

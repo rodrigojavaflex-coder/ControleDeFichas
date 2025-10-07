@@ -101,7 +101,6 @@ export class AuthController {
           }
         } catch (error) {
           // Se falhar ao decodificar, continua com logout simples
-          console.log('Logout sem decodificação de token:', error.message);
         }
       }
       

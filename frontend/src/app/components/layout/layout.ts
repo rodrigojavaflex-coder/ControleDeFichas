@@ -33,7 +33,6 @@ export class LayoutComponent implements OnInit {
     this.navigationService.isMobileOpen$.subscribe(
       isOpen => {
         this.isMenuOpen = isOpen;
-        console.log('Menu visibility changed:', isOpen); // Debug
       }
     );
 

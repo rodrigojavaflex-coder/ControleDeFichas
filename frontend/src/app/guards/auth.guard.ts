@@ -16,7 +16,6 @@ export const authGuard: CanActivateFn = async (route, state) => {
   const isTokenValid = await authService.validateToken();
   
   if (!isTokenValid) {
-    console.log('Token inválido ou expirado, redirecionando para login');
     router.navigate(['/login']);
     return false;
   }
