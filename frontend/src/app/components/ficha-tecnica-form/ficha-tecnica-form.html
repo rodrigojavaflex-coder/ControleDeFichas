@@ -39,18 +39,6 @@
     </div>
   }
 
-  <!-- Estado de Erro -->
-  @if (error) {
-    <div class="error-state">
-      <div class="error-message">
-        <span class="nav-icon">
-          <svg width="22" height="22" fill="none" stroke="rgba(239,68,68,0.7)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12" y2="16"></line></svg>
-        </span>
-        <p>{{ error }}</p>
-      </div>
-    </div>
-  }
-
   <!-- Formulário -->
   @if (!loading) {
     <form id="ficha-form" [formGroup]="fichaForm" (ngSubmit)="onSubmit()" class="ficha-form">
@@ -59,12 +47,7 @@
       <!-- BLOCO 1: INFORMAÇÕES BÁSICAS -->
       <!-- =================================================================== -->
       <section class="form-section">
-        <h2>
-          <span class="nav-icon">
-            <svg width="22" height="22" fill="none" stroke="rgba(100,116,139,0.6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          </span>
-          INFORMAÇÕES BÁSICAS
-        </h2>
+        <h2>INFORMAÇÕES BÁSICAS</h2>
         
         <div class="form-grid">
           <div class="form-group">
@@ -189,7 +172,7 @@
       <!-- BLOCO 2: TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10 -->
       <!-- =================================================================== -->
       <section class="form-section">
-        <h2>🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10@if (fichaForm.get('tipoDaFicha')?.value === 'FITOTERÁPICO') { E 7.3.13}</h2>        <div class="form-grid">
+        <h2> TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10@if (fichaForm.get('tipoDaFicha')?.value === 'FITOTERÁPICO') { E 7.3.13}</h2>        <div class="form-grid">
 
           <div class="form-group">
             <label for="caracteristicasOrganolepticas">Características Organolépticas</label>
@@ -393,7 +376,7 @@
       <!-- BLOCO 3: INFORMAÇÕES ADICIONAIS - TRANSCRITOS DAS REFERÊNCIAS - ITEM 7.3.11 -->
       <!-- =================================================================== -->
       <section class="form-section">
-        <h2>📊 INFORMAÇÕES ADICIONAIS - TRANSCRITOS DAS REFERÊNCIAS - ITEM 7.3.11</h2>
+        <h2> INFORMAÇÕES ADICIONAIS - TRANSCRITOS DAS REFERÊNCIAS - ITEM 7.3.11</h2>
         
         <div class="form-grid">
           @if (fichaForm.get('tipoDaFicha')?.value !== 'FITOTERÁPICO') {
@@ -572,4 +555,13 @@
       </div>
     </form>
   }
+
+  <!-- Modal de Erro -->
+  <app-confirmation-modal
+    [isVisible]="showErrorModal"
+    title="Erro"
+    [message]="errorModalMessage"
+    confirmText="OK"
+    (confirmed)="closeErrorModal()">
+  </app-confirmation-modal>
 </div>

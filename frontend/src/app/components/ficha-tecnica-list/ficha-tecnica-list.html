@@ -170,82 +170,155 @@
           </div>
         }
 
-        <!-- Tabela de Fichas Técnicas -->
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Ações</th>
-                <th>Tipo da Ficha</th>
-                <th>Produto</th>
-                <th>Revisão</th>
-                <th>Data de Análise</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (ficha of fichasTecnicas(); track ficha.id) {
-                <tr>
-                  <td>
-                    <div class="action-buttons">
-                      @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
-                        <button 
-                          type="button"
-                          class="btn btn-small btn-secondary"
-                        title="Ficha Técnica"
+        <!-- Cards de Fichas Técnicas -->
+        <div class="fichas-cards-container">
+          @for (ficha of fichasTecnicas(); track ficha.id) {
+            <div class="ficha-card">
+              <div class="ficha-header" (click)="toggleExpand(ficha.id)" [title]="isExpanded(ficha.id) ? 'Ocultar Certificados' : 'Exibir Certificados'">
+                <div class="ficha-title">
+                  <h3>Ficha: {{ ficha.codigoFormulaCerta }} - {{ ficha.produto }} ({{ ficha.tipoDaFicha }})</h3>
+                  <div class="ficha-actions" (click)="$event.stopPropagation()">
+                    @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
+                      <button 
+                        type="button"
+                        class="btn btn-small btn-info"
+                        title="Imprimir Ficha Técnica"
                         (click)="printFicha(ficha)"
-                        >
-                          Ficha Técnica
-                        </button>
-                      }
-
-                      @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
+                      >
+                        Imprimir Ficha Técnica
+                      </button>
+                    }
+                    @if (hasPermission(Permission.FICHA_TECNICA_UPDATE)) {
+                      <button 
+                        type="button"
+                        class="btn btn-small btn-primary"
+                        title="Editar Ficha"
+                        (click)="editFicha(ficha)"
+                      >
+                        Editar Ficha
+                      </button>
+                    }
+                    @if (hasPermission(Permission.FICHA_TECNICA_DELETE)) {
+                      <button 
+                        type="button"
+                        class="btn btn-small btn-danger"
+                        title="Excluir Ficha"
+                        (click)="openDeleteModal(ficha)"
+                      >
+                        Excluir Ficha
+                      </button>
+                    }
+                    @if (hasPermission(Permission.CERTIFICADO_CREATE)) {
+                      <button type="button" class="btn btn-small btn-success" title="Novo Certificado" (click)="novoCertificado(ficha)">
+                        Novo Certificado
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Conteúdo expandido com certificados -->
+              @if (isExpanded(ficha.id)) {
+                <div class="ficha-content">
+                  @if (isLoadingCertificados(ficha.id)) {
+                    <div class="certificado-loading">
+                      <div class="spinner small"></div>
+                      <span>Carregando certificados...</span>
+                    </div>
+                  } @else if (getCertificados(ficha.id).length === 0) {
+                    <div class="certificado-empty">
+                      <span>Nenhum certificado encontrado para esta ficha técnica.</span>
+                      @if (hasPermission(Permission.CERTIFICADO_CREATE)) {
                         <button 
                           type="button"
-                          class="btn btn-small btn-info"
-                          title="Visualizar"
-                          (click)="viewFicha(ficha)"
+                          class="btn btn-small btn-success"
+                          (click)="novoCertificado(ficha)"
                         >
-                          Visualizar
-                        </button>
-                      }
-                      @if (hasPermission(Permission.FICHA_TECNICA_UPDATE)) {
-                        <button 
-                          type="button"
-                          class="btn btn-small btn-primary"
-                          title="Editar"
-                          (click)="editFicha(ficha)"
-                        >
-                          Editar
-                        </button>
-                      }
-
-                      @if (hasPermission(Permission.FICHA_TECNICA_DELETE)) {
-                        <button 
-                          type="button"
-                          class="btn btn-small btn-danger"
-                          title="Excluir"
-                          (click)="openDeleteModal(ficha)"
-                        >
-                          Excluir
+                          Criar Primeiro Certificado
                         </button>
                       }
                     </div>
-                  </td>
-                  <td>{{ ficha.tipoDaFicha || '-' }}</td>
-                  <td class="product-cell">
-                    <div class="product-info">
-                      <span class="product-name">{{ ficha.codigoFormulaCerta }} - {{ ficha.produto }}</span>
-                      @if (ficha.formulaMolecular) {
-                        <span class="formula">{{ ficha.formulaMolecular }}</span>
-                      }
+                  } @else {
+                    @for (certificado of getCertificados(ficha.id); track certificado.id) {
+                      <div class="certificado-card">
+                        <details open>
+                          <summary class="certificado-header">
+                            <div class="certificado-title">
+                              <span>Certificado: {{ certificado.numeroDoCertificado }}</span>
+                              <div class="certificado-actions" (click)="$event.stopPropagation()">
+                                @if (hasPermission(Permission.CERTIFICADO_READ)) {
+                                  <button type="button" class="btn btn-small btn-info" title="Imprimir Certificado" (click)="printCertificado(certificado)">Imprimir Certificado</button>
+                                }
+                                @if (hasPermission(Permission.CERTIFICADO_UPDATE)) {
+                                  <button type="button" class="btn btn-small btn-primary" title="Editar Certificado" (click)="editCertificado(certificado)">Editar Certificado</button>
+                                }
+                                @if (hasPermission(Permission.CERTIFICADO_DELETE)) {
+                                  <button type="button" class="btn btn-small btn-danger" title="Excluir Certificado" (click)="openDeleteCertModal(certificado)">Excluir Certificado</button>
+                                }
+                              </div>
+                            </div>
+                          </summary>
+                          <div class="certificado-body certificados-grid">
+                            <!-- Coluna 1: Detalhes básicos -->
+                            <div class="col-details">
+                              <p><strong>Número:</strong> {{ certificado.numeroDoCertificado }}</p>
+                              <p><strong>Lote:</strong> {{ certificado.loteDoCertificado }}</p>
+                              <p><strong>Fornecedor:</strong> {{ certificado.fornecedor }}</p>
+                              <p><strong>Pedido:</strong> {{ certificado.numeroDoPedido }}</p>
+                            </div>
+                            <!-- Coluna 3: Métricas e datas -->
+                            <div class="col-metrics">
+                              <p><strong>Quantidade:</strong> {{ certificado.quantidade }}</p>
+                              <p><strong>Data Cert.:</strong> {{ formatDate(certificado.dataCertificado) }}</p>
+                              <p><strong>Fabricação:</strong> {{ formatDate(certificado.dataDeFabricacao) }}</p>
+                              <p><strong>Validade:</strong> {{ formatDate(certificado.dataDeValidade) }}</p>
+                            </div>
+                            <!-- Coluna 3: Laudos -->
+                            <div class="col-laudos">
+                              @if (isLoadingLaudos(certificado.id)) {
+                                <div class="laudos-loading"><div class="spinner small"></div><span>Carregando laudos...</span></div>
+                              } @else {
+                                <div class="laudos-section">
+                                  <h4 class="laudos-title">Laudos do Certificado</h4>
+                                  <div class="laudos-list">
+                                    @for (laudo of getLaudos(certificado.id); track laudo.id) {
+                                      <div class="laudo-item">
+                                        <a href="#" (click)="$event.preventDefault(); openLaudo(certificado.id, laudo.id)">{{ laudo.nomeArquivo }}</a>
+                                        @if (hasPermission(Permission.CERTIFICADO_UPDATE)) {
+                                          <button type="button" class="btn btn-small btn-danger" (click)="confirmRemoveLaudo(certificado.id, laudo.id, laudo.nomeArquivo)">Excluir Laudo</button>
+                                        }
+                                      </div>
+                                    }
+                                  </div>
+                                  @if (hasPermission(Permission.CERTIFICADO_UPDATE)) {
+                                    <div class="upload-section">
+                                      <label class="btn btn-small btn-success upload-laudo-btn">
+                                        Enviar Laudo
+                                        <input type="file" accept="application/pdf" (change)="onLaudoFileSelected(certificado.id, $event)" />
+                                      </label>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        </details>
+                      </div>
+                    }
+                  }
+
+                  <!-- Botão Novo Certificado -->
+                  @if (hasPermission(Permission.CERTIFICADO_CREATE)) {
+                    <div class="add-certificado-container">
+                      <button type="button" class="btn btn-success" (click)="novoCertificado(ficha)">
+                        Novo Certificado
+                      </button>
                     </div>
-                  </td>
-                  <td>{{ ficha.revisao || '-' }}</td>
-                  <td>{{ formatDate(ficha.dataDeAnalise) }}</td>
-                </tr>
+                  }
+                </div>
               }
-            </tbody>
-          </table>
+            </div>
+          }
         </div>
       }
     </section>
@@ -256,9 +329,33 @@
 <app-confirmation-modal 
   [isVisible]="showDeleteModal" 
   title="Confirmar Exclusão" 
-  message="Tem certeza de que deseja excluir esta ficha técnica? Esta ação não pode ser desfeita." 
+  [message]="deleteMessage" 
   confirmText="Excluir" 
   cancelText="Cancelar" 
   (confirmed)="confirmDelete()" 
   (cancelled)="closeDeleteModal()">
+</app-confirmation-modal>
+
+<!-- Modal de Confirmação de Exclusão de Certificado -->
+<app-confirmation-modal
+  [isVisible]="showDeleteCertModal"
+  title="Confirmar Exclusão"
+  [message]="deleteCertMessageCert"
+  confirmText="Excluir"
+  cancelText="Cancelar"
+  (confirmed)="confirmDeleteCertificado()"
+  (cancelled)="closeDeleteCertModal()"
+>
+</app-confirmation-modal>
+
+<!-- Modal de Confirmação de Exclusão de Laudo -->
+<app-confirmation-modal
+  [isVisible]="showDeleteLaudoModal"
+  title="Confirmar Exclusão"
+  [message]="deleteLaudoMessage"
+  confirmText="Excluir"
+  cancelText="Cancelar"
+  (confirmed)="confirmDeleteLaudo()"
+  (cancelled)="closeDeleteLaudoModal()"
+>
 </app-confirmation-modal>

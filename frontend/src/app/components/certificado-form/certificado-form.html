@@ -1,0 +1,372 @@
+<div class="certificado-form-container" [class.edit-mode]="isEditMode">
+  <header class="page-header">
+    <div class="header-content">
+      <h1>
+        {{ isEditMode ? 'Editar' : 'Novo' }} Certificado
+      </h1>
+      <!-- Informações da Ficha Técnica Relacionada -->
+      @if (fichaTecnica) {
+        <div class="ficha-info">
+          <div class="ficha-badge">
+            <span>Ficha Técnica: {{ fichaTecnica.codigoFormulaCerta }} - {{ fichaTecnica.produto }}</span>
+          </div>
+        </div>
+      }
+
+      <!-- Botões de Ação no Header -->
+      @if (!loading) {
+        <div class="header-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="onCancel()"
+            [disabled]="loading"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="loading"
+            form="certificado-form"
+          >
+            @if (loading) {
+              Salvando...
+            } @else {
+              {{ isEditMode ? 'Atualizar' : 'Salvar' }} Certificado
+            }
+          </button>
+        </div>
+      }
+    </div>
+
+  </header>
+
+  <!-- Estado de Carregamento -->
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>{{ isEditMode ? 'Carregando certificado...' : 'Salvando...' }}</p>
+    </div>
+  }
+
+  <!-- Formulário -->
+  @if (!loading) {
+    <form id="certificado-form" [formGroup]="certificadoForm" (ngSubmit)="onSubmit()" class="certificado-form">
+
+      <!-- =================================================================== -->
+      <!-- BLOCO 1: INFORMAÇÕES DO CERTIFICADO -->
+      <!-- =================================================================== -->
+      <section class="form-section">
+        <h2>INFORMAÇÕES DO CERTIFICADO</h2>
+
+        <div class="form-grid form-grid-4-cols">
+          <div class="form-group">
+            <label for="numeroDoCertificado">Número do Certificado *</label>
+            <input
+              id="numeroDoCertificado"
+              type="text"
+              formControlName="numeroDoCertificado"
+              class="form-input"
+              [class.error]="hasError('numeroDoCertificado')"
+              placeholder="Número único do certificado"
+            />
+            @if (hasError('numeroDoCertificado')) {
+              <span class="error-text">{{ getError('numeroDoCertificado') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="loteDoCertificado">Lote do Certificado *</label>
+            <input
+              id="loteDoCertificado"
+              type="text"
+              formControlName="loteDoCertificado"
+              class="form-input"
+              [class.error]="hasError('loteDoCertificado')"
+              placeholder="Lote do certificado"
+            />
+            @if (hasError('loteDoCertificado')) {
+              <span class="error-text">{{ getError('loteDoCertificado') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="fornecedor">Fornecedor *</label>
+            <input
+              id="fornecedor"
+              type="text"
+              formControlName="fornecedor"
+              class="form-input"  
+              [class.error]="hasError('fornecedor')"
+              placeholder="Nome do fornecedor"
+            />
+            @if (hasError('fornecedor')) {
+              <span class="error-text">{{ getError('fornecedor') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="numeroDoPedido">Número do Pedido *</label>
+            <input
+              id="numeroDoPedido"
+              type="text"
+              formControlName="numeroDoPedido"
+              class="form-input"
+              [class.error]="hasError('numeroDoPedido')"
+              placeholder="Número do pedido"
+            />
+            @if (hasError('numeroDoPedido')) {
+              <span class="error-text">{{ getError('numeroDoPedido') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="quantidade">Quantidade *</label>
+            <input
+              id="quantidade"
+              type="text"
+              formControlName="quantidade"
+              class="form-input"
+              [class.error]="hasError('quantidade')"
+              placeholder="Quantidade do produto"
+            />
+            @if (hasError('quantidade')) {
+              <span class="error-text">{{ getError('quantidade') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="dataCertificado">Data do Certificado *</label>
+            <input
+              id="dataCertificado"
+              type="date"
+              formControlName="dataCertificado"
+              class="form-input"
+              [class.error]="hasError('dataCertificado')"
+            />
+            @if (hasError('dataCertificado')) {
+              <span class="error-text">{{ getError('dataCertificado') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="dataDeFabricacao">Data de Fabricação *</label>
+            <input
+              id="dataDeFabricacao"
+              type="date"
+              formControlName="dataDeFabricacao"
+              class="form-input"
+              [class.error]="hasError('dataDeFabricacao')"
+            />
+            @if (hasError('dataDeFabricacao')) {
+              <span class="error-text">{{ getError('dataDeFabricacao') }}</span>
+            }
+          </div>
+
+          <div class="form-group">
+            <label for="dataDeValidade">Data de Validade *</label>
+            <input
+              id="dataDeValidade"
+              type="date"
+              formControlName="dataDeValidade"
+              class="form-input"
+              [class.error]="hasError('dataDeValidade')"
+            />
+            @if (hasError('dataDeValidade')) {
+              <span class="error-text">{{ getError('dataDeValidade') }}</span>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- BLOCO 2: TESTES REALIZADOS -->
+      <!-- =================================================================== -->
+      <section class="form-section">
+        <h2>TESTES REALIZADOS - RESULTADOS</h2>
+
+        <div class="form-grid-single-column">
+          <div class="form-group">
+            <label for="pesoMolecular">Peso Molecular</label>
+            <input
+              id="pesoMolecular"
+              type="text"
+              formControlName="pesoMolecular"
+              class="form-input"
+              placeholder="Peso molecular"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="formulaMolecular">Fórmula Molecular</label>
+            <input
+              id="formulaMolecular"
+              type="text"
+              formControlName="formulaMolecular"
+              class="form-input"
+              placeholder="Fórmula molecular"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="dcb">DCB</label>
+            <input
+              id="dcb"
+              type="text"
+              formControlName="dcb"
+              class="form-input"
+              placeholder="DCB"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="nomeCientifico">Nome Científico</label>
+            <input
+              id="nomeCientifico"
+              type="text"
+              formControlName="nomeCientifico"
+              class="form-input"
+              placeholder="Nome científico"
+            />
+          </div>
+
+          @if (fichaTecnica?.tipoDaFicha === 'MATÉRIA PRIMA') {
+            <div class="form-group"><label for="caracteristicasOrganolepticas">Características Organolépticas</label><input id="caracteristicasOrganolepticas" type="text" formControlName="caracteristicasOrganolepticas" class="form-input" placeholder="Características organolépticas" /></div>
+            <div class="form-group"><label for="solubilidade">Solubilidade</label><input id="solubilidade" type="text" formControlName="solubilidade" class="form-input" placeholder="Solubilidade" /></div>
+            <div class="form-group"><label for="faixaPh">Faixa pH</label><input id="faixaPh" type="text" formControlName="faixaPh" class="form-input" placeholder="Faixa pH" /></div>
+            <div class="form-group"><label for="faixaFusao">Faixa Fusão</label><input id="faixaFusao" type="text" formControlName="faixaFusao" class="form-input" placeholder="Faixa de fusão" /></div>
+            <div class="form-group"><label for="peso">Peso</label><input id="peso" type="text" formControlName="peso" class="form-input" placeholder="Peso" /></div>
+            <div class="form-group"><label for="volume">Volume</label><input id="volume" type="text" formControlName="volume" class="form-input" placeholder="Volume" /></div>
+            <div class="form-group"><label for="densidadeSemCompactacao">Densidade sem Compactação (±10%)</label><input id="densidadeSemCompactacao" type="text" formControlName="densidadeSemCompactacao" class="form-input" placeholder="Digite a densidade sem compactação" /></div>
+            <div class="form-group"><label for="perdaPorSecagem">Perda por Secagem</label><input id="perdaPorSecagem" type="text" formControlName="perdaPorSecagem" class="form-input" placeholder="Perda por secagem" /></div>
+            <div class="form-group"><label for="infraVermelho">Infravermelho</label><input id="infraVermelho" type="text" formControlName="infraVermelho" class="form-input" placeholder="Infravermelho" /></div>
+            <div class="form-group"><label for="ultraVioleta">Ultravioleta</label><input id="ultraVioleta" type="text" formControlName="ultraVioleta" class="form-input" placeholder="Ultravioleta" /></div>
+            <div class="form-group"><label for="teor">Teor</label><input id="teor" type="text" formControlName="teor" class="form-input" placeholder="Teor" /></div>
+            <div class="form-group"><label for="conservacao">Conservação</label><input id="conservacao" type="text" formControlName="conservacao" class="form-input" placeholder="Conservação" /></div>
+            <!-- Adicione campos amostragem, referenciaBibliografica, dataDeAnalise conforme necessário -->
+          }
+          @if (fichaTecnica?.tipoDaFicha === 'FITOTERÁPICO') {
+            <div class="form-group"><label for="caracteristicasOrganolepticas">Características Organolépticas</label><input id="caracteristicasOrganolepticas" type="text" formControlName="caracteristicasOrganolepticas" class="form-input" placeholder="Características organolépticas" /></div>
+            <div class="form-group"><label for="solubilidade">Solubilidade</label><input id="solubilidade" type="text" formControlName="solubilidade" class="form-input" placeholder="Solubilidade" /></div>
+            <div class="form-group"><label for="faixaPh">Faixa pH</label><input id="faixaPh" type="text" formControlName="faixaPh" class="form-input" placeholder="Faixa pH" /></div>
+            <div class="form-group"><label for="faixaFusao">Faixa Fusão</label><input id="faixaFusao" type="text" formControlName="faixaFusao" class="form-input" placeholder="Faixa de fusão" /></div>
+            <div class="form-group"><label for="peso">Peso</label><input id="peso" type="text" formControlName="peso" class="form-input" placeholder="Peso" /></div>
+            <div class="form-group"><label for="volume">Volume</label><input id="volume" type="text" formControlName="volume" class="form-input" placeholder="Volume" /></div>
+            <div class="form-group"><label for="densidadeSemCompactacao">Densidade sem Compactação (±10%)</label><input id="densidadeSemCompactacao" type="text" formControlName="densidadeSemCompactacao" class="form-input" placeholder="Digite a densidade sem compactação" /></div>
+            <div class="form-group"><label for="determinacaoMateriaisEstranhos">Determinação de Materiais Estranhos</label><input id="determinacaoMateriaisEstranhos" type="text" formControlName="determinacaoMateriaisEstranhos" class="form-input" placeholder="Determinação de materiais estranhos" /></div>
+            <div class="form-group"><label for="pesquisasDeContaminacaoMicrobiologica">Pesquisas de Contaminação Microbiológica</label><input id="pesquisasDeContaminacaoMicrobiologica" type="text" formControlName="pesquisasDeContaminacaoMicrobiologica" class="form-input" placeholder="Pesquisas de contaminação microbiológica" /></div>
+            <div class="form-group"><label for="umidade">Umidade</label><input id="umidade" type="text" formControlName="umidade" class="form-input" placeholder="Umidade" /></div>
+            <div class="form-group"><label for="cinzas">Cinzas</label><input id="cinzas" type="text" formControlName="cinzas" class="form-input" placeholder="Cinzas" /></div>
+            <div class="form-group"><label for="caracteresMicroscopicos">Caracteres Microscópicos</label><input id="caracteresMicroscopicos" type="text" formControlName="caracteresMicroscopicos" class="form-input" placeholder="Caracteres microscópicos" /></div>
+            <div class="form-group"><label for="infraVermelho">Infravermelho</label><input id="infraVermelho" type="text" formControlName="infraVermelho" class="form-input" placeholder="Infravermelho" /></div>
+            <div class="form-group"><label for="ultraVioleta">Ultravioleta</label><input id="ultraVioleta" type="text" formControlName="ultraVioleta" class="form-input" placeholder="Ultravioleta" /></div>
+            <div class="form-group"><label for="teor">Teor</label><input id="teor" type="text" formControlName="teor" class="form-input" placeholder="Teor" /></div>
+            <div class="form-group"><label for="conservacao">Conservação</label><input id="conservacao" type="text" formControlName="conservacao" class="form-input" placeholder="Conservação" /></div>
+            <!-- Adicione campos amostragem, referenciaBibliografica, dataDeAnalise conforme necessário -->
+          }
+
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- BLOCO 2.5: OBSERVAÇÕES E AVALIAÇÃO -->
+      <!-- =================================================================== -->
+      <section class="form-section">
+        <div class="form-group full-width">
+          <label for="observacao01">Observações</label>
+          <textarea
+            id="observacao01"
+            formControlName="observacao01"
+            class="form-input"
+            rows="4"
+            placeholder="Observações adicionais"
+          ></textarea>
+        </div>
+
+        <div class="form-group full-width">
+          <label for="avaliacaoDoLaudo">Avaliação do Laudo</label>
+          <textarea
+            id="avaliacaoDoLaudo"
+            formControlName="avaliacaoDoLaudo"
+            class="form-input"
+            rows="4"
+            placeholder="Avaliação do laudo"
+          ></textarea>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- BLOCO 3: UPLOAD DO LAUDO -->
+      <!-- =================================================================== -->
+  <section class="form-section laudos-section" [class.laudos-disabled]="!certificadoId">
+        <h2>LAUDOS EM PDF</h2>
+
+        <div class="form-group full-width">
+          <label for="laudoFile">Enviar Laudo (PDF, máximo 100KB)</label>
+          <input
+            #laudoFile
+            id="laudoFile"
+            type="file"
+            accept="application/pdf"
+            (change)="onFileChange($event)"
+            class="form-input file-input"
+            [disabled]="!certificadoId"
+          />
+          <small class="form-hint">
+            Selecione um arquivo PDF menor que 100KB. O laudo será enviado automaticamente.
+          </small>
+        </div>
+
+
+        <div *ngIf="uploadedLaudos.length > 0" class="laudos-list">
+          <h3>Laudos do Certificado</h3>
+          <div class="laudos-grid">
+            <div *ngFor="let laudo of uploadedLaudos" class="laudo-card">
+              <!-- Nome do arquivo -->
+              <div class="laudo-name">
+                <a href="javascript:void(0)" (click)="openLaudo(laudo.id)">
+                  {{ laudo.nomeArquivo }}
+                </a>
+              </div>
+              <!-- Data de envio -->
+              <div class="laudo-date">{{ laudo.criadoEm | date:'short' }}</div>
+              <!-- Botão de remover estilo grid -->
+              <button type="button" class="btn btn-small btn-danger laudo-remove-btn"
+                (click)="removeLaudo(laudo.id)"
+                [disabled]="!certificadoId">
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Campo oculto para fichaTecnicaId -->
+      <input type="hidden" formControlName="fichaTecnicaId" />
+
+    </form>
+  }
+
+  <!-- Botões de ação fora do container -->
+  <div class="footer-actions-outside">
+    <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="loading">
+      Cancelar
+    </button>
+    <button type="submit" class="btn btn-primary" [disabled]="loading" form="certificado-form">
+      <ng-container *ngIf="loading">Salvando...</ng-container>
+      <ng-container *ngIf="!loading">{{ isEditMode ? 'Atualizar' : 'Salvar' }} Certificado</ng-container>
+    </button>
+  </div>
+
+  <!-- Modal de erro -->
+  <app-confirmation-modal
+    [isVisible]="showErrorModal"
+    [title]="errorModalTitle"
+    [message]="errorModalMessage"
+    [confirmText]="errorModalConfirmText"
+    [cancelText]="''"
+    (confirmed)="closeErrorModal()"
+    (cancelled)="closeErrorModal()">
+  </app-confirmation-modal>
+</div>

@@ -32,7 +32,13 @@ export enum Permission {
   PROFILE_CREATE = 'perfil:create',
   PROFILE_READ = 'perfil:read',
   PROFILE_UPDATE = 'perfil:update',
-  PROFILE_DELETE = 'perfil:delete'
+  PROFILE_DELETE = 'perfil:delete',
+
+  // Certificados
+  CERTIFICADO_CREATE = 'certificado:create',
+  CERTIFICADO_READ = 'certificado:read',
+  CERTIFICADO_UPDATE = 'certificado:update',
+  CERTIFICADO_DELETE = 'certificado:delete'
 }
 
 export interface PermissionGroup {

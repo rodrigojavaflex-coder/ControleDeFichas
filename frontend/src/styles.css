@@ -53,10 +53,16 @@ body {
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
   --bg-tertiary: #e9ecef;
+  --bg-hover: #e9ecef;
+  --bg-hover-secondary: #f1f5f9;
   --text-primary: #1a202c;
   --text-secondary: #64748b;
   --text-muted: #9ca3af;
   --border-color: #e2e8f0;
+  --link-color: #0066cc;
+  --primary-color: #3b82f6;
+  --accent-color: #10b981;
+  --success-color: #10b981;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -66,10 +72,16 @@ body.theme-dark {
   --bg-primary: #1a202c;
   --bg-secondary: #2d3748;
   --bg-tertiary: #4a5568;
+  --bg-hover: #374151;
+  --bg-hover-secondary: #4a5568;
   --text-primary: #f7fafc;
   --text-secondary: #e2e8f0;
   --text-muted: #a0aec0;
   --border-color: #4a5568;
+  --link-color: #63b3ed;
+  --primary-color: #63b3ed;
+  --accent-color: #68d391;
+  --success-color: #68d391;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
@@ -79,10 +91,16 @@ body.theme-light {
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
   --bg-tertiary: #e9ecef;
+  --bg-hover: #e9ecef;
+  --bg-hover-secondary: #f1f5f9;
   --text-primary: #1a202c;
   --text-secondary: #64748b;
   --text-muted: #9ca3af;
   --border-color: #e2e8f0;
+  --link-color: #0066cc;
+  --primary-color: #3b82f6;
+  --accent-color: #10b981;
+  --success-color: #10b981;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -99,6 +117,12 @@ body.theme-dark {
 /* Estilos globais para tabelas e botões */
 .table-container {
   overflow-x: auto;
+}
+/* Dark mode para badge de ficha no formulário de certificado */
+body.theme-dark .certificado-form-container .ficha-info .ficha-badge {
+  background-color: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border-color: #374151 !important;
 }
 .data-table {
   width: 100%;

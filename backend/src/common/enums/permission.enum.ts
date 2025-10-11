@@ -32,6 +32,12 @@ export enum Permission {
   PROFILE_READ   = 'perfil:read',
   PROFILE_UPDATE = 'perfil:update',
   PROFILE_DELETE = 'perfil:delete',
+
+  // Certificados
+  CERTIFICADO_CREATE = 'certificado:create',
+  CERTIFICADO_READ = 'certificado:read',
+  CERTIFICADO_UPDATE = 'certificado:update',
+  CERTIFICADO_DELETE = 'certificado:delete',
 }
 
 export const PERMISSION_GROUPS = {
@@ -74,6 +80,12 @@ export const PERMISSION_GROUPS = {
     { key: Permission.PROFILE_READ, label: 'Visualizar perfis' },
     { key: Permission.PROFILE_UPDATE, label: 'Editar perfis' },
     { key: Permission.PROFILE_DELETE, label: 'Excluir perfis' },
+  ],
+  Certificados: [
+    { key: Permission.CERTIFICADO_CREATE, label: 'Criar certificados' },
+    { key: Permission.CERTIFICADO_READ, label: 'Visualizar certificados' },
+    { key: Permission.CERTIFICADO_UPDATE, label: 'Editar certificados' },
+    { key: Permission.CERTIFICADO_DELETE, label: 'Excluir certificados' },
   ],
 };
 

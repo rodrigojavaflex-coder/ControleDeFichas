@@ -1,0 +1,532 @@
+/* Sobreponha section para dark mode via host-context */
+:host-context(body.theme-dark) .form-section {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+:host-context(body.theme-dark) .certificado-form {
+  background-color: var(--bg-secondary) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+/* Ícones suaves para certificado */
+.nav-icon svg {
+  opacity: 0.7;
+  transition: opacity 0.2s, stroke 0.2s;
+}
+
+.nav-icon:hover svg {
+  opacity: 1;
+  stroke: #10b981;
+}
+
+/* Container principal */
+.certificado-form-container {
+  padding: 0.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Garantir que o modo de edição tenha o mesmo layout */
+.certificado-form-container.edit-mode {
+  padding: 1rem !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+}
+
+/* Header */
+.page-header {
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.75rem;
+}
+
+.header-content {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-content h1 {
+  margin: 0;
+  color: #333;
+  font-size: 1.75rem;
+  flex: none;
+}
+
+/* Informações da ficha técnica relacionada */
+.ficha-info {
+  /* Ajuste de margem para alinhar com o título */
+  margin: 0 1rem;
+  align-self: center;
+}
+
+.ficha-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f0f9ff;
+  color: #0369a1;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #bae6fd;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.ficha-badge svg {
+  color: #0369a1;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  /* Escopo maior para formulário de certificado */
+  ::ng-deep .certificado-form-container .ficha-info .ficha-badge {
+    background-color: #1f2937 !important; /* cinza escuro */
+    color: #f3f4f6 !important; /* texto claro */
+    border-color: #374151 !important; /* borda sombreada */
+  }
+  ::ng-deep .certificado-form-container .ficha-info .ficha-badge svg {
+    color: #f3f4f6 !important;
+  }
+}
+
+/* Botões de ação no header */
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Botões de ação no rodapé */
+.form-actions-footer {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1.5rem;
+  padding-block: 2rem; /* Espaçamento interno acima e abaixo */
+  padding-inline: 1rem; /* Espaçamento lateral */
+  border-top: 1px solid var(--border-color, #e1e5e9);
+  background: var(--bg-primary, #ffffff);
+  /* Removido margin externo para não sobrepor borda */
+}
+
+/* Botões de ação fora do container */
+.footer-actions-outside {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+.footer-actions-outside .btn {
+  padding: 0.5rem 1rem;
+}
+
+/* Responsividade do header */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1;
+    max-width: 150px;
+  }
+}
+
+/* Estados de loading e error */
+.loading-state,
+.error-state {
+  text-align: center;
+  padding: 2rem;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #10b981;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.error-message svg {
+  flex-shrink: 0;
+}
+
+/* Formulário */
+.certificado-form {
+  /* Usa variável de tema para fundo, respeita modo claro/escuro */
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+/* Estilos para lista de laudos */
+.laudos-list {
+  margin-top: 2rem;
+  padding: 1.5rem 1rem 1rem 1rem;
+  border-radius: 12px;
+  background: #f3f4f6;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+/* Ajustes para exibir nome do arquivo e data separadamente */
+.laudo-item {
+  /* ...existing styles... */
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+}
+/* Grid de cartas de laudos */
+.laudos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+.laudo-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.25rem 1rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.laudo-name a {
+  font-weight: 600;
+  color: #1d4ed8;
+  text-decoration: none;
+}
+.laudo-name a:hover {
+  text-decoration: underline;
+}
+.laudo-date {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+.laudo-remove-btn {
+  align-self: flex-end;
+}
+.laudo-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+.laudo-date {
+  color: #6b7280;
+}
+.laudo-remove-btn {
+  margin-left: auto;
+}
+.laudos-ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.laudo-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.laudo-date a {
+  color: #2563eb;
+  font-weight: 500;
+}
+.laudo-remove-btn {
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  padding: 0;
+}
+.laudo-remove-btn:hover {
+  text-decoration: underline;
+}
+
+/* Laudos desativados (sem certificadoId) */
+.laudos-section.laudos-disabled {
+  background: #f3f4f6;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Seções do formulário */
+.form-section {
+  background: var(--bg-primary, white);
+  border: 1px solid var(--border-color, #e1e5e9);
+  color: var(--text-primary, #1a202c);
+  border-radius: 8px;
+  margin-bottom: 1.25rem; /* Reduzido de 2rem para 1.25rem */
+  box-shadow: var(--shadow-md, 0 2px 12px rgba(0, 0, 0, 0.08));
+  overflow: hidden;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.form-section:last-of-type {
+  border-bottom: none;
+}
+
+.form-section h2 {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.625rem 1rem; /* Reduzido de 0.75rem para 0.625rem */
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.form-section:nth-child(1) h2 {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  box-shadow: 0 2px 8px rgba(79, 172, 254, 0.3);
+}
+
+.form-section:nth-child(2) h2 {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  box-shadow: 0 2px 8px rgba(67, 233, 123, 0.3);
+}
+
+.form-section:nth-child(3) h2 {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  box-shadow: 0 2px 8px rgba(250, 112, 154, 0.3);
+}
+
+/* Grid do formulário */
+.form-grid {
+  padding: 1rem; /* Reduzido de 1.5rem para 1rem */
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.125rem;
+  width: 100%;
+}
+
+/* Grid específico para bloco de testes - uma coluna por linha */
+.form-grid-single-column {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* Aumentado o espaçamento entre campos */
+  width: 100%;
+}
+
+.form-grid-single-column .form-group {
+  margin-bottom: 0; /* Remove margem padrão já que usamos gap */
+}
+
+/* Grid específico para 4 colunas no bloco de informações */
+.form-grid-4-cols {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+/* Grupos de formulário */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.25rem;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+  padding: 0 1rem 0.25rem 1rem; /* Adiciona padding lateral igual ao form-grid */
+}
+
+.form-group label {
+  margin-bottom: 0.0625rem;
+  color: #374151;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.form-input {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.form-input.error {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2) !important;
+}
+
+/* Garantir que o estilo de erro seja aplicado mesmo em foco */
+input.form-input.error:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2) !important;
+}
+
+.error-text {
+  color: #dc3545;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.form-input.file-input {
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.form-input.file-input::file-selector-button {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 1rem;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.form-input.file-input::file-selector-button:hover {
+  background-color: #059669;
+}
+
+/* Textarea */
+textarea.form-input {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* Hint para formulário */
+.form-hint {
+  margin-top: 0.25rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+/* Informações do arquivo selecionado */
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  color: #166534;
+  font-size: 0.875rem;
+}
+
+.file-info svg {
+  color: #166534;
+}
+
+/* Regras específicas para modo de edição - Garantir layout consistente */
+.edit-mode .form-section {
+  margin-bottom: 1.25rem !important;
+}
+
+.edit-mode .form-section h2 {
+  padding: 0.625rem 1rem !important;
+}
+
+.edit-mode .form-grid {
+  padding: 1rem !important;
+  gap: 0.125rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.edit-mode .form-group label {
+  margin-bottom: 0.0625rem !important;
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+  .certificado-form-container {
+    padding: 0.5rem;
+  }
+
+  .form-section {
+    padding: 1.5rem;
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .form-grid-4-cols {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .certificado-form-container {
+    padding: 0.25rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0.125rem; /* Reduzido de 1rem para 0.75rem */
+    padding: 0.75rem; /* Reduzido de 1rem para 0.75rem */
+  }
+
+  .form-section h2 {
+    font-size: 1.125rem;
+  }
+
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-section {
+    padding: 0.75rem;
+  }
+
+  .form-input {
+    padding: 0.625rem;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .header-actions .btn {
+    width: 100%;
+  }
+}

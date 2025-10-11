@@ -1,9 +1,11 @@
 import { Component, OnInit, inject, signal, OnDestroy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { LaudoService } from '../../services/laudo.service';
 import { FormsModule } from '@angular/forms';
 import { FichaTecnicaService } from '../../services/ficha-tecnica.service';
 import { AuthService } from '../../services/auth.service';
@@ -15,6 +17,7 @@ import {
 } from '../../models/ficha-tecnica.model';
 import { Permission } from '../../models/usuario.model';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+import { CertificadoService, Certificado } from '../../services/certificado.service';
 
 @Component({
   selector: 'app-ficha-tecnica-list',
@@ -29,7 +32,275 @@ import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
   styleUrls: ['./ficha-tecnica-list.css']
 })
 export class FichaTecnicaListComponent implements OnInit, OnDestroy {
+  /**
+   * Imprime o certificado após buscar a ficha completa
+   */
+  printCertificado(certificado: Certificado) {
+    const fichaId = certificado.fichaTecnica?.id;
+    if (!fichaId) {
+      alert('Ficha técnica não vinculada ao certificado.');
+      return;
+    }
+    this.fichaTecnicaService.findOne(fichaId).subscribe({
+      next: (ficha: FichaTecnica) => {
+        const printContent = this.generateCertificadoPrintContent(certificado, ficha);
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (printWindow) {
+          printWindow.document.write(printContent);
+          printWindow.document.close();
+          printWindow.focus();
+          printWindow.onload = () => {
+            printWindow.print();
+            printWindow.close();
+          };
+        }
+      },
+      error: () => alert('Erro ao buscar ficha técnica para impressão.')
+    });
+  }
+
+  /**
+   * Carrega laudos para um certificado específico
+   */
+  private loadLaudos(certificadoId: string): void {
+    // Marcar carregamento
+    this.loadingLaudos.update(set => new Set(set).add(certificadoId));
+    this.laudoService.getLaudos(certificadoId).subscribe({
+      next: (laudos) => {
+        // Atualizar sinal de laudos
+        this.laudosPorCertificado.update(map => {
+          const newMap = new Map(map);
+          newMap.set(certificadoId, laudos);
+          return newMap;
+        });
+        // Remover do set de carregamento
+        this.loadingLaudos.update(set => {
+          const newSet = new Set(set);
+          newSet.delete(certificadoId);
+          return newSet;
+        });
+      },
+      error: (error) => {
+        console.error('Erro ao carregar laudos:', error);
+        this.loadingLaudos.update(set => {
+          const newSet = new Set(set);
+          newSet.delete(certificadoId);
+          return newSet;
+        });
+      }
+    });
+  }
+
+  /**
+   * Abre um laudo em nova aba
+   */
+  public openLaudo(certificadoId: string, laudoId: string): void {
+    this.laudoService.downloadLaudo(certificadoId, laudoId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      },
+      error: (error) => console.error('Erro ao abrir laudo:', error)
+    });
+  }
+
+  /**
+   * Remove um laudo do certificado
+   */
+  public removeLaudo(certificadoId: string, laudoId: string): void {
+    this.laudoService.remove(certificadoId, laudoId).subscribe({
+      next: () => this.loadLaudos(certificadoId),
+      error: (error) => console.error('Erro ao remover laudo:', error)
+    });
+  }
+  /**
+   * Seleciona e faz upload de um arquivo de laudo
+   */
+  public onLaudoFileSelected(certificadoId: string, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+    const file = input.files[0];
+    // Validar tipo PDF
+    if (file.type !== 'application/pdf') {
+      alert('Somente arquivos PDF são permitidos.');
+      input.value = '';
+      return;
+    }
+    // Validar tamanho (100KB)
+    if (file.size > 100 * 1024) {
+      alert('O arquivo deve ter no máximo 100KB.');
+      input.value = '';
+      return;
+    }
+    // Upload automático
+    this.laudoService.uploadLaudo(certificadoId, file).subscribe({
+      next: () => {
+        input.value = '';
+        this.loadLaudos(certificadoId);
+      },
+      error: (err) => {
+        console.error('Erro ao enviar laudo:', err);
+        alert('Erro ao enviar laudo.');
+      }
+    });
+  }
+
+  /**
+   * Gera conteúdo HTML para impressão do certificado com dados da ficha
+   */
+  generateCertificadoPrintContent(certificado: Certificado, ficha: FichaTecnica): string {
+    // Preparar logo e informações do usuário para rodapé
+    let logoHtml = '';
+    if (this.configuracao?.logoRelatorio) {
+      const backendUrl = environment.apiUrl.replace(/\/api$/, '');
+      const logoUrl = this.configuracao.logoRelatorio.startsWith('/uploads')
+        ? backendUrl + this.configuracao.logoRelatorio
+        : this.configuracao.logoRelatorio;
+      logoHtml = `<img src="${logoUrl}" alt="Logo" style="height:40px;"/>`;
+    }
+    const userName = this.authService.getCurrentUser()?.nome || 'Usuário';
+    const printedAt = new Date().toLocaleString();
+
+    // Cabeçalho do Certificado (compacto)
+    const headerHtml = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 0.8em; margin-bottom: 20px;">
+        <div><strong>Número Certificado:</strong> ${certificado.numeroDoCertificado || '-'}</div>
+        <div><strong>Produto:</strong> ${ficha.produto}</div>
+        <div><strong>Lote:</strong> ${certificado.loteDoCertificado}</div>
+        <div><strong>Fornecedor:</strong> ${certificado.fornecedor}</div>
+        <div><strong>Número Pedido:</strong> ${certificado.numeroDoPedido}</div>
+        <div><strong>Quantidade:</strong> ${certificado.quantidade}</div>
+        <div><strong>Data Certificado:</strong> ${certificado.dataCertificado}</div>
+        <div><strong>Data Fabricação:</strong> ${certificado.dataDeFabricacao}</div>
+        <div><strong>Data Validade:</strong> ${certificado.dataDeValidade}</div>
+      </div>
+    `;
+
+    // Definição de campos para comparação baseado no tipo da ficha
+    const fieldsConfig: Array<{label: string, fichaKey: keyof FichaTecnica, certKey: keyof Certificado}> =
+      ficha.tipoDaFicha === 'FITOTERÁPICO'
+        ? [
+            {label: 'Características Organolépticas', fichaKey: 'caracteristicasOrganolepticas', certKey: 'caracteristicasOrganolepticas'},
+            {label: 'Solubilidade', fichaKey: 'solubilidade', certKey: 'solubilidade'},
+            {label: 'Faixa pH', fichaKey: 'faixaPh', certKey: 'faixaPh'},
+            {label: 'Faixa Fusão', fichaKey: 'faixaFusao', certKey: 'faixaFusao'},
+            {label: 'Peso', fichaKey: 'peso', certKey: 'peso'},
+            {label: 'Volume', fichaKey: 'volume', certKey: 'volume'},
+            {label: 'Densidade sem Compactação', fichaKey: 'densidadeComCompactacao', certKey: 'densidadeSemCompactacao'},
+            {label: 'Determinação de Materiais Estranhos', fichaKey: 'determinacaoMateriaisEstranhos', certKey: 'determinacaoMateriaisEstranhos'},
+            {label: 'Pesquisas de Contaminação Microbiológica', fichaKey: 'pesquisasDeContaminacaoMicrobiologica', certKey: 'pesquisasDeContaminacaoMicrobiologica'},
+            {label: 'Umidade', fichaKey: 'umidade', certKey: 'umidade'},
+            {label: 'Cinzas', fichaKey: 'cinzas', certKey: 'cinzas'},
+            {label: 'Caracteres Microscópicos', fichaKey: 'caracteresMicroscopicos', certKey: 'caracteresMicroscopicos'},
+            {label: 'Infravermelho', fichaKey: 'infraVermelho', certKey: 'infraVermelho'},
+            {label: 'Ultravioleta', fichaKey: 'ultraVioleta', certKey: 'ultraVioleta'},
+            {label: 'Teor', fichaKey: 'teor', certKey: 'teor'},
+            {label: 'Conservação', fichaKey: 'conservacao', certKey: 'conservacao'},
+          ]
+        : [ // MATÉRIA PRIMA
+            {label: 'Características Organolépticas', fichaKey: 'caracteristicasOrganolepticas', certKey: 'caracteristicasOrganolepticas'},
+            {label: 'Solubilidade', fichaKey: 'solubilidade', certKey: 'solubilidade'},
+            {label: 'Faixa pH', fichaKey: 'faixaPh', certKey: 'faixaPh'},
+            {label: 'Faixa Fusão', fichaKey: 'faixaFusao', certKey: 'faixaFusao'},
+            {label: 'Peso', fichaKey: 'peso', certKey: 'peso'},
+            {label: 'Volume', fichaKey: 'volume', certKey: 'volume'},
+            {label: 'Densidade sem Compactação', fichaKey: 'densidadeComCompactacao', certKey: 'densidadeSemCompactacao'},
+            {label: 'Perda por Secagem', fichaKey: 'perdaPorSecagem', certKey: 'perdaPorSecagem'},
+            {label: 'Infravermelho', fichaKey: 'infraVermelho', certKey: 'infraVermelho'},
+            {label: 'Ultravioleta', fichaKey: 'ultraVioleta', certKey: 'ultraVioleta'},
+            {label: 'Teor', fichaKey: 'teor', certKey: 'teor'},
+            {label: 'Conservação', fichaKey: 'conservacao', certKey: 'conservacao'},
+          ];
+
+    const rowsHtml = fieldsConfig.map(f => `
+      <tr>
+        <td>${f.label}</td>
+        <td>${(ficha[f.fichaKey] as string) || '-'}</td>
+        <td>${(certificado[f.certKey] as string) || '-'}</td>
+      </tr>
+    `).join('');
+
+    // Monta HTML final
+
+    // Monta HTML final
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <title>Certificado de Análise Físico Química</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 15px; font-size: 0.67em; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; }
+    th { background: #f4f4f4; }
+    .footer-print { font-size: 0.7em; color: #444; margin-top: 20px; text-align: center; }
+    /* Cabeçalho com logo */
+    .header { display: flex; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+    .logo-box { flex: 0 0 auto; margin-right: 20px; }
+    .header-content { flex: 1 1 auto; text-align: center; }
+    .header-title { margin: 0; font-size: 2.08em; font-weight: bold; }
+    .header-row { display: flex; gap: 24px; margin-top: 6px; font-size: 1em; justify-content: center; }
+    .header-row span { font-weight: bold; }
+    .footer-print-logo { max-height: 40px; display: block; margin: 0 auto 8px; }
+    @media print {
+      @page {
+        size: auto;
+        margin: 15mm 10mm 40px 10mm;
+      }
+      body { margin: 10px; }
+      .footer-print {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 5px;
+        border-top: 1px solid #ccc;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Cabeçalho do relatório com logo -->
+  <div class="header">
+    <div class="logo-box">${logoHtml}</div>
+    <div class="header-content">
+      <h1 class="header-title">Certificado de Análise Físico Química</h1>
+      <div class="header-row">
+        ${ficha.codigoFormulaCerta ? `<div>${ficha.codigoFormulaCerta}</div>` : ''}
+        ${ficha.produto ? `<div>${ficha.produto}</div>` : ''}
+      </div>
+    </div>
+  </div>
+  ${headerHtml}
+  <h2 style="text-align: center; font-size: 1.5em;">Testes Realizados</h2>
+  <table>
+    <thead>
+      <tr><th style="width: 25%;">Análise</th><th style="width: 50%;">Especificação</th><th style="width: 25%;">Resultado</th></tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+    </tbody>
+  </table>
+  <div style="margin-top: 20px;">
+    <p><strong>Avaliação do Laudo:</strong> ${certificado.avaliacaoDoLaudo || '-'}</p>
+    <p><strong>Referência Bibliográfica:</strong> ${ficha.referenciaBibliografica || '-'}</p>
+    <p><strong>Observação:</strong> ${certificado.observacao01 || '-'}</p>
+  </div>
+  <div style="display: flex; justify-content: space-between; margin-top: 40px;">
+    <div style="width: 45%; border-top: 1px solid #000; text-align: center; padding-top: 10px;">Assinatura do Analista</div>
+    <div style="width: 45%; border-top: 1px solid #000; text-align: center; padding-top: 10px;">Validação do Responsável Técnico</div>
+  </div>
+  <div class="footer-print">
+    <div>Documento gerado em ${printedAt} Impresso por: ${userName}</div>
+  </div>
+</body>
+</html>`;
+  }
   private fichaTecnicaService = inject(FichaTecnicaService);
+  private route = inject(ActivatedRoute);
+  private certificadoService = inject(CertificadoService);
   public authService = inject(AuthService);
   private router = inject(Router);
 
@@ -60,11 +331,39 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   // Modal de confirmação
   showDeleteModal = false;
   fichaToDelete: FichaTecnica | null = null;
+  // Mensagem exibida no modal de confirmação (pode ser sobrescrita com erro específico)
+  deleteMessage = 'Tem certeza de que deseja excluir esta ficha técnica? Esta ação não pode ser desfeita.';
+
+  // Controle de expansão e certificados
+  expandedFichas = new Set<string>();
+  certificadosPorFicha = signal<Map<string, Certificado[]>>(new Map());
+  loadingCertificados = signal<Set<string>>(new Set());
+  // Laudos por certificado
+  laudosPorCertificado = signal<Map<string, any[]>>(new Map());
+  loadingLaudos = signal<Set<string>>(new Set());
+  private fichaToExpand: string | null = null;
 
   private configuracaoService = inject(ConfiguracaoService);
   configuracao: Configuracao | null = null;
+  private laudoService = inject(LaudoService);
+
+  // Modal de confirmação para exclusão de certificado
+  showDeleteCertModal = false;
+  certificadoToDelete: Certificado | null = null;
+  deleteCertMessageCert = '';
+
+  // Modal de confirmação para exclusão de laudo
+  showDeleteLaudoModal = false;
+  laudoToDelete: { certificadoId: string; laudoId: string; nomeArquivo: string } | null = null;
+  deleteLaudoMessage = '';
 
   ngOnInit() {
+    // Capturar possível ficha para expandir via query param
+    this.route.queryParams.subscribe(params => {
+      if (params['fichaTecnicaId']) {
+        this.fichaToExpand = params['fichaTecnicaId'];
+      }
+    });
     this.loadFichasTecnicas();
     
     // Configurar debounce para pesquisa por produto
@@ -108,6 +407,11 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
         this.totalPages = response.meta.totalPages;
         this.currentPage = response.meta.page;
         this.loading.set(false);
+        // Expandir ficha técnica especificada, se houver
+        if (this.fichaToExpand) {
+          this.toggleExpand(this.fichaToExpand);
+          this.fichaToExpand = null;
+        }
       },
       error: (error: any) => {
         console.error('Erro ao carregar fichas técnicas:', error);
@@ -181,6 +485,104 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Navega para criação de novo certificado
+   */
+  novoCertificado(ficha: FichaTecnica) {
+    this.router.navigate(['/certificados/new'], { 
+      queryParams: { fichaTecnicaId: ficha.id } 
+    });
+  }
+
+  /**
+   * Visualiza certificado
+   */
+  viewCertificado(certificado: Certificado) {
+    // TODO: Implementar visualização de certificado
+    console.log('Visualizar certificado:', certificado);
+  }
+
+  /**
+   * Edita certificado
+   */
+  editCertificado(certificado: Certificado) {
+    this.router.navigate(['/certificados/edit', certificado.id]);
+  }
+
+  /**
+   * Exclui certificado
+   */
+  deleteCertificado(certificado: Certificado) {
+    // Executa exclusão após confirmação
+    this.certificadoService.delete(certificado.id).subscribe({
+      next: () => {
+        this.certificadosPorFicha.update(map => {
+          const newMap = new Map(map);
+          const fichaId = certificado.fichaTecnica?.id;
+          if (fichaId && newMap.has(fichaId)) {
+            const list = newMap.get(fichaId) || [];
+            newMap.set(fichaId, list.filter(c => c.id !== certificado.id));
+          }
+          return newMap;
+        });
+        this.closeDeleteCertModal();
+      },
+      error: (err) => {
+        console.error('Erro ao excluir certificado:', err);
+        alert('Erro ao excluir certificado. Tente novamente.');
+      }
+    });
+  }
+
+  // Abre modal para confirmação de exclusão do certificado
+  openDeleteCertModal(certificado: Certificado) {
+    this.certificadoToDelete = certificado;
+    this.deleteCertMessageCert = `Deseja realmente excluir o certificado ${certificado.numeroDoCertificado}?`;
+    this.showDeleteCertModal = true;
+  }
+  
+  // Fecha modal de exclusão de certificado sem ação
+  closeDeleteCertModal() {
+    this.showDeleteCertModal = false;
+    this.certificadoToDelete = null;
+  }
+  
+  // Confirma exclusão de certificado via modal
+  confirmDeleteCertificado() {
+    if (this.certificadoToDelete) {
+      this.deleteCertificado(this.certificadoToDelete);
+    }
+  }
+
+  // Abre modal de confirmação para exclusão de laudo
+  confirmRemoveLaudo(certificadoId: string, laudoId: string, nomeArquivo: string) {
+    this.laudoToDelete = { certificadoId, laudoId, nomeArquivo };
+    this.deleteLaudoMessage = `Deseja excluir o laudo "${nomeArquivo}"?`;
+    this.showDeleteLaudoModal = true;
+  }
+
+  // Fecha modal de exclusão de laudo sem ação
+  closeDeleteLaudoModal() {
+    this.showDeleteLaudoModal = false;
+    this.laudoToDelete = null;
+  }
+
+  // Confirma exclusão de laudo via modal
+  confirmDeleteLaudo() {
+    if (this.laudoToDelete) {
+      this.laudoService.remove(this.laudoToDelete.certificadoId, this.laudoToDelete.laudoId).subscribe({
+        next: () => {
+          this.loadLaudos(this.laudoToDelete!.certificadoId);
+          this.closeDeleteLaudoModal();
+        },
+        error: (error) => {
+          console.error('Erro ao remover laudo:', error);
+          this.closeDeleteLaudoModal();
+        }
+      });
+    }
+  }
+
+  /**
    * Formata texto convertendo quebras de linha para HTML
    */
   private formatTextForHtml(text: string | null | undefined): string {
@@ -243,12 +645,12 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
       <head>
         <title>${nomeRelatorio}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 15px; line-height: 1.3; }
+          body { font-family: Arial, sans-serif; margin: 15px; line-height: 1.3; font-size: 0.67em; }
           .header { display: flex; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
           .logo-box { flex: 0 0 auto; margin-right: 20px; }
-          .header-content { flex: 1 1 auto; }
+          .header-content { flex: 1 1 auto; text-align: center; }
           .header-title { margin: 0; font-size: 1.6em; font-weight: bold; }
-          .header-row { display: flex; gap: 24px; margin-top: 6px; font-size: 1em; }
+          .header-row { display: flex; gap: 24px; margin-top: 6px; font-size: 1em; justify-content: center; }
           .header-row span { font-weight: bold; }
           .section { margin-bottom: 18px; }
           .section-title { background: #f0f0f0; padding: 6px; font-weight: bold; border-left: 4px solid #007bff; margin-bottom: 8px; font-size: 0.95em; }
@@ -273,14 +675,14 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
           <div class="header-content">
             <h1 class="header-title">FICHA TÉCNICA${ficha.tipoDaFicha ? ' - ' + (ficha.tipoDaFicha === 'FITOTERÁPICO' ? 'FITOTERÁPICO' : 'MATÉRIA PRIMA') : ''}</h1>
             <div class="header-row">
-              ${ficha.codigoFormulaCerta ? `<div><span>Código:</span> ${ficha.codigoFormulaCerta}</div>` : ''}
-              ${ficha.produto ? `<div><span>Produto:</span> ${ficha.produto}</div>` : ''}
+              ${ficha.codigoFormulaCerta ? `<div>${ficha.codigoFormulaCerta}</div>` : ''}
+              ${ficha.produto ? `<div>${ficha.produto}</div>` : ''}
             </div>
           </div>
         </div>
 
         <div class="section">
-          <div class="section-title">📋 INFORMAÇÕES BÁSICAS</div>
+          <div class="section-title">INFORMAÇÕES BÁSICAS</div>
           <div class="field"><span class="field-label">Produto:</span> <span class="field-value">${ficha.produto}</span></div>
           <div class="field"><span class="field-label">Peso Molecular:</span> <span class="field-value">${ficha.pesoMolecular || '-'}</span></div>
           <div class="field"><span class="field-label">Fórmula Molecular:</span> <span class="field-value">${ficha.formulaMolecular || '-'}</span></div>
@@ -290,7 +692,7 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
         </div>
 
         <div class="section">
-          <div class="section-title">🧪 TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10</div>
+          <div class="section-title">TESTES - REFERÊNCIA RDC 67/2007 - ITEM 7.3.10</div>
           <div class="field"><span class="field-label">Características Organolépticas:</span> <span class="field-value">${this.formatTextForHtml(ficha.caracteristicasOrganolepticas)}</span></div>
           <div class="field"><span class="field-label">Solubilidade:</span> <span class="field-value">${ficha.solubilidade ? ficha.solubilidade.replace(/\n/g, '<br>') : '-'}</span></div>
           <div class="field"><span class="field-label">Faixa de pH:</span> <span class="field-value">${ficha.faixaPh || '-'}</span></div>
@@ -309,7 +711,7 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
         </div>
 
         <div class="section">
-          <div class="section-title">📊 INFORMAÇÕES ADICIONAIS - ITEM 7.3.11</div>
+          <div class="section-title">INFORMAÇÕES ADICIONAIS - ITEM 7.3.11</div>
           ${ficha.tipoDaFicha !== 'FITOTERÁPICO' ? `
             <div class="field"><span class="field-label">Cinzas:</span> <span class="field-value">${ficha.cinzas || '-'}</span></div>
             <div class="field"><span class="field-label">Perda por Secagem:</span> <span class="field-value">${ficha.perdaPorSecagem || '-'}</span></div>
@@ -358,7 +760,8 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
    */
   public openDeleteModal(ficha: FichaTecnica) {
     this.fichaToDelete = ficha;
-    this.showDeleteModal = true;
+  this.deleteMessage = 'Tem certeza de que deseja excluir esta ficha técnica? Esta ação não pode ser desfeita.';
+  this.showDeleteModal = true;
   }
 
   /**
@@ -382,8 +785,12 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
       },
       error: (error: any) => {
         console.error('Erro ao excluir ficha técnica:', error);
-        this.error.set('Erro ao excluir ficha técnica. Tente novamente.');
+        // Exibir erro específico no modal
+        const msg = error?.error?.message || error.message || 'Erro ao excluir ficha técnica.';
+        this.deleteMessage = msg;
         this.loading.set(false);
+        // Manter modal aberto para visualização do erro
+        this.showDeleteModal = true;
       }
     });
   }
@@ -400,7 +807,12 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
    */
   public formatDate(dateString: string | undefined): string {
     if (!dateString) return '-';
-    const date = new Date(dateString);
+    // Interpreta string 'YYYY-MM-DD' como data local, evitando UTC
+    const parts = dateString.split('T')[0].split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const date = new Date(year, month, day);
     return date.toLocaleDateString('pt-BR');
   }
 
@@ -429,5 +841,74 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
    */
   public get hasNextPage(): boolean {
     return this.currentPage < this.totalPages;
+  }
+
+  // Controle de expansão e certificados
+  toggleExpand(fichaId: string) {
+    if (this.expandedFichas.has(fichaId)) {
+      this.expandedFichas.delete(fichaId);
+    } else {
+      this.expandedFichas.add(fichaId);
+      this.loadCertificados(fichaId);
+    }
+  }
+
+  isExpanded(fichaId: string): boolean {
+    return this.expandedFichas.has(fichaId);
+  }
+
+  private loadCertificados(fichaId: string) {
+    if (this.certificadosPorFicha().has(fichaId)) {
+      return; // Já carregados
+    }
+
+    this.loadingCertificados.update(set => new Set(set).add(fichaId));
+
+    this.certificadoService.findByFichaTecnica(fichaId).subscribe({
+      next: (certificados) => {
+        this.certificadosPorFicha.update(map => {
+          const newMap = new Map(map);
+          newMap.set(fichaId, certificados);
+          return newMap;
+        });
+        this.loadingCertificados.update(set => {
+          const newSet = new Set(set);
+          newSet.delete(fichaId);
+          return newSet;
+        });
+        // Carregar laudos para cada certificado
+        certificados.forEach(certificado => {
+          this.loadLaudos(certificado.id);
+        });
+      },
+      error: (error) => {
+        console.error('Erro ao carregar certificados:', error);
+        this.loadingCertificados.update(set => {
+          const newSet = new Set(set);
+          newSet.delete(fichaId);
+          return newSet;
+        });
+      }
+    });
+  }
+
+  getCertificados(fichaId: string): Certificado[] {
+    return this.certificadosPorFicha().get(fichaId) || [];
+  }
+
+  isLoadingCertificados(fichaId: string): boolean {
+    return this.loadingCertificados().has(fichaId);
+  }
+  /**
+   * Verifica se laudos estão sendo carregados para um certificado
+   */
+  public isLoadingLaudos(certificadoId: string): boolean {
+    return this.loadingLaudos().has(certificadoId);
+  }
+  /**
+   * Retorna laudos carregados para um certificado
+   */
+  public getLaudos(certificadoId: string): any[] {
+    return this.laudosPorCertificado().get(certificadoId) || [];
   }
 }

@@ -14,10 +14,10 @@ import { CommonModule } from '@angular/common';
           <p>{{ message }}</p>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" (click)="onCancel()">
+          <button *ngIf="cancelText" class="btn btn-secondary" (click)="onCancel()">
             {{ cancelText }}
           </button>
-          <button class="btn btn-danger" (click)="onConfirm()">
+          <button class="btn {{ cancelText ? 'btn-danger' : 'btn-primary' }}" (click)="onConfirm()">
             {{ confirmText }}
           </button>
         </div>

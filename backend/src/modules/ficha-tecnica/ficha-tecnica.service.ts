@@ -32,6 +32,19 @@ export class FichaTecnicaService {
       );
       return await this.fichaTecnicaRepository.save(fichaTecnica);
     } catch (error) {
+      // Para erros de banco (como violação de unicidade), formatar mensagem amigável
+      if (error.code && error.code === '23505') {
+        const detail = error.detail || '';
+        const uniqueMatch = /Key \(([^)]+)\)=\(([^)]+)\)/.exec(detail);
+        if (uniqueMatch) {
+          const column = uniqueMatch[1];
+          const value = uniqueMatch[2];
+          const columnName = column === 'codigo_formula_certa' ? 'código fórmula certa' : column;
+          throw new BadRequestException(`Ficha técnica duplicada: já existe ficha técnica com ${columnName} = "${value}".`);
+        } else {
+          throw new BadRequestException('Ficha técnica duplicada: já existe um registro com esses dados.');
+        }
+      }
       throw new BadRequestException(
         'Erro ao criar ficha técnica: ' + error.message,
       );
@@ -129,9 +142,12 @@ export class FichaTecnicaService {
 
   async findOne(id: string): Promise<FichaTecnica> {
     try {
-      const fichaTecnica = await this.fichaTecnicaRepository.findOne({
-        where: { id },
-      });
+      const fichaTecnica = await this.fichaTecnicaRepository
+        .createQueryBuilder('ficha')
+        .leftJoinAndSelect('ficha.certificados', 'certificado')
+        .where('ficha.id = :id', { id })
+        .orderBy('certificado.dataCertificado', 'DESC')
+        .getOne();
 
       if (!fichaTecnica) {
         throw new NotFoundException('Ficha técnica não encontrada');
@@ -184,6 +200,19 @@ export class FichaTecnicaService {
 
       return await this.fichaTecnicaRepository.save(fichaTecnica);
     } catch (error) {
+      // Para erros de banco (como violação de unicidade), formatar mensagem amigável
+      if (error.code && error.code === '23505') {
+        const detail = error.detail || '';
+        const uniqueMatch = /Key \(([^)]+)\)=\(([^)]+)\)/.exec(detail);
+        if (uniqueMatch) {
+          const column = uniqueMatch[1];
+          const value = uniqueMatch[2];
+          const columnName = column === 'codigo_formula_certa' ? 'código fórmula certa' : column;
+          throw new BadRequestException(`Ficha técnica duplicada: já existe ficha técnica com ${columnName} = "${value}".`);
+        } else {
+          throw new BadRequestException('Ficha técnica duplicada: já existe um registro com esses dados.');
+        }
+      }
       if (error instanceof NotFoundException) {
         throw error;
       }
@@ -198,9 +227,18 @@ export class FichaTecnicaService {
       const fichaTecnica = await this.findOne(id);
       await this.fichaTecnicaRepository.remove(fichaTecnica);
     } catch (error) {
+      // Se não encontrado, repassa
       if (error instanceof NotFoundException) {
         throw error;
       }
+      // Violação de FK (certificados associados)
+      const pgErrorCode = (error as any)?.code || (error as any)?.driverError?.code;
+      if (pgErrorCode === '23503') {
+        throw new BadRequestException(
+          'Não é possível excluir esta ficha técnica pois existem certificados associados. Remova os certificados antes de excluir a ficha técnica.',
+        );
+      }
+      // Outros erros
       throw new BadRequestException(
         'Erro ao remover ficha técnica: ' + error.message,
       );

@@ -4,6 +4,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { FichaTecnicaService } from '../../services/ficha-tecnica.service';
 import { AuthService } from '../../services/auth.service';
+import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { 
   FichaTecnica, 
   CreateFichaTecnicaDto, 
@@ -14,7 +15,7 @@ import { Permission } from '../../models/usuario.model';
 @Component({
   selector: 'app-ficha-tecnica-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ConfirmationModalComponent],
   templateUrl: './ficha-tecnica-form.html',
   styleUrls: ['./ficha-tecnica-form.css']
 })
@@ -30,13 +31,23 @@ export class FichaTecnicaFormComponent implements OnInit {
 
   fichaForm: FormGroup;
   loading = false;
-  error: string | null = null;
   isEditMode = false;
   fichaId: string | null = null;
   currentFicha: FichaTecnica | null = null;
 
+  // Modal de erro
+  showErrorModal = false;
+  errorModalMessage = '';
+
   constructor() {
     this.fichaForm = this.createForm();
+  }
+
+  // Ajusta data compensando timezone local e formata para YYYY-MM-DD
+  private formatDate(date: Date | string): string {
+    const d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 10);
   }
 
   ngOnInit() {
@@ -107,7 +118,8 @@ export class FichaTecnicaFormComponent implements OnInit {
       },
       error: (err) => {
         console.error('ERRO: Falha ao buscar dados da ficha!', err);
-        this.error = 'Falha ao carregar a ficha técnica. Verifique o console para mais detalhes.';
+        this.errorModalMessage = 'Falha ao carregar a ficha técnica. Verifique o console para mais detalhes.';
+        this.showErrorModal = true;
         this.loading = false;
       }
     });
@@ -143,7 +155,8 @@ export class FichaTecnicaFormComponent implements OnInit {
       observacao01: ficha.observacao01,
       amostragem: ficha.amostragem,
       referenciaBibliografica: ficha.referenciaBibliografica,
-      dataDeAnalise: ficha.dataDeAnalise
+      // Ajusta data de análise para exibir corretamente no input
+      dataDeAnalise: ficha.dataDeAnalise ? this.formatDate(ficha.dataDeAnalise) : ''
     });
   }
 
@@ -170,7 +183,6 @@ export class FichaTecnicaFormComponent implements OnInit {
    */
   private createFichaTecnica(data: CreateFichaTecnicaDto) {
     this.loading = true;
-    this.error = null;
 
     this.fichaTecnicaService.create(data).subscribe({
       next: () => {
@@ -178,7 +190,17 @@ export class FichaTecnicaFormComponent implements OnInit {
       },
       error: (error) => {
         console.error('Erro ao criar ficha técnica:', error);
-        this.error = 'Erro ao criar ficha técnica. Verifique os dados e tente novamente.';
+        // Extrai mensagem específica do backend ou usa mensagem genérica
+        const backendMessage = error?.error?.message;
+        if (backendMessage && backendMessage.includes('duplicada')) {
+          // Para erros de unicidade, mostra mensagem mais clara no modal
+          const codigoMatch = backendMessage.match(/código fórmula certa = "([^"]+)"/);
+          const codigo = codigoMatch ? codigoMatch[1] : 'informado';
+          this.errorModalMessage = `Já existe uma ficha técnica para o código Fórmula Certa ${codigo}.`;
+        } else {
+          this.errorModalMessage = backendMessage || 'Erro ao criar ficha técnica. Verifique os dados e tente novamente.';
+        }
+        this.showErrorModal = true;
         this.loading = false;
       }
     });
@@ -191,7 +213,6 @@ export class FichaTecnicaFormComponent implements OnInit {
     if (!this.fichaId) return;
 
     this.loading = true;
-    this.error = null;
 
     this.fichaTecnicaService.update(this.fichaId, data).subscribe({
       next: () => {
@@ -199,7 +220,17 @@ export class FichaTecnicaFormComponent implements OnInit {
       },
       error: (error) => {
         console.error('Erro ao atualizar ficha técnica:', error);
-        this.error = 'Erro ao atualizar ficha técnica. Verifique os dados e tente novamente.';
+        // Extrai mensagem específica do backend ou usa mensagem genérica
+        const backendMessage = error?.error?.message;
+        if (backendMessage && backendMessage.includes('duplicada')) {
+          // Para erros de unicidade, mostra mensagem mais clara no modal
+          const codigoMatch = backendMessage.match(/código fórmula certa = "([^"]+)"/);
+          const codigo = codigoMatch ? codigoMatch[1] : 'informado';
+          this.errorModalMessage = `Já existe uma ficha técnica para o código Fórmula Certa ${codigo}.`;
+        } else {
+          this.errorModalMessage = backendMessage || 'Erro ao atualizar ficha técnica. Verifique os dados e tente novamente.';
+        }
+        this.showErrorModal = true;
         this.loading = false;
       }
     });
@@ -213,6 +244,14 @@ export class FichaTecnicaFormComponent implements OnInit {
       const control = this.fichaForm.get(key);
       control?.markAsTouched();
     });
+  }
+
+  /**
+   * Fecha o modal de erro
+   */
+  closeErrorModal() {
+    this.showErrorModal = false;
+    this.errorModalMessage = '';
   }
 
   /**
