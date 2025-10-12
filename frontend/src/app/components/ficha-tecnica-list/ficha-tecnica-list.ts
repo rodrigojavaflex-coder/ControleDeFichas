@@ -4,7 +4,7 @@ import { environment } from '../../../environments/environment';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { LaudoService } from '../../services/laudo.service';
 import { FormsModule } from '@angular/forms';
 import { FichaTecnicaService } from '../../services/ficha-tecnica.service';
@@ -16,8 +16,9 @@ import {
   FichaTecnicaPaginatedResponse
 } from '../../models/ficha-tecnica.model';
 import { Permission } from '../../models/usuario.model';
-import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, takeUntil, filter } from 'rxjs';
 import { CertificadoService, Certificado } from '../../services/certificado.service';
+import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-auditoria.component';
 
 @Component({
   selector: 'app-ficha-tecnica-list',
@@ -26,7 +27,8 @@ import { CertificadoService, Certificado } from '../../services/certificado.serv
     CommonModule, 
     RouterModule, 
     FormsModule,
-    ConfirmationModalComponent
+    ConfirmationModalComponent,
+    HistoricoAuditoriaComponent
   ],
   templateUrl: './ficha-tecnica-list.html',
   styleUrls: ['./ficha-tecnica-list.css']
@@ -44,15 +46,15 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
     this.fichaTecnicaService.findOne(fichaId).subscribe({
       next: (ficha: FichaTecnica) => {
         const printContent = this.generateCertificadoPrintContent(certificado, ficha);
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        const printWindow = window.open('', '_blank');
         if (printWindow) {
           printWindow.document.write(printContent);
           printWindow.document.close();
           printWindow.focus();
-          printWindow.onload = () => {
+          // Removido o fechamento automático para não travar a edição
+          setTimeout(() => {
             printWindow.print();
-            printWindow.close();
-          };
+          }, 100);
         }
       },
       error: () => alert('Erro ao buscar ficha técnica para impressão.')
@@ -277,7 +279,7 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   <h2 style="text-align: center; font-size: 1.5em;">Testes Realizados</h2>
   <table>
     <thead>
-      <tr><th style="width: 25%;">Análise</th><th style="width: 50%;">Especificação</th><th style="width: 25%;">Resultado</th></tr>
+      <tr><th style="width: 20%;">Análise</th><th style="width: 40%;">Especificação</th><th style="width: 40%;">Resultado</th></tr>
     </thead>
     <tbody>
       ${rowsHtml}
@@ -334,6 +336,10 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   // Mensagem exibida no modal de confirmação (pode ser sobrescrita com erro específico)
   deleteMessage = 'Tem certeza de que deseja excluir esta ficha técnica? Esta ação não pode ser desfeita.';
 
+  // Modal de auditoria
+  showAuditModal = false;
+  selectedFichaForAudit: FichaTecnica | null = null;
+
   // Controle de expansão e certificados
   expandedFichas = new Set<string>();
   certificadosPorFicha = signal<Map<string, Certificado[]>>(new Map());
@@ -342,6 +348,11 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   laudosPorCertificado = signal<Map<string, any[]>>(new Map());
   loadingLaudos = signal<Set<string>>(new Set());
   private fichaToExpand: string | null = null;
+
+  // Controle de dropdowns
+  dropdownsAbertos = signal<Set<string>>(new Set());
+  // Controle de dropdowns de certificados
+  certDropdownsAbertos = signal<Set<string>>(new Set());
 
   private configuracaoService = inject(ConfiguracaoService);
   configuracao: Configuracao | null = null;
@@ -356,6 +367,10 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   showDeleteLaudoModal = false;
   laudoToDelete: { certificadoId: string; laudoId: string; nomeArquivo: string } | null = null;
   deleteLaudoMessage = '';
+
+  // Modal de auditoria de certificado
+  showCertAuditModal = false;
+  selectedCertForAudit: Certificado | null = null;
 
   ngOnInit() {
     // Capturar possível ficha para expandir via query param
@@ -377,6 +392,18 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
       // Carregar lista com filtros aplicados
       this.loadFichasTecnicas();
     });
+
+    // Recarregar dados quando voltar para a rota (após edição)
+    this.router.events
+      .pipe(
+        filter(event => event instanceof NavigationEnd),
+        filter((event: NavigationEnd) => event.url.startsWith('/fichas-tecnicas') && !event.url.includes('/edit') && !event.url.includes('/new')),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        // Recarregar dados quando voltar para a lista
+        this.loadFichasTecnicas();
+      });
     
     // Configurar debounce para pesquisa por produto
     this.searchSubject
@@ -509,10 +536,13 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
    * Navega para edição de ficha técnica
    */
   editFicha(ficha: FichaTecnica) {
-    // Navega para edição mantendo filtros atualizados
+    // Navega para edição mantendo filtros atualizados e marcando ficha para expansão
     this.router.navigate(
       ['/fichas-tecnicas/edit', ficha.id],
-      { queryParamsHandling: 'preserve' }
+      { 
+        queryParams: { ...this.searchFilters, fichaTecnicaId: ficha.id },
+        queryParamsHandling: 'merge'
+      }
     );
   }
 
@@ -636,19 +666,33 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   // Criar conteúdo HTML para impressão com nome do usuário
   const printContent = this.generatePrintContentWithUser(ficha);
     
-    // Abrir nova janela para impressão
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    // Abrir nova aba para impressão
+    const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
       
-      // Aguardar carregamento e imprimir
-      printWindow.onload = () => {
+      // Aguardar carregamento e imprimir (sem fechar automaticamente)
+      setTimeout(() => {
         printWindow.print();
-        printWindow.close();
-      };
+      }, 100);
     }
+  }
+  /**
+   * Abrir modal de histórico de auditoria de certificado
+   */
+  public openCertAuditHistory(cert: Certificado) {
+    this.selectedCertForAudit = cert;
+    this.showCertAuditModal = true;
+  }
+
+  /**
+   * Fechar modal de auditoria de certificado
+   */
+  public closeCertAuditModal() {
+    this.showCertAuditModal = false;
+    this.selectedCertForAudit = null;
   }
 
   /**
@@ -812,6 +856,22 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Abrir modal de histórico de auditoria
+   */
+  public openAuditHistory(ficha: FichaTecnica) {
+    this.selectedFichaForAudit = ficha;
+    this.showAuditModal = true;
+  }
+
+  /**
+   * Fechar modal de auditoria
+   */
+  public closeAuditModal() {
+    this.showAuditModal = false;
+    this.selectedFichaForAudit = null;
+  }
+
+  /**
    * Confirma e executa a exclusão
    */
   public confirmDelete() {
@@ -886,6 +946,7 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   toggleExpand(fichaId: string) {
     if (this.expandedFichas.has(fichaId)) {
       this.expandedFichas.delete(fichaId);
+      this.closeDropdown(fichaId); // Fecha o dropdown ao fechar o card
     } else {
       this.expandedFichas.add(fichaId);
       this.loadCertificados(fichaId);
@@ -894,6 +955,53 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
 
   isExpanded(fichaId: string): boolean {
     return this.expandedFichas.has(fichaId);
+  }
+
+  // Controle de dropdowns
+  toggleDropdown(fichaId: string) {
+    this.dropdownsAbertos.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(fichaId)) {
+        newSet.delete(fichaId);
+      } else {
+        newSet.add(fichaId);
+      }
+      return newSet;
+    });
+  }
+
+  isDropdownOpen(fichaId: string): boolean {
+    return this.dropdownsAbertos().has(fichaId);
+  }
+
+  // Métodos para dropdowns de certificado
+  toggleCertDropdown(certId: string) {
+    this.certDropdownsAbertos.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(certId)) newSet.delete(certId);
+      else newSet.add(certId);
+      return newSet;
+    });
+  }
+
+  isCertDropdownOpen(certId: string): boolean {
+    return this.certDropdownsAbertos().has(certId);
+  }
+
+  closeCertDropdown(certId: string) {
+    this.certDropdownsAbertos.update(set => {
+      const newSet = new Set(set);
+      newSet.delete(certId);
+      return newSet;
+    });
+  }
+
+  closeDropdown(fichaId: string) {
+    this.dropdownsAbertos.update(set => {
+      const newSet = new Set(set);
+      newSet.delete(fichaId);
+      return newSet;
+    });
   }
 
   private loadCertificados(fichaId: string) {

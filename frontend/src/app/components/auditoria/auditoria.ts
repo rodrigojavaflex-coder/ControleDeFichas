@@ -241,7 +241,7 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   getUserName(log: Auditoria | UndoableChange): string {
     // Priorizar dados do usuário que vêm com o log (relação do backend)
     if (log.usuario) {
-      return log.usuario.name;  // Corrigido: backend retorna "name" não "nome"
+      return log.usuario.nome;  // Backend retorna "nome"
     }
     
     // Fallback: buscar nos usuários carregados separadamente

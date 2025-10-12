@@ -68,4 +68,8 @@ export class AuditoriaService {
   undoChange(logId: string): Observable<RollbackResult> {
     return this.http.post<RollbackResult>(`${this.apiUrl}/${logId}/undo`, {});
   }
+
+  getHistoryByEntity(entidade: string, entidadeId: string): Promise<Auditoria[]> {
+    return this.http.get<Auditoria[]>(`${this.apiUrl}/entity/${entidade}/${entidadeId}`).toPromise().then(result => result || []);
+  }
 }

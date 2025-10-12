@@ -6,12 +6,14 @@ export enum Permission {
   USER_UPDATE = 'user:update',
   USER_DELETE = 'user:delete',
   USER_PRINT = 'user:print',
+  USER_AUDIT = 'user:audit',
 
   // Fichas Técnicas
   FICHA_TECNICA_CREATE = 'ficha-tecnica:create',
   FICHA_TECNICA_READ = 'ficha-tecnica:read',
   FICHA_TECNICA_UPDATE = 'ficha-tecnica:update',
   FICHA_TECNICA_DELETE = 'ficha-tecnica:delete',
+  FICHA_TECNICA_AUDIT = 'ficha-tecnica:audit',
 
   // Administração
   ADMIN_FULL = 'admin:full',
@@ -38,7 +40,8 @@ export enum Permission {
   CERTIFICADO_CREATE = 'certificado:create',
   CERTIFICADO_READ = 'certificado:read',
   CERTIFICADO_UPDATE = 'certificado:update',
-  CERTIFICADO_DELETE = 'certificado:delete'
+  CERTIFICADO_DELETE = 'certificado:delete',
+  CERTIFICADO_AUDIT = 'certificado:audit'
 }
 
 export interface PermissionGroup {

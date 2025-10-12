@@ -7,12 +7,13 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
 import { Usuario, PaginatedResponse, FindUsuariosDto, Permission } from '../../models/usuario.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-auditoria.component';
 import { BaseListComponent } from '../base-list.component';
 
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmationModalComponent],
+  imports: [CommonModule, FormsModule, ConfirmationModalComponent, HistoricoAuditoriaComponent],
   templateUrl: './user-list.html',
   styleUrls: ['./user-list.css']
 })
@@ -32,6 +33,10 @@ export class UserListComponent extends BaseListComponent<Usuario> {
   emailFilter = '';
   /** Título do modal de confirmação de exclusão */
   deleteModalTitle = 'Confirmação de Exclusão';
+
+  // Modal de auditoria
+  showAuditModal = false;
+  selectedUserForAudit: Usuario | null = null;
 
   override ngOnInit(): void {
     super.ngOnInit();
@@ -124,5 +129,21 @@ export class UserListComponent extends BaseListComponent<Usuario> {
 
   canDeleteUser(): boolean {
     return this.authService.hasPermission(Permission.USER_DELETE);
+  }
+
+  canAuditUser(): boolean {
+    return this.authService.hasPermission(Permission.USER_AUDIT);
+  }
+
+  /** Abrir modal de histórico de auditoria */
+  openAuditHistory(user: Usuario): void {
+    this.selectedUserForAudit = user;
+    this.showAuditModal = true;
+  }
+
+  /** Fechar modal de auditoria */
+  closeAuditModal(): void {
+    this.showAuditModal = false;
+    this.selectedUserForAudit = null;
   }
 }

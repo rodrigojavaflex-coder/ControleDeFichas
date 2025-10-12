@@ -6,12 +6,14 @@ export enum Permission {
   USER_UPDATE = 'user:update',
   USER_DELETE = 'user:delete',
   USER_PRINT = 'user:print',
+  USER_AUDIT = 'user:audit',
 
   // Fichas Técnicas
   FICHA_TECNICA_CREATE = 'ficha-tecnica:create',
   FICHA_TECNICA_READ = 'ficha-tecnica:read',
   FICHA_TECNICA_UPDATE = 'ficha-tecnica:update',
   FICHA_TECNICA_DELETE = 'ficha-tecnica:delete',
+  FICHA_TECNICA_AUDIT = 'ficha-tecnica:audit',
 
   // Administração
   ADMIN_FULL = 'admin:full',
@@ -38,6 +40,7 @@ export enum Permission {
   CERTIFICADO_READ = 'certificado:read',
   CERTIFICADO_UPDATE = 'certificado:update',
   CERTIFICADO_DELETE = 'certificado:delete',
+  CERTIFICADO_AUDIT = 'certificado:audit',
 }
 
 export const PERMISSION_GROUPS = {
@@ -53,12 +56,14 @@ export const PERMISSION_GROUPS = {
     { key: Permission.USER_UPDATE, label: 'Editar usuários' },
     { key: Permission.USER_DELETE, label: 'Excluir usuários' },
     { key: Permission.USER_PRINT, label: 'Imprimir relatórios de usuários' },
+    { key: Permission.USER_AUDIT, label: 'Visualizar auditoria' },
   ],
   'Fichas Técnicas': [
     { key: Permission.FICHA_TECNICA_CREATE, label: 'Criar fichas técnicas' },
     { key: Permission.FICHA_TECNICA_READ, label: 'Visualizar fichas técnicas' },
     { key: Permission.FICHA_TECNICA_UPDATE, label: 'Editar fichas técnicas' },
     { key: Permission.FICHA_TECNICA_DELETE, label: 'Excluir fichas técnicas' },
+    { key: Permission.FICHA_TECNICA_AUDIT, label: 'Visualizar auditoria' },
   ],
   Administração: [
     { key: Permission.ADMIN_FULL, label: 'Administração completa' },
@@ -86,6 +91,7 @@ export const PERMISSION_GROUPS = {
     { key: Permission.CERTIFICADO_READ, label: 'Visualizar certificados' },
     { key: Permission.CERTIFICADO_UPDATE, label: 'Editar certificados' },
     { key: Permission.CERTIFICADO_DELETE, label: 'Excluir certificados' },
+    { key: Permission.CERTIFICADO_AUDIT, label: 'Visualizar auditoria' },
   ],
 };
 

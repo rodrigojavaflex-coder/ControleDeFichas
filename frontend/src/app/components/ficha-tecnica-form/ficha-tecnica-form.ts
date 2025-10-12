@@ -47,11 +47,17 @@ export class FichaTecnicaFormComponent implements OnInit {
     this.fichaForm = this.createForm();
   }
 
-  // Ajusta data compensando timezone local e formata para YYYY-MM-DD
+  // Formata data para input sem compensar timezone
   private formatDate(date: Date | string): string {
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0, 10);
+    if (typeof date === 'string') {
+      // Se já é string, assume que está no formato correto
+      return date.split('T')[0];
+    }
+    // Para Date, converte para YYYY-MM-DD local
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   ngOnInit() {

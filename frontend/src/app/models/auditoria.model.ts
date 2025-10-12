@@ -32,7 +32,7 @@ export interface Auditoria {
   usuarioId: string | null;
   usuario?: {
     id: string;
-    name: string;  // Backend retorna "name" não "nome"
+    nome: string;  // Campo correto do backend
     email: string;
   };
   entidade: string | null;
@@ -74,7 +74,7 @@ export interface UndoableChange {
   usuarioId: string | null;
   usuario?: {
     id: string;
-    name: string;  // Backend retorna "name" não "nome"
+    nome: string;  // Campo correto do backend
     email: string;
   };
   criadoEm: Date;

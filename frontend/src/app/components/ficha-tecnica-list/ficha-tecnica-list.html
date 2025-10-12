@@ -176,43 +176,46 @@
             <div class="ficha-card">
               <div class="ficha-header" (click)="toggleExpand(ficha.id)" [title]="isExpanded(ficha.id) ? 'Ocultar Certificados' : 'Exibir Certificados'">
                 <div class="ficha-title">
-                  <h3>Ficha: {{ ficha.codigoFormulaCerta }} - {{ ficha.produto }} ({{ ficha.tipoDaFicha }})</h3>
-                  <div class="ficha-actions" (click)="$event.stopPropagation()">
-                    @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
-                      <button 
-                        type="button"
-                        class="btn btn-small btn-info"
-                        title="Imprimir Ficha Técnica"
-                        (click)="printFicha(ficha)"
-                      >
-                        Imprimir Ficha Técnica
+                  <h3>Ficha: {{ ficha.codigoFormulaCerta }} - <strong>{{ ficha.produto }}</strong> ({{ ficha.tipoDaFicha }})</h3>
+                                    <div class="ficha-actions">
+                    <!-- Menu de ações (3 pontos) -->
+                    <div class="dropdown-container" (click)="$event.stopPropagation()">
+          <button type="button"
+            class="btn btn-outline-secondary btn-sm dropdown-toggle-custom"
+            (click)="toggleDropdown(ficha.id); !isExpanded(ficha.id) && toggleExpand(ficha.id)"
+                              title="Exibir opções da ficha técnica">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                        </svg>
+                        Opções da Ficha
                       </button>
-                    }
-                    @if (hasPermission(Permission.FICHA_TECNICA_UPDATE)) {
-                      <button 
-                        type="button"
-                        class="btn btn-small btn-primary"
-                        title="Editar Ficha"
-                        (click)="editFicha(ficha)"
-                      >
-                        Editar Ficha
-                      </button>
-                    }
-                    @if (hasPermission(Permission.FICHA_TECNICA_DELETE)) {
-                      <button 
-                        type="button"
-                        class="btn btn-small btn-danger"
-                        title="Excluir Ficha"
-                        (click)="openDeleteModal(ficha)"
-                      >
-                        Excluir Ficha
-                      </button>
-                    }
-                    @if (hasPermission(Permission.CERTIFICADO_CREATE)) {
-                      <button type="button" class="btn btn-small btn-success" title="Novo Certificado" (click)="novoCertificado(ficha)">
-                        Novo Certificado
-                      </button>
-                    }
+                      @if (isDropdownOpen(ficha.id)) {
+                        <ul class="dropdown-menu-custom show">
+                          @if (hasPermission(Permission.CERTIFICADO_CREATE)) {
+                            <li><a class="dropdown-item" title="Adicionar um novo Certificado a ficha" (click)="novoCertificado(ficha); closeDropdown(ficha.id); $event.preventDefault()">Novo Certificado</a></li>
+                          }
+                          @if (hasPermission(Permission.FICHA_TECNICA_READ)) {
+                            <li><a class="dropdown-item" title="Gerar o Relatório Ficha Técnica"  (click)="printFicha(ficha); closeDropdown(ficha.id); $event.preventDefault()">Imprimir Ficha</a></li>
+                          }
+                          @if (hasPermission(Permission.FICHA_TECNICA_UPDATE)) {
+                            <li><a class="dropdown-item" title="Fazer Alterações na Ficha Técnica" (click)="editFicha(ficha); closeDropdown(ficha.id); $event.preventDefault()">Editar Ficha</a></li>
+                          }
+                          @if (hasPermission(Permission.FICHA_TECNICA_AUDIT)) {
+                            <li><a class="dropdown-item" title="Visualizar todo o Histórico de alterações da Ficha Técnica" (click)="openAuditHistory(ficha); closeDropdown(ficha.id); $event.preventDefault()">Histórico de Auditoria</a></li>
+                          }
+                          @if (hasPermission(Permission.FICHA_TECNICA_DELETE)) {
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" title="Remover a Ficha Técnica" (click)="openDeleteModal(ficha); closeDropdown(ficha.id); $event.preventDefault()">
+                              <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="me-2">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V6z"/>
+                                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                              </svg>
+                              Excluir Ficha
+                            </a></li>
+                          }
+                        </ul>
+                      }
+                    </div>
                   </div>
                 </div>
               </div>
@@ -246,15 +249,43 @@
                             <div class="certificado-title">
                               <span>Certificado: {{ certificado.numeroDoCertificado }}</span>
                               <div class="certificado-actions" (click)="$event.stopPropagation()">
-                                @if (hasPermission(Permission.CERTIFICADO_READ)) {
-                                  <button type="button" class="btn btn-small btn-info" title="Imprimir Certificado" (click)="printCertificado(certificado)">Imprimir Certificado</button>
-                                }
-                                @if (hasPermission(Permission.CERTIFICADO_UPDATE)) {
-                                  <button type="button" class="btn btn-small btn-primary" title="Editar Certificado" (click)="editCertificado(certificado)">Editar Certificado</button>
-                                }
-                                @if (hasPermission(Permission.CERTIFICADO_DELETE)) {
-                                  <button type="button" class="btn btn-small btn-danger" title="Excluir Certificado" (click)="openDeleteCertModal(certificado)">Excluir Certificado</button>
-                                }
+                                <!-- Ações do Certificado - Dropdown -->
+                                <div class="dropdown-container" (click)="$event.stopPropagation()">
+                                  <button type="button"
+                                    class="btn btn-outline-secondary btn-sm dropdown-toggle-custom"
+                                    (click)="toggleCertDropdown(certificado.id)"
+                                    title="Mais ações">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                      <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                    </svg>
+                                    Opções do Certificado
+                                  </button>
+                                  @if (isCertDropdownOpen(certificado.id)) {
+                                    <ul class="dropdown-menu-custom show">
+                                      @if (hasPermission(Permission.CERTIFICADO_READ)) {
+                                        <li><a class="dropdown-item" (click)="printCertificado(certificado); closeCertDropdown(certificado.id); $event.preventDefault()">Imprimir Certificado</a></li>
+                                      }
+                                      @if (hasPermission(Permission.CERTIFICADO_UPDATE)) {
+                                        <li><a class="dropdown-item" (click)="editCertificado(certificado); closeCertDropdown(certificado.id); $event.preventDefault()">Editar Certificado</a></li>
+                                      }
+                                      @if (hasPermission(Permission.CERTIFICADO_AUDIT)) {
+                                        <li><a class="dropdown-item" (click)="openCertAuditHistory(certificado); closeCertDropdown(certificado.id); $event.preventDefault()">Histórico de Auditoria</a></li>
+                                      }
+                                      @if (hasPermission(Permission.CERTIFICADO_DELETE)) {
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                          <a class="dropdown-item text-danger" title="Excluir Certificado" (click)="openDeleteCertModal(certificado); closeCertDropdown(certificado.id); $event.preventDefault()">
+                                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="me-2">
+                                              <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5V6z"/>
+                                              <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                                            </svg>
+                                            Excluir Certificado
+                                          </a>
+                                        </li>
+                                      }
+                                    </ul>
+                                  }
+                                </div>
                               </div>
                             </div>
                           </summary>
@@ -285,15 +316,15 @@
                                       <div class="laudo-item">
                                         <a href="#" (click)="$event.preventDefault(); openLaudo(certificado.id, laudo.id)">{{ laudo.nomeArquivo }}</a>
                                         @if (hasPermission(Permission.CERTIFICADO_UPDATE)) {
-                                          <button type="button" class="btn btn-small btn-danger" (click)="confirmRemoveLaudo(certificado.id, laudo.id, laudo.nomeArquivo)">Excluir Laudo</button>
+                                          <button type="button" class="btn btn-small btn-danger" (click)="confirmRemoveLaudo(certificado.id, laudo.id, laudo.nomeArquivo)" title="Remover o laudo do certificado">Excluir Laudo</button>
                                         }
                                       </div>
                                     }
                                   </div>
                                   @if (hasPermission(Permission.CERTIFICADO_UPDATE)) {
                                     <div class="upload-section">
-                                      <label class="btn btn-small btn-success upload-laudo-btn">
-                                        Enviar Laudo
+                                      <label title="Selecione um o laudo em .PDF para gravar o laudo do certificado" class="btn btn-small btn-success upload-laudo-btn">
+                                        Incluir Laudo
                                         <input type="file" accept="application/pdf" (change)="onLaudoFileSelected(certificado.id, $event)" />
                                       </label>
                                     </div>
@@ -359,3 +390,49 @@
   (cancelled)="closeDeleteLaudoModal()"
 >
 </app-confirmation-modal>
+
+<!-- Modal de histórico de auditoria -->
+<app-historico-auditoria
+  *ngIf="selectedFichaForAudit"
+  [entidade]="'fichas_tecnicas'"
+  [entidadeId]="selectedFichaForAudit.id"
+  [fieldLabels]="{
+    produto: 'Produto',
+    tipoDaFicha: 'Tipo da Ficha',
+    codigoFormulaCerta: 'Código Fórmula Certa',
+    principioAtivo: 'Princípio Ativo',
+    concentracao: 'Concentração',
+    formaFarmaceutica: 'Forma Farmacêutica',
+    viaAdministracao: 'Via Administração',
+    indicacao: 'Indicação',
+    posologia: 'Posologia',
+    conservacao: 'Conservação',
+    validade: 'Validade',
+    fabricante: 'Fabricante',
+    registroMS: 'Registro MS',
+    bula: 'Bula',
+    observacoes: 'Observações'
+  }"
+  [showModal]="showAuditModal"
+  (modalClosed)="closeAuditModal()">
+</app-historico-auditoria>
+<!-- Modal de histórico de auditoria de certificado -->
+<app-historico-auditoria
+  *ngIf="selectedCertForAudit"
+  [entidade]="'certificados'"
+  [entidadeId]="selectedCertForAudit.id"
+  [fieldLabels]="{
+    numeroDoCertificado: 'Número Certificado',
+    loteDoCertificado: 'Lote',
+    fornecedor: 'Fornecedor',
+    numeroDoPedido: 'Número do Pedido',
+    quantidade: 'Quantidade',
+    dataCertificado: 'Data Certificado',
+    dataDeFabricacao: 'Data Fabricação',
+    dataDeValidade: 'Data de Validade',
+    avaliacaoDoLaudo: 'Avaliação do Laudo',
+    observacao01: 'Observação'
+  }"
+  [showModal]="showCertAuditModal"
+  (modalClosed)="closeCertAuditModal()">
+</app-historico-auditoria>

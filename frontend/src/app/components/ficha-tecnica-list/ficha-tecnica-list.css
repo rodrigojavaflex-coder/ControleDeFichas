@@ -198,6 +198,18 @@
   text-align: center;
   padding: 1.5rem 1rem;
 }
+/**
+ * Estilos para título do card de ficha técnica e posicionamento de ações
+ */
+.ficha-title {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ficha-title h3 {
+  font-size: 1rem;
+  margin: 0;
+}
 
 .spinner {
   width: 2rem;
@@ -293,29 +305,130 @@
 
 /* Header do card de ficha */
 .ficha-header {
-  padding: 1rem;
-  background: var(--bg-secondary, #f8f9fa);
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  padding: 1rem 1.25rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
 
 .ficha-header:hover {
-  background: var(--bg-hover, #e9ecef);
+  background: var(--bg-hover);
 }
 
-.ficha-title h3 {
-  margin: 0;
-  color: var(--text-primary, #333);
+.ficha-info h3 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary);
   font-size: 1.1rem;
   font-weight: 600;
 }
 
-.ficha-title {
+.ficha-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ficha-meta .codigo {
+  background: var(--primary-color);
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ficha-meta .tipo {
+  background: var(--accent-color);
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ficha-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Botões pequenos */
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Dropdown menu */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-toggle {
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.dropdown-toggle:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary-color);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+  min-width: 200px;
+  padding: 0.5rem 0;
+  margin-top: 0.125rem;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.dropdown-item.text-danger {
+  color: #dc3545 !important;
+}
+
+.dropdown-item.text-danger:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545 !important;
+}
+
+.dropdown-divider {
+  height: 1px;
+  margin: 0.25rem 0;
+  background: var(--border-color);
 }
 
 .certificado-title {
@@ -863,4 +976,310 @@
   .certificado-indent {
     padding-left: 1rem !important;
   }
+}
+
+/* === NOVOS ESTILOS PARA LAYOUT MAIS COMPACTO === */
+
+/* Cards de certificado - novo layout */
+.certificado-card {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.certificado-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.certificado-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.certificado-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.certificado-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.cert-icon {
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.certificado-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.certificado-meta .lote {
+  background: var(--bg-tertiary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+.certificado-meta .validade {
+  background: var(--success-color);
+  color: white;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+.certificado-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+/* Botões de ícone */
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+  transform: scale(1.05);
+}
+
+.btn-icon.btn-info {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-icon.btn-info:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-icon.btn-primary {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-icon.btn-primary:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-icon.btn-danger {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+.btn-icon.btn-danger:hover {
+  background: #dc3545;
+  color: white;
+}
+
+/* Laudos compactos */
+.laudos-compact {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.laudos-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.laudos-list-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.laudo-link {
+  background: var(--bg-secondary);
+  color: var(--link-color);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.8rem;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.laudo-link:hover {
+  background: var(--bg-hover);
+  color: var(--primary-color);
+}
+
+.upload-compact {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.upload-btn-compact {
+  background: var(--success-color);
+  color: white;
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--success-color);
+  transition: all 0.2s ease;
+}
+
+.upload-btn-compact:hover {
+  background: var(--bg-hover);
+  color: var(--success-color);
+}
+
+.upload-btn-compact input {
+  display: none;
+}
+
+/* === DROPDOWN CUSTOMIZADO === */
+
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle-custom {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: none;
+  color: var(--text-secondary, #666);
+  margin-left: 0rem;
+}
+
+.dropdown-toggle-custom:hover {
+  background: var(--bg-hover, rgba(0,0,0,0.05));
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+  color: var(--text-primary);
+}
+
+.dropdown-menu-custom {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  padding: 0.5rem 0;
+  margin-top: 0.25rem;
+  list-style: none;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.dropdown-menu-custom.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.dropdown-menu-custom::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 12px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid var(--bg-primary);
+}
+
+.dropdown-menu-custom::after {
+  content: '';
+  position: absolute;
+  top: -7px;
+  right: 12px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid var(--border-color);
+}
+
+.dropdown-item {
+  display: block;
+  padding: 0.5rem 1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: 0.9rem;
+  transform: translateX(0);
+}
+
+.dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--primary-color);
+  transform: translateX(4px);
+}
+
+.dropdown-item.text-danger {
+  color: #dc3545;
+}
+
+.dropdown-item.text-danger:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.dropdown-divider {
+  height: 1px;
+  margin: 0.5rem 0;
+  background: var(--border-color);
+  border: none;
 }

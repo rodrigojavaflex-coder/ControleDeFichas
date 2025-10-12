@@ -86,6 +86,11 @@
                 Excluir
               </button>
             }
+            @if (canAuditUser()) {
+              <button class="btn btn-small btn-secondary" (click)="openAuditHistory(user)">
+                Auditoria
+              </button>
+            }
           </td>
         </tr>
       </tbody>
@@ -137,3 +142,19 @@
   (confirmed)="onDeleteConfirmed()"
   (cancelled)="onDeleteCancelled()"
 ></app-confirmation-modal>
+
+<!-- Modal de histórico de auditoria -->
+<app-historico-auditoria
+  *ngIf="selectedUserForAudit"
+  [entidade]="'usuarios'"
+  [entidadeId]="selectedUserForAudit.id"
+  [fieldLabels]="{
+    nome: 'Nome',
+    email: 'Email',
+    ativo: 'Status',
+    senha: 'Senha',
+    permissoes: 'Permissões'
+  }"
+  [showModal]="showAuditModal"
+  (modalClosed)="closeAuditModal()">
+</app-historico-auditoria>

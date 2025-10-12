@@ -440,4 +440,17 @@ export class AuditoriaService {
   private getDescription(action: AuditAction): string {
     return AUDIT_ACTION_DESCRIPTIONS[action] || `Action: ${action}`;
   }
+
+  async findByEntity(entidade: string, entidadeId: string): Promise<Auditoria[]> {
+    return this.auditLogRepository.find({
+      where: {
+        entidade,
+        entidadeId
+      },
+      relations: ['usuario'],
+      order: {
+        criadoEm: 'DESC'
+      }
+    });
+  }
 }
