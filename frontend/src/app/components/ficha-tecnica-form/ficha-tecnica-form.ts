@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
+// import { Location } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { FichaTecnicaService } from '../../services/ficha-tecnica.service';
 import { AuthService } from '../../services/auth.service';
@@ -23,6 +24,7 @@ export class FichaTecnicaFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  // private location = inject(Location);
   private fichaTecnicaService = inject(FichaTecnicaService);
   private authService = inject(AuthService);
 
@@ -34,6 +36,8 @@ export class FichaTecnicaFormComponent implements OnInit {
   isEditMode = false;
   fichaId: string | null = null;
   currentFicha: FichaTecnica | null = null;
+  // Store original query parameters to restore filters and selection on cancel
+  private originalQueryParams: any = {};
 
   // Modal de erro
   showErrorModal = false;
@@ -51,6 +55,11 @@ export class FichaTecnicaFormComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Capture original query parameters for restoring state on cancel
+    this.route.queryParams.subscribe(params => {
+      this.originalQueryParams = params;
+    });
+
     //console.log('PASSO 1: Componente do formulário iniciado (ngOnInit)');
     this.route.params.subscribe(params => {
       //console.log('PASSO 2: Parâmetros da rota recebidos:', params);
@@ -186,7 +195,8 @@ export class FichaTecnicaFormComponent implements OnInit {
 
     this.fichaTecnicaService.create(data).subscribe({
       next: () => {
-        this.router.navigate(['/fichas-tecnicas']);
+        // Retorna para a lista mantendo os filtros aplicados
+        this.router.navigate(['/fichas-tecnicas'], { queryParamsHandling: 'preserve' });
       },
       error: (error) => {
         console.error('Erro ao criar ficha técnica:', error);
@@ -216,7 +226,8 @@ export class FichaTecnicaFormComponent implements OnInit {
 
     this.fichaTecnicaService.update(this.fichaId, data).subscribe({
       next: () => {
-        this.router.navigate(['/fichas-tecnicas']);
+        // Retorna para a lista mantendo os filtros aplicados
+        this.router.navigate(['/fichas-tecnicas'], { queryParamsHandling: 'preserve' });
       },
       error: (error) => {
         console.error('Erro ao atualizar ficha técnica:', error);
@@ -307,6 +318,11 @@ export class FichaTecnicaFormComponent implements OnInit {
    * Cancela a operação e volta à listagem
    */
   cancel() {
-    this.router.navigate(['/fichas-tecnicas']);
+    // Restore filters and highlight the ficha being edited
+    const params = { ...this.originalQueryParams };
+    if (this.currentFicha?.id) {
+      params.fichaTecnicaId = this.currentFicha.id;
+    }
+    this.router.navigate(['/fichas-tecnicas'], { queryParams: params });
   }
 }

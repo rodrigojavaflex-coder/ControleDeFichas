@@ -9,7 +9,7 @@
       </h1>
       <div class="header-actions">
         @if (hasPermission(Permission.FICHA_TECNICA_CREATE)) {
-          <a routerLink="/fichas-tecnicas/new" class="btn btn-primary">
+    <a [routerLink]="['/fichas-tecnicas','new']" [queryParams]="searchFilters" class="btn btn-primary">
             Nova Ficha Técnica
           </a>
         }
@@ -127,7 +127,7 @@
           <h3>Nenhuma ficha técnica encontrada</h3>
           <p>Não há fichas técnicas que correspondam aos filtros aplicados.</p>
           @if (hasPermission(Permission.FICHA_TECNICA_CREATE)) {
-            <a routerLink="/fichas-tecnicas/new" class="btn btn-primary">
+      <a [routerLink]="['/fichas-tecnicas','new']" [queryParams]="searchFilters" class="btn btn-primary">
               Criar Primeira Ficha Técnica
             </a>
           }

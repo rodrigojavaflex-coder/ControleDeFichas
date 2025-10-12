@@ -228,7 +228,7 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
     return `<!DOCTYPE html>
 <html>
 <head>
-  <title>Certificado de Análise Físico Química</title>
+  <title>Certificado ${certificado.numeroDoCertificado} - ${ficha.produto}</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 15px; font-size: 0.67em; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -360,11 +360,23 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Capturar possível ficha para expandir via query param
     this.route.queryParams.subscribe(params => {
+      // Expansão de ficha, se informada
       if (params['fichaTecnicaId']) {
         this.fichaToExpand = params['fichaTecnicaId'];
       }
+      // Aplicar filtros vindos da URL, se existirem
+      if (params['tipoDaFicha']) this.searchFilters.tipoDaFicha = params['tipoDaFicha'];
+      if (params['produto']) this.searchFilters.produto = params['produto'];
+      if (params['codigoFormulaCerta']) this.searchFilters.codigoFormulaCerta = params['codigoFormulaCerta'];
+      if (params['dataInicialAnalise']) this.searchFilters.dataInicialAnalise = params['dataInicialAnalise'];
+      if (params['dataFinalAnalise']) this.searchFilters.dataFinalAnalise = params['dataFinalAnalise'];
+      if (params['page']) {
+        this.searchFilters.page = +params['page'];
+        this.currentPage = +params['page'];
+      }
+      // Carregar lista com filtros aplicados
+      this.loadFichasTecnicas();
     });
-    this.loadFichasTecnicas();
     
     // Configurar debounce para pesquisa por produto
     this.searchSubject
@@ -422,11 +434,17 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Aplica os filtros de pesquisa
+   * Aplica os filtros de pesquisa e atualiza URL
    */
   applyFilters() {
     this.searchFilters.page = 1;
     this.currentPage = 1;
+    // Atualizar query params com filtros
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: this.searchFilters,
+      queryParamsHandling: 'merge'
+    });
     this.loadFichasTecnicas();
   }
 
@@ -438,7 +456,7 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Limpa todos os filtros
+   * Limpa todos os filtros e atualiza URL
    */
   clearFilters() {
     this.searchFilters = {
@@ -446,16 +464,26 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
       limit: this.itemsPerPage
     };
     this.currentPage = 1;
+    // Remover filtros da URL
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {}
+    });
     this.loadFichasTecnicas();
   }
 
   /**
-   * Navega para uma página específica
+   * Navega para uma página específica e atualiza URL
    */
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
       this.searchFilters.page = page;
       this.currentPage = page;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { page },
+        queryParamsHandling: 'merge'
+      });
       this.loadFichasTecnicas();
     }
   }
@@ -481,16 +509,22 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
    * Navega para edição de ficha técnica
    */
   editFicha(ficha: FichaTecnica) {
-    this.router.navigate(['/fichas-tecnicas/edit', ficha.id]);
+    // Navega para edição mantendo filtros atualizados
+    this.router.navigate(
+      ['/fichas-tecnicas/edit', ficha.id],
+      { queryParamsHandling: 'preserve' }
+    );
   }
 
   /**
-   * Navega para criação de novo certificado
+   * Navega para criação de novo certificado (mantendo filtros)
    */
   novoCertificado(ficha: FichaTecnica) {
-    this.router.navigate(['/certificados/new'], { 
-      queryParams: { fichaTecnicaId: ficha.id } 
-    });
+    // Passa filtros atuais para preservar estado ao voltar
+    this.router.navigate(
+      ['/certificados/new'],
+      { queryParams: { fichaTecnicaId: ficha.id, ...this.searchFilters } }
+    );
   }
 
   /**
@@ -502,10 +536,15 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Edita certificado
+   * Edita certificado (mantendo filtros)
    */
   editCertificado(certificado: Certificado) {
-    this.router.navigate(['/certificados/edit', certificado.id]);
+    // Passa filtros atuais e fichaId para retorno
+    const fichaId = certificado.fichaTecnica?.id;
+    this.router.navigate(
+      ['/certificados/edit', certificado.id],
+      { queryParams: { fichaTecnicaId: fichaId, ...this.searchFilters } }
+    );
   }
 
   /**

@@ -9,6 +9,7 @@ import { FichaTecnica } from '../../models/ficha-tecnica.model';
 import { Permission } from '../../models/usuario.model';
 import { LaudoService } from '../../services/laudo.service';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-certificado-form',
@@ -23,6 +24,7 @@ export class CertificadoFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private location = inject(Location);
   private certificadoService = inject(CertificadoService);
   private fichaTecnicaService = inject(FichaTecnicaService);
   private authService = inject(AuthService);
@@ -37,10 +39,11 @@ export class CertificadoFormComponent implements OnInit {
   error: string | null = null;
   isEditMode = false;
   certificadoId: string | null = null;
-  currentCertificado: Certificado | null = null;
-
-  // Dados da ficha técnica relacionada
   fichaTecnicaId: string | null = null;
+  // Current certificate loaded for edit
+  currentCertificado: Certificado | null = null;
+  // Store original query parameters for cancel
+  private originalQueryParams: any = {};
   fichaTecnica: FichaTecnica | null = null;
 
   // Upload de arquivo
@@ -69,6 +72,10 @@ export class CertificadoFormComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Capture original query parameters for restoring state on cancel
+    this.route.queryParams.subscribe(params => {
+      this.originalQueryParams = params;
+    });
     this.route.params.subscribe(params => {
       if (params['id']) {
         this.isEditMode = true;
@@ -326,14 +333,20 @@ export class CertificadoFormComponent implements OnInit {
   private createCertificado(formData: CreateCertificadoDto) {
     this.certificadoService.create(formData).subscribe({
       next: (certificado) => {
-        // Atualizar certificadoId para upload
+        // Atualizar certificadoId e determinar ficha vinculada
         this.certificadoId = certificado.id;
-        // Se há arquivo para upload, fazer upload após criação
+        const fichaId = certificado.fichaTecnica?.id;
+        // Após criação, navegar para lista de fichas mantendo filtros e expandindo a ficha
         if (this.selectedFile) {
-          this.uploadLaudo();
+          this.laudoService.uploadLaudo(this.certificadoId, this.selectedFile).subscribe({
+            next: () => this.router.navigate(['/fichas-tecnicas'], { queryParams: { fichaTecnicaId: fichaId }, queryParamsHandling: 'merge' }),
+            error: err => {
+              console.error('Erro ao salvar laudo após criação:', err);
+              this.router.navigate(['/fichas-tecnicas'], { queryParams: { fichaTecnicaId: fichaId }, queryParamsHandling: 'merge' });
+            }
+          });
         } else {
-          // Navegar de volta e expandir os certificados da ficha associada
-          this.router.navigate(['/fichas-tecnicas'], { queryParams: { fichaTecnicaId: certificado.fichaTecnica?.id } });
+          this.router.navigate(['/fichas-tecnicas'], { queryParams: { fichaTecnicaId: fichaId }, queryParamsHandling: 'merge' });
         }
       },
       error: (error) => {
@@ -351,12 +364,19 @@ export class CertificadoFormComponent implements OnInit {
 
     this.certificadoService.update(this.certificadoId, formData).subscribe({
       next: (certificado) => {
-        // Se há arquivo para upload, fazer upload após atualização
+        // Determinar ficha vinculada após atualização
+        const fichaId = certificado.fichaTecnica?.id;
+        // Após atualização, navegar para lista de fichas mantendo filtros e expandindo a ficha
         if (this.selectedFile) {
-          this.uploadLaudo();
+          this.laudoService.uploadLaudo(this.certificadoId!, this.selectedFile).subscribe({
+            next: () => this.router.navigate(['/fichas-tecnicas'], { queryParams: { fichaTecnicaId: fichaId }, queryParamsHandling: 'merge' }),
+            error: err => {
+              console.error('Erro ao salvar laudo após atualização:', err);
+              this.router.navigate(['/fichas-tecnicas'], { queryParams: { fichaTecnicaId: fichaId }, queryParamsHandling: 'merge' });
+            }
+          });
         } else {
-          // Navegar de volta e expandir os certificados da ficha associada
-          this.router.navigate(['/fichas-tecnicas'], { queryParams: { fichaTecnicaId: certificado.fichaTecnica?.id } });
+          this.router.navigate(['/fichas-tecnicas'], { queryParams: { fichaTecnicaId: fichaId }, queryParamsHandling: 'merge' });
         }
       },
       error: (error) => {
@@ -397,7 +417,12 @@ export class CertificadoFormComponent implements OnInit {
   }
 
   onCancel() {
-    this.router.navigate(['/fichas-tecnicas']);
+    // Restore filters and highlight the corresponding ficha
+    const params = { ...this.originalQueryParams };
+    if (this.fichaTecnicaId) {
+      params.fichaTecnicaId = this.fichaTecnicaId;
+    }
+    this.router.navigate(['/fichas-tecnicas'], { queryParams: params });
   }
 
   hasPermission(permission: Permission): boolean {
