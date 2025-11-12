@@ -1,0 +1,239 @@
+/* ============================================
+   BASE: TIPOGRAFIA - DESIGN SYSTEM
+   ============================================ */
+
+/* ========== Títulos ========== */
+h1,
+.titulo-1 {
+  font: var(--texto-titulo-1);
+  color: var(--cor-texto-primario);
+  margin-bottom: var(--espacamento-lg);
+}
+
+h2,
+.titulo-2 {
+  font: var(--texto-titulo-2);
+  color: var(--cor-texto-primario);
+  margin-bottom: var(--espacamento-md);
+}
+
+h3,
+.titulo-3 {
+  font: var(--texto-titulo-3);
+  color: var(--cor-texto-primario);
+  margin-bottom: var(--espacamento-md);
+}
+
+h4,
+.titulo-4 {
+  font: var(--texto-titulo-4);
+  color: var(--cor-texto-primario);
+  margin-bottom: var(--espacamento-sm);
+}
+
+h5,
+.titulo-5 {
+  font: var(--texto-titulo-5);
+  color: var(--cor-texto-primario);
+  margin-bottom: var(--espacamento-sm);
+}
+
+h6,
+.titulo-6 {
+  font: var(--texto-titulo-6);
+  color: var(--cor-texto-primario);
+  margin-bottom: var(--espacamento-sm);
+}
+
+/* ========== Parágrafos ========== */
+p {
+  margin-bottom: var(--espacamento-md);
+  color: var(--cor-texto-primario);
+}
+
+/* ========== Texto de Destaque ========== */
+strong,
+b {
+  font-weight: var(--peso-fonte-negrito);
+}
+
+em,
+i {
+  font-style: italic;
+}
+
+small,
+.texto-pequeno {
+  font-size: var(--tamanho-fonte-sm);
+}
+
+.texto-grande {
+  font-size: var(--tamanho-fonte-lg);
+}
+
+/* ========== Código ========== */
+code,
+kbd,
+samp {
+  font-family: var(--fonte-mono);
+  font-size: 0.875em;
+  padding: 0.125rem 0.25rem;
+  background-color: var(--cor-superficie-hover);
+  border-radius: var(--raio-borda-sm);
+}
+
+pre {
+  font-family: var(--fonte-mono);
+  font-size: var(--tamanho-fonte-sm);
+  background-color: var(--cor-superficie-hover);
+  padding: var(--espacamento-md);
+  border-radius: var(--raio-borda-md);
+  overflow-x: auto;
+  margin-bottom: var(--espacamento-md);
+  
+  code {
+    padding: 0;
+    background-color: transparent;
+  }
+}
+
+/* ========== Citações ========== */
+blockquote {
+  padding-left: var(--espacamento-lg);
+  border-left: 4px solid var(--cor-borda);
+  font-style: italic;
+  color: var(--cor-texto-secundario);
+  margin-bottom: var(--espacamento-md);
+}
+
+/* ========== Utilitários de Texto ========== */
+.texto-primario {
+  color: var(--cor-texto-primario);
+}
+
+.texto-secundario {
+  color: var(--cor-texto-secundario);
+}
+
+.texto-terciario {
+  color: var(--cor-texto-terciario);
+}
+
+.texto-desabilitado {
+  color: var(--cor-texto-desabilitado);
+}
+
+.texto-inverso {
+  color: var(--cor-texto-inverso);
+}
+
+/* Cores de feedback */
+.texto-sucesso {
+  color: var(--cor-sucesso);
+}
+
+.texto-perigo {
+  color: var(--cor-perigo);
+}
+
+.texto-alerta {
+  color: var(--cor-alerta-texto);
+}
+
+.texto-info {
+  color: var(--cor-info);
+}
+
+/* Alinhamento */
+.texto-esquerda {
+  text-align: left;
+}
+
+.texto-centro {
+  text-align: center;
+}
+
+.texto-direita {
+  text-align: right;
+}
+
+.texto-justificado {
+  text-align: justify;
+}
+
+/* Transformação */
+.texto-maiusculo {
+  text-transform: uppercase;
+}
+
+.texto-minusculo {
+  text-transform: lowercase;
+}
+
+.texto-capitalizado {
+  text-transform: capitalize;
+}
+
+/* Peso */
+.texto-leve {
+  font-weight: var(--peso-fonte-leve);
+}
+
+.texto-normal {
+  font-weight: var(--peso-fonte-normal);
+}
+
+.texto-medio {
+  font-weight: var(--peso-fonte-medio);
+}
+
+.texto-semibold {
+  font-weight: var(--peso-fonte-semibold);
+}
+
+.texto-negrito {
+  font-weight: var(--peso-fonte-negrito);
+}
+
+/* Decoração */
+.texto-sublinhado {
+  text-decoration: underline;
+}
+
+.texto-linha-sobre {
+  text-decoration: line-through;
+}
+
+.texto-sem-decoracao {
+  text-decoration: none;
+}
+
+/* Truncamento */
+.texto-truncar {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.texto-quebrar {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Espaçamento de Linhas */
+.texto-linha-compacta {
+  line-height: var(--altura-linha-compacta);
+}
+
+.texto-linha-normal {
+  line-height: var(--altura-linha-normal);
+}
+
+.texto-linha-relaxada {
+  line-height: var(--altura-linha-relaxada);
+}
+
+.texto-linha-solta {
+  line-height: var(--altura-linha-solta);
+}

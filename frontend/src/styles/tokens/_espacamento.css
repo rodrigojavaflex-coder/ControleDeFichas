@@ -1,0 +1,61 @@
+/* ============================================
+   TOKENS DE ESPAÇAMENTO - DESIGN SYSTEM
+   ============================================ */
+
+:root {
+  /* ========== Escala de Espaçamento (baseado em 4px) ========== */
+  --espacamento-0: 0;
+  --espacamento-1: 0.25rem;  /* 4px */
+  --espacamento-2: 0.5rem;   /* 8px */
+  --espacamento-3: 0.75rem;  /* 12px */
+  --espacamento-4: 1rem;     /* 16px */
+  --espacamento-5: 1.25rem;  /* 20px */
+  --espacamento-6: 1.5rem;   /* 24px */
+  --espacamento-7: 1.75rem;  /* 28px */
+  --espacamento-8: 2rem;     /* 32px */
+  --espacamento-10: 2.5rem;  /* 40px */
+  --espacamento-12: 3rem;    /* 48px */
+  --espacamento-16: 4rem;    /* 64px */
+  --espacamento-20: 5rem;    /* 80px */
+  --espacamento-24: 6rem;    /* 96px */
+  
+  /* ========== Aliases Semânticos ========== */
+  --espacamento-xs: var(--espacamento-1);   /* 4px */
+  --espacamento-sm: var(--espacamento-2);   /* 8px */
+  --espacamento-md: var(--espacamento-4);   /* 16px */
+  --espacamento-lg: var(--espacamento-6);   /* 24px */
+  --espacamento-xl: var(--espacamento-8);   /* 32px */
+  --espacamento-2xl: var(--espacamento-12); /* 48px */
+  --espacamento-3xl: var(--espacamento-16); /* 64px */
+  
+  /* ========== Espaçamento de Componentes ========== */
+  --espacamento-campo-formulario: var(--espacamento-md);
+  --espacamento-grupo-formulario: var(--espacamento-lg);
+  --espacamento-cartao: var(--espacamento-lg);
+  --espacamento-secao: var(--espacamento-2xl);
+  --espacamento-pagina: var(--espacamento-xl);
+  
+  /* ========== Padding de Componentes ========== */
+  --padding-botao-sm: var(--espacamento-1) var(--espacamento-2);
+  --padding-botao-md: var(--espacamento-2) var(--espacamento-4);
+  --padding-botao-lg: var(--espacamento-3) var(--espacamento-6);
+  
+  --padding-campo: var(--espacamento-2) var(--espacamento-3);
+  --padding-campo-sm: var(--espacamento-1) var(--espacamento-2);
+  --padding-campo-lg: var(--espacamento-3) var(--espacamento-4);
+  
+  --padding-modal-cabecalho: var(--espacamento-md); /* Reduzido pela metade: era var(--espacamento-lg) */
+  --padding-modal-corpo: var(--espacamento-lg);
+  --padding-modal-rodape: var(--espacamento-md); /* Reduzido pela metade: era var(--espacamento-lg) */
+  
+  --padding-cartao-cabecalho: var(--espacamento-md) var(--espacamento-lg);
+  --padding-cartao-corpo: var(--espacamento-lg);
+  --padding-cartao-rodape: var(--espacamento-md) var(--espacamento-lg);
+  
+  /* ========== Gap de Layout ========== */
+  --gap-xs: var(--espacamento-1);
+  --gap-sm: var(--espacamento-2);
+  --gap-md: var(--espacamento-4);
+  --gap-lg: var(--espacamento-6);
+  --gap-xl: var(--espacamento-8);
+}

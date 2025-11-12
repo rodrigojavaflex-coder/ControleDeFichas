@@ -1,0 +1,322 @@
+/* ============================================
+   COMPONENTE: BOTÕES - DESIGN SYSTEM
+   ============================================ */
+
+/* ========== Base do Botão ========== */
+.botao {
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacamento-sm);
+  
+  /* Espaçamento */
+  padding: var(--padding-botao-md);
+  
+  /* Tipografia */
+  font: var(--texto-botao);
+  text-decoration: none;
+  text-align: center;
+  white-space: nowrap;
+  
+  /* Bordas */
+  border: var(--largura-borda-base) solid transparent;
+  border-radius: var(--raio-botao);
+  
+  /* Interação */
+  cursor: pointer;
+  user-select: none;
+  
+  /* Transições */
+  transition: var(--transicao-rapida);
+}
+
+/* Estado desabilitado */
+.botao:disabled,
+.botao.desabilitado {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Foco */
+.botao:focus-visible {
+  outline: none;
+  box-shadow: var(--sombra-foco);
+}
+
+/* ========== Variantes de Cor ========== */
+
+.botao-primario {
+  background-color: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  border-color: var(--cor-primaria);
+}
+
+.botao-primario:hover:not(:disabled) {
+  background-color: var(--cor-primaria-hover);
+  border-color: var(--cor-primaria-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-md);
+}
+
+.botao-primario:active:not(:disabled) {
+  background-color: var(--cor-primaria-ativa);
+  border-color: var(--cor-primaria-ativa);
+  transform: translateY(0);
+}
+
+.botao-secundario {
+  background-color: var(--cor-secundaria);
+  color: var(--cor-texto-inverso);
+  border-color: var(--cor-secundaria);
+}
+
+.botao-secundario:hover:not(:disabled) {
+  background-color: var(--cor-secundaria-hover);
+  border-color: var(--cor-secundaria-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-md);
+}
+
+.botao-secundario:active:not(:disabled) {
+  background-color: var(--cor-secundaria-ativa);
+  border-color: var(--cor-secundaria-ativa);
+  transform: translateY(0);
+}
+
+.botao-sucesso {
+  background-color: var(--cor-sucesso);
+  color: var(--cor-texto-inverso);
+  border-color: var(--cor-sucesso);
+}
+
+.botao-sucesso:hover:not(:disabled) {
+  background-color: var(--cor-sucesso-hover);
+  border-color: var(--cor-sucesso-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-md);
+}
+
+.botao-sucesso:active:not(:disabled) {
+  background-color: var(--cor-sucesso-ativa);
+  border-color: var(--cor-sucesso-ativa);
+  transform: translateY(0);
+}
+
+.botao-perigo {
+  background-color: var(--cor-perigo);
+  color: var(--cor-texto-inverso);
+  border-color: var(--cor-perigo);
+}
+
+.botao-perigo:hover:not(:disabled) {
+  background-color: var(--cor-perigo-hover);
+  border-color: var(--cor-perigo-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-md);
+}
+
+.botao-perigo:active:not(:disabled) {
+  background-color: var(--cor-perigo-ativa);
+  border-color: var(--cor-perigo-ativa);
+  transform: translateY(0);
+}
+
+.botao-alerta {
+  background-color: var(--cor-alerta);
+  color: var(--cor-alerta-texto);
+  border-color: var(--cor-alerta);
+}
+
+.botao-alerta:hover:not(:disabled) {
+  background-color: var(--cor-alerta-hover);
+  border-color: var(--cor-alerta-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-md);
+}
+
+.botao-alerta:active:not(:disabled) {
+  background-color: var(--cor-alerta-ativa);
+  border-color: var(--cor-alerta-ativa);
+  transform: translateY(0);
+}
+
+/* ========== Variantes de Estilo ========== */
+
+.botao-contorno {
+  background-color: transparent;
+  color: var(--cor-texto-primario);
+  border-color: var(--cor-borda);
+}
+
+.botao-contorno:hover:not(:disabled) {
+  background-color: var(--cor-superficie-hover);
+  border-color: var(--cor-borda-escura);
+}
+
+.botao-contorno:active:not(:disabled) {
+  background-color: var(--cor-superficie-ativa);
+}
+
+/* Variantes de contorno com cores */
+.botao-contorno.botao-primario {
+  color: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  background-color: transparent;
+}
+
+.botao-contorno.botao-primario:hover:not(:disabled) {
+  background-color: var(--cor-primaria-clara);
+  border-color: var(--cor-primaria-hover);
+}
+
+.botao-contorno.botao-perigo {
+  color: var(--cor-perigo);
+  border-color: var(--cor-perigo);
+  background-color: transparent;
+}
+
+.botao-contorno.botao-perigo:hover:not(:disabled) {
+  background-color: var(--cor-perigo-clara);
+  border-color: var(--cor-perigo-hover);
+}
+
+.botao-fantasma {
+  background-color: transparent;
+  color: var(--cor-texto-primario);
+  border-color: transparent;
+}
+
+.botao-fantasma:hover:not(:disabled) {
+  background-color: var(--cor-superficie-hover);
+}
+
+.botao-fantasma:active:not(:disabled) {
+  background-color: var(--cor-superficie-ativa);
+}
+
+.botao-link {
+  background-color: transparent;
+  color: var(--cor-texto-link);
+  border-color: transparent;
+  text-decoration: underline;
+}
+
+.botao-link:hover:not(:disabled) {
+  color: var(--cor-texto-link-hover);
+}
+
+/* ========== Tamanhos ========== */
+
+.botao-pequeno {
+  padding: var(--padding-botao-sm);
+  font-size: var(--tamanho-fonte-xs);
+  gap: var(--espacamento-xs);
+}
+
+.botao-grande {
+  padding: var(--padding-botao-lg);
+  font-size: var(--tamanho-fonte-base);
+  gap: var(--espacamento-md);
+}
+
+/* ========== Estados Especiais ========== */
+
+.botao-carregando {
+  position: relative;
+  color: transparent;
+  pointer-events: none;
+}
+
+.botao-carregando::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  border: 2px solid var(--cor-texto-inverso);
+  border-radius: var(--raio-borda-completo);
+  border-top-color: transparent;
+  animation: spin var(--duracao-lenta) linear infinite;
+}
+
+.botao-bloco {
+  display: flex;
+  width: 100%;
+}
+
+.botao-icone {
+  padding: var(--espacamento-2);
+  aspect-ratio: 1;
+  border-radius: var(--raio-borda-circular);
+}
+
+/* ========== Grupo de Botões ========== */
+
+.grupo-botoes {
+  display: inline-flex;
+  gap: var(--espacamento-sm);
+}
+
+.grupo-botoes.grupo-botoes-vertical {
+  flex-direction: column;
+}
+
+.grupo-botoes.grupo-botoes-conectado {
+  gap: 0;
+}
+
+.grupo-botoes.grupo-botoes-conectado .botao {
+  border-radius: 0;
+  border-right-width: 0;
+}
+
+.grupo-botoes.grupo-botoes-conectado .botao:first-child {
+  border-top-left-radius: var(--raio-botao);
+  border-bottom-left-radius: var(--raio-botao);
+}
+
+.grupo-botoes.grupo-botoes-conectado .botao:last-child {
+  border-top-right-radius: var(--raio-botao);
+  border-bottom-right-radius: var(--raio-botao);
+  border-right-width: var(--largura-borda-base);
+}
+
+/* ========== Botões em Tabelas (Células de Ações) ========== */
+
+/* Célula de ações em tabelas */
+td.action-buttons,
+td.actions-cell,
+.action-buttons,
+.actions-cell {
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}
+
+/* Espaçamento entre botões dentro de células */
+td.action-buttons .btn,
+td.actions-cell .btn,
+.action-buttons .btn,
+.actions-cell .btn {
+  margin: 0 0.25rem !important;
+}
+
+/* Primeira e última não precisam de margem externa */
+td.action-buttons .btn:first-child,
+td.actions-cell .btn:first-child,
+.action-buttons .btn:first-child,
+.actions-cell .btn:first-child {
+  margin-left: 0 !important;
+}
+
+td.action-buttons .btn:last-child,
+td.actions-cell .btn:last-child,
+.action-buttons .btn:last-child,
+.actions-cell .btn:last-child {
+  margin-right: 0 !important;
+}

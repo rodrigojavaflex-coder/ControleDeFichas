@@ -59,8 +59,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
   const quotedMatches = Array.from(detail.matchAll(/"([^\"]+)"/g)) as RegExpMatchArray[];
   const refTable = quotedMatches.length > 0 ? quotedMatches[quotedMatches.length - 1][1] : '';
         const refName = refTable ? this.formatName(refTable) : 'outros registros';
-        // Mensagem escalável: indica entidade e tabela de dependência
-        message = `Não é possível excluir ${entityName} pois está sendo usado no cadastro de ${refName}.`;
+        // Mensagem específica para vendas com baixas
+        if (entityRoute === 'vendas' && refTable === 'baixas') {
+          message = 'Não é possível excluir a Venda pois existem baixas registradas!';
+        } else {
+          message = `Não é possível excluir ${entityName} pois está sendo usado no cadastro de ${refName}.`;
+        }
       } else {
         message = `Violação de integridade de dados em ${entityName}.`;
       }

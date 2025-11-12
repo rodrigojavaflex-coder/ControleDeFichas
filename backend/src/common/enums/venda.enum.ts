@@ -1,0 +1,14 @@
+export enum VendaOrigem {
+  GOIANIA = 'GOIANIA',
+  UBERABA = 'UBERABA',
+  NEROPOLIS = 'NEROPOLIS',
+  OUTRO = 'OUTRO',
+}
+
+export enum VendaStatus {
+  REGISTRADO = 'REGISTRADO',
+  CANCELADO = 'CANCELADO',
+  PAGO = 'PAGO',
+  PAGO_PARCIAL = 'PAGO_PARCIAL',
+  FECHADO = 'FECHADO',
+}

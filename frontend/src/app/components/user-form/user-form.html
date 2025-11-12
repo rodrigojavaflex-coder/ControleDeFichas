@@ -106,11 +106,29 @@
       </div>
     </div>
 
+    <!-- Unidade -->
+    <div class="form-group">
+      <label for="unidade" class="form-label">Unidade</label>
+      <select
+        id="unidade"
+        class="form-control"
+        formControlName="unidade"
+      >
+        <option value="">Nenhuma unidade</option>
+        <option *ngFor="let unit of unidades" [value]="unit">
+          {{ unit }}
+        </option>
+      </select>
+      <div class="form-help">
+        Selecione a unidade do usuário (opcional)
+      </div>
+    </div>
+
     <!-- Botões -->
     <div class="form-actions">
       <button
         type="button"
-        class="btn btn-secondary"
+        class="btn btn-cancelar"
         (click)="onCancel()"
         [disabled]="isSubmitting"
       >
@@ -119,7 +137,7 @@
       
       <button
         type="submit"
-        class="btn btn-primary"
+        class="btn btn-salvar"
         [disabled]="userForm.invalid || isSubmitting"
       >
         <span *ngIf="isSubmitting">

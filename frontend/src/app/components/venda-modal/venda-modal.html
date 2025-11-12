@@ -1,0 +1,207 @@
+<!-- Modal de Venda - Design System -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-conteudo modal-grande" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">{{ isEditing ? 'Editar Venda' : 'Nova Venda' }}</h3>
+      <button type="button" class="modal-fechar" (click)="closeModal()" [attr.disabled]="isLoading ? 'disabled' : null">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="vendaForm" (ngSubmit)="onSubmit()" class="modal-corpo">
+      <!-- Primeira linha: Protocolo, Data Venda, Origem, Status, Unidade -->
+      <div class="grid-formulario" style="grid-template-columns: repeat(5, 1fr); margin-bottom: var(--espacamento-md);">
+        <div class="grupo-campo">
+          <label for="protocolo" class="label-campo obrigatorio">Protocolo</label>
+          <input
+            id="protocolo"
+            type="text"
+            formControlName="protocolo"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('protocolo')}"
+            placeholder="Digite o protocolo">
+          <div class="mensagem-invalida" *ngIf="hasFieldError('protocolo')">
+            {{ getFieldError('protocolo') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="dataVenda" class="label-campo obrigatorio">Data</label>
+          <input
+            id="dataVenda"
+            type="date"
+            formControlName="dataVenda"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('dataVenda')}">
+          <div class="mensagem-invalida" *ngIf="hasFieldError('dataVenda')">
+            {{ getFieldError('dataVenda') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="origem" class="label-campo obrigatorio">Comprado em</label>
+          <select
+            id="origem"
+            formControlName="origem"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('origem')}">
+            <option *ngFor="let origem of [VendaOrigem.GOIANIA, VendaOrigem.UBERABA, VendaOrigem.NEROPOLIS, VendaOrigem.OUTRO]"
+                    [value]="origem">
+              {{ getOrigemLabel(origem) }}
+            </option>
+          </select>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('origem')">
+            {{ getFieldError('origem') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="status" class="label-campo obrigatorio">Status</label>
+          <select
+            id="status"
+            formControlName="status"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('status')}">
+            <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL, VendaStatus.FECHADO]"
+                    [value]="status">
+              {{ getStatusLabel(status) }}
+            </option>
+          </select>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('status')">
+            {{ getFieldError('status') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="unidade" class="label-campo">Unidade</label>
+          <select
+            id="unidade"
+            formControlName="unidade"
+            class="campo"
+            [attr.disabled]="unidadeDisabled ? 'disabled' : null">
+            <option value="">Nenhuma</option>
+            <option *ngFor="let unit of unidades" [value]="unit">
+              {{ unit }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Segunda linha: Cliente, Vendedor, Ativo -->
+      <div class="grid-formulario grid-formulario-3-colunas" style="margin-bottom: var(--espacamento-md);">
+        <div class="grupo-campo">
+          <label for="cliente" class="label-campo obrigatorio">Cliente</label>
+          <input
+            id="cliente"
+            type="text"
+            formControlName="cliente"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('cliente')}"
+            placeholder="Nome completo do cliente">
+          <div class="mensagem-invalida" *ngIf="hasFieldError('cliente')">
+            {{ getFieldError('cliente') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="vendedor" class="label-campo obrigatorio">Vendedor</label>
+          <input
+            id="vendedor"
+            type="text"
+            formControlName="vendedor"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('vendedor')}"
+            placeholder="Nome do vendedor">
+          <div class="mensagem-invalida" *ngIf="hasFieldError('vendedor')">
+            {{ getFieldError('vendedor') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="ativo" class="label-campo">Ativo</label>
+          <input
+            id="ativo"
+            type="text"
+            formControlName="ativo"
+            class="campo"
+            placeholder="Ex: Ativa, Pendente, etc"
+            maxlength="300">
+        </div>
+      </div>
+
+      <!-- Terceira linha: Valor Compra, Valor Cliente, Observação -->
+      <div class="grid-formulario grid-formulario-3-colunas">
+        <div class="grupo-campo">
+          <label for="valorCompra" class="label-campo obrigatorio">Valor Compra</label>
+          <div class="grupo-input">
+            <span class="prefixo-input">R$</span>
+            <input
+              id="valorCompra"
+              type="text"
+              formControlName="valorCompra"
+              class="campo"
+              [ngClass]="{'invalido': hasFieldError('valorCompra')}"
+              placeholder="0,00"
+              (input)="formatCurrency($event, 'valorCompra')"
+              (blur)="formatCurrencyOnBlur('valorCompra')">
+          </div>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('valorCompra')">
+            {{ getFieldError('valorCompra') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="valorCliente" class="label-campo obrigatorio">Valor Cliente</label>
+          <div class="grupo-input">
+            <span class="prefixo-input">R$</span>
+            <input
+              id="valorCliente"
+              type="text"
+              formControlName="valorCliente"
+              class="campo"
+              [ngClass]="{'invalido': hasFieldError('valorCliente')}"
+              placeholder="0,00"
+              (input)="formatCurrency($event, 'valorCliente')"
+              (blur)="formatCurrencyOnBlur('valorCliente')">
+          </div>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('valorCliente')">
+            {{ getFieldError('valorCliente') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="observacao" class="label-campo">Observação</label>
+          <textarea
+            id="observacao"
+            formControlName="observacao"
+            class="campo"
+            rows="3"
+            placeholder="Observações adicionais (opcional)">
+          </textarea>
+        </div>
+      </div>
+    </form>
+
+    <!-- Actions -->
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="closeModal()"
+        [attr.disabled]="isLoading ? 'disabled' : null"
+        title="Cancelar">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="botao botao-primario"
+        (click)="onSubmit()"
+        [attr.disabled]="(isLoading || vendaForm.invalid) ? 'disabled' : null"
+        [ngClass]="{'botao-carregando': isLoading}">
+        {{ isLoading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Criar Venda') }}
+      </button>
+    </div>
+  </div>
+</div>

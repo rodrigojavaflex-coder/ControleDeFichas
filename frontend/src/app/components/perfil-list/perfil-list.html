@@ -4,7 +4,7 @@
       <h1>Perfis</h1>
       <div class="header-actions">
         @if (authService.hasPermission(Permission.PROFILE_CREATE)) {
-          <a routerLink="/perfil/new" class="btn btn-primary">Novo Perfil</a>
+          <a routerLink="/perfil/new" class="btn btn-novo">Novo Perfil</a>
         }
       </div>
     </div>
@@ -49,13 +49,13 @@
               <tr>
                 <td class="action-buttons">
                   @if (authService.hasPermission(Permission.PROFILE_UPDATE)) {
-                    <button type="button" class="btn btn-small btn-primary" (click)="editPerfil(perfil)">Editar</button>
+                    <button type="button" class="btn btn-sm btn-editar" (click)="editPerfil(perfil)">Editar</button>
                   }
                   @if (authService.hasPermission(Permission.PROFILE_READ)) {
-                    <button type="button" class="btn btn-small btn-info" (click)="printPerfil(perfil)">Imprimir</button>
+                    <button type="button" class="btn btn-sm btn-imprimir" (click)="printPerfil(perfil)">Imprimir</button>
                   }
                   @if (authService.hasPermission(Permission.PROFILE_DELETE)) {
-                    <button type="button" class="btn btn-small btn-danger" (click)="deletePerfil(perfil)">Excluir</button>
+                    <button type="button" class="btn btn-sm btn-excluir" (click)="deletePerfil(perfil)">Excluir</button>
                   }
                 </td>
                 <td>{{ perfil.nomePerfil }}</td>

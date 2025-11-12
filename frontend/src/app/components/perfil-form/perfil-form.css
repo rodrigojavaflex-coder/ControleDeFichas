@@ -18,3 +18,97 @@
 	flex: 1;
 	min-width: 200px;
 }
+
+/* ============================================
+   ESTILOS DE PERMISSÕES
+   ============================================ */
+
+.permission-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.25rem;
+}
+
+.permission-group-header label {
+  font-weight: bold;
+}
+
+.permissions-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.permissions-actions .btn-small {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.permissions-section {
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.permissions-section > label[for="permSearch"] {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.permissions-section input.perm-search {
+  margin: 1rem 0 1rem;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.permission-group {
+  background-color: var(--bg-primary);
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.permission-group h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.25rem;
+}
+
+.permission-group .group-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.permission-group .group-header input {
+  margin-right: 0.5rem;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.permission-item label {
+  margin-left: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-primary);
+}

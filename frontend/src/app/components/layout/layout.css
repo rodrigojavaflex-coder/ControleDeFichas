@@ -6,11 +6,10 @@
   transition: background-color 0.3s ease;
 }
 
-.main-content-wrapper {
+.layout-main {
   display: flex;
   flex: 1;
-  overflow: hidden;
-  padding-top: 64px; /* Altura do header */
+  overflow: visible;
   position: relative;
   background-color: var(--bg-secondary, #f8fafc);
   transition: background-color 0.3s ease;
@@ -29,19 +28,25 @@
   transform: translateX(0);
   visibility: visible;
   opacity: 1;
+  overflow: visible;
 }
 
 .layout-content {
   flex: 1;
   overflow-y: auto;
   padding: 2rem;
+  padding-top: 2rem; /* Espaçamento adicional para compensar header */
   transition: margin-left 0.3s ease-in-out;
   margin-left: 256px; /* Espaço para o menu por padrão */
+  margin-top: 64px !important; /* Compensar header fixo */
+  position: relative;
+  z-index: 1;
 }
 
 /* Estado quando menu está colapsado - aplicado globalmente primeiro */
 .layout-content.menu-collapsed {
   margin-left: 0 !important;
+  margin-top: 64px !important; /* Manter compensação do header */
 }
 
 .login-container {
@@ -123,5 +128,6 @@
   .layout-content {
     margin-left: 0; /* Em mobile, sem margem */
     padding: 1rem;
+    margin-top: 64px !important; /* Compensar header fixo */
   }
 }

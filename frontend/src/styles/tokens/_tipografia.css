@@ -1,0 +1,56 @@
+/* ============================================
+   TOKENS DE TIPOGRAFIA - DESIGN SYSTEM
+   ============================================ */
+
+:root {
+  /* ========== Famílias de Fontes ========== */
+  --fonte-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fonte-mono: 'Courier New', Courier, monospace;
+  --fonte-titulo: var(--fonte-base);
+  
+  /* ========== Tamanhos de Fonte ========== */
+  --tamanho-fonte-xs: 0.75rem;    /* 12px */
+  --tamanho-fonte-sm: 0.875rem;   /* 14px */
+  --tamanho-fonte-base: 1rem;     /* 16px */
+  --tamanho-fonte-lg: 1.125rem;   /* 18px */
+  --tamanho-fonte-xl: 1.25rem;    /* 20px */
+  --tamanho-fonte-2xl: 1.5rem;    /* 24px */
+  --tamanho-fonte-3xl: 1.875rem;  /* 30px */
+  --tamanho-fonte-4xl: 2.25rem;   /* 36px */
+  --tamanho-fonte-5xl: 3rem;      /* 48px */
+  
+  /* ========== Pesos de Fonte ========== */
+  --peso-fonte-leve: 300;
+  --peso-fonte-normal: 400;
+  --peso-fonte-medio: 500;
+  --peso-fonte-semibold: 600;
+  --peso-fonte-negrito: 700;
+  --peso-fonte-extranegrito: 800;
+  
+  /* ========== Altura de Linha ========== */
+  --altura-linha-compacta: 1.25;
+  --altura-linha-normal: 1.5;
+  --altura-linha-relaxada: 1.75;
+  --altura-linha-solta: 2;
+  
+  /* ========== Espaçamento de Letras ========== */
+  --espacamento-letra-compacto: -0.025em;
+  --espacamento-letra-normal: 0;
+  --espacamento-letra-amplo: 0.025em;
+  --espacamento-letra-extra-amplo: 0.05em;
+  
+  /* ========== Estilos de Texto ========== */
+  --texto-titulo-1: var(--peso-fonte-negrito) var(--tamanho-fonte-4xl)/var(--altura-linha-compacta) var(--fonte-titulo);
+  --texto-titulo-2: var(--peso-fonte-negrito) var(--tamanho-fonte-3xl)/var(--altura-linha-compacta) var(--fonte-titulo);
+  --texto-titulo-3: var(--peso-fonte-semibold) var(--tamanho-fonte-2xl)/var(--altura-linha-normal) var(--fonte-titulo);
+  --texto-titulo-4: var(--peso-fonte-semibold) var(--tamanho-fonte-xl)/var(--altura-linha-normal) var(--fonte-titulo);
+  --texto-titulo-5: var(--peso-fonte-semibold) var(--tamanho-fonte-lg)/var(--altura-linha-normal) var(--fonte-titulo);
+  --texto-titulo-6: var(--peso-fonte-semibold) var(--tamanho-fonte-base)/var(--altura-linha-normal) var(--fonte-titulo);
+  
+  --texto-corpo: var(--peso-fonte-normal) var(--tamanho-fonte-base)/var(--altura-linha-normal) var(--fonte-base);
+  --texto-corpo-pequeno: var(--peso-fonte-normal) var(--tamanho-fonte-sm)/var(--altura-linha-normal) var(--fonte-base);
+  --texto-legenda: var(--peso-fonte-normal) var(--tamanho-fonte-xs)/var(--altura-linha-normal) var(--fonte-base);
+  
+  --texto-botao: var(--peso-fonte-medio) var(--tamanho-fonte-sm)/var(--altura-linha-normal) var(--fonte-base);
+  --texto-label: var(--peso-fonte-medio) var(--tamanho-fonte-sm)/var(--altura-linha-normal) var(--fonte-base);
+}

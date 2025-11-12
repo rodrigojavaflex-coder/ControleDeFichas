@@ -3,10 +3,10 @@
     <div class="header-content">
       <h2>{{ isEditMode ? 'Editar Perfil' : 'Novo Perfil' }}</h2>
       <div class="header-actions">
-        <button type="submit" class="btn btn-primary" [disabled]="perfilForm.invalid || loading">
+        <button type="submit" class="btn btn-salvar" [disabled]="perfilForm.invalid || loading">
           {{ isEditMode ? 'Atualizar' : 'Salvar' }}
         </button>
-  <button type="button" class="btn btn-secondary" (click)="router.navigate(['/perfil'])">Cancelar</button>
+  <button type="button" class="btn btn-cancelar" (click)="router.navigate(['/perfil'])">Cancelar</button>
       </div>
     </div>
   </header>
@@ -46,7 +46,7 @@
       <div class="permissions-actions">
         <button
           type="button"
-          class="btn btn-small btn-primary"
+          class="btn btn-sm btn-primary"
           (click)="selectAllFiltered()"
           [disabled]="allFilteredSelected"
         >
@@ -54,7 +54,7 @@
         </button>
         <button
           type="button"
-          class="btn btn-small btn-secondary"
+          class="btn btn-sm btn-secondary"
           (click)="deselectAllFiltered()"
           [disabled]="!anyFilteredSelected"
         >
@@ -86,10 +86,10 @@
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn btn-primary" [disabled]="perfilForm.invalid || loading">
+      <button type="submit" class="btn btn-salvar" [disabled]="perfilForm.invalid || loading">
         {{ isEditMode ? 'Atualizar' : 'Salvar' }}
       </button>
-  <button type="button" class="btn btn-secondary" (click)="router.navigate(['/perfil'])">Cancelar</button>
+  <button type="button" class="btn btn-cancelar" (click)="router.navigate(['/perfil'])">Cancelar</button>
     </div>
   </div>
 </form>

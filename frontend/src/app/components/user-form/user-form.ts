@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
-import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil } from '../../models/usuario.model';
+import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil, Unidade } from '../../models/usuario.model';
 
 @Component({
   selector: 'app-user-form',
@@ -22,6 +22,10 @@ export class UserFormComponent implements OnInit {
 
   // Perfis
   availableProfiles: Perfil[] = [];
+
+  // Unidades
+  Unidade = Unidade;
+  unidades = Object.values(Unidade);
 
   constructor(
     private fb: FormBuilder,
@@ -42,8 +46,9 @@ export class UserFormComponent implements OnInit {
       name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
       email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
       password: ['', [Validators.minLength(6)]],
-  isActive: [true],
-  perfilId: ['', Validators.required]
+      isActive: [true],
+      perfilId: ['', Validators.required],
+      unidade: [''] // Campo opcional para unidade
     });
   }
 
@@ -90,7 +95,8 @@ export class UserFormComponent implements OnInit {
           name: user.nome,
           email: user.email,
           isActive: user.ativo,
-          perfilId: user.perfil?.id
+          perfilId: user.perfil?.id,
+          unidade: user.unidade || ''
         });
         this.loading = false;
       },
@@ -126,7 +132,8 @@ export class UserFormComponent implements OnInit {
       email: formValue.email,
       senha: formValue.password,
       ativo: formValue.isActive,
-      perfilId: formValue.perfilId
+      perfilId: formValue.perfilId,
+      unidade: formValue.unidade || null
     };
 
     this.userService.createUser(createUsuarioDto).subscribe({
@@ -145,7 +152,8 @@ export class UserFormComponent implements OnInit {
       nome: formValue.name,
       email: formValue.email,
       ativo: formValue.isActive,
-      perfilId: formValue.perfilId
+      perfilId: formValue.perfilId,
+      unidade: formValue.unidade || null
     };
 
     // Adiciona senha apenas se foi informada
@@ -195,6 +203,7 @@ export class UserFormComponent implements OnInit {
   get email() { return this.userForm.get('email'); }
   get password() { return this.userForm.get('password'); }
   get isActive() { return this.userForm.get('isActive'); }
+  get unidade() { return this.userForm.get('unidade'); }
 
   // Métodos para verificar erros
   hasError(controlName: string, errorType: string): boolean {

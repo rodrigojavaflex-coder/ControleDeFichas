@@ -2,14 +2,15 @@
 .sidebar {
   position: relative;
   width: 280px;
-  height: 100vh;
+  height: calc(100vh - 64px); /* Ajustado para compensar altura do header */
   background: #f8fafc;
   display: flex;
   flex-direction: column;
   transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-  overflow: hidden;
+  overflow: visible;
   z-index: 100;
-  margin-right: 20px;
+  margin-right: 24px;
+  box-sizing: border-box;
 }
 
 .sidebar.collapsed {
@@ -137,8 +138,8 @@
 .sidebar-content {
   flex: 1;
   padding: 16px 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible;
+  min-height: 0; /* Permite que o flex item encolha */
 }
 
 .main-nav {
@@ -213,6 +214,17 @@
   justify-content: center;
   flex-shrink: 0;
   box-sizing: border-box;
+  opacity: 0.75;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.nav-link:hover .nav-icon {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.nav-link.active .nav-icon {
+  opacity: 1;
 }
 
 .nav-text {
@@ -230,6 +242,7 @@
 .sidebar-footer {
   padding: 20px;
   border-top: 1px solid #e2e8f0;
+  flex-shrink: 0; /* Impede que o footer seja comprimido */
 }
 
 .logout-btn {
@@ -314,28 +327,136 @@
   }
 }
 
-/* Acessibilidade */
-.nav-link:focus,
-.control-btn:focus,
-.logout-btn:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: -2px;
+/* Submenus */
+.submenu-toggle {
+  cursor: pointer;
+  user-select: none;
 }
 
-/* Scrollbar personalizada */
-.sidebar-content::-webkit-scrollbar {
-  width: 4px;
+.submenu-toggle:hover {
+  background: #f1f5f9;
+  color: #334155;
 }
 
-.sidebar-content::-webkit-scrollbar-track {
-  background: transparent;
+.submenu-toggle.active {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
-.sidebar-content::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 2px;
+.submenu-arrow {
+  margin-left: auto;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  color: #6b7280;
 }
 
-.sidebar-content::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+.submenu-arrow.open {
+  transform: rotate(90deg);
+}
+
+.submenu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  margin-left: 20px;
+  margin-top: 4px;
+  border-left: 2px solid #e2e8f0;
+  padding-left: 20px;
+  overflow: visible;
+  position: relative;
+  z-index: 5;
+  margin-right: -4px;
+}
+
+.submenu-item {
+  margin: 2px 0;
+}
+
+.submenu-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px 12px 20px;
+  position: relative;
+  overflow: visible;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.2s ease;
+  box-sizing: border-box;
+  margin-right: -4px;
+}
+
+.submenu-link:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.submenu-link.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.submenu-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  background: #3b82f6;
+  border-radius: 0 2px 2px 0;
+}
+
+.submenu-icon {
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+  color: currentColor;
+  overflow: visible;
+  position: relative;
+  z-index: 25;
+  box-sizing: border-box;
+  padding: 2px;
+}
+
+.submenu-icon svg {
+  position: relative;
+  z-index: 26;
+  max-width: 20px !important;
+  max-height: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+  pointer-events: none;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+.submenu-link:hover .submenu-icon {
+  opacity: 0.9;
+}
+
+.submenu-link.active .submenu-icon {
+  opacity: 1;
+}
+
+.sidebar.collapsed .submenu {
+  display: none;
+}
+
+.sidebar.collapsed .submenu-toggle {
+  justify-content: center;
+  padding: 12px 4px;
+}
+
+.sidebar.collapsed .submenu-arrow {
+  display: none;
 }

@@ -41,6 +41,17 @@ export enum Permission {
   CERTIFICADO_UPDATE = 'certificado:update',
   CERTIFICADO_DELETE = 'certificado:delete',
   CERTIFICADO_AUDIT = 'certificado:audit',
+
+  // Vendas
+  VENDA_CREATE = 'venda:create',
+  VENDA_READ = 'venda:read',
+  VENDA_UPDATE = 'venda:update',
+  VENDA_DELETE = 'venda:delete',
+  VENDA_BAIXAR = 'venda:baixar',
+  VENDA_REMOVE_BAIXA = 'venda:remove-baixa',
+  VENDA_AUDIT = 'venda:audit',
+  VENDA_FECHAR = 'venda:fechar',
+  VENDA_CANCELAR_FECHAMENTO = 'venda:cancelar-fechamento',
 }
 
 export const PERMISSION_GROUPS = {
@@ -92,6 +103,17 @@ export const PERMISSION_GROUPS = {
     { key: Permission.CERTIFICADO_UPDATE, label: 'Editar certificados' },
     { key: Permission.CERTIFICADO_DELETE, label: 'Excluir certificados' },
     { key: Permission.CERTIFICADO_AUDIT, label: 'Visualizar auditoria' },
+  ],
+  Vendas: [
+    { key: Permission.VENDA_CREATE, label: 'Criar vendas' },
+    { key: Permission.VENDA_READ, label: 'Visualizar vendas' },
+    { key: Permission.VENDA_UPDATE, label: 'Editar vendas' },
+    { key: Permission.VENDA_DELETE, label: 'Excluir vendas' },
+    { key: Permission.VENDA_BAIXAR, label: 'Baixar vendas' },
+    { key: Permission.VENDA_REMOVE_BAIXA, label: 'Remover baixas' },
+    { key: Permission.VENDA_AUDIT, label: 'Visualizar auditoria' },
+    { key: Permission.VENDA_FECHAR, label: 'Fechar vendas' },
+    { key: Permission.VENDA_CANCELAR_FECHAMENTO, label: 'Cancelar fechamento de vendas' },
   ],
 };
 

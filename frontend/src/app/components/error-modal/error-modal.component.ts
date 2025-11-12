@@ -34,7 +34,8 @@ import { ThemeService, Theme } from '../../services/theme.service';
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 1000;
+        z-index: 99999;
+        pointer-events: auto;
       }
       .error-modal {
         position: relative;
@@ -42,6 +43,8 @@ import { ThemeService, Theme } from '../../services/theme.service';
         width: 90%;
         border-radius: 6px;
         transition: background 0.3s, color 0.3s;
+        z-index: 99999;
+        pointer-events: auto;
       }
       .modal-header {
         display: flex;

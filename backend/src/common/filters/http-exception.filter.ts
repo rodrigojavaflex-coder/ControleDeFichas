@@ -27,12 +27,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
       // Código 23503 => foreign key violation
       if (err.driverError && err.driverError.code === '23503') {
         status = HttpStatus.BAD_REQUEST;
-        // Extrai tabela referenciada do detalhe do erro
+        
+        // Verificar se é exclusão de venda com baixas associadas
         const detail: string = (err.driverError.detail as string) || '';
-        const match = /referenced from table \"([^\"]+)\"/.exec(detail);
-        const tabela = match ? match[1] : 'outros registros';
-        const suggestion = `Por favor, exclua antes os registros em "${tabela}" que dependem deste item e tente novamente.`;
-        message = `Operação inválida: existem registros vinculados. ${suggestion}`;
+        if (detail.includes('baixas') && detail.includes('vendas')) {
+          message = 'Excluir todas as baixas antes de excluir a venda!';
+        } else {
+          // Extrai tabela referenciada do detalhe do erro
+          const match = /referenced from table \"([^\"]+)\"/.exec(detail);
+          const tabela = match ? match[1] : 'outros registros';
+          const suggestion = `Por favor, exclua antes os registros em "${tabela}" que dependem deste item e tente novamente.`;
+          message = `Operação inválida: existem registros vinculados. ${suggestion}`;
+        }
       } else {
         status = HttpStatus.INTERNAL_SERVER_ERROR;
         message = 'Erro interno de banco de dados.';

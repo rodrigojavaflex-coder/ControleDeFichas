@@ -1,0 +1,259 @@
+/**
+ * CLASSES SEMÂNTICAS DE BOTÕES
+ * 
+ * Padronização de botões por função/ação em todo o sistema.
+ * Use estas classes junto com .btn e .btn-sm para consistência visual.
+ * 
+ * Estrutura: .btn .btn-sm .btn-{acao}
+ * Exemplo: <button class="btn btn-sm btn-editar">Editar</button>
+ * 
+ * IMPORTANTE: Usa !important para sobrescrever estilos Bootstrap
+ */
+
+/* ============================================
+   BOTÕES DE AÇÕES PRIMÁRIAS
+   ============================================ */
+
+.btn-novo {
+  /* Criar/Adicionar novo registro */
+  background-color: var(--cor-primaria) !important;
+  border-color: var(--cor-primaria) !important;
+  color: #fff !important;
+}
+
+.btn-novo:hover,
+.btn-novo:focus {
+  background-color: var(--cor-primaria-hover) !important;
+  border-color: var(--cor-primaria-hover) !important;
+}
+
+.btn-salvar {
+  /* Salvar/Confirmar formulário */
+  background-color: var(--cor-primaria) !important;
+  border-color: var(--cor-primaria) !important;
+  color: #fff !important;
+}
+
+.btn-salvar:hover,
+.btn-salvar:focus {
+  background-color: var(--cor-primaria-hover) !important;
+  border-color: var(--cor-primaria-hover) !important;
+}
+
+.btn-editar {
+  /* Editar registro existente */
+  background-color: var(--cor-primaria) !important;
+  border-color: var(--cor-primaria) !important;
+  color: #fff !important;
+}
+
+.btn-editar:hover,
+.btn-editar:focus {
+  background-color: var(--cor-primaria-hover) !important;
+  border-color: var(--cor-primaria-hover) !important;
+}
+
+/* ============================================
+   BOTÕES DE AÇÕES SECUNDÁRIAS
+   ============================================ */
+
+.btn-cancelar {
+  /* Cancelar operação/Voltar */
+  background-color: var(--cor-secundaria) !important;
+  border-color: var(--cor-secundaria) !important;
+  color: #fff !important;
+}
+
+.btn-cancelar:hover,
+.btn-cancelar:focus {
+  background-color: var(--cor-secundaria-hover) !important;
+  border-color: var(--cor-secundaria-hover) !important;
+}
+
+.btn-limpar {
+  /* Limpar filtros/formulário */
+  background-color: var(--cor-secundaria) !important;
+  border-color: var(--cor-secundaria) !important;
+  color: #fff !important;
+}
+
+.btn-limpar:hover,
+.btn-limpar:focus {
+  background-color: var(--cor-secundaria-hover) !important;
+  border-color: var(--cor-secundaria-hover) !important;
+}
+
+.btn-imprimir {
+  /* Imprimir/Exportar */
+  background-color: var(--cor-info) !important;
+  border-color: var(--cor-info) !important;
+  color: #fff !important;
+}
+
+.btn-imprimir:hover,
+.btn-imprimir:focus {
+  background-color: var(--cor-info-hover) !important;
+  border-color: var(--cor-info-hover) !important;
+}
+
+.btn-auditoria {
+  /* Ver histórico de auditoria */
+  background-color: var(--cor-secundaria) !important;
+  border-color: var(--cor-secundaria) !important;
+  color: #fff !important;
+}
+
+.btn-auditoria:hover,
+.btn-auditoria:focus {
+  background-color: var(--cor-secundaria-hover) !important;
+  border-color: var(--cor-secundaria-hover) !important;
+}
+
+/* ============================================
+   BOTÕES DE AÇÕES POSITIVAS
+   ============================================ */
+
+.btn-baixa {
+  /* Lançar baixa em venda */
+  background-color: var(--cor-sucesso) !important;
+  border-color: var(--cor-sucesso) !important;
+  color: #fff !important;
+}
+
+.btn-baixa:hover,
+.btn-baixa:focus {
+  background-color: var(--cor-sucesso-hover) !important;
+  border-color: var(--cor-sucesso-hover) !important;
+}
+
+.btn-upload {
+  /* Upload de arquivo */
+  background-color: var(--cor-sucesso) !important;
+  border-color: var(--cor-sucesso) !important;
+  color: #fff !important;
+}
+
+.btn-upload:hover,
+.btn-upload:focus {
+  background-color: var(--cor-sucesso-hover) !important;
+  border-color: var(--cor-sucesso-hover) !important;
+}
+
+/* ============================================
+   BOTÕES DE AÇÕES DESTRUTIVAS
+   ============================================ */
+
+.btn-excluir {
+  /* Excluir registro */
+  background-color: var(--cor-perigo) !important;
+  border-color: var(--cor-perigo) !important;
+  color: #fff !important;
+}
+
+.btn-excluir:hover,
+.btn-excluir:focus {
+  background-color: var(--cor-perigo-hover) !important;
+  border-color: var(--cor-perigo-hover) !important;
+}
+
+.btn-remover {
+  /* Remover item (ex: laudo) */
+  background-color: var(--cor-perigo) !important;
+  border-color: var(--cor-perigo) !important;
+  color: #fff !important;
+}
+
+.btn-remover:hover,
+.btn-remover:focus {
+  background-color: var(--cor-perigo-hover) !important;
+  border-color: var(--cor-perigo-hover) !important;
+}
+
+/* ============================================
+   BOTÕES DE AÇÕES DE ALERTA
+   ============================================ */
+
+.btn-filtrar {
+  /* Aplicar filtros */
+  background-color: var(--cor-primaria) !important;
+  border-color: var(--cor-primaria) !important;
+  color: #fff !important;
+}
+
+.btn-filtrar:hover,
+.btn-filtrar:focus {
+  background-color: var(--cor-primaria-hover) !important;
+  border-color: var(--cor-primaria-hover) !important;
+}
+
+/* ============================================
+   ESTADOS HOVER/ACTIVE
+   ============================================
+   Os estados hover e disabled são aplicados
+   automaticamente pela classe base .btn
+   definida em componentes/_botoes.css
+   
+   As cores ajustam automaticamente com
+   o tema via variáveis CSS do _temas.css
+   ============================================ */
+
+/* ============================================
+   TAMANHOS - .btn-sm
+   ============================================
+   Garante que .btn-sm funcione corretamente
+   com as classes semânticas
+   ============================================ */
+
+.btn-sm.btn-novo,
+.btn-sm.btn-editar,
+.btn-sm.btn-excluir,
+.btn-sm.btn-salvar,
+.btn-sm.btn-cancelar,
+.btn-sm.btn-limpar,
+.btn-sm.btn-imprimir,
+.btn-sm.btn-auditoria,
+.btn-sm.btn-baixa,
+.btn-sm.btn-upload,
+.btn-sm.btn-remover,
+.btn-sm.btn-filtrar {
+  /* Tamanhos do Bootstrap .btn-sm reduzidos em 20% */
+  padding: 0.2rem 0.4rem !important; /* Era 0.25rem 0.5rem */
+  font-size: 0.7rem !important; /* Era 0.875rem */
+  line-height: 1.5 !important;
+  border-radius: 0.16rem !important; /* Era 0.2rem */
+}
+
+/* ============================================
+   DOCUMENTAÇÃO DE USO
+   ============================================
+   
+   TEMPLATES RECOMENDADOS:
+   
+   <!-- Botão Novo (Header de Listas) -->
+   <button class="btn btn-novo">Novo</button>
+   
+   <!-- Botão Editar (Grid) -->
+   <button class="btn btn-sm btn-editar">Editar</button>
+   
+   <!-- Botão Excluir (Grid) -->
+   <button class="btn btn-sm btn-excluir">Excluir</button>
+   
+   <!-- Botão Imprimir (Grid) -->
+   <button class="btn btn-sm btn-imprimir">Imprimir</button>
+   
+   <!-- Botão Auditoria (Grid) -->
+   <button class="btn btn-sm btn-auditoria">Auditoria</button>
+   
+   <!-- Botão Baixa (Grid Vendas) -->
+   <button class="btn btn-sm btn-baixa">Baixa</button>
+   
+   <!-- Botão Salvar (Formulário) -->
+   <button class="btn btn-salvar">Salvar</button>
+   
+   <!-- Botão Cancelar (Formulário) -->
+   <button class="btn btn-cancelar">Cancelar</button>
+   
+   <!-- Botão Limpar (Filtros) -->
+   <button class="btn btn-limpar">Limpar</button>
+   
+   ============================================ */

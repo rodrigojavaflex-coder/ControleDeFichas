@@ -1,0 +1,269 @@
+/* ============================================
+   COMPONENTE: CARTÕES - DESIGN SYSTEM
+   ============================================ */
+
+/* ========== Base do Cartão ========== */
+.cartao {
+  /* Aparência */
+  background-color: var(--cor-superficie);
+  border: var(--borda-fina);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra-sm);
+  
+  /* Layout */
+  overflow: hidden;
+  
+  /* Transição */
+  transition: var(--transicao-sombra);
+}
+
+.cartao:hover {
+  box-shadow: var(--sombra-md);
+}
+
+/* ========== Cabeçalho do Cartão ========== */
+.cartao-cabecalho {
+  padding: var(--padding-cartao-cabecalho);
+  background-color: var(--cor-superficie-hover);
+  border-bottom: var(--borda-fina);
+}
+
+.cartao-titulo {
+  font: var(--texto-titulo-5);
+  color: var(--cor-texto-primario);
+  margin: 0;
+}
+
+.cartao-subtitulo {
+  font-size: var(--tamanho-fonte-sm);
+  color: var(--cor-texto-secundario);
+  margin-top: var(--espacamento-xs);
+}
+
+/* ========== Corpo do Cartão ========== */
+.cartao-corpo {
+  padding: var(--padding-cartao-corpo);
+}
+
+/* ========== Rodapé do Cartão ========== */
+.cartao-rodape {
+  padding: var(--padding-cartao-rodape);
+  background-color: var(--cor-superficie-hover);
+  border-top: var(--borda-fina);
+  
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacamento-md);
+}
+
+/* ========== Imagem do Cartão ========== */
+.cartao-imagem {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.cartao-imagem-topo {
+  border-top-left-radius: var(--raio-cartao);
+  border-top-right-radius: var(--raio-cartao);
+}
+
+/* ========== Variantes de Destaque ========== */
+.cartao-destaque {
+  border-color: var(--cor-primaria);
+  border-width: var(--largura-borda-base);
+}
+
+.cartao-destaque-primario {
+  border-left: 4px solid var(--cor-primaria);
+}
+
+.cartao-destaque-sucesso {
+  border-left: 4px solid var(--cor-sucesso);
+}
+
+.cartao-destaque-perigo {
+  border-left: 4px solid var(--cor-perigo);
+}
+
+.cartao-destaque-alerta {
+  border-left: 4px solid var(--cor-alerta);
+}
+
+/* ========== Cartão Clicável ========== */
+.cartao-clicavel {
+  cursor: pointer;
+  transition: var(--transicao-rapida);
+}
+
+.cartao-clicavel:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sombra-lg);
+}
+
+.cartao-clicavel:active {
+  transform: translateY(0);
+  box-shadow: var(--sombra-md);
+}
+
+/* ========== Cartão com Grid ========== */
+.cartao-grid {
+  display: grid;
+  gap: var(--espacamento-md);
+}
+
+.cartao-grid.cartao-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.cartao-grid.cartao-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.cartao-grid.cartao-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1024px) {
+  .cartao-grid.cartao-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .cartao-grid.cartao-grid-2,
+  .cartao-grid.cartao-grid-3,
+  .cartao-grid.cartao-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== Lista de Cartões ========== */
+.lista-cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-md);
+}
+
+/* ========== Cartão Horizontal ========== */
+.cartao-horizontal {
+  display: flex;
+  flex-direction: row;
+}
+
+.cartao-horizontal .cartao-imagem {
+  width: 200px;
+  height: 100%;
+  object-fit: cover;
+  border-top-left-radius: var(--raio-cartao);
+  border-bottom-left-radius: var(--raio-cartao);
+  border-top-right-radius: 0;
+}
+
+.cartao-horizontal .cartao-conteudo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cartao-horizontal .cartao-corpo {
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .cartao-horizontal {
+    flex-direction: column;
+  }
+  
+  .cartao-horizontal .cartao-imagem {
+    width: 100%;
+    height: 200px;
+    border-top-left-radius: var(--raio-cartao);
+    border-top-right-radius: var(--raio-cartao);
+    border-bottom-left-radius: 0;
+  }
+}
+
+/* ========== Cartão de Informação ========== */
+.cartao-info {
+  padding: var(--espacamento-lg);
+}
+
+.cartao-info .cartao-info-icone {
+  font-size: var(--tamanho-fonte-3xl);
+  margin-bottom: var(--espacamento-md);
+}
+
+.cartao-info .cartao-info-icone.icone-primario {
+  color: var(--cor-primaria);
+}
+
+.cartao-info .cartao-info-icone.icone-sucesso {
+  color: var(--cor-sucesso);
+}
+
+.cartao-info .cartao-info-icone.icone-perigo {
+  color: var(--cor-perigo);
+}
+
+.cartao-info .cartao-info-icone.icone-alerta {
+  color: var(--cor-alerta);
+}
+
+.cartao-info .cartao-info-titulo {
+  font: var(--texto-titulo-6);
+  color: var(--cor-texto-primario);
+  margin: 0 0 var(--espacamento-xs) 0;
+}
+
+.cartao-info .cartao-info-valor {
+  font-size: var(--tamanho-fonte-2xl);
+  font-weight: var(--peso-fonte-negrito);
+  color: var(--cor-texto-primario);
+  margin: 0;
+}
+
+.cartao-info .cartao-info-descricao {
+  font-size: var(--tamanho-fonte-sm);
+  color: var(--cor-texto-secundario);
+  margin-top: var(--espacamento-xs);
+}
+
+/* ========== Cartão Vazio ========== */
+.cartao-vazio {
+  padding: var(--espacamento-2xl);
+  text-align: center;
+  color: var(--cor-texto-secundario);
+}
+
+.cartao-vazio .cartao-vazio-icone {
+  font-size: var(--tamanho-fonte-5xl);
+  opacity: 0.5;
+  margin-bottom: var(--espacamento-md);
+}
+
+.cartao-vazio .cartao-vazio-mensagem {
+  font-size: var(--tamanho-fonte-base);
+  color: var(--cor-texto-secundario);
+}
+
+/* ========== Cartão de Carregamento ========== */
+.cartao-carregando {
+  position: relative;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cartao-carregando::after {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--cor-borda);
+  border-top-color: var(--cor-primaria);
+  border-radius: var(--raio-borda-completo);
+  animation: spin var(--duracao-lenta) linear infinite;
+}

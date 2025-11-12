@@ -2,6 +2,7 @@ import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Perfil } from '../../perfil/entities/perfil.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
+import { Unidade } from '../../../common/enums/unidade.enum';
 
 @Entity('usuarios')
 @Index(['email'], { unique: true })
@@ -55,4 +56,16 @@ export class Usuario extends BaseEntity {
   })
   @Column({ default: 'Claro', length: 10 })
   tema: string;
+
+  @ApiProperty({
+    description: 'Unidade do usuário',
+    example: 'INHUMAS',
+    enum: Unidade,
+  })
+  @Column({
+    type: 'enum',
+    enum: Unidade,
+    nullable: true,
+  })
+  unidade?: Unidade;
 }

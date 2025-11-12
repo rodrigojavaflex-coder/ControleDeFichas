@@ -2,7 +2,7 @@
   <div class="header">
     <h2>Lista de Usuários</h2>
     @if (canCreateUser()) {
-      <button class="btn btn-primary" (click)="createUser()">
+      <button class="btn btn-novo" (click)="createUser()">
         Novo Usuário
       </button>
     }
@@ -28,7 +28,7 @@
         class="form-control"
       >
     </div>
-    <button class="btn btn-secondary" (click)="clearFilters()">
+    <button class="btn btn-limpar" (click)="clearFilters()">
       Limpar Filtros
     </button>
   </div>
@@ -55,6 +55,7 @@
         <tr>
           <th>Nome</th>
           <th>Email</th>
+          <th>Unidade</th>
           <th>Status</th>
           <th>Criado em</th>
           <th>Ações</th>
@@ -64,30 +65,31 @@
   <tr *ngFor="let user of items">
           <td>{{ user.nome }}</td>
           <td>{{ user.email }}</td>
+          <td>{{ user.unidade || '-' }}</td>
           <td>
             <span [class]="user.ativo ? 'status-active' : 'status-inactive'">
               {{ user.ativo ? 'Ativo' : 'Inativo' }}
             </span>
           </td>
           <td>{{ user.criadoEm | date:'dd/MM/yyyy HH:mm' }}</td>
-          <td>
+          <td class="action-buttons">
             @if (canEditUser()) {
-              <button class="btn btn-small btn-primary" (click)="editUser(user)">
+              <button class="btn btn-sm btn-editar" (click)="editUser(user)">
                 Editar
               </button>
             }
             @if (canPrintUser()) {
-              <button class="btn btn-small btn-info" (click)="printUser(user)">
+              <button class="btn btn-sm btn-imprimir" (click)="printUser(user)">
                 Imprimir
               </button>
             }
             @if (canDeleteUser()) {
-              <button class="btn btn-small btn-danger" (click)="deleteUser(user)">
+              <button class="btn btn-sm btn-excluir" (click)="deleteUser(user)">
                 Excluir
               </button>
             }
             @if (canAuditUser()) {
-              <button class="btn btn-small btn-secondary" (click)="openAuditHistory(user)">
+              <button class="btn btn-sm btn-auditoria" (click)="openAuditHistory(user)">
                 Auditoria
               </button>
             }
@@ -109,7 +111,7 @@
   @if (totalPages > 1) {
     <div class="pagination">
     <button 
-      class="btn btn-secondary" 
+      class="btn btn-sm btn-cancelar" 
       (click)="onPageChange(currentPage - 1)"
       [disabled]="currentPage <= 1"
     >
@@ -122,7 +124,7 @@
     </span>
     
     <button 
-      class="btn btn-secondary" 
+      class="btn btn-sm btn-cancelar" 
       (click)="onPageChange(currentPage + 1)"
       [disabled]="currentPage >= totalPages"
     >

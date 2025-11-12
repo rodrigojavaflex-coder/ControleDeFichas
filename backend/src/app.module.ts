@@ -12,6 +12,8 @@ import { ConfiguracaoModule } from './modules/configuracao/configuracao.module';
 import { PerfilModule } from './modules/perfil/perfil.module';
 import { CertificadoModule } from './modules/certificado/certificado.module';
 import { AuditoriaInterceptor } from './common/interceptors/auditoria.interceptor';
+import { VendasModule } from './modules/vendas/vendas.module';
+import { BaixasModule } from './modules/baixas/baixas.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 import { Configuracao } from './modules/configuracao/entities/configuracao.entity';
@@ -36,6 +38,8 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
   ConfiguracaoModule,
   PerfilModule,
   CertificadoModule,
+  VendasModule,
+  BaixasModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],

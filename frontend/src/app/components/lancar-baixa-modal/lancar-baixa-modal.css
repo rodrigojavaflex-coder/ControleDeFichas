@@ -1,0 +1,202 @@
+/* ============================================
+   MODAL DE BAIXA - USANDO DESIGN SYSTEM
+   ============================================
+   
+   As classes principais vêm do Design System:
+   - .modal-overlay, .modal-conteudo, .modal-cabecalho, .modal-corpo, .modal-rodape
+   - .botao, .botao-primario, .botao-fantasma
+   - .campo, .label-campo, .grupo-campo
+   - .cartao, .cartao-corpo
+   - .grid-formulario
+   
+   Este arquivo contém apenas estilos específicos do modal de baixa.
+   O tema escuro é gerenciado automaticamente pelo Design System.
+   ============================================ */
+
+/* Otimização de altura do modal */
+:host ::ng-deep .modal-conteudo.modal-grande {
+  max-height: 90vh;
+}
+
+/* Reduzir altura do cabeçalho pela metade */
+:host ::ng-deep .modal-cabecalho {
+  padding: var(--espacamento-sm) var(--espacamento-md) !important;
+  min-height: auto;
+}
+
+:host ::ng-deep .modal-titulo {
+  font-size: var(--tamanho-fonte-base);
+  line-height: 1.2;
+  margin: 0;
+}
+
+/* Reduzir altura do rodapé pela metade */
+:host ::ng-deep .modal-rodape {
+  padding: var(--espacamento-sm) var(--espacamento-md) !important;
+  min-height: auto;
+}
+
+:host ::ng-deep .modal-rodape .botao {
+  padding: var(--espacamento-xs) var(--espacamento-md);
+  font-size: var(--tamanho-fonte-sm);
+  height: auto;
+}
+
+/* Reduzir altura da seção de Baixas Realizadas */
+.cartao {
+  margin-top: var(--espacamento-md) !important;
+}
+
+:host ::ng-deep .cartao-cabecalho {
+  padding: var(--espacamento-xs) var(--espacamento-md) !important;
+  min-height: auto;
+}
+
+:host ::ng-deep .cartao-titulo {
+  font-size: var(--tamanho-fonte-sm);
+  line-height: 1.2;
+  margin: 0;
+}
+
+:host ::ng-deep .cartao-corpo {
+  padding: var(--espacamento-sm) var(--espacamento-md) !important;
+}
+
+:host ::ng-deep .cartao-rodape {
+  padding: var(--espacamento-xs) var(--espacamento-md) !important;
+  min-height: auto;
+}
+
+/* Otimizar tabela sem header */
+:host ::ng-deep .tabela-responsive .tabela {
+  margin: 0;
+}
+
+:host ::ng-deep .tabela-responsive .tabela tbody tr {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+:host ::ng-deep .tabela-responsive .tabela tbody tr:last-child {
+  border-bottom: none;
+}
+
+:host ::ng-deep .tabela-responsive .tabela td {
+  padding: var(--espacamento-xs) var(--espacamento-sm);
+  font-size: var(--tamanho-fonte-xs);
+  line-height: 1.3;
+  vertical-align: middle;
+}
+
+/* Espaçamento entre botões de ação */
+:host ::ng-deep .tabela-responsive .tabela td .btn {
+  margin-right: var(--espacamento-xs);
+}
+
+:host ::ng-deep .tabela-responsive .tabela td .btn:last-child {
+  margin-right: 0;
+}
+
+.info-row-single {
+  padding: var(--espacamento-xs) 0 !important;
+  gap: var(--espacamento-md) !important;
+}
+
+.info-row-single .label,
+.info-row-single .value {
+  font-size: var(--tamanho-fonte-xs);
+  line-height: 1.2;
+}
+
+/* Valor em destaque no título do modal */
+.valor-destaque {
+  color: var(--cor-sucesso);
+  font-weight: var(--peso-fonte-extrabold);
+  font-size: var(--tamanho-fonte-base);
+  margin-left: var(--espacamento-xs);
+}
+
+/* Informações da venda dentro do cartão */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--espacamento-xs) 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  font-weight: var(--peso-fonte-medio);
+  color: var(--cor-texto-primario);
+  font-size: var(--tamanho-fonte-sm);
+}
+
+.info-row .value {
+  color: var(--cor-texto-secundario);
+  font-size: var(--tamanho-fonte-sm);
+}
+
+/* Layout especial para linha única com cliente e valor */
+.info-row-single {
+  display: flex;
+  align-items: center;
+  padding: var(--espacamento-xs) 0;
+  border-bottom: 1px solid var(--cor-borda);
+  gap: var(--espacamento-lg);
+  flex-wrap: wrap;
+}
+
+.info-row-single .label {
+  font-weight: var(--peso-fonte-medio);
+  color: var(--cor-texto-primario);
+  font-size: var(--tamanho-fonte-sm);
+  flex-shrink: 0;
+}
+
+.info-row-single .value {
+  color: var(--cor-texto-secundario);
+  font-size: var(--tamanho-fonte-sm);
+}
+
+/* Status badges específicos */
+.status-badge {
+  padding: var(--espacamento-xs) var(--espacamento-sm);
+  border-radius: var(--raio-borda-sm);
+  font-size: var(--tamanho-fonte-xs);
+  font-weight: var(--peso-fonte-medio);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-registrado {
+  background-color: var(--cor-info-clara);
+  color: var(--cor-info-texto);
+}
+
+.status-pago-parcial {
+  background-color: var(--cor-alerta-clara);
+  color: var(--cor-alerta-texto);
+}
+
+.status-pago {
+  background-color: var(--cor-sucesso-clara);
+  color: var(--cor-sucesso-texto);
+}
+
+/* Responsividade mobile */
+@media (max-width: 640px) {
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--espacamento-xs);
+  }
+
+  .info-row-single {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--espacamento-xs);
+  }
+}

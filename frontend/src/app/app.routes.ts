@@ -12,6 +12,7 @@ import { ChangePasswordComponent } from './components/change-password/change-pas
 import { PerfilListComponent } from './components/perfil-list/perfil-list';
 import { PerfilFormComponent } from './components/perfil-form/perfil-form';
 import { CertificadoFormComponent } from './components/certificado-form/certificado-form';
+import { VendasListComponent } from './components/vendas-list/vendas-list';
 
 export const routes: Routes = [
   // Rota de configuração
@@ -78,8 +79,8 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'certificados/edit/:id',
-    component: CertificadoFormComponent,
+    path: 'vendas',
+    component: VendasListComponent,
     canActivate: [authGuard]
   },
   // Rotas de perfil: paths específicos antes da rota geral para evitar conflitos de prefixo

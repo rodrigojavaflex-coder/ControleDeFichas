@@ -1,3 +1,9 @@
+export enum Unidade {
+  INHUMAS = 'INHUMAS',
+  NERÓPOLIS = 'NERÓPOLIS',
+  UBERABA = 'UBERABA',
+}
+
 export enum Permission {
   CONFIGURACAO_ACCESS = 'configuracao:access',
   // Usuários
@@ -41,7 +47,18 @@ export enum Permission {
   CERTIFICADO_READ = 'certificado:read',
   CERTIFICADO_UPDATE = 'certificado:update',
   CERTIFICADO_DELETE = 'certificado:delete',
-  CERTIFICADO_AUDIT = 'certificado:audit'
+  CERTIFICADO_AUDIT = 'certificado:audit',
+
+  // Vendas
+  VENDA_CREATE = 'venda:create',
+  VENDA_READ = 'venda:read',
+  VENDA_UPDATE = 'venda:update',
+  VENDA_DELETE = 'venda:delete',
+  VENDA_BAIXAR = 'venda:baixar',
+  VENDA_REMOVE_BAIXA = 'venda:remove-baixa',
+  VENDA_AUDIT = 'venda:audit',
+  VENDA_FECHAR = 'venda:fechar',
+  VENDA_CANCELAR_FECHAMENTO = 'venda:cancelar-fechamento'
 }
 
 export interface PermissionGroup {
@@ -63,9 +80,10 @@ export interface Usuario {
   email: string;
   ativo: boolean;
   perfil: Perfil;
+  tema?: string; // Tema preferido do usuário (Claro ou Escuro)
+  unidade?: Unidade; // Unidade do usuário
   criadoEm: Date;
   atualizadoEm: Date;
-  tema?: string; // Tema preferido do usuário (Claro ou Escuro)
 }
 
 export interface ChangePasswordDto {
@@ -80,6 +98,7 @@ export interface CreateUsuarioDto {
   senha: string;
   ativo?: boolean;
   tema?: string; // Tema preferido (Claro ou Escuro)
+  unidade?: Unidade | null; // Unidade do usuário (null para sem unidade)
   perfilId: string; // ID do perfil do usuário
 }
 
@@ -89,6 +108,7 @@ export interface UpdateUsuarioDto {
   senha?: string;
   ativo?: boolean;
   tema?: string; // Permitir atualizar tema do usuário (Claro ou Escuro)
+  unidade?: Unidade | null; // Permitir atualizar unidade do usuário (null para limpar)
   perfilId?: string; // Atualizar perfil do usuário
 }
 

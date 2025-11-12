@@ -7,9 +7,11 @@ import { Usuario, Permission } from '../../models/usuario.model';
 
 interface MenuItem {
   label: string;
-  route: string;
-  icon: string;
+  route?: string;
+  icon?: string;
   requiredPermissions: Permission[];
+  children?: MenuItem[];
+  isOpen?: boolean;
 }
 
 @Component({
@@ -34,46 +36,65 @@ export class NavigationComponent implements OnInit, OnDestroy {
   // Definir todos os itens de menu disponíveis
   private allMenuItems: MenuItem[] = [
     {
-      label: 'Configuração',
-      route: '/configuracao',
-      icon: 'feather-settings',
-      requiredPermissions: [Permission.CONFIGURACAO_ACCESS]
+      label: 'Sistema',
+      icon: 'feather-cog',
+      requiredPermissions: [],
+      children: [
+        {
+          label: 'Auditoria',
+          route: '/auditoria',
+          icon: 'feather-eye',
+          requiredPermissions: [Permission.AUDIT_VIEW, Permission.AUDIT_MANAGE]
+        },
+        {
+          label: 'Usuários',
+          route: '/users',
+          icon: 'feather-users',
+          requiredPermissions: [Permission.USER_CREATE, Permission.USER_READ, Permission.USER_UPDATE, Permission.USER_DELETE]
+        },
+        {
+          label: 'Perfis',
+          route: '/perfil',
+          icon: 'feather-shield',
+          requiredPermissions: [
+            Permission.PROFILE_CREATE,
+            Permission.PROFILE_READ,
+            Permission.PROFILE_UPDATE,
+            Permission.PROFILE_DELETE
+          ]
+        },
+        {
+          label: 'Configuração',
+          route: '/configuracao',
+          icon: 'feather-sliders',
+          requiredPermissions: [Permission.CONFIGURACAO_ACCESS]
+        }
+      ]
     },
-      // Dashboard removido do menu
     {
-      label: 'Usuários',
-      route: '/users',
-      icon: 'feather-users',
-      requiredPermissions: [Permission.USER_CREATE, Permission.USER_READ, Permission.USER_UPDATE, Permission.USER_DELETE]
+      label: 'Cadastro',
+      icon: 'feather-file-text',
+      requiredPermissions: [],
+      children: [
+        {
+          label: 'Fichas Técnicas',
+          route: '/fichas-tecnicas',
+          icon: 'feather-layers',
+          requiredPermissions: [Permission.FICHA_TECNICA_CREATE, Permission.FICHA_TECNICA_READ, Permission.FICHA_TECNICA_UPDATE, Permission.FICHA_TECNICA_DELETE]
+        },
+        {
+          label: 'Vendas',
+          route: '/vendas',
+          icon: 'feather-shopping-cart',
+          requiredPermissions: [Permission.VENDA_CREATE, Permission.VENDA_READ, Permission.VENDA_UPDATE, Permission.VENDA_DELETE]
+        }
+      ]
     },
-      {
-        label: 'Fichas Técnicas',
-        route: '/fichas-tecnicas',
-        icon: 'feather-file-text',
-        requiredPermissions: [Permission.FICHA_TECNICA_CREATE, Permission.FICHA_TECNICA_READ, Permission.FICHA_TECNICA_UPDATE, Permission.FICHA_TECNICA_DELETE]
-      },
-      {
-        label: 'Auditoria',
-        route: '/auditoria',
-        icon: 'feather-search',
-        requiredPermissions: [Permission.AUDIT_VIEW, Permission.AUDIT_MANAGE]
-      },
     {
       label: 'Relatórios',
       route: '/reports',
       icon: 'feather-bar-chart-2',
       requiredPermissions: [Permission.REPORTS_VIEW, Permission.REPORTS_EXPORT]
-    },
-    {
-      label: 'Perfis',
-      route: '/perfil',
-      icon: 'feather-users',
-      requiredPermissions: [
-        Permission.PROFILE_CREATE,
-        Permission.PROFILE_READ,
-        Permission.PROFILE_UPDATE,
-        Permission.PROFILE_DELETE
-      ]
     }
   ];
 
@@ -108,15 +129,38 @@ export class NavigationComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.visibleMenuItems = this.allMenuItems.filter(menuItem => {
-      // Se não requer permissões, mostrar sempre
-      if (menuItem.requiredPermissions.length === 0) {
-        return true;
-      }
+    this.visibleMenuItems = this.allMenuItems
+      .map(menuItem => this.filterMenuItem(menuItem))
+      .filter(item => item !== null) as MenuItem[];
+  }
 
-  // Verificar se usuário tem pelo menos uma das permissões necessárias (via perfil)
-  return this.authService.hasAnyPermission(menuItem.requiredPermissions);
-    });
+  /**
+   * Filtra um item de menu e seus filhos baseado nas permissões
+   */
+  private filterMenuItem(menuItem: MenuItem): MenuItem | null {
+    // Se tem filhos, processar recursivamente
+    if (menuItem.children) {
+      const filteredChildren = menuItem.children
+        .map(child => this.filterMenuItem(child))
+        .filter(child => child !== null) as MenuItem[];
+
+      // Se tem filhos visíveis, mostrar o item pai
+      if (filteredChildren.length > 0) {
+        return {
+          ...menuItem,
+          children: filteredChildren,
+          isOpen: false
+        };
+      }
+      return null;
+    }
+
+    // Para itens folha, verificar permissões
+    if (menuItem.requiredPermissions.length === 0) {
+      return menuItem;
+    }
+
+    return this.authService.hasAnyPermission(menuItem.requiredPermissions) ? menuItem : null;
   }
 
   /**
@@ -144,9 +188,26 @@ export class NavigationComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Verifica se um submenu está ativo (algum filho está ativo)
+   */
+  isSubmenuActive(item: MenuItem): boolean {
+    if (!item.children) return false;
+    return item.children.some(child => child.route && this.isRouteActive(child.route));
+  }
+
+  /**
    * Manipula o clique em um item do menu
    */
   onMenuItemClick(): void {
     this.navigationService.closeOnNavigation();
+  }
+
+  /**
+   * Alterna a visibilidade de um submenu
+   */
+  toggleSubmenu(item: MenuItem): void {
+    if (item.children) {
+      item.isOpen = !item.isOpen;
+    }
   }
 }

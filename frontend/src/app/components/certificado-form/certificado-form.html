@@ -18,8 +18,7 @@
         <div class="header-actions">
           <button
             type="button"
-            class="btn btn-secondary"
-            (click)="onCancel()"
+            class="btn btn-cancelar" (click)="onCancel()"
             [disabled]="loading"
           >
             Cancelar
@@ -332,7 +331,7 @@
               <!-- Data de envio -->
               <div class="laudo-date">{{ laudo.criadoEm | date:'short' }}</div>
               <!-- Botão de remover estilo grid -->
-              <button type="button" class="btn btn-small btn-danger laudo-remove-btn"
+              <button type="button" class="btn btn-sm btn-danger laudo-remove-btn"
                 (click)="removeLaudo(laudo.id)"
                 [disabled]="!certificadoId">
                 Excluir
@@ -350,10 +349,10 @@
 
   <!-- Botões de ação fora do container -->
   <div class="footer-actions-outside">
-    <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="loading">
+    <button type="button" class="btn btn-cancelar" (click)="onCancel()" [disabled]="loading">
       Cancelar
     </button>
-    <button type="submit" class="btn btn-primary" [disabled]="loading" form="certificado-form">
+    <button type="submit" class="btn btn-salvar" [disabled]="loading" form="certificado-form">
       <ng-container *ngIf="loading">Salvando...</ng-container>
       <ng-container *ngIf="!loading">{{ isEditMode ? 'Atualizar' : 'Salvar' }} Certificado</ng-container>
     </button>

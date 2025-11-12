@@ -65,6 +65,7 @@ export class UsuariosService {
         senha: hashedPassword,
         ativo: createUsuarioDto.ativo ?? true,
         tema: createUsuarioDto.tema || 'Claro',
+        unidade: createUsuarioDto.unidade,
         perfil,
       };
 
@@ -218,6 +219,7 @@ export class UsuariosService {
       user.perfil = perfil;
     }
     if (updateUsuarioDto.tema !== undefined) user.tema = updateUsuarioDto.tema;
+    if (updateUsuarioDto.unidade !== undefined) user.unidade = updateUsuarioDto.unidade;
 
     try {
       return await this.usuarioRepository.save(user);

@@ -1,0 +1,290 @@
+/* ============================================
+   DESIGN SYSTEM - ARQUIVO PRINCIPAL
+   Sistema de Design Escalável e Consistente
+   Atualizado: 27/10/2025 - Bootstrap + Design System
+   ============================================ */
+
+/* ========== 1. TOKENS ========== */
+@import './tokens/_cores.css';
+@import './tokens/_espacamento.css';
+@import './tokens/_tipografia.css';
+@import './tokens/_bordas.css';
+@import './tokens/_transicoes.css';
+
+/* ========== 2. BASE ========== */
+@import './base/_reset.css';
+@import './base/_tipografia.css';
+@import './base/_temas.css';
+
+/* ========== 3. COMPONENTES ========== */
+@import './componentes/_botoes.css';
+@import './componentes/_formularios.css';
+@import './componentes/_modais.css';
+@import './componentes/_cartoes.css';
+@import './componentes/_tabelas.css';
+
+/* ========== 4. UTILITÁRIOS ========== */
+@import './utilitarios/_botoes-semanticos.css';
+
+/* ============================================
+   CONFIGURAÇÕES GLOBAIS
+   ============================================ */
+
+html {
+  font-size: 16px;
+  /* IMPORTANTE: Aplicar cores base diretamente no html */
+  background-color: var(--cor-fundo, #f8f9fa);
+  color: var(--cor-texto-primario, #212529);
+  
+  @media (max-width: 768px) {
+    font-size: 14px;
+  }
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* IMPORTANTE: Body herda do html */
+  background-color: inherit;
+  color: inherit;
+}
+
+/* Container Principal */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--espacamento-lg);
+}
+
+.container-fluido {
+  width: 100%;
+  padding: 0 var(--espacamento-lg);
+}
+
+/* Layout Principal */
+#app,
+app-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Utilitários de Visibilidade */
+.oculto {
+  display: none !important;
+}
+
+.visivel {
+  display: block !important;
+}
+
+.invisivel {
+  visibility: hidden !important;
+}
+
+@media (max-width: 640px) {
+  .oculto-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .visivel-mobile {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .oculto-tablet {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .visivel-tablet {
+    display: none !important;
+  }
+}
+
+/* Utilitários de Espaçamento */
+.m-0 { margin: 0 !important; }
+.mt-0 { margin-top: 0 !important; }
+.mb-0 { margin-bottom: 0 !important; }
+.ml-0 { margin-left: 0 !important; }
+.mr-0 { margin-right: 0 !important; }
+
+.p-0 { padding: 0 !important; }
+.pt-0 { padding-top: 0 !important; }
+.pb-0 { padding-bottom: 0 !important; }
+.pl-0 { padding-left: 0 !important; }
+.pr-0 { padding-right: 0 !important; }
+
+/* Utilitários de Flexbox */
+.flex {
+  display: flex !important;
+}
+
+.flex-coluna {
+  flex-direction: column !important;
+}
+
+.flex-linha {
+  flex-direction: row !important;
+}
+
+.flex-centro {
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.flex-entre {
+  justify-content: space-between !important;
+}
+
+.flex-inicio {
+  justify-content: flex-start !important;
+}
+
+.flex-fim {
+  justify-content: flex-end !important;
+}
+
+.flex-wrap {
+  flex-wrap: wrap !important;
+}
+
+.flex-1 {
+  flex: 1 !important;
+}
+
+/* Utilitários de Grid */
+.grid {
+  display: grid !important;
+}
+
+.gap-1 { gap: var(--espacamento-1) !important; }
+.gap-2 { gap: var(--espacamento-2) !important; }
+.gap-3 { gap: var(--espacamento-3) !important; }
+.gap-4 { gap: var(--espacamento-4) !important; }
+.gap-6 { gap: var(--espacamento-6) !important; }
+.gap-8 { gap: var(--espacamento-8) !important; }
+
+/* Utilitários de Largura */
+.w-completa {
+  width: 100% !important;
+}
+
+.w-auto {
+  width: auto !important;
+}
+
+.h-completa {
+  height: 100% !important;
+}
+
+.h-auto {
+  height: auto !important;
+}
+
+/* Utilitários de Posição */
+.position-relative {
+  position: relative !important;
+}
+
+.position-absolute {
+  position: absolute !important;
+}
+
+.position-fixed {
+  position: fixed !important;
+}
+
+.position-sticky {
+  position: sticky !important;
+}
+
+/* Loading State */
+.carregando {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.carregando::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  margin-top: -12px;
+  border: 3px solid var(--cor-primaria);
+  border-top-color: transparent;
+  border-radius: var(--raio-borda-completo);
+  animation: spin var(--duracao-lenta) linear infinite;
+}
+
+/* ============================================
+   ANIMAÇÕES DE ENTRADA
+   ============================================ */
+
+.fade-in {
+  animation: var(--animacao-fade-in);
+}
+
+.slide-up {
+  animation: var(--animacao-slide-up);
+}
+
+.slide-down {
+  animation: var(--animacao-slide-down);
+}
+
+.slide-left {
+  animation: var(--animacao-slide-left);
+}
+
+.slide-right {
+  animation: var(--animacao-slide-right);
+}
+
+.scale-in {
+  animation: var(--animacao-scale-in);
+}
+
+/* ============================================
+   ACESSIBILIDADE
+   ============================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Melhorias para modo de alto contraste */
+@media (prefers-contrast: high) {
+  :root {
+    --borda-base: var(--largura-borda-grossa) var(--estilo-borda-solida) var(--cor-borda);
+  }
+}
+
+/* Respeitar preferência de movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

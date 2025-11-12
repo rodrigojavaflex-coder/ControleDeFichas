@@ -1,6 +1,5 @@
 .user-list-container {
-  padding: 2rem;
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -59,6 +58,8 @@
 }
 
 /* Botões */
+/* Estilos gerenciados em componentes/_tabelas.css */
+
 .btn {
   padding: 0.5rem 1rem;
   border: none;
@@ -80,49 +81,6 @@
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-}
-
-.btn-primary {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #2563eb;
-}
-
-.btn-secondary {
-  background-color: var(--text-secondary, #6c757d);
-  color: white;
-  transition: all 0.3s ease;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--text-primary, #545b62);
-}
-
-.btn-danger {
-  background-color: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background-color: #c82333;
-}
-
-.btn-info {
-  background-color: #17a2b8;
-  color: white;
-}
-
-.btn-info:hover:not(:disabled) {
-  background-color: #138496;
-}
-
-.btn-small {
-  padding: 0.25rem 0.5rem;
-  font-size: 12px;
-  margin-right: 0.5rem;
 }
 
 /* Loading e Error */
@@ -148,6 +106,8 @@
 }
 
 /* Tabela */
+/* Estilos gerais importados de componentes/_tabelas.css */
+
 .table-container {
   background: var(--bg-primary, white);
   border-radius: 8px;
@@ -161,34 +121,9 @@
   border-collapse: collapse;
 }
 
-.users-table th {
-  background-color: var(--bg-secondary, #f8f9fa);
-  padding: 1rem;
-  text-align: left;
-  font-weight: 600;
-  color: var(--text-primary, #495057);
-  border-bottom: 2px solid var(--border-color, #dee2e6);
-  transition: all 0.3s ease;
-}
-
-.users-table td {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color, #dee2e6);
-  vertical-align: middle;
-  color: var(--text-primary, #333);
-  transition: all 0.3s ease;
-}
-
-.users-table tbody tr:hover {
-  background-color: var(--bg-secondary, #f8f9fa);
-  transition: background-color 0.3s ease;
-}
-
-.users-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
 /* Status */
+/* Estilos específicos para status de usuário */
+
 .status-active {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
@@ -199,6 +134,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   transition: all 0.3s ease;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .status-inactive {
@@ -211,6 +148,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   transition: all 0.3s ease;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 /* No users */

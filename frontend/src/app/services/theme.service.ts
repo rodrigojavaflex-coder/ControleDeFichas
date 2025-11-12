@@ -192,6 +192,10 @@ export class ThemeService {
   }
   
   private updateBodyClass(theme: Theme): void {
+    // Aplicar atributo data-theme no <html> (Design System)
+    document.documentElement.setAttribute('data-theme', theme);
+    
+    // Aplicar classe no <body> (compatibilidade)
     const body = document.body;
     body.classList.remove('theme-light', 'theme-dark');
     body.classList.add(`theme-${theme}`);

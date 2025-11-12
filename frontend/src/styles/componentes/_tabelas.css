@@ -1,0 +1,529 @@
+/* ============================================
+   TABELAS E LAYOUT DE AÇÕES
+   Configuração Geral do Sistema
+   ============================================ */
+
+/* Container de Tabelas */
+.table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+/* Tabela Geral */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Tema Escuro - Tabela */
+body.theme-dark table {
+  background: #2d3748;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-dark table th,
+body.theme-dark table td {
+  border-bottom: 1px solid #4b5563;
+  color: #e0e0e0;
+}
+
+body.theme-dark table th {
+  background-color: #1a202c;
+  color: #cbd5e0;
+}
+
+body.theme-dark table tbody tr:hover {
+  background-color: #374151;
+}
+
+/* Cabeçalho de Tabela */
+table th,
+table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Linhas da Tabela */
+table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============================================
+   COLUNA DE AÇÕES - LAYOUT EM PILHA
+   ============================================ */
+
+/* Célula de Ações com Largura Fixa */
+.actions-cell {
+  width: 85px !important;
+  min-width: 85px !important;
+  max-width: 85px !important;
+  padding: 8px 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+}
+
+/* Botões dentro da célula de ações */
+.actions-cell .btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 24px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Reset específico para garantir que nenhum botão tenha margem */
+.actions-cell .btn:first-child,
+.actions-cell .btn:nth-child(2),
+.actions-cell .btn:nth-child(3),
+.actions-cell .btn:nth-child(4),
+.actions-cell .btn:nth-child(5) {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.actions-cell .btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.actions-cell .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Botão Extra Pequeno para Ações */
+.btn-sm {
+  padding: 0;
+  font-size: 0.7rem;
+  font-weight: 500;
+  height: 24px;
+  min-height: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  box-sizing: border-box;
+  transform: translateX(0);
+  backface-visibility: hidden;
+}
+
+.btn-xs {
+  padding: 0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  height: 20px;
+  min-height: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  box-sizing: border-box;
+  transform: translateX(0);
+  backface-visibility: hidden;
+}
+
+/* ============================================
+   VARIAÇÕES DE BOTÕES DE AÇÃO
+   ============================================ */
+
+.btn-editar {
+  background-color: #0056b3;
+  color: white;
+}
+
+.btn-editar:hover:not(:disabled) {
+  background-color: #003d82;
+}
+
+.btn-excluir {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-excluir:hover:not(:disabled) {
+  background-color: #bd2130;
+}
+
+.btn-baixa {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-baixa:hover:not(:disabled) {
+  background-color: #1e7e34;
+}
+
+.btn-auditoria {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-auditoria:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.btn-visualizar {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-visualizar:hover:not(:disabled) {
+  background-color: #117a8b;
+}
+
+.btn-novo {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-novo:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.btn-limpar {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-limpar:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.btn-cancelar {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-cancelar:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+/* ============================================
+   TEMA ESCURO - BOTÕES
+   ============================================ */
+
+body.theme-dark .btn-editar {
+  background-color: #1e40af;
+}
+
+body.theme-dark .btn-editar:hover:not(:disabled) {
+  background-color: #1e3a8a;
+}
+
+body.theme-dark .btn-excluir {
+  background-color: #991b1b;
+}
+
+body.theme-dark .btn-excluir:hover:not(:disabled) {
+  background-color: #7f1d1d;
+}
+
+body.theme-dark .btn-baixa {
+  background-color: #15803d;
+}
+
+body.theme-dark .btn-baixa:hover:not(:disabled) {
+  background-color: #166534;
+}
+
+body.theme-dark .btn-auditoria {
+  background-color: #4b5563;
+}
+
+body.theme-dark .btn-auditoria:hover:not(:disabled) {
+  background-color: #3f4956;
+}
+
+body.theme-dark .btn-visualizar {
+  background-color: #0369a1;
+}
+
+body.theme-dark .btn-visualizar:hover:not(:disabled) {
+  background-color: #0c4a6e;
+}
+
+/* ============================================
+   INPUTS DENTRO DA TABELA
+   ============================================ */
+
+table input.form-control {
+  padding: 0 8px;
+  height: 32px;
+  line-height: 32px;
+  font-size: 0.85rem;
+}
+
+table select.form-control {
+  padding: 0 24px 0 8px;
+  height: 32px;
+  line-height: 32px;
+  font-size: 0.85rem;
+}
+
+/* ============================================
+   ESTADOS ESPECIAIS DE LINHAS
+   ============================================ */
+
+/* Nova linha */
+.new-row {
+  background-color: #e3f2fd !important;
+  border-left: 4px solid #2196f3;
+}
+
+.new-row td {
+  border-bottom: 2px solid #2196f3;
+}
+
+/* Linha em edição */
+.editing-row {
+  background-color: #fff3cd !important;
+  border-left: 4px solid #ffc107;
+}
+
+.editing-row td {
+  border-bottom: 2px solid #ffc107;
+}
+
+/* Linha sem dados */
+.no-data {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.no-data i {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  display: block;
+  opacity: 0.5;
+}
+
+/* ============================================
+   RESPONSIVIDADE
+   ============================================ */
+
+@media (max-width: 1200px) {
+  /* Tablets grandes */
+  .actions-cell {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+    padding: 8px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .actions-cell .btn {
+    width: 100% !important;
+    height: 22px !important;
+    font-size: 0.65rem;
+    flex-shrink: 0 !important;
+  }
+
+  /* Reset específico para garantir que nenhum botão tenha margem */
+  .actions-cell .btn:first-child,
+  .actions-cell .btn:nth-child(2),
+  .actions-cell .btn:nth-child(3),
+  .actions-cell .btn:nth-child(4),
+  .actions-cell .btn:nth-child(5) {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Tablets e mobile */
+  .actions-cell {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: none !important;
+    padding: 8px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .actions-cell .btn {
+    width: 100% !important;
+    height: 22px !important;
+    font-size: 0.65rem;
+    flex-shrink: 0 !important;
+  }
+
+  /* Reset específico para garantir que nenhum botão tenha margem */
+  .actions-cell .btn:first-child,
+  .actions-cell .btn:nth-child(2),
+  .actions-cell .btn:nth-child(3),
+  .actions-cell .btn:nth-child(4),
+  .actions-cell .btn:nth-child(5) {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  table th,
+  table td {
+    padding: 8px 10px;
+  }
+
+  table th {
+    font-size: 0.8rem;
+  }
+
+  table {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Mobile pequeno */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .actions-cell {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: none !important;
+    padding: 8px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .actions-cell .btn {
+    width: 100% !important;
+    height: 20px !important;
+    font-size: 0.6rem;
+    flex-shrink: 0 !important;
+  }
+
+  /* Reset específico para garantir que nenhum botão tenha margem */
+  .actions-cell .btn:first-child,
+  .actions-cell .btn:nth-child(2),
+  .actions-cell .btn:nth-child(3),
+  .actions-cell .btn:nth-child(4),
+  .actions-cell .btn:nth-child(5) {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  table th,
+  table td {
+    padding: 6px 8px;
+  }
+
+  table th {
+    font-size: 0.75rem;
+  }
+
+  table {
+    font-size: 0.75rem;
+  }
+}
+
+/* ============================================
+   STATUS BADGES
+   ============================================ */
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-registrado {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.status-cancelado {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-pago {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-pago-parcial {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-fechado {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+/* ============================================
+   OBSERVAÇÕES E CÉLULAS TRUNCADAS
+   ============================================ */
+
+.observacao-cell,
+.descricao-cell,
+.texto-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .observacao-cell,
+  .descricao-cell,
+  .texto-cell {
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .observacao-cell,
+  .descricao-cell,
+  .texto-cell {
+    max-width: 100px;
+  }
+}

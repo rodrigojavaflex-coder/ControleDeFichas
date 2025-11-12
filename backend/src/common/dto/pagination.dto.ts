@@ -17,7 +17,7 @@ export class PaginationDto {
 
   @ApiProperty({
     minimum: 1,
-    maximum: 100,
+    maximum: 200,
     default: 10,
     description: 'Quantidade de itens por página',
     required: false,
@@ -26,6 +26,6 @@ export class PaginationDto {
   @Type(() => Number)
   @IsPositive()
   @Min(1)
-  @Max(100)
+  @Max(200)
   limit?: number = 10;
 }

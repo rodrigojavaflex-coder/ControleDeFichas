@@ -1,0 +1,464 @@
+/* ============================================
+   ESTILOS ESPECÍFICOS DE TEMAS - DESIGN SYSTEM
+   ============================================
+   
+   Este arquivo contém estilos específicos que precisam
+   ser aplicados diretamente aos elementos conforme o tema.
+   
+   Estes estilos complementam as variáveis CSS definidas em
+   tokens/_cores.css para casos onde variáveis não são suficientes.
+   
+   ATUALIZADO: 27/10/2025 - Sistema de temas unificado
+   ============================================ */
+
+/* ========== Transições Suaves ========== */
+[data-theme="dark"] *,
+[data-theme="dark"] *::before,
+[data-theme="dark"] *::after,
+[data-theme="light"] *,
+[data-theme="light"] *::before,
+[data-theme="light"] *::after {
+  transition: 
+    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== HTML/Body Base ========== */
+html {
+  color-scheme: light dark;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ========== Tema Escuro - Body ========== */
+[data-theme="dark"] body {
+  background-color: var(--cor-fundo);
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] html {
+  background-color: var(--cor-fundo);
+}
+
+/* ========== Tema Claro - Body ========== */
+[data-theme="light"] body {
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="light"] html {
+  background-color: var(--cor-superficie);
+}
+
+/* ========== Status Badges - Tema Escuro ========== */
+[data-theme="dark"] .status-registrado {
+  background-color: #1e40af;
+  color: #dbeafe;
+}
+
+[data-theme="dark"] .status-pago-parcial {
+  background-color: #b45309;
+  color: #fef3c7;
+}
+
+[data-theme="dark"] .status-pago {
+  background-color: #166534;
+  color: #dcfce7;
+}
+
+[data-theme="dark"] .status-cancelado {
+  background-color: #991b1b;
+  color: #fecaca;
+}
+
+/* ========== Prefixos e Sufixos de Input - Tema Escuro ========== */
+[data-theme="dark"] .prefixo-input,
+[data-theme="dark"] .sufixo-input {
+  background-color: var(--cor-superficie-hover);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-secundario);
+}
+
+[data-theme="dark"] .prefixo-input:hover,
+[data-theme="dark"] .sufixo-input:hover {
+  background-color: var(--cor-superficie-ativa);
+}
+
+/* ========== Certificado Badge Específico ========== */
+[data-theme="dark"] .certificado-form-container .ficha-info .ficha-badge {
+  background-color: var(--cor-superficie-hover);
+  color: var(--cor-texto-primario);
+  border-color: var(--cor-borda);
+}
+
+[data-theme="light"] .certificado-form-container .ficha-info .ficha-badge {
+  background-color: var(--cor-superficie-hover);
+  color: var(--cor-texto-primario);
+  border-color: var(--cor-borda);
+}
+
+/* ========== Elementos Genéricos - Tema Escuro ========== */
+[data-theme="dark"] .info-row .label {
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .info-row .value:not(.status-badge) {
+  color: var(--cor-texto-secundario);
+}
+
+/* ========== Tabelas - Tema Escuro ========== */
+[data-theme="dark"] .data-table {
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto-primario);
+  border-color: var(--cor-borda);
+}
+
+[data-theme="dark"] .data-table th {
+  background-color: var(--cor-superficie-hover);
+  color: var(--cor-texto-primario);
+  border-color: var(--cor-borda);
+}
+
+[data-theme="dark"] .data-table td {
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .data-table tr:hover {
+  background-color: var(--cor-superficie-hover);
+}
+
+/* ========== Navegação - Tema Escuro ========== */
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .nav-list {
+  background-color: var(--cor-superficie);
+}
+
+[data-theme="dark"] .nav-item,
+[data-theme="dark"] .nav-link,
+[data-theme="dark"] .nav-text {
+  color: var(--cor-texto-secundario);
+}
+
+[data-theme="dark"] .nav-link:hover {
+  background-color: var(--cor-superficie-hover);
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .nav-link.active {
+  background-color: #21262f;
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .submenu-toggle.active {
+  background-color: #21262f;
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .submenu-link.active {
+  background-color: #21262f;
+  color: var(--cor-texto-primario);
+}
+
+/* ========== Headers e Containers - Tema Escuro ========== */
+[data-theme="dark"] .app-header,
+[data-theme="dark"] .page-header {
+  background-color: var(--cor-superficie);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .form-section,
+[data-theme="dark"] .ficha-form,
+[data-theme="dark"] .card,
+[data-theme="dark"] .panel {
+  background-color: var(--cor-superficie);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+/* ========== Botões Bootstrap - Tema Escuro ========== */
+[data-theme="dark"] .btn {
+  color: var(--cor-texto-primario);
+  border-color: var(--cor-borda);
+}
+
+[data-theme="dark"] .btn-primary {
+  background-color: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background-color: var(--cor-primaria-hover);
+  border-color: var(--cor-primaria-hover);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background-color: var(--cor-secundaria);
+  border-color: var(--cor-secundaria);
+  color: var(--cor-texto-inverso);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background-color: var(--cor-secundaria-hover);
+  border-color: var(--cor-secundaria-hover);
+}
+
+[data-theme="dark"] .btn-success {
+  background-color: var(--cor-sucesso);
+  border-color: var(--cor-sucesso);
+  color: var(--cor-texto-inverso);
+}
+
+[data-theme="dark"] .btn-success:hover {
+  background-color: var(--cor-sucesso-hover);
+  border-color: var(--cor-sucesso-hover);
+}
+
+[data-theme="dark"] .btn-danger {
+  background-color: var(--cor-perigo);
+  border-color: var(--cor-perigo);
+  color: var(--cor-texto-inverso);
+}
+
+[data-theme="dark"] .btn-danger:hover {
+  background-color: var(--cor-perigo-hover);
+  border-color: var(--cor-perigo-hover);
+}
+
+[data-theme="dark"] .btn-info {
+  background-color: var(--cor-info);
+  border-color: var(--cor-info);
+  color: var(--cor-texto-inverso);
+}
+
+[data-theme="dark"] .btn-info:hover {
+  background-color: var(--cor-info-hover);
+  border-color: var(--cor-info-hover);
+}
+
+[data-theme="dark"] .btn-outline-primary {
+  background-color: transparent;
+  border-color: var(--cor-primaria);
+  color: var(--cor-primaria);
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+  background-color: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+  background-color: transparent;
+  border-color: var(--cor-secundaria);
+  color: var(--cor-texto-secundario);
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: var(--cor-secundaria);
+  border-color: var(--cor-secundaria);
+  color: var(--cor-texto-inverso);
+}
+
+/* ========== Inputs e Forms Bootstrap - Tema Escuro ========== */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .form-input {
+  background-color: var(--cor-superficie-hover);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus,
+[data-theme="dark"] .form-input:focus {
+  background-color: var(--cor-superficie-hover);
+  border-color: var(--cor-primaria);
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .form-control::placeholder,
+[data-theme="dark"] .form-input::placeholder {
+  color: var(--cor-texto-terciario);
+}
+
+[data-theme="dark"] .form-label,
+[data-theme="dark"] label {
+  color: var(--cor-texto-primario);
+}
+
+[data-theme="dark"] .filters-section {
+  background-color: var(--cor-superficie);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+/* ========== Compatibilidade com Classes Legadas (body.theme-*) ========== */
+/* NOTA: Manter apenas para compatibilidade durante transição */
+/* TODO: Remover após migração completa de todos os componentes */
+
+body.theme-dark {
+  background-color: var(--cor-fundo);
+  color: var(--cor-texto-primario);
+}
+
+body.theme-light {
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto-primario);
+}
+
+/* Aplicar transições também para compatibilidade legada */
+body.theme-dark *,
+body.theme-dark *::before,
+body.theme-dark *::after,
+body.theme-light *,
+body.theme-light *::before,
+body.theme-light *::after {
+  transition: 
+    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== Regras Legadas Espelhadas ========== */
+body.theme-dark .status-registrado {
+  background-color: #1e40af;
+  color: #dbeafe;
+}
+
+body.theme-dark .status-pago-parcial {
+  background-color: #b45309;
+  color: #fef3c7;
+}
+
+body.theme-dark .status-pago {
+  background-color: #166534;
+  color: #dcfce7;
+}
+
+body.theme-dark .status-cancelado {
+  background-color: #991b1b;
+  color: #fecaca;
+}
+
+body.theme-dark .prefixo-input,
+body.theme-dark .sufixo-input {
+  background-color: var(--cor-superficie-hover);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-secundario);
+}
+
+body.theme-dark .data-table {
+  background-color: var(--cor-superficie);
+  color: var(--cor-texto-primario);
+}
+
+body.theme-dark .data-table th {
+  background-color: var(--cor-superficie-hover);
+  color: var(--cor-texto-primario);
+  border-color: var(--cor-borda);
+}
+
+body.theme-dark .data-table td {
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+body.theme-dark .sidebar,
+body.theme-dark .form-section,
+body.theme-dark .ficha-form,
+body.theme-dark .card,
+body.theme-dark .panel,
+body.theme-dark .filters-section {
+  background-color: var(--cor-superficie);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+body.theme-dark .nav-link {
+  color: var(--cor-texto-secundario);
+}
+
+body.theme-dark .nav-link:hover {
+  background-color: var(--cor-superficie-hover);
+}
+
+body.theme-dark .nav-link.active {
+  background-color: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+}
+
+/* Botões Bootstrap para compatibilidade legada */
+body.theme-dark .btn {
+  color: var(--cor-texto-primario);
+  border-color: var(--cor-borda);
+}
+
+body.theme-dark .btn-primary {
+  background-color: var(--cor-primaria);
+  border-color: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+}
+
+body.theme-dark .btn-secondary {
+  background-color: var(--cor-secundaria);
+  border-color: var(--cor-secundaria);
+  color: var(--cor-texto-inverso);
+}
+
+body.theme-dark .btn-success {
+  background-color: var(--cor-sucesso);
+  border-color: var(--cor-sucesso);
+  color: var(--cor-texto-inverso);
+}
+
+body.theme-dark .btn-danger {
+  background-color: var(--cor-perigo);
+  border-color: var(--cor-perigo);
+  color: var(--cor-texto-inverso);
+}
+
+body.theme-dark .btn-info {
+  background-color: var(--cor-info);
+  border-color: var(--cor-info);
+  color: var(--cor-texto-inverso);
+}
+
+body.theme-dark .btn-outline-primary {
+  background-color: transparent;
+  border-color: var(--cor-primaria);
+  color: var(--cor-primaria);
+}
+
+body.theme-dark .btn-outline-secondary {
+  background-color: transparent;
+  border-color: var(--cor-secundaria);
+  color: var(--cor-texto-secundario);
+}
+
+body.theme-dark .form-control,
+body.theme-dark .form-select,
+body.theme-dark .form-input {
+  background-color: var(--cor-superficie-hover);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+body.theme-dark .form-control::placeholder,
+body.theme-dark .form-input::placeholder {
+  color: var(--cor-texto-terciario);
+}
+
+body.theme-dark .form-label {
+  color: var(--cor-texto-primario);
+}

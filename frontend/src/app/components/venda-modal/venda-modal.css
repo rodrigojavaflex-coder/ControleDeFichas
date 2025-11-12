@@ -1,0 +1,33 @@
+/* ============================================
+   MODAL DE VENDA - USANDO DESIGN SYSTEM
+   ============================================
+   
+   As classes principais vêm do Design System:
+   - .modal-overlay, .modal-conteudo, .modal-cabecalho, .modal-corpo, .modal-rodape
+   - .botao, .botao-primario, .botao-fantasma
+   - .campo, .label-campo, .grupo-campo
+   - .grid-formulario
+   - .grupo-input, .prefixo-input
+   
+   Este arquivo contém apenas ajustes específicos do modal de venda.
+   O tema escuro é gerenciado automaticamente pelo Design System.
+   ============================================ */
+
+/* Ajustes para grid customizado com 5 colunas na primeira linha */
+@media (max-width: 1024px) {
+  [style*="grid-template-columns: repeat(5, 1fr)"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  [style*="grid-template-columns: repeat(5, 1fr)"],
+  [style*="grid-template-columns: repeat(3, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Remove margin-bottom do último grid */
+.modal-corpo > .grid-formulario:last-child {
+  margin-bottom: 0;
+}

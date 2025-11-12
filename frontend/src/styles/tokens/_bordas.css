@@ -1,0 +1,45 @@
+/* ============================================
+   TOKENS DE BORDAS - DESIGN SYSTEM
+   ============================================ */
+
+:root {
+  /* ========== Raio de Borda ========== */
+  --raio-borda-nenhum: 0;
+  --raio-borda-xs: 0.125rem;  /* 2px */
+  --raio-borda-sm: 0.25rem;   /* 4px */
+  --raio-borda-md: 0.5rem;    /* 8px */
+  --raio-borda-lg: 0.75rem;   /* 12px */
+  --raio-borda-xl: 1rem;      /* 16px */
+  --raio-borda-2xl: 1.5rem;   /* 24px */
+  --raio-borda-3xl: 2rem;     /* 32px */
+  --raio-borda-completo: 9999px;
+  --raio-borda-circular: 50%;
+  
+  /* ========== Largura de Borda ========== */
+  --largura-borda-fina: 1px;
+  --largura-borda-base: 2px;
+  --largura-borda-grossa: 3px;
+  --largura-borda-extra-grossa: 4px;
+  
+  /* ========== Estilos de Borda ========== */
+  --estilo-borda-solida: solid;
+  --estilo-borda-tracejada: dashed;
+  --estilo-borda-pontilhada: dotted;
+  
+  /* ========== Bordas Compostas ========== */
+  --borda-fina: var(--largura-borda-fina) var(--estilo-borda-solida) var(--cor-borda);
+  --borda-base: var(--largura-borda-base) var(--estilo-borda-solida) var(--cor-borda);
+  --borda-grossa: var(--largura-borda-grossa) var(--estilo-borda-solida) var(--cor-borda);
+  
+  --borda-primaria: var(--largura-borda-base) var(--estilo-borda-solida) var(--cor-primaria);
+  --borda-perigo: var(--largura-borda-base) var(--estilo-borda-solida) var(--cor-perigo);
+  --borda-sucesso: var(--largura-borda-base) var(--estilo-borda-solida) var(--cor-sucesso);
+  
+  /* ========== Raio de Borda de Componentes ========== */
+  --raio-botao: var(--raio-borda-md);
+  --raio-campo: var(--raio-borda-md);
+  --raio-cartao: var(--raio-borda-lg);
+  --raio-modal: var(--raio-borda-xl);
+  --raio-alerta: var(--raio-borda-md);
+  --raio-badge: var(--raio-borda-sm);
+}

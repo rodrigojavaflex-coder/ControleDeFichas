@@ -12,6 +12,7 @@ import {
   IsIn,
 } from 'class-validator';
 import { Permission } from '../../../common/enums/permission.enum';
+import { Unidade } from '../../../common/enums/unidade.enum';
 
 export class CreateUsuarioDto {
   @ApiProperty({
@@ -71,4 +72,14 @@ export class CreateUsuarioDto {
   @IsString({ message: 'Tema deve ser uma string' })
   @IsIn(['Claro', 'Escuro'], { message: 'Tema deve ser Claro ou Escuro' })
   tema?: string = 'Claro';
+
+  @ApiProperty({
+    description: 'Unidade do usuário',
+    example: 'INHUMAS',
+    enum: Unidade,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(Unidade, { message: 'Unidade deve ser um valor válido (INHUMAS, NERÓPOLIS, UBERABA)' })
+  unidade?: Unidade;
 }

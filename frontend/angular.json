@@ -28,6 +28,7 @@
               }
             ],
             "styles": [
+              "src/styles/design-system.css",
               "src/styles.css"
             ]
           },
