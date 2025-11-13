@@ -283,7 +283,7 @@ export class BaixasListComponent implements OnInit {
               <span>Total ${origemLabel}:</span> ${this.formatCurrency(totalOrigem)}
             </div>
             <div class="origin-type-summary">
-              <div class="origin-type-summary-title">Totais por tipo</div>
+              <div class="origin-type-summary-title">Resumo por tipo (${origemLabel})</div>
               <table>
                 <thead>
                   <tr>
@@ -294,6 +294,12 @@ export class BaixasListComponent implements OnInit {
                 <tbody>
                   ${linhasTotaisPorTipoNaOrigem}
                 </tbody>
+                <tfoot>
+                  <tr>
+                    <td><strong>Total ${origemLabel}</strong></td>
+                    <td><strong>${this.formatCurrency(totalOrigem)}</strong></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </section>
@@ -312,12 +318,15 @@ export class BaixasListComponent implements OnInit {
       )
       .join('');
 
+    const reportTimestamp = this.getReportTimestamp();
+    const reportTitle = 'Fechamento';
+
     popup.document.write(`
       <!DOCTYPE html>
       <html lang="pt-BR">
         <head>
           <meta charset="utf-8" />
-          <title>Fechamento</title>
+          <title>${reportTitle}</title>
           <style>
             body { font-family: 'Segoe UI', Arial, sans-serif; margin: 16px; color: #1f2937; background: #fff; font-size: 12px; }
             h1 { margin: 0; font-size: 20px; letter-spacing: 0.5px; color: #0f172a; }
@@ -359,9 +368,11 @@ export class BaixasListComponent implements OnInit {
           <header class="report-header">
             <div class="logo-area">${logoHtml}</div>
             <div class="title-area">
-              <h1>Fechamento</h1>
+              <h1>${reportTitle}</h1>
               <div class="subheader">
-                Período: ${this.dataInicialFilter || '-'} até ${this.dataFinalFilter || '-'} |
+                Período: ${this.formatReportDate(this.dataInicialFilter)} até ${this.formatReportDate(
+                  this.dataFinalFilter
+                )} |
                 Unidade: ${this.unidadeFilter || 'Todas'}
               </div>
             </div>
@@ -393,6 +404,7 @@ export class BaixasListComponent implements OnInit {
       </html>
     `);
     popup.document.close();
+    popup.document.title = `${reportTitle} ${reportTimestamp}`;
     popup.focus();
   }
   onValorBlur(type: 'min' | 'max'): void {
@@ -550,5 +562,27 @@ export class BaixasListComponent implements OnInit {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  }
+
+  private getReportTimestamp(): string {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(
+      now.getHours()
+    )}${pad(now.getMinutes())}`;
+  }
+
+  private formatReportDate(date: string | null | undefined): string {
+    if (!date) {
+      return '-';
+    }
+    const parsed = new Date(date);
+    if (isNaN(parsed.getTime())) {
+      return date;
+    }
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
   }
 }

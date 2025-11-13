@@ -39,17 +39,6 @@
             Imprimir
           </button>
         </div>
-        <div class="vendas-summary" *ngIf="selectedVendas.size > 0">
-          <span class="summary-item">
-            <strong>Qnt Vendas:</strong> {{ selectedVendas.size }}
-          </span>
-          <span class="summary-item">
-            <strong>Valor Compra:</strong> {{ formatCurrency(getTotalValorCompra()) }}
-          </span>
-          <span class="summary-item">
-            <strong>Valor Cliente:</strong> {{ formatCurrency(getTotalValorCliente()) }}
-          </span>
-        </div>
       </div>
     </div>
   </header>

@@ -467,6 +467,8 @@ export class VendasListComponent extends BaseListComponent<Venda> {
       );
       return;
     }
+    const reportTimestamp = this.getReportTimestamp();
+    const reportTitle = `Relatório de Vendas ${reportTimestamp}`;
 
     const currentUser = this.authService.getCurrentUser();
     const usuarioLabel = currentUser?.nome || currentUser?.email || 'Usuário não identificado';
@@ -605,7 +607,7 @@ export class VendasListComponent extends BaseListComponent<Venda> {
       <html lang="pt-BR">
         <head>
           <meta charset="utf-8" />
-          <title>Relatório de Vendas</title>
+          <title>${reportTitle}</title>
           <style>
             body { font-family: 'Segoe UI', Arial, sans-serif; margin: 16px; color: #1a202c; font-size: 12px; background: #fff; margin-bottom: 80px; }
             h1 { margin: 0; font-size: 20px; letter-spacing: 0.5px; }
@@ -645,7 +647,7 @@ export class VendasListComponent extends BaseListComponent<Venda> {
           <header class="report-header">
             <div class="logo-area">${logoHtml}</div>
             <div class="title-area">
-              <h1>Relatório de Vendas</h1>
+              <h1>${reportTitle}</h1>
             </div>
             <div class="header-spacer">&nbsp;</div>
           </header>
@@ -662,6 +664,7 @@ export class VendasListComponent extends BaseListComponent<Venda> {
       </html>
     `);
     popup.document.close();
+    popup.document.title = reportTitle;
     popup.focus();
   }
 
@@ -1110,5 +1113,13 @@ export class VendasListComponent extends BaseListComponent<Venda> {
     });
 
     return erros;
+  }
+
+  private getReportTimestamp(): string {
+    const now = new Date();
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(
+      now.getHours()
+    )}${pad(now.getMinutes())}`;
   }
 }
