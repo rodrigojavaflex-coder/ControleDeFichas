@@ -1,354 +1,321 @@
-<div class="vendas-list-container">
-  <div class="header">
-    <div class="header-left">
-      <h2>Vendas</h2>
-      <!-- Resumo de Vendas Selecionadas -->
-      <div class="vendas-summary" *ngIf="selectedVendas.size > 0">
-        <span class="summary-item">
-          <strong>Qnt Vendas:</strong> {{ selectedVendas.size }}
-        </span>
-        <span class="summary-divider">•</span>
-        <span class="summary-item">
-          <strong>Valor Compra:</strong> {{ formatCurrency(getTotalValorCompra()) }}
-        </span>
-        <span class="summary-divider">•</span>
-        <span class="summary-item">
-          <strong>Valor Cliente:</strong> {{ formatCurrency(getTotalValorCliente()) }}
-        </span>
+<div class="vendas-page">
+  <header class="page-header">
+    <div class="header-content">
+      <div>
+        <h2>Vendas</h2>
+        <p class="page-description">
+          Visualize e gerencie as vendas registradas, acompanhe status e totais rapidamente.
+        </p>
+        <div class="header-actions">
+          <button
+            *ngIf="canCreateVenda()"
+            class="btn btn-novo"
+            (click)="openNewVendaModal()"
+            [attr.disabled]="loading ? 'disabled' : null">
+            Nova Venda
+          </button>
+          <button
+            *ngIf="canFecharVendas()"
+            class="btn btn-fechar"
+            (click)="fecharVendasSelecionadas()"
+            [attr.disabled]="shouldDisableFecharVendasButton() ? 'disabled' : null"
+            [attr.title]="getFecharVendasTooltip()">
+            Fechar Vendas
+          </button>
+          <button
+            *ngIf="canCancelarFechamento()"
+            class="btn btn-cancelar-fechamento"
+            (click)="cancelarFechamentosSelecionados()"
+            [attr.disabled]="selectedVendas.size === 0 || loading || cancelamentoLoading ? 'disabled' : null"
+            title="Cancelar fechamento das vendas selecionadas">
+            Cancelar Fechamento
+          </button>
+          <button
+            *ngIf="canReadVenda()"
+            class="btn btn-imprimir"
+            (click)="imprimirFechamentoAtual()"
+            [attr.disabled]="items.length === 0 || loading ? 'disabled' : null"
+            title="Imprimir lista de vendas">
+            Imprimir
+          </button>
+        </div>
+        <div class="vendas-summary" *ngIf="selectedVendas.size > 0">
+          <span class="summary-item">
+            <strong>Qnt Vendas:</strong> {{ selectedVendas.size }}
+          </span>
+          <span class="summary-item">
+            <strong>Valor Compra:</strong> {{ formatCurrency(getTotalValorCompra()) }}
+          </span>
+          <span class="summary-item">
+            <strong>Valor Cliente:</strong> {{ formatCurrency(getTotalValorCliente()) }}
+          </span>
+        </div>
       </div>
     </div>
-    <div class="actions">
-      <button
-        *ngIf="canCreateVenda()"
-        class="btn btn-novo"
-        (click)="openNewVendaModal()"
-        [attr.disabled]="loading ? 'disabled' : null">
-        Nova Venda
-      </button>
-      <button
-        *ngIf="canFecharVendas()"
-        class="btn btn-fechar"
-        (click)="fecharVendasSelecionadas()"
-        [attr.disabled]="shouldDisableFecharVendasButton() ? 'disabled' : null"
-        [attr.title]="getFecharVendasTooltip()">
-        Fechar Vendas
-      </button>
-      <button
-        *ngIf="canCancelarFechamento()"
-        class="btn btn-cancelar-fechamento"
-        (click)="cancelarFechamentosSelecionados()"
-        [attr.disabled]="selectedVendas.size === 0 || loading || cancelamentoLoading ? 'disabled' : null"
-        title="Cancelar fechamento das vendas selecionadas">
-        Cancelar Fechamento
-      </button>
-      <button
-        *ngIf="canReadVenda()"
-        class="btn btn-imprimir"
-        (click)="imprimirFechamentoAtual()"
-        [attr.disabled]="items.length === 0 || loading ? 'disabled' : null"
-        title="Imprimir lista de vendas">
-        Imprimir
-      </button>
-      <button 
-        class="btn btn-limpar" 
-        (click)="clearFilters()"
-        title="Limpar filtros">
+  </header>
+
+  <section class="filters">
+    <div class="filter-group">
+      <label for="protocoloFilter">Protocolo</label>
+      <input
+        id="protocoloFilter"
+        type="text"
+        [(ngModel)]="protocoloFilter"
+        (input)="onFilterChange()"
+        placeholder="Buscar por protocolo..."
+        class="form-control">
+    </div>
+
+    <div class="filter-group">
+      <label for="clienteFilter">Cliente</label>
+      <input
+        id="clienteFilter"
+        type="text"
+        [(ngModel)]="clienteFilter"
+        (input)="onFilterChange()"
+        placeholder="Buscar por cliente..."
+        class="form-control">
+    </div>
+
+    <div class="filter-group">
+      <label for="vendedorFilter">Vendedor</label>
+      <input
+        id="vendedorFilter"
+        type="text"
+        [(ngModel)]="vendedorFilter"
+        (input)="onFilterChange()"
+        placeholder="Buscar por vendedor..."
+        class="form-control">
+    </div>
+
+    <div class="filter-group">
+      <label for="ativoFilter">Ativo</label>
+      <input
+        id="ativoFilter"
+        type="text"
+        [(ngModel)]="ativoFilter"
+        (input)="onFilterChange()"
+        placeholder="Buscar por ativo..."
+        class="form-control">
+    </div>
+
+    <div class="filter-group">
+      <label for="origemFilter">Comprado em</label>
+      <select
+        id="origemFilter"
+        [(ngModel)]="origemFilter"
+        (change)="onFilterChange()"
+        class="form-control">
+        <option value="">Todas</option>
+        <option *ngFor="let origem of [VendaOrigem.GOIANIA, VendaOrigem.UBERABA, VendaOrigem.NEROPOLIS, VendaOrigem.OUTRO]" [value]="origem">
+          {{ getOrigemLabel(origem) }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label for="statusFilter">Status</label>
+      <select
+        id="statusFilter"
+        [(ngModel)]="statusFilter"
+        (change)="onFilterChange()"
+        class="form-control">
+        <option value="">Todos</option>
+        <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL, VendaStatus.FECHADO]" [value]="status">
+          {{ getStatusLabel(status) }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-group date-field">
+      <label for="dataInicialFilter">Data Venda Inicial</label>
+      <input
+        id="dataInicialFilter"
+        type="date"
+        [(ngModel)]="dataInicialFilter"
+        (change)="onFilterChange()"
+        class="form-control">
+    </div>
+
+    <div class="filter-group date-field">
+      <label for="dataFinalFilter">Data Venda Final</label>
+      <input
+        id="dataFinalFilter"
+        type="date"
+        [(ngModel)]="dataFinalFilter"
+        (change)="onFilterChange()"
+        class="form-control">
+    </div>
+
+    <div class="filter-group date-field">
+      <label for="dataInicialFechamentoFilter">Fechamento Inicial</label>
+      <input
+        id="dataInicialFechamentoFilter"
+        type="date"
+        [(ngModel)]="dataInicialFechamentoFilter"
+        (change)="onFilterChange()"
+        class="form-control">
+    </div>
+
+    <div class="filter-group date-field">
+      <label for="dataFinalFechamentoFilter">Fechamento Final</label>
+      <input
+        id="dataFinalFechamentoFilter"
+        type="date"
+        [(ngModel)]="dataFinalFechamentoFilter"
+        (change)="onFilterChange()"
+        class="form-control">
+    </div>
+
+    <div class="filter-group">
+      <label for="unidadeFilter">Unidade</label>
+      <select
+        id="unidadeFilter"
+        [(ngModel)]="unidadeFilter"
+        [disabled]="unidadeDisabled"
+        (change)="onFilterChange()"
+        class="form-control">
+        <option value="">Todas</option>
+        <option *ngFor="let unidade of unidades" [value]="unidade">
+          {{ unidade }}
+        </option>
+      </select>
+    </div>
+
+    <div class="filter-group filter-actions">
+      <label>&nbsp;</label>
+      <button class="btn btn-limpar" type="button" (click)="clearFilters()">
         Limpar
       </button>
     </div>
-  </div>
+  </section>
 
-  <!-- Filtros -->
-  <div class="filters">
-    <div class="filter-row">
-      <div class="filter-group">
-        <label for="protocoloFilter">Protocolo:</label>
-        <input
-          id="protocoloFilter"
-          type="text"
-          [(ngModel)]="protocoloFilter"
-          (input)="onFilterChange()"
-          placeholder="Buscar por protocolo..."
-          class="form-control">
-      </div>
-
-      <div class="filter-group">
-        <label for="clienteFilter">Cliente:</label>
-        <input
-          id="clienteFilter"
-          type="text"
-          [(ngModel)]="clienteFilter"
-          (input)="onFilterChange()"
-          placeholder="Buscar por cliente..."
-          class="form-control">
-      </div>
-
-      <div class="filter-group">
-        <label for="vendedorFilter">Vendedor:</label>
-        <input
-          id="vendedorFilter"
-          type="text"
-          [(ngModel)]="vendedorFilter"
-          (input)="onFilterChange()"
-          placeholder="Buscar por vendedor..."
-          class="form-control">
-      </div>
-
-      <div class="filter-group">
-        <label for="ativoFilter">Ativo:</label>
-        <input
-          id="ativoFilter"
-          type="text"
-          [(ngModel)]="ativoFilter"
-          (input)="onFilterChange()"
-          placeholder="Buscar por ativo..."
-          class="form-control">
-      </div>
-
-      <div class="filter-group">
-        <label for="origemFilter">Comprado em:</label>
-        <select
-          id="origemFilter"
-          [(ngModel)]="origemFilter"
-          (change)="onFilterChange()"
-          class="form-control">
-          <option value="">Todas</option>
-          <option *ngFor="let origem of [VendaOrigem.GOIANIA, VendaOrigem.UBERABA, VendaOrigem.NEROPOLIS, VendaOrigem.OUTRO]" [value]="origem">
-            {{ getOrigemLabel(origem) }}
-          </option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="statusFilter">Status:</label>
-        <select
-          id="statusFilter"
-          [(ngModel)]="statusFilter"
-          (change)="onFilterChange()"
-          class="form-control">
-          <option value="">Todos</option>
-          <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL, VendaStatus.FECHADO]" [value]="status">
-            {{ getStatusLabel(status) }}
-          </option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="dataInicialFilter">Data Inicial:</label>
-        <input
-          id="dataInicialFilter"
-          type="date"
-          [(ngModel)]="dataInicialFilter"
-          (change)="onFilterChange()"
-          class="form-control">
-      </div>
-
-      <div class="filter-group">
-        <label for="dataFinalFilter">Data Final:</label>
-        <input
-          id="dataFinalFilter"
-          type="date"
-          [(ngModel)]="dataFinalFilter"
-          (change)="onFilterChange()"
-          class="form-control">
-      </div>
-
-      <div class="filter-group">
-        <label for="dataInicialFechamentoFilter">Data Fechamento Inicial:</label>
-        <input
-          id="dataInicialFechamentoFilter"
-          type="date"
-          [(ngModel)]="dataInicialFechamentoFilter"
-          (change)="onFilterChange()"
-          class="form-control">
-      </div>
-
-      <div class="filter-group">
-        <label for="dataFinalFechamentoFilter">Data Fechamento Final:</label>
-        <input
-          id="dataFinalFechamentoFilter"
-          type="date"
-          [(ngModel)]="dataFinalFechamentoFilter"
-          (change)="onFilterChange()"
-          class="form-control">
-      </div>
-
-      <div class="filter-group">
-        <label for="unidadeFilter">Unidade:</label>
-        <select
-          id="unidadeFilter"
-          [(ngModel)]="unidadeFilter"
-          [disabled]="unidadeDisabled"
-          (change)="onFilterChange()"
-          class="form-control">
-          <option value="">Todas</option>
-          <option *ngFor="let unidade of unidades" [value]="unidade">
-            {{ unidade }}
-          </option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading -->
-  <div *ngIf="loading" class="loading">
+  <section *ngIf="loading" class="state-card">
     <div class="spinner"></div>
-    Carregando vendas...
-  </div>
+    <p>Carregando vendas...</p>
+  </section>
 
-  <!-- Erro -->
-  <div *ngIf="error" class="error-message">
+  <section *ngIf="error" class="state-card error-message">
     <i class="fas fa-exclamation-triangle"></i>
     {{ error }}
-  </div>
+  </section>
 
-  <!-- Tabela de Vendas -->
-  <div class="table-container" *ngIf="!loading && !error">
-    <table class="vendas-table">
-      <thead>
-        <tr>
-          <th class="checkbox-column">
-            <input
-              type="checkbox"
-              [checked]="isAllSelected()"
-              [indeterminate]="isIndeterminate()"
-              (change)="toggleSelectAll()"
-              title="Selecionar/Desselecionar todas as vendas">
-          </th>
-          <th>Protocolo</th>
-          <th>Data venda</th>
-          <th>Data fechamento</th>
-          <th>Cliente</th>
-          <th>Comprado em</th>
-          <th>Vendedor</th>
-          <th>Ativo</th>
-          <th>Valor compra</th>
-          <th>Valor cliente</th>
-          <th>Valor baixado</th>
-          <th>Status</th>
-          <th>Observação</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Vendas Existentes -->
-        <tr *ngFor="let venda of items">
-          <!-- Checkbox -->
-          <td class="checkbox-column">
-            <input
-              type="checkbox"
-              [checked]="isVendaSelected(venda.id)"
-              (change)="toggleSelectVenda(venda.id)"
-              title="Selecionar venda">
-          </td>
+  <section class="results-card" *ngIf="!loading && !error">
+    <div class="table-wrapper">
+      <table class="vendas-table">
+        <thead>
+          <tr>
+            <th class="checkbox-column">
+              <input
+                type="checkbox"
+                [checked]="isAllSelected()"
+                [indeterminate]="isIndeterminate()"
+                (change)="toggleSelectAll()"
+                title="Marcar/Desmarcar todas as vendas">
+            </th>
+            <th>Protocolo</th>
+            <th>Data venda</th>
+            <th>Data fechamento</th>
+            <th>Cliente</th>
+            <th>Comprado em</th>
+            <th>Vendedor</th>
+            <th>Ativo</th>
+            <th>Valor compra</th>
+            <th>Valor cliente</th>
+            <th>Valor Pago</th>
+            <th>Status</th>
+            <th>Observação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let venda of items">
+            <td class="checkbox-column">
+              <input
+                type="checkbox"
+                [checked]="isVendaSelected(venda.id)"
+                (change)="toggleSelectVenda(venda.id)"
+                title="Selecionar venda">
+            </td>
+            <td>{{ venda.protocolo }}</td>
+            <td>{{ formatDate(venda.dataVenda) }}</td>
+            <td>{{ venda.dataFechamento ? formatDate(venda.dataFechamento) : '-' }}</td>
+            <td>{{ venda.cliente }}</td>
+            <td>{{ getOrigemLabel(venda.origem) }}</td>
+            <td>{{ venda.vendedor }}</td>
+            <td>{{ venda.ativo || '-' }}</td>
+            <td>{{ formatCurrency(venda.valorCompra) }}</td>
+            <td>{{ formatCurrency(venda.valorCliente) }}</td>
+            <td>{{ formatCurrency(getValorBaixadoForVenda(venda.id)) }}</td>
+            <td>
+              <span class="status-badge {{ getStatusClass(venda.status) }}">
+                {{ getStatusLabel(venda.status) }}
+              </span>
+            </td>
+            <td class="observacao-cell">{{ venda.observacao || '-' }}</td>
+            <td class="actions-cell">
+              <button
+                *ngIf="canEditVenda()"
+                class="btn btn-sm btn-editar"
+                (click)="openEditVendaModal(venda)"
+                title="Editar">
+                Editar
+              </button>
+              <button
+                *ngIf="canLancarBaixa(venda)"
+                class="btn btn-sm btn-baixa"
+                (click)="openBaixaModal(venda)"
+                title="Lançar baixa">
+                Baixa
+              </button>
+              <button
+                *ngIf="canDeleteVenda()"
+                class="btn btn-sm btn-excluir"
+                (click)="deleteVenda(venda)"
+                title="Excluir">
+                Excluir
+              </button>
+              <button
+                *ngIf="canAuditVenda()"
+                class="btn btn-sm btn-auditoria"
+                (click)="openAuditHistory(venda)"
+                title="Ver histórico de auditoria">
+                Auditoria
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="items.length === 0 && !loading" class="no-data">
+            <td colspan="14" class="text-center">
+              <i class="fas fa-inbox"></i>
+              Nenhuma venda encontrada
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-          <!-- Protocolo -->
-          <td>{{ venda.protocolo }}</td>
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button
+        class="btn btn-sm btn-cancelar"
+        (click)="onPageChange(currentPage - 1)"
+        [attr.disabled]="(currentPage === 1 || loading) ? 'disabled' : null">
+        <i class="fas fa-chevron-left"></i> Anterior
+      </button>
 
-          <!-- Data Venda -->
-          <td>{{ formatDate(venda.dataVenda) }}</td>
+      <span class="page-info">
+        Página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} registros)
+      </span>
 
-          <!-- Data Fechamento -->
-          <td>{{ venda.dataFechamento ? formatDate(venda.dataFechamento) : '-' }}</td>
-
-          <!-- Cliente -->
-          <td>{{ venda.cliente }}</td>
-
-          <!-- Origem -->
-          <td>{{ getOrigemLabel(venda.origem) }}</td>
-
-          <!-- Vendedor -->
-          <td>{{ venda.vendedor }}</td>
-
-          <!-- Ativo -->
-          <td>{{ venda.ativo || '-' }}</td>
-
-          <!-- Valor Compra -->
-          <td>{{ formatCurrency(venda.valorCompra) }}</td>
-
-          <!-- Valor Cliente -->
-          <td>{{ formatCurrency(venda.valorCliente) }}</td>
-
-          <!-- Valor Baixado -->
-          <td>{{ formatCurrency(getValorBaixadoForVenda(venda.id)) }}</td>
-
-          <!-- Status -->
-          <td>
-            <span class="status-badge {{ getStatusClass(venda.status) }}">
-              {{ getStatusLabel(venda.status) }}
-            </span>
-          </td>
-
-          <!-- Observação -->
-          <td class="observacao-cell">{{ venda.observacao || '-' }}</td>
-
-          <!-- Ações -->
-          <td class="actions-cell">
-            <button
-              *ngIf="canEditVenda()"
-              class="btn btn-sm btn-editar"
-              (click)="openEditVendaModal(venda)"
-              title="Editar">
-              Editar
-            </button>
-            <button
-              *ngIf="canLancarBaixa(venda)"
-              class="btn btn-sm btn-baixa"
-              (click)="openBaixaModal(venda)"
-              title="Lançar baixa">
-              Baixa
-            </button>
-            <button
-              *ngIf="canDeleteVenda()"
-              class="btn btn-sm btn-excluir"
-              (click)="deleteVenda(venda)"
-              title="Excluir">
-              Excluir
-            </button>
-            <button
-              *ngIf="canAuditVenda()"
-              class="btn btn-sm btn-auditoria"
-              (click)="openAuditHistory(venda)"
-              title="Ver histórico de auditoria">
-              Auditoria
-            </button>
-          </td>
-        </tr>
-
-        <!-- Sem dados -->
-        <tr *ngIf="items.length === 0 && !loading" class="no-data">
-          <td colspan="14" class="text-center">
-            <i class="fas fa-inbox"></i>
-            Nenhuma venda encontrada
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Paginação -->
-  <div class="pagination" *ngIf="totalPages > 1">
-    <button
-      class="btn btn-sm btn-cancelar"
-      (click)="onPageChange(currentPage - 1)"
-      [attr.disabled]="(currentPage === 1 || loading) ? 'disabled' : null">
-      <i class="fas fa-chevron-left"></i> Anterior
-    </button>
-
-    <span class="page-info">
-      Página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} registros)
-    </span>
-
-    <button
-      class="btn btn-sm btn-cancelar"
-      (click)="onPageChange(currentPage + 1)"
-      [attr.disabled]="(currentPage === totalPages || loading) ? 'disabled' : null">
-      Próximo <i class="fas fa-chevron-right"></i>
-    </button>
-  </div>
+      <button
+        class="btn btn-sm btn-cancelar"
+        (click)="onPageChange(currentPage + 1)"
+        [attr.disabled]="(currentPage === totalPages || loading) ? 'disabled' : null">
+        Próximo <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </section>
 </div>
 
-<!-- Modal de Venda -->
 <app-venda-modal
   [showModal]="showVendaModal"
   [venda]="selectedVenda"
@@ -356,7 +323,6 @@
   (saved)="onVendaSaved($event)">
 </app-venda-modal>
 
-<!-- Modal de Histórico de Auditoria -->
 <app-historico-auditoria
   *ngIf="selectedVendaForAudit"
   [entidade]="'vendas'"
@@ -376,7 +342,6 @@
   (modalClosed)="closeAuditModal()">
 </app-historico-auditoria>
 
-<!-- Modal de Lançar Baixa -->
 <app-lancar-baixa-modal
   [showModal]="showBaixaModal"
   [venda]="selectedVendaForBaixa"
@@ -384,7 +349,6 @@
   (modalClosed)="onBaixaModalClosed()">
 </app-lancar-baixa-modal>
 
-<!-- Modal de Confirmação de Exclusão -->
 <div class="confirmation-modal-overlay" *ngIf="showDeleteModal" (click)="onDeleteCancelled()">
   <div class="confirmation-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">

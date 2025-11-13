@@ -42,6 +42,20 @@
   height: auto;
 }
 
+:host ::ng-deep .btn-recibo {
+  background-color: #0ea5e9;
+  color: #fff;
+  border: none;
+  margin-left: var(--espacamento-xs);
+  font-size: var(--tamanho-fonte-xs);
+  padding: var(--espacamento-xs) var(--espacamento-sm);
+  height: auto;
+}
+
+:host ::ng-deep .btn-recibo:hover:not(:disabled) {
+  background-color: #0284c7;
+}
+
 /* Reduzir altura da seção de Baixas Realizadas */
 .cartao {
   margin-top: var(--espacamento-md) !important;

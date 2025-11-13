@@ -31,3 +31,21 @@
 .modal-corpo > .grid-formulario:last-child {
   margin-bottom: 0;
 }
+
+/* Reduzir altura do cabeçalho e rodapé do modal de venda */
+.modal-venda .modal-cabecalho,
+.modal-venda .modal-rodape {
+  padding: var(--espacamento-xs) var(--espacamento-md);
+  min-height: auto;
+}
+
+.modal-venda .modal-titulo {
+  font-size: var(--tamanho-fonte-base);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.modal-venda .modal-rodape .botao {
+  padding: var(--espacamento-xs) var(--espacamento-md);
+  height: auto;
+}

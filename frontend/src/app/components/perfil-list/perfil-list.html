@@ -1,65 +1,97 @@
-<div class="perfil-list">
+<div class="perfil-page">
   <header class="page-header">
     <div class="header-content">
-      <h1>Perfis</h1>
+      <div>
+        <p class="page-subtitle">Administração</p>
+        <h1>Perfis</h1>
+      </div>
       <div class="header-actions">
         @if (authService.hasPermission(Permission.PROFILE_CREATE)) {
-          <a routerLink="/perfil/new" class="btn btn-novo">Novo Perfil</a>
+          <a routerLink="/perfil/new" class="btn btn-novo">
+            Novo Perfil
+          </a>
         }
+        <button class="btn btn-ghost" (click)="loadItems()" [disabled]="loading">
+          <i class="fas fa-sync-alt"></i>
+          Atualizar
+        </button>
       </div>
     </div>
   </header>
 
-  <!-- Estado de Carregamento -->
   @if (loading) {
-    <div class="loading-state">
+    <section class="state-card">
       <div class="spinner"></div>
       <p>Carregando perfis...</p>
-    </div>
+    </section>
   }
 
-  <!-- Estado de Erro -->
   @if (error) {
-    <div class="error-state">
+    <section class="state-card error">
       <div class="error-message">
-        <i class="icon">⚠️</i>
+        <i class="fas fa-exclamation-circle"></i>
         <p>{{ error }}</p>
       </div>
-  <button class="btn btn-primary" (click)="loadItems()">Tentar Novamente</button>
-    </div>
+      <button class="btn btn-primario" (click)="loadItems()">Tentar novamente</button>
+    </section>
   }
 
-  <!-- Lista de Perfis -->
   @if (!loading && !error) {
-    <section class="results-section">
+    <section class="results-card">
       <div class="results-header">
-  <p class="results-count">Exibindo {{ items.length }} perfis</p>
+        <div>
+          <h2>Perfis cadastrados</h2>
+          <p class="results-count">
+            Exibindo {{ items.length }} {{ items.length === 1 ? 'perfil' : 'perfis' }}
+          </p>
+        </div>
       </div>
-      <div class="table-container">
+
+      <div class="table-wrapper">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Ações</th>
+              <th class="acoes-col">Ações</th>
               <th>Nome do Perfil</th>
               <th>Permissões</th>
             </tr>
           </thead>
           <tbody>
+            @if (items.length === 0) {
+              <tr>
+                <td colspan="3" class="empty-state">
+                  Nenhum perfil cadastrado.
+                </td>
+              </tr>
+            }
             @for (perfil of items; track perfil.id) {
               <tr>
-                <td class="action-buttons">
+                <td class="actions-cell">
                   @if (authService.hasPermission(Permission.PROFILE_UPDATE)) {
-                    <button type="button" class="btn btn-sm btn-editar" (click)="editPerfil(perfil)">Editar</button>
+                    <button type="button" class="btn btn-sm btn-editar" (click)="editPerfil(perfil)">
+                      Editar
+                    </button>
                   }
                   @if (authService.hasPermission(Permission.PROFILE_READ)) {
-                    <button type="button" class="btn btn-sm btn-imprimir" (click)="printPerfil(perfil)">Imprimir</button>
+                    <button type="button" class="btn btn-sm btn-imprimir" (click)="printPerfil(perfil)">
+                      Imprimir
+                    </button>
                   }
                   @if (authService.hasPermission(Permission.PROFILE_DELETE)) {
-                    <button type="button" class="btn btn-sm btn-excluir" (click)="deletePerfil(perfil)">Excluir</button>
+                    <button type="button" class="btn btn-sm btn-excluir" (click)="deletePerfil(perfil)">
+                      Excluir
+                    </button>
                   }
                 </td>
-                <td>{{ perfil.nomePerfil }}</td>
-                <td>{{ formattedPermissoes[perfil.id] }}</td>
+                <td>
+                  <div class="perfil-name">
+                    <strong>{{ perfil.nomePerfil }}</strong>
+                    <small>ID: {{ perfil.id }}</small>
+                  </div>
+                </td>
+                <td class="permissoes-cell">
+                  {{ formattedPermissoes[perfil.id] || 'Sem permissões' }}
+                </td>
               </tr>
             }
           </tbody>
@@ -67,7 +99,7 @@
       </div>
     </section>
   }
-  </div> <!-- fim de .perfil-list -->
+</div>
 
   <!-- Modal de confirmação de exclusão de perfil -->
   <app-confirmation-modal

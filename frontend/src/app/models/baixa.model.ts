@@ -1,3 +1,6 @@
+import { Unidade } from './usuario.model';
+import { VendaOrigem } from './venda.model';
+
 export enum TipoDaBaixa {
   DINHEIRO = 'DINHEIRO',
   CARTAO_PIX = 'CARTÃO/PIX',
@@ -18,6 +21,10 @@ export interface Baixa {
     id: string;
     protocolo: string;
     cliente: string;
+    unidade?: Unidade;
+    origem?: VendaOrigem;
+    vendedor?: string;
+    dataVenda?: string;
   };
 }
 

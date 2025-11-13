@@ -120,6 +120,13 @@
                       [ngClass]="{'opacity-50': venda.status === 'FECHADO'}">
                       Excluir
                     </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-recibo"
+                      (click)="onImprimirRecibo(baixa)"
+                      title="Gerar recibo de pagamento">
+                      Recibo
+                    </button>
                   </td>
                 </tr>
               </tbody>

@@ -1,6 +1,6 @@
 <!-- Modal de Venda - Design System -->
 <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-  <div class="modal-conteudo modal-grande" (click)="$event.stopPropagation()">
+  <div class="modal-conteudo modal-grande modal-venda" (click)="$event.stopPropagation()">
     <!-- Header -->
     <div class="modal-cabecalho">
       <h3 class="modal-titulo">{{ isEditing ? 'Editar Venda' : 'Nova Venda' }}</h3>

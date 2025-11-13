@@ -1,95 +1,114 @@
-<form [formGroup]="perfilForm" (ngSubmit)="onSubmit()" class="perfil-form">
-  <header class="page-header">
-    <div class="header-content">
-      <h2>{{ isEditMode ? 'Editar Perfil' : 'Novo Perfil' }}</h2>
-      <div class="header-actions">
-        <button type="submit" class="btn btn-salvar" [disabled]="perfilForm.invalid || loading">
-          {{ isEditMode ? 'Atualizar' : 'Salvar' }}
-        </button>
-  <button type="button" class="btn btn-cancelar" (click)="router.navigate(['/perfil'])">Cancelar</button>
+<div class="perfil-form-page">
+  <form [formGroup]="perfilForm" (ngSubmit)="onSubmit()" class="perfil-form-card">
+    <header class="page-header">
+      <div class="header-content">
+        <div>
+          <p class="page-subtitle">Administração</p>
+          <h2>{{ isEditMode ? 'Editar Perfil' : 'Novo Perfil' }}</h2>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="btn btn-cancelar" (click)="router.navigate(['/perfil'])">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-salvar" [disabled]="perfilForm.invalid || loading">
+            {{ isEditMode ? 'Atualizar' : 'Salvar' }}
+          </button>
+        </div>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <div *ngIf="loading" class="loading-state">
-    <p>Carregando...</p>
-  </div>
-  <div *ngIf="error" class="error-state">
-    <p>{{ error }}</p>
-  </div>
+    <section *ngIf="loading" class="state-card">
+      <div class="spinner"></div>
+      <p>Carregando informações do perfil...</p>
+    </section>
 
-  <div *ngIf="!loading">
-    <div class="form-group">
-      <div class="inline-group">
+    <section *ngIf="error" class="state-card error">
+      <p>{{ error }}</p>
+      <button class="btn btn-primario" type="button" (click)="router.navigate(['/perfil'])">
+        Voltar para lista
+      </button>
+    </section>
+
+    <div *ngIf="!loading" class="form-content">
+      <div class="form-group">
         <label for="nomePerfil">Nome do Perfil</label>
-        <input id="nomePerfil" type="text" formControlName="nomePerfil" class="form-input" />
-      </div>
-      <div *ngIf="perfilForm.get('nomePerfil')?.invalid && perfilForm.get('nomePerfil')?.touched" class="error-message">
-        Nome do perfil é obrigatório.
-      </div>
-    </div>
-
-    <div class="permissions-section">
-      <div class="form-group inline-group">
-        <label for="permSearch">Buscar Permissões</label>
         <input
-          id="permSearch"
-          name="permissionFilter"
+          id="nomePerfil"
           type="text"
-          [(ngModel)]="permissionFilter"
-          (ngModelChange)="onPermissionFilterChange($event)"
-          [ngModelOptions]="{ standalone: true }"
-          placeholder="Digite para buscar..."
-          class="form-input perm-search"
+          formControlName="nomePerfil"
+          class="form-input"
+          placeholder="Informe um nome descritivo"
         />
+        <div *ngIf="perfilForm.get('nomePerfil')?.invalid && perfilForm.get('nomePerfil')?.touched" class="error-message">
+          Nome do perfil é obrigatório.
+        </div>
       </div>
-      <div class="permissions-actions">
-        <button
-          type="button"
-          class="btn btn-sm btn-primary"
-          (click)="selectAllFiltered()"
-          [disabled]="allFilteredSelected"
-        >
-          Marcar Todos
-        </button>
-        <button
-          type="button"
-          class="btn btn-sm btn-secondary"
-          (click)="deselectAllFiltered()"
-          [disabled]="!anyFilteredSelected"
-        >
-          Desmarcar Todos
-        </button>
-      </div>
-      <div class="permissions-grid">
-        <div *ngFor="let group of filteredPermissionGroups | keyvalue" class="permission-group">
-          <div class="permission-group-header inline-group">
+
+      <div class="permissions-section">
+        <div class="permissions-header">
+          <h3>Permissões</h3>
+        </div>
+
+        <div class="permissions-toolbar">
+          <div class="search-group">
+            <label for="permSearch">Buscar Permissões</label>
             <input
-              type="checkbox"
-              [id]="group.key + '_select_all'"
-              [checked]="isGroupSelected(group.key)"
-              (change)="toggleSelectGroup(group.key, $event.target.checked)"
+              id="permSearch"
+              name="permissionFilter"
+              type="text"
+              [(ngModel)]="permissionFilter"
+              (ngModelChange)="onPermissionFilterChange($event)"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Digite para filtrar por nome ou grupo"
+              class="form-input perm-search"
             />
-            <label [for]="group.key + '_select_all'">{{ formatGroupName(group.key) }}</label>
           </div>
-          <div *ngFor="let perm of group.value" class="permission-item">
-            <input
-              type="checkbox"
-              [id]="perm.key"
-              [checked]="perfilForm.value.permissoes.includes(perm.key)"
-              (change)="onPermissionChange(perm.key, $event.target.checked)"
-            />
-            <label [for]="perm.key">{{ perm.label }}</label>
+          <div class="permissions-actions">
+            <button
+              type="button"
+              class="btn btn-sm btn-primary"
+              (click)="selectAllFiltered()"
+              [disabled]="allFilteredSelected"
+            >
+              Marcar todos
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-secondary"
+              (click)="deselectAllFiltered()"
+              [disabled]="!anyFilteredSelected"
+            >
+              Desmarcar
+            </button>
           </div>
+        </div>
+
+        <div class="permissions-grid" *ngIf="filteredPermissionGroups | keyvalue as groups">
+          <div *ngFor="let group of groups" class="permission-group">
+            <div class="permission-group-header">
+              <input
+                type="checkbox"
+                [id]="group.key + '_select_all'"
+                [checked]="isGroupSelected(group.key)"
+                (change)="toggleSelectGroup(group.key, $event.target.checked)"
+              />
+              <label [for]="group.key + '_select_all'">{{ formatGroupName(group.key) }}</label>
+            </div>
+            <div *ngFor="let perm of group.value" class="permission-item">
+              <input
+                type="checkbox"
+                [id]="perm.key"
+                [checked]="perfilForm.value.permissoes.includes(perm.key)"
+                (change)="onPermissionChange(perm.key, $event.target.checked)"
+              />
+              <label [for]="perm.key">{{ perm.label }}</label>
+            </div>
+          </div>
+          <p *ngIf="groups.length === 0" class="empty-permissions">
+            Nenhuma permissão encontrada para o filtro informado.
+          </p>
         </div>
       </div>
     </div>
-
-    <div class="form-actions">
-      <button type="submit" class="btn btn-salvar" [disabled]="perfilForm.invalid || loading">
-        {{ isEditMode ? 'Atualizar' : 'Salvar' }}
-      </button>
-  <button type="button" class="btn btn-cancelar" (click)="router.navigate(['/perfil'])">Cancelar</button>
-    </div>
-  </div>
-</form>
+  </form>
+</div>

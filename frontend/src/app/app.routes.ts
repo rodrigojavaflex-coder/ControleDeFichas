@@ -13,6 +13,7 @@ import { PerfilListComponent } from './components/perfil-list/perfil-list';
 import { PerfilFormComponent } from './components/perfil-form/perfil-form';
 import { CertificadoFormComponent } from './components/certificado-form/certificado-form';
 import { VendasListComponent } from './components/vendas-list/vendas-list';
+import { BaixasListComponent } from './components/baixas-list/baixas-list';
 
 export const routes: Routes = [
   // Rota de configuração
@@ -81,6 +82,11 @@ export const routes: Routes = [
   {
     path: 'vendas',
     component: VendasListComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'relatorios/baixas',
+    component: BaixasListComponent,
     canActivate: [authGuard]
   },
   // Rotas de perfil: paths específicos antes da rota geral para evitar conflitos de prefixo

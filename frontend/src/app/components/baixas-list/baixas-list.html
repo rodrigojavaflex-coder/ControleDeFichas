@@ -1,0 +1,196 @@
+<ng-container *ngIf="canViewBaixas(); else noPermission">
+  <div class="baixas-list-container">
+    <header class="page-header">
+      <div>
+        <h2>Baixas</h2>
+        <p class="page-description">
+          Consulte todas as baixas registradas, filtrando por período e unidade.
+        </p>
+        <div class="header-actions">
+          <button class="btn btn-imprimir" type="button" (click)="imprimirRelatorio()" [attr.disabled]="(loading || items.length === 0) ? 'disabled' : null">
+            Imprimir
+          </button>
+          <button class="btn btn-atualizar" type="button" (click)="loadBaixas()" [attr.disabled]="loading ? 'disabled' : null">
+            Atualizar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <section class="filters">
+      <div class="filter-group">
+        <label for="protocolo">Protocolo</label>
+        <input
+          id="protocolo"
+          type="text"
+          class="form-control"
+          [(ngModel)]="protocoloFilter"
+          (input)="onFilterChange()"
+          placeholder="Buscar por protocolo">
+      </div>
+
+      <div class="filter-group">
+        <label for="cliente">Cliente</label>
+        <input
+          id="cliente"
+          type="text"
+          class="form-control"
+          [(ngModel)]="clienteFilter"
+          (input)="onFilterChange()"
+          placeholder="Buscar por cliente">
+      </div>
+
+      <div class="filter-group date-field">
+        <label for="dataInicial">Data Inicial</label>
+        <input
+          id="dataInicial"
+          type="date"
+          class="form-control"
+          [(ngModel)]="dataInicialFilter"
+          (change)="onFilterChange()">
+      </div>
+
+      <div class="filter-group date-field">
+        <label for="dataFinal">Data Final</label>
+        <input
+          id="dataFinal"
+          type="date"
+          class="form-control"
+          [(ngModel)]="dataFinalFilter"
+          (change)="onFilterChange()">
+      </div>
+
+      <div class="filter-group">
+        <label for="unidade">Unidade</label>
+        <select
+          id="unidade"
+          class="form-control"
+          [(ngModel)]="unidadeFilter"
+          (change)="onFilterChange()"
+          [disabled]="unidadeDisabled">
+          <option value="">Todas</option>
+          <option *ngFor="let unidade of unidades" [value]="unidade">
+            {{ unidade }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="origem">Comprado em</label>
+        <select
+          id="origem"
+          class="form-control"
+          [(ngModel)]="origemFilter"
+          (change)="onFilterChange()">
+          <option value="">Todas</option>
+          <option *ngFor="let origem of origens" [value]="origem">
+            {{ getOrigemLabel(origem) }}
+          </option>
+        </select>
+      </div>
+
+      <div class="filter-group value-range-group">
+        <label>Valor da baixa</label>
+        <div class="range-fields">
+          <input
+            id="valorMin"
+            type="number"
+            step="0.01"
+            class="form-control small-field"
+            [(ngModel)]="valorMinFilter"
+            (blur)="onValorBlur('min')"
+            (keyup.enter)="onFilterChange()"
+            placeholder="Mínimo">
+          <span class="range-separator">até</span>
+          <input
+            id="valorMax"
+            type="number"
+            step="0.01"
+            class="form-control small-field"
+            [(ngModel)]="valorMaxFilter"
+            (blur)="onValorBlur('max')"
+            (keyup.enter)="onFilterChange()"
+            placeholder="Máximo">
+        </div>
+      </div>
+
+      <div class="filter-group filter-actions">
+        <label>&nbsp;</label>
+        <button class="btn btn-limpar" type="button" (click)="clearFilters()">
+          Limpar
+        </button>
+      </div>
+    </section>
+
+    <section *ngIf="error" class="state-card error">
+      <p>{{ error }}</p>
+      <button class="btn btn-primario" type="button" (click)="loadBaixas()">Tentar novamente</button>
+    </section>
+
+    <section *ngIf="loading" class="state-card">
+      <div class="spinner"></div>
+      <p>Carregando baixas...</p>
+    </section>
+
+    <section *ngIf="!loading && !error" class="results-section">
+      <div class="results-header">
+        <p>{{ items.length }} baixas encontradas nesta página</p>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data Baixa</th>
+              <th>Protocolo</th>
+              <th>Cliente</th>
+              <th>Unidade</th>
+              <th>Comprado em</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Observação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngIf="items.length === 0">
+              <td colspan="7" class="empty-state">
+                Nenhuma baixa encontrada para os filtros selecionados.
+              </td>
+            </tr>
+            <tr *ngFor="let baixa of items">
+              <td>{{ baixa.dataBaixa | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ baixa.venda?.protocolo || '-' }}</td>
+              <td>{{ baixa.venda?.cliente || '-' }}</td>
+              <td>{{ baixa.venda?.unidade || '-' }}</td>
+              <td>{{ getOrigemLabel(baixa.venda?.origem) }}</td>
+              <td>{{ baixa.tipoDaBaixa }}</td>
+              <td>{{ formatCurrency(baixa.valorBaixa) }}</td>
+              <td>{{ baixa.observacao || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination" *ngIf="totalPages > 1">
+        <button class="btn btn-sm btn-cancelar" (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1 || loading">
+          <i class="fas fa-chevron-left"></i>
+          Anterior
+        </button>
+
+        <span class="page-info">
+          Página {{ currentPage }} de {{ totalPages }}
+        </span>
+
+        <button class="btn btn-sm btn-cancelar" (click)="onPageChange(currentPage + 1)" [disabled]="currentPage === totalPages || loading">
+          Próxima
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </section>
+  </div>
+</ng-container>
+
+<ng-template #noPermission>
+  <div class="state-card error">
+    <p>Você não possui permissão para visualizar esta página.</p>
+  </div>
+</ng-template>

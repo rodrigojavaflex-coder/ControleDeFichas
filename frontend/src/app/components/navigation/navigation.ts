@@ -92,9 +92,16 @@ export class NavigationComponent implements OnInit, OnDestroy {
     },
     {
       label: 'Relatórios',
-      route: '/reports',
       icon: 'feather-bar-chart-2',
-      requiredPermissions: [Permission.REPORTS_VIEW, Permission.REPORTS_EXPORT]
+      requiredPermissions: [],
+      children: [
+        {
+          label: 'Baixas',
+          route: '/relatorios/baixas',
+          icon: 'feather-file-text',
+          requiredPermissions: [Permission.VENDA_BAIXAR]
+        }
+      ]
     }
   ];
 

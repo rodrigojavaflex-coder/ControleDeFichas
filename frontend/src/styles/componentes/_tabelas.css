@@ -74,15 +74,15 @@ table tbody tr:last-child td {
 
 /* Célula de Ações com Largura Fixa */
 .actions-cell {
-  width: 85px !important;
-  min-width: 85px !important;
-  max-width: 85px !important;
-  padding: 8px 0 !important;
+  width: 95px !important;
+  min-width: 95px !important;
+  max-width: 95px !important;
+  padding: 8px !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 4px !important;
+  gap: 6px !important;
   align-items: stretch !important;
-  justify-content: flex-start !important;
+  justify-content: center !important;
 }
 
 /* Botões dentro da célula de ações */
