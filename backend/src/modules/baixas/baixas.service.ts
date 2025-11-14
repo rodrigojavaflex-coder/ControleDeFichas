@@ -28,8 +28,6 @@ export class BaixasService {
   ) {}
 
   async create(createBaixaDto: CreateBaixaDto): Promise<Baixa> {
-    this.logger.debug('BaixasService.create called with:', createBaixaDto);
-
     try {
       // Verificar se a venda existe
       const venda = await this.vendasService.findOne(createBaixaDto.idvenda);
@@ -64,21 +62,16 @@ export class BaixasService {
       });
 
       const savedBaixa = await this.baixaRepository.save(baixa);
-      this.logger.debug('Baixa created successfully:', savedBaixa.id);
-
       // Atualizar status da venda baseado no total das baixas
       await this.updateVendaStatus(createBaixaDto.idvenda);
 
       return savedBaixa;
     } catch (error) {
-      this.logger.error('Error creating baixa:', error);
       throw error;
     }
   }
 
   async findAll(findBaixasDto: FindBaixasDto): Promise<PaginatedResponseDto<Baixa>> {
-    this.logger.debug('BaixasService.findAll called with:', findBaixasDto);
-
     const queryBuilder = this.baixaRepository.createQueryBuilder('baixa');
 
     // Aplicar filtros
@@ -106,8 +99,6 @@ export class BaixasService {
   }
 
   async findOne(id: string): Promise<Baixa> {
-    this.logger.debug('BaixasService.findOne called with id:', id);
-
     const baixa = await this.baixaRepository.findOne({
       where: { id },
       relations: ['venda'], // Carregar relacionamento com venda
@@ -121,8 +112,6 @@ export class BaixasService {
   }
 
   async update(id: string, updateBaixaDto: UpdateBaixaDto): Promise<Baixa> {
-    this.logger.debug('BaixasService.update called with id:', id, 'and data:', updateBaixaDto);
-
     const baixa = await this.findOne(id);
 
     // Manter data como string YYYY-MM-DD para evitar conversão de timezone
@@ -142,8 +131,6 @@ export class BaixasService {
   }
 
   async remove(id: string): Promise<void> {
-    this.logger.debug('BaixasService.remove called with id:', id);
-
     const baixa = await this.findOne(id);
 
     // Validar status da venda antes de permitir exclusão
@@ -215,10 +202,6 @@ export class BaixasService {
       const totalPago = parseFloat(totalBaixas?.total || '0');
       const valorCliente = venda.valorCliente || 0;
 
-      this.logger.debug(
-        `Calculando status da venda ${idvenda}: valorCliente=${valorCliente}, totalPago=${totalPago}, statusAtual=${venda.status}`
-      );
-
       // Determinar novo status baseado nas regras de negócio
       let novoStatus: VendaStatus;
 
@@ -235,22 +218,14 @@ export class BaixasService {
 
       // Não alterar status se venda estiver FECHADA ou se o status já é correto
       if (venda.status === VendaStatus.FECHADO) {
-        this.logger.debug(
-          `Venda ${idvenda} está FECHADA. Status não será alterado. (Atual: ${venda.status})`
-        );
         return;
       }
 
       // Só atualizar se o status mudou
       if (venda.status !== novoStatus) {
         await this.vendasService.update(idvenda, { status: novoStatus });
-        this.logger.log(
-          `Status da venda ${idvenda} atualizado: ${venda.status} → ${novoStatus}`
-        );
       } else {
-        this.logger.debug(
-          `Status da venda ${idvenda} já é ${novoStatus}. Nenhuma alteração necessária.`
-        );
+        // Nenhuma alteração necessária
       }
     } catch (error) {
       this.logger.error(`Erro ao atualizar status da venda ${idvenda}:`, error);

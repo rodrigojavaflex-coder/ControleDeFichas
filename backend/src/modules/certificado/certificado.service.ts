@@ -22,7 +22,6 @@ export class CertificadoService {
   ) {}
 
   async create(createCertificadoDto: CreateCertificadoDto): Promise<Certificado> {
-    this.logger.debug('CertificadoService.create called with:', createCertificadoDto);
     try {
       // Remover fichaTecnicaId do DTO para não conflitar com a entidade
       const { fichaTecnicaId, ...certificadoData } = createCertificadoDto;
@@ -48,7 +47,6 @@ export class CertificadoService {
   }
 
   async findAll(): Promise<Certificado[]> {
-    this.logger.debug('CertificadoService.findAll called');
     try {
       return await this.certificadoRepository.find({
         order: { criadoEm: 'DESC' },
@@ -61,7 +59,6 @@ export class CertificadoService {
   }
 
   async findOne(id: string): Promise<Certificado> {
-    this.logger.debug('CertificadoService.findOne called with id:', id);
     try {
       const certificado = await this.certificadoRepository.findOne({
         where: { id },
@@ -78,7 +75,6 @@ export class CertificadoService {
   }
 
   async update(id: string, updateCertificadoDto: UpdateCertificadoDto): Promise<Certificado> {
-    this.logger.debug('CertificadoService.update called with id:', id, 'and data:', updateCertificadoDto);
     try {
       const certificado = await this.findOne(id);
       Object.assign(certificado, updateCertificadoDto);
@@ -90,7 +86,6 @@ export class CertificadoService {
   }
 
   async remove(id: string): Promise<void> {
-    this.logger.debug('CertificadoService.remove called with id:', id);
     try {
       const certificado = await this.findOne(id);
       await this.certificadoRepository.remove(certificado);
@@ -104,7 +99,6 @@ export class CertificadoService {
    * Lista certificados associados a uma ficha técnica
    */
   async findByFichaTecnica(fichaTecnicaId: string): Promise<Certificado[]> {
-    this.logger.debug('CertificadoService.findByFichaTecnica called with fichaTecnicaId:', fichaTecnicaId);
     return await this.certificadoRepository.find({
       where: { fichaTecnica: { id: fichaTecnicaId } },
       relations: ['fichaTecnica'],

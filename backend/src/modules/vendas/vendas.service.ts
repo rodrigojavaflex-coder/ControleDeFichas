@@ -226,7 +226,6 @@ export class VendasService {
 
       await this.vendaRepository.update(id, updateData);
 
-      this.logger.log(`Venda ${id} atualizada com sucesso`);
       
       // Após atualizar a venda, recalcular o status baseado nas baixas
       await this.updateVendaStatusBasedOnBaixas(id);

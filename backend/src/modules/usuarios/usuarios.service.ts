@@ -30,7 +30,6 @@ export class UsuariosService {
   ) {}
 
   async create(createUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
-    this.logger.debug('UserService.create called with:', createUsuarioDto);
     try {
       // Verificar se já existe um usuário com este email
       const existingUser = await this.usuarioRepository.findOneBy({
@@ -69,23 +68,10 @@ export class UsuariosService {
         perfil,
       };
 
-      this.logger.debug('Processed user data:', {
-        ...userData,
-        password: '[HASHED]',
-      });
 
       const user = this.usuarioRepository.create(userData);
-      this.logger.debug('User entity created:', {
-        ...user,
-        password: '[HASHED]',
-      });
 
       const savedUser = await this.usuarioRepository.save(user);
-      this.logger.log('User saved successfully:', {
-        id: savedUser.id,
-        name: savedUser.nome,
-        email: savedUser.email,
-      });
 
       return savedUser;
     } catch (error) {
@@ -352,7 +338,6 @@ export class UsuariosService {
 
     try {
       await this.usuarioRepository.save(user);
-      this.logger.log('Senha atualizada com sucesso', { userId: user.id });
     } catch (error) {
       this.logger.error('Erro ao atualizar senha:', error);
       throw error;

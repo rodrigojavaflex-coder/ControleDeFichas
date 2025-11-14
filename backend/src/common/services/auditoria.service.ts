@@ -168,7 +168,6 @@ export class AuditoriaService {
         }
       }
 
-      this.logger.debug(`Entidade não encontrada para tabela: ${tableName}`);
       return null;
     } catch (error) {
       this.logger.warn(`Erro ao obter classe da entidade para tabela ${tableName}:`, error);
