@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BaixasService } from '../../services/baixas.service';
@@ -12,6 +12,13 @@ import { Venda } from '../../models/venda.model';
 import { firstValueFrom } from 'rxjs';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
+import { PageContextService } from '../../services/page-context.service';
+
+interface AppliedFilter {
+  key: string;
+  label: string;
+  value: string;
+}
 
 @Component({
   selector: 'app-baixas-list',
@@ -20,11 +27,12 @@ import { environment } from '../../../environments/environment';
   templateUrl: './baixas-list.html',
   styleUrls: ['./baixas-list.css']
 })
-export class BaixasListComponent implements OnInit {
+export class BaixasListComponent implements OnInit, OnDestroy {
   private baixasService = inject(BaixasService);
   private authService = inject(AuthService);
   private vendaService = inject(VendaService);
   private configuracaoService = inject(ConfiguracaoService);
+  private pageContextService = inject(PageContextService);
 
   Permission = Permission;
   TipoDaBaixa = TipoDaBaixa;
@@ -53,6 +61,7 @@ export class BaixasListComponent implements OnInit {
   origemFilter: VendaOrigem | '' = '';
   private vendaCache = new Map<string, Venda>();
   configuracao: Configuracao | null = null;
+  filtersPanelOpen = false;
 
   ngOnInit(): void {
     if (!this.canViewBaixas()) {
@@ -63,7 +72,15 @@ export class BaixasListComponent implements OnInit {
     this.initializeDateFilters();
     this.initializeUnidadeFilter();
     this.loadConfiguracao();
+    this.pageContextService.setContext({
+      title: 'Baixas',
+      description: 'Consulte e filtre todas as baixas registradas.'
+    });
     this.loadBaixas();
+  }
+
+  ngOnDestroy(): void {
+    this.pageContextService.resetContext();
   }
 
   canViewBaixas(): boolean {
@@ -169,6 +186,80 @@ export class BaixasListComponent implements OnInit {
     this.valorMaxFilter = '';
     this.initializeDateFilters();
     this.loadBaixas(1);
+  }
+
+  toggleFiltersVisibility(): void {
+    this.filtersPanelOpen = !this.filtersPanelOpen;
+  }
+
+  onFiltersToggleKey(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggleFiltersVisibility();
+    }
+  }
+
+  get appliedFilters(): AppliedFilter[] {
+    const filters: AppliedFilter[] = [];
+    if (this.protocoloFilter.trim()) {
+      filters.push({ key: 'protocolo', label: 'Protocolo', value: this.protocoloFilter.trim() });
+    }
+    if (this.clienteFilter.trim()) {
+      filters.push({ key: 'cliente', label: 'Cliente', value: this.clienteFilter.trim() });
+    }
+    if (this.dataInicialFilter || this.dataFinalFilter) {
+      const inicio = this.formatDateDisplay(this.dataInicialFilter);
+      const fim = this.formatDateDisplay(this.dataFinalFilter);
+      let value = '';
+      if (inicio && fim) value = `${inicio} a ${fim}`;
+      else if (inicio) value = `A partir de ${inicio}`;
+      else if (fim) value = `Até ${fim}`;
+      filters.push({ key: 'periodo', label: 'Período', value });
+    }
+    if (this.unidadeFilter) {
+      filters.push({ key: 'unidade', label: 'Unidade', value: this.unidadeFilter });
+    }
+    if (this.origemFilter) {
+      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(this.origemFilter) });
+    }
+    if (this.valorMinFilter || this.valorMaxFilter) {
+      let value = '';
+      if (this.valorMinFilter && this.valorMaxFilter) value = `${this.valorMinFilter} a ${this.valorMaxFilter}`;
+      else if (this.valorMinFilter) value = `>= ${this.valorMinFilter}`;
+      else if (this.valorMaxFilter) value = `<= ${this.valorMaxFilter}`;
+      filters.push({ key: 'valor', label: 'Valor da baixa', value });
+    }
+    return filters.filter(filter => filter.value);
+  }
+
+  clearAppliedFilter(key: string): void {
+    switch (key) {
+      case 'protocolo':
+        this.protocoloFilter = '';
+        break;
+      case 'cliente':
+        this.clienteFilter = '';
+        break;
+      case 'periodo':
+        this.dataInicialFilter = '';
+        this.dataFinalFilter = '';
+        break;
+      case 'unidade':
+        if (!this.unidadeDisabled) {
+          this.unidadeFilter = '';
+        }
+        break;
+      case 'origem':
+        this.origemFilter = '';
+        break;
+      case 'valor':
+        this.valorMinFilter = '';
+        this.valorMaxFilter = '';
+        break;
+      default:
+        return;
+    }
+    this.onFilterChange();
   }
 
   private getLogoRelatorioUrl(): string | null {
@@ -505,6 +596,15 @@ export class BaixasListComponent implements OnInit {
       default:
         return '-';
     }
+  }
+
+  private formatDateDisplay(value?: string): string {
+    if (!value) return '';
+    const [year, month, day] = value.split('-');
+    if (!year || !month || !day) {
+      return value;
+    }
+    return `${day}/${month}/${year}`;
   }
 
   private async enrichBaixasWithVendas(baixas: Baixa[]): Promise<Baixa[]> {

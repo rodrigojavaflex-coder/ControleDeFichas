@@ -63,6 +63,24 @@
   transition: color 0.3s ease;
 }
 
+.header-page-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary, #1a202c);
+}
+
+.page-description {
+  font-size: 0.95rem;
+  color: var(--text-secondary, #475569);
+}
+
 .header-right {
   display: flex;
   align-items: center;

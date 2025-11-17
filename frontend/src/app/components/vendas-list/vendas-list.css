@@ -1,10 +1,10 @@
 .vendas-page {
-  padding: 1.5rem;
+  padding: 0 1.2rem 1rem;
   background: #f8fafc;
   min-height: calc(100vh - 120px);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.6rem;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -50,7 +50,7 @@
 
 .header-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -58,27 +58,80 @@
   margin-top: 1rem;
 }
 
-.btn.btn-fechar {
-  background: #16a34a;
-  color: #fff;
-  border: none;
+.header-actions .btn {
+  min-height: 30px;
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+  font-weight: 600;
+  border: 1px solid transparent !important;
+  color: #0f172a !important;
+  background: transparent !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.btn.btn-cancelar-fechamento {
-  background: #f97316;
-  color: #fff;
-  border: none;
+.header-actions .btn:hover {
+  background: #e0e7ff !important;
+  border-color: #c7d2fe !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
 }
 
-.btn.btn-imprimir {
-  background: #2563eb;
-  color: #fff;
+.header-actions .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.filters-inline {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filters-panel-top {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+}
+
+.filters-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.btn-toggle-filtros {
   border: none;
+  background: transparent;
+  color: #1f2937;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-toggle-filtros .filters-count {
+  background: #eef2ff;
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 0.1rem 0.75rem;
+  font-size: 0.85rem;
 }
 
 .filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.75rem;
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -90,11 +143,11 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  flex: 1 1 160px;
+  min-width: 0;
 }
 
 .filter-group.date-field {
-  flex: 0 0 140px;
+  min-width: 0;
 }
 
 .filter-group label {
@@ -103,8 +156,10 @@
 }
 
 .filter-actions {
-  flex: 0 0 auto;
   align-items: flex-end;
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-start;
 }
 
 .form-control {
@@ -112,6 +167,50 @@
   border-radius: 8px;
   padding: 0.55rem 0.75rem;
   width: 100%;
+}
+
+.applied-filters-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.applied-filters-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.filter-chip {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  color: #312e81;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.filter-chip strong {
+  margin-right: 0.25rem;
+}
+
+.chip-remove {
+  background: transparent;
+  border: none;
+  color: #312e81;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.chip-remove:hover {
+  color: #1d1b5e;
 }
 
 .state-card {
@@ -161,6 +260,21 @@
   text-align: left;
 }
 
+.vendas-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.vendas-table th.sortable .sort-icon {
+  margin-left: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.vendas-table th.sortable.sorted {
+  color: #2563eb;
+}
+
 .vendas-table th.checkbox-column {
   width: 50px;
 }
@@ -176,6 +290,17 @@
 
 .vendas-table tbody tr:hover {
   background-color: #f8fafc;
+}
+
+.vendas-table tbody tr.row-selected {
+  background-color: #e0f2fe;
+}
+
+.results-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 0.75rem;
 }
 
 .actions-cell {
@@ -234,6 +359,16 @@
   box-shadow: none;
 }
 
+:host-context(body.theme-dark) .filters {
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
+:host-context(body.theme-dark) .filters-panel-top,
+:host-context(body.theme-dark) .filters-controls,
+:host-context(body.theme-dark) .filters-controls span {
+  color: #e2e8f0;
+}
+
 :host-context(body.theme-dark) .page-header h2,
 :host-context(body.theme-dark) .page-description,
 :host-context(body.theme-dark) .filter-group label,
@@ -245,6 +380,32 @@
 :host-context(body.theme-dark) .vendas-summary {
   background: rgba(79, 70, 229, 0.2);
   border-color: rgba(99, 102, 241, 0.3);
+}
+
+:host-context(body.theme-dark) .filters-panel-top {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+}
+
+:host-context(body.theme-dark) .btn-toggle-filtros {
+  color: #e2e8f0;
+}
+
+:host-context(body.theme-dark) .header-actions .btn {
+  color: #e0e7ff !important;
+}
+
+:host-context(body.theme-dark) .header-actions .btn:hover {
+  background: rgba(79, 70, 229, 0.25) !important;
+  border-color: rgba(165, 180, 252, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+:host-context(body.theme-dark) .btn-toggle-filtros .filters-count {
+  background: rgba(99, 102, 241, 0.25);
+  color: #c7d2fe;
 }
 
 :host-context(body.theme-dark) .form-control {
@@ -270,12 +431,34 @@
   border-bottom-color: rgba(148, 163, 184, 0.2);
 }
 
+:host-context(body.theme-dark) .vendas-table th.sortable.sorted {
+  color: #93c5fd;
+}
+
 :host-context(body.theme-dark) .vendas-table tbody tr:hover {
   background-color: rgba(148, 163, 184, 0.1);
 }
 
 :host-context(body.theme-dark) .state-card {
   color: #f8fafc;
+}
+
+:host-context(body.theme-dark) .filter-chip {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #dbeafe;
+}
+
+:host-context(body.theme-dark) .chip-remove {
+  color: #cbd5f5;
+}
+
+:host-context(body.theme-dark) .chip-remove:hover {
+  color: #ffffff;
+}
+
+:host-context(body.theme-dark) .vendas-table tbody tr.row-selected {
+  background-color: rgba(59, 130, 246, 0.2);
 }
 
 :host-context(body.theme-dark) .btn.btn-imprimir {
@@ -303,6 +486,42 @@ body.theme-dark .vendas-page .table-wrapper {
   background: #0f172a;
   border-color: rgba(148, 163, 184, 0.3);
   box-shadow: none;
+}
+
+body.theme-dark .vendas-page .filters {
+  border-color: rgba(148, 163, 184, 0.15);
+}
+
+body.theme-dark .vendas-page .filters-panel-top,
+body.theme-dark .vendas-page .filters-controls,
+body.theme-dark .vendas-page .filters-controls span {
+  color: #e2e8f0;
+}
+
+body.theme-dark .vendas-page .filters-panel-top {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+}
+
+body.theme-dark .vendas-page .btn-toggle-filtros {
+  color: #e2e8f0;
+}
+
+body.theme-dark .vendas-page .header-actions .btn {
+  color: #e0e7ff !important;
+}
+
+body.theme-dark .vendas-page .header-actions .btn:hover {
+  background: rgba(79, 70, 229, 0.25) !important;
+  border-color: rgba(165, 180, 252, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+body.theme-dark .vendas-page .btn-toggle-filtros .filters-count {
+  background: rgba(99, 102, 241, 0.25);
+  color: #c7d2fe;
 }
 
 body.theme-dark .vendas-page .page-header h2,
@@ -341,12 +560,34 @@ body.theme-dark .vendas-page .vendas-table td {
   border-bottom-color: rgba(148, 163, 184, 0.2);
 }
 
+body.theme-dark .vendas-page .vendas-table th.sortable.sorted {
+  color: #93c5fd;
+}
+
 body.theme-dark .vendas-page .vendas-table tbody tr:hover {
   background-color: rgba(148, 163, 184, 0.1);
 }
 
 body.theme-dark .vendas-page .state-card {
   color: #f8fafc;
+}
+
+body.theme-dark .vendas-page .vendas-table tbody tr.row-selected {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+body.theme-dark .vendas-page .filter-chip {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #dbeafe;
+}
+
+body.theme-dark .vendas-page .chip-remove {
+  color: #cbd5f5;
+}
+
+body.theme-dark .vendas-page .chip-remove:hover {
+  color: #ffffff;
 }
 
 body.theme-dark .vendas-page .btn.btn-imprimir {
@@ -376,4 +617,102 @@ body.theme-dark .vendas-page .btn.btn-cancelar-fechamento {
   to {
     transform: rotate(360deg);
   }
+}
+
+.confirmation-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+}
+
+.confirmation-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.2);
+}
+
+.confirmation-modal .modal-header,
+.confirmation-modal .modal-footer {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.confirmation-modal .modal-footer {
+  border-top: 1px solid #e2e8f0;
+  border-bottom: none;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.confirmation-modal .modal-body {
+  padding: 1rem 1.5rem;
+  color: #1f2937;
+}
+
+.confirmation-modal .warning-text {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #b45309;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.confirmation-modal .close-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+:host-context(body.theme-dark) .confirmation-modal {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #f8fafc;
+}
+
+:host-context(body.theme-dark) .confirmation-modal .modal-header,
+:host-context(body.theme-dark) .confirmation-modal .modal-footer {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+:host-context(body.theme-dark) .confirmation-modal .warning-text {
+  color: #fbbf24;
+}
+
+:host-context(body.theme-dark) .confirmation-modal .close-btn {
+  color: #cbd5f5;
+}
+
+body.theme-dark .vendas-page .confirmation-modal {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #f8fafc;
+}
+
+body.theme-dark .vendas-page .confirmation-modal .modal-header,
+body.theme-dark .vendas-page .confirmation-modal .modal-footer {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+body.theme-dark .vendas-page .confirmation-modal .warning-text {
+  color: #fbbf24;
+}
+
+body.theme-dark .vendas-page .confirmation-modal .close-btn {
+  color: #cbd5f5;
 }

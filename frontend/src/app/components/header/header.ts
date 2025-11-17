@@ -7,6 +7,7 @@ import { Usuario, Permission } from '../../models/usuario.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { ChangePasswordModalComponent } from '../change-password-modal/change-password-modal';
 import { ToastNotificationComponent } from '../toast-notification/toast-notification';
+import { PageContextService } from '../../services/page-context.service';
 
 @Component({
   selector: 'app-header',
@@ -19,11 +20,13 @@ export class HeaderComponent {
   private authService = inject(AuthService);
   private navigationService = inject(NavigationService);
   private themeService = inject(ThemeService);
+  private pageContextService = inject(PageContextService);
   private router = inject(Router);
   private destroy$ = new Subject<void>();
   
   currentUser$ = this.authService.currentUser$;
   currentTheme$ = this.themeService.currentTheme$;
+  pageContext$ = this.pageContextService.context$;
   
   // Propriedades para o modal de confirmação
   showLogoutModal = false;

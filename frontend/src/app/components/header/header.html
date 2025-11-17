@@ -4,7 +4,11 @@
       <span>☰</span>
     </button>
     
-    <span class="app-title">Sistema de controle e Gestão Farmacêutica</span>
+    <ng-container *ngIf="pageContext$ | async as pageContext">
+      <div class="header-page-info">
+        <span class="page-title">{{ pageContext.title }}</span>
+      </div>
+    </ng-container>
   </div>
   <div class="header-right">
     <div *ngIf="currentUser$ | async as user" class="user-profile">

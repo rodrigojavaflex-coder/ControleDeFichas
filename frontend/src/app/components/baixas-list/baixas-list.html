@@ -1,127 +1,5 @@
 <ng-container *ngIf="canViewBaixas(); else noPermission">
-  <div class="baixas-list-container">
-    <header class="page-header">
-      <div>
-        <h2>Baixas</h2>
-        <p class="page-description">
-          Consulte todas as baixas registradas, filtrando por período e unidade.
-        </p>
-        <div class="header-actions">
-          <button class="btn btn-imprimir" type="button" (click)="imprimirRelatorio()" [attr.disabled]="(loading || items.length === 0) ? 'disabled' : null">
-            Imprimir
-          </button>
-          <button class="btn btn-atualizar" type="button" (click)="loadBaixas()" [attr.disabled]="loading ? 'disabled' : null">
-            Atualizar
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <section class="filters">
-      <div class="filter-group">
-        <label for="protocolo">Protocolo</label>
-        <input
-          id="protocolo"
-          type="text"
-          class="form-control"
-          [(ngModel)]="protocoloFilter"
-          (input)="onFilterChange()"
-          placeholder="Buscar por protocolo">
-      </div>
-
-      <div class="filter-group">
-        <label for="cliente">Cliente</label>
-        <input
-          id="cliente"
-          type="text"
-          class="form-control"
-          [(ngModel)]="clienteFilter"
-          (input)="onFilterChange()"
-          placeholder="Buscar por cliente">
-      </div>
-
-      <div class="filter-group date-field">
-        <label for="dataInicial">Data Inicial</label>
-        <input
-          id="dataInicial"
-          type="date"
-          class="form-control"
-          [(ngModel)]="dataInicialFilter"
-          (change)="onFilterChange()">
-      </div>
-
-      <div class="filter-group date-field">
-        <label for="dataFinal">Data Final</label>
-        <input
-          id="dataFinal"
-          type="date"
-          class="form-control"
-          [(ngModel)]="dataFinalFilter"
-          (change)="onFilterChange()">
-      </div>
-
-      <div class="filter-group">
-        <label for="unidade">Unidade</label>
-        <select
-          id="unidade"
-          class="form-control"
-          [(ngModel)]="unidadeFilter"
-          (change)="onFilterChange()"
-          [disabled]="unidadeDisabled">
-          <option value="">Todas</option>
-          <option *ngFor="let unidade of unidades" [value]="unidade">
-            {{ unidade }}
-          </option>
-        </select>
-      </div>
-
-      <div class="filter-group">
-        <label for="origem">Comprado em</label>
-        <select
-          id="origem"
-          class="form-control"
-          [(ngModel)]="origemFilter"
-          (change)="onFilterChange()">
-          <option value="">Todas</option>
-          <option *ngFor="let origem of origens" [value]="origem">
-            {{ getOrigemLabel(origem) }}
-          </option>
-        </select>
-      </div>
-
-      <div class="filter-group value-range-group">
-        <label>Valor da baixa</label>
-        <div class="range-fields">
-          <input
-            id="valorMin"
-            type="number"
-            step="0.01"
-            class="form-control small-field"
-            [(ngModel)]="valorMinFilter"
-            (blur)="onValorBlur('min')"
-            (keyup.enter)="onFilterChange()"
-            placeholder="Mínimo">
-          <span class="range-separator">até</span>
-          <input
-            id="valorMax"
-            type="number"
-            step="0.01"
-            class="form-control small-field"
-            [(ngModel)]="valorMaxFilter"
-            (blur)="onValorBlur('max')"
-            (keyup.enter)="onFilterChange()"
-            placeholder="Máximo">
-        </div>
-      </div>
-
-      <div class="filter-group filter-actions">
-        <label>&nbsp;</label>
-        <button class="btn btn-limpar" type="button" (click)="clearFilters()">
-          Limpar
-        </button>
-      </div>
-    </section>
-
+  <div class="baixas-page">
     <section *ngIf="error" class="state-card error">
       <p>{{ error }}</p>
       <button class="btn btn-primario" type="button" (click)="loadBaixas()">Tentar novamente</button>
@@ -132,10 +10,166 @@
       <p>Carregando baixas...</p>
     </section>
 
-    <section *ngIf="!loading && !error" class="results-section">
+    <section class="results-card" *ngIf="!loading && !error">
       <div class="results-header">
-        <p>{{ items.length }} baixas encontradas nesta página</p>
+        <div class="header-actions">
+          <button class="btn btn-imprimir" type="button" (click)="imprimirRelatorio()" [attr.disabled]="(loading || items.length === 0) ? 'disabled' : null">
+            <i class="fas fa-print"></i>
+            Imprimir
+          </button>
+          <button class="btn btn-atualizar" type="button" (click)="loadBaixas()" [attr.disabled]="loading ? 'disabled' : null">
+            <i class="fas fa-rotate"></i>
+            Atualizar
+          </button>
+        </div>
+        <p class="results-info">{{ items.length }} baixas encontradas nesta página</p>
       </div>
+
+      <div class="filters-inline">
+        <div
+          class="filters-panel-top"
+          role="button"
+          tabindex="0"
+          (click)="toggleFiltersVisibility()"
+          (keydown)="onFiltersToggleKey($event)">
+          <div class="filters-controls">
+            <div class="filters-toggle btn btn-toggle-filtros">
+              <span>{{ filtersPanelOpen ? 'Ocultar filtros' : 'Mostrar filtros' }}</span>
+              <span class="filters-count" *ngIf="appliedFilters.length">
+                {{ appliedFilters.length }}
+              </span>
+              <i
+                class="fas"
+                [class.fa-chevron-up]="filtersPanelOpen"
+                [class.fa-chevron-down]="!filtersPanelOpen"></i>
+            </div>
+            <div
+              class="applied-filters-inline"
+              *ngIf="appliedFilters.length"
+              (click)="$event.stopPropagation()"
+              (keydown)="$event.stopPropagation()">
+              <div class="applied-filters-list">
+                <span class="filter-chip" *ngFor="let filter of appliedFilters">
+                  <strong>{{ filter.label }}:</strong> {{ filter.value }}
+                  <button
+                    class="chip-remove"
+                    type="button"
+                    (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
+                    aria-label="Remover filtro {{ filter.label }}">
+                    ×
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="filters" *ngIf="filtersPanelOpen">
+          <div class="filter-group">
+            <label for="protocolo">Protocolo</label>
+            <input
+              id="protocolo"
+              type="text"
+              class="form-control"
+              [(ngModel)]="protocoloFilter"
+              (input)="onFilterChange()"
+              placeholder="Buscar por protocolo">
+          </div>
+
+          <div class="filter-group">
+            <label for="cliente">Cliente</label>
+            <input
+              id="cliente"
+              type="text"
+              class="form-control"
+              [(ngModel)]="clienteFilter"
+              (input)="onFilterChange()"
+              placeholder="Buscar por cliente">
+          </div>
+
+          <div class="filter-group date-field">
+            <label for="dataInicial">Data Inicial</label>
+            <input
+              id="dataInicial"
+              type="date"
+              class="form-control"
+              [(ngModel)]="dataInicialFilter"
+              (change)="onFilterChange()">
+          </div>
+
+          <div class="filter-group date-field">
+            <label for="dataFinal">Data Final</label>
+            <input
+              id="dataFinal"
+              type="date"
+              class="form-control"
+              [(ngModel)]="dataFinalFilter"
+              (change)="onFilterChange()">
+          </div>
+
+          <div class="filter-group">
+            <label for="unidade">Unidade</label>
+            <select
+              id="unidade"
+              class="form-control"
+              [(ngModel)]="unidadeFilter"
+              (change)="onFilterChange()"
+              [disabled]="unidadeDisabled">
+              <option value="">Todas</option>
+              <option *ngFor="let unidade of unidades" [value]="unidade">
+                {{ unidade }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="origem">Comprado em</label>
+            <select
+              id="origem"
+              class="form-control"
+              [(ngModel)]="origemFilter"
+              (change)="onFilterChange()">
+              <option value="">Todas</option>
+              <option *ngFor="let origem of origens" [value]="origem">
+                {{ getOrigemLabel(origem) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group value-range-group">
+            <label>Valor da baixa</label>
+            <div class="range-fields">
+              <input
+                id="valorMin"
+                type="number"
+                step="0.01"
+                class="form-control small-field"
+                [(ngModel)]="valorMinFilter"
+                (blur)="onValorBlur('min')"
+                (keyup.enter)="onFilterChange()"
+                placeholder="Mínimo">
+              <span class="range-separator">até</span>
+              <input
+                id="valorMax"
+                type="number"
+                step="0.01"
+                class="form-control small-field"
+                [(ngModel)]="valorMaxFilter"
+                (blur)="onValorBlur('max')"
+                (keyup.enter)="onFilterChange()"
+                placeholder="Máximo">
+            </div>
+          </div>
+
+          <div class="filter-group filter-actions">
+            <label>&nbsp;</label>
+            <button class="btn btn-limpar" type="button" (click)="clearFilters()">
+              Limpar Filtro
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="table-wrapper">
         <table>
           <thead>

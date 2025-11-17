@@ -1,6 +1,7 @@
-import { Component, OnInit, inject, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, ViewEncapsulation, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of, Subject } from 'rxjs';
 import { VendaService } from '../../services/vendas.service';
 import { BaixasService } from '../../services/baixas.service';
 import { AuthService } from '../../services/auth.service';
@@ -14,6 +15,29 @@ import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-au
 import { LancarBaixaModalComponent } from '../lancar-baixa-modal/lancar-baixa-modal';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
+import { PageContextService } from '../../services/page-context.service';
+import { catchError, map, takeUntil } from 'rxjs/operators';
+
+type SortDirection = 'asc' | 'desc';
+type SortableField =
+  | 'protocolo'
+  | 'dataVenda'
+  | 'dataFechamento'
+  | 'cliente'
+  | 'origem'
+  | 'vendedor'
+  | 'ativo'
+  | 'valorCompra'
+  | 'valorCliente'
+  | 'valorPago'
+  | 'status'
+  | 'observacao';
+
+interface AppliedFilter {
+  key: string;
+  label: string;
+  value: string;
+}
 
 @Component({
   selector: 'app-vendas-list',
@@ -23,12 +47,13 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./vendas-list.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class VendasListComponent extends BaseListComponent<Venda> {
+export class VendasListComponent extends BaseListComponent<Venda> implements OnDestroy {
   private vendaService = inject(VendaService);
   private baixasService = inject(BaixasService);
   private authService = inject(AuthService);
   private configuracaoService = inject(ConfiguracaoService);
   private cdr = inject(ChangeDetectorRef);
+  private pageContextService = inject(PageContextService);
   configuracao: Configuracao | null = null;
 
   // Paginação
@@ -75,6 +100,9 @@ export class VendasListComponent extends BaseListComponent<Venda> {
   baixasCache: Map<string, Baixa[]> = new Map();
   fechamentoLoading = false;
   cancelamentoLoading = false;
+  filtersPanelOpen = false;
+  sortField: SortableField | null = null;
+  sortDirection: SortDirection = 'asc';
 
   // Modal de venda
   showVendaModal = false;
@@ -87,6 +115,9 @@ export class VendasListComponent extends BaseListComponent<Venda> {
   // Modal de lançar baixa
   showBaixaModal = false;
   selectedVendaForBaixa: Venda | null = null;
+  showBulkDeleteModal = false;
+  bulkDeleteLoading = false;
+  private destroy$ = new Subject<void>();
 
   // Enums para template
   VendaOrigem = VendaOrigem;
@@ -106,7 +137,17 @@ export class VendasListComponent extends BaseListComponent<Venda> {
       next: config => (this.configuracao = config),
       error: () => (this.configuracao = null)
     });
+    this.pageContextService.setContext({
+      title: 'Vendas',
+      description: 'Visualize e gerencie as vendas registradas, acompanhe status e totais rapidamente.'
+    });
     super.ngOnInit();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.pageContextService.resetContext();
   }
 
   private restoreFiltersFromStorage(): void {
@@ -254,6 +295,7 @@ export class VendasListComponent extends BaseListComponent<Venda> {
         this.items = response.data;
         this.totalItems = response.meta.total;
         this.totalPages = response.meta.totalPages;
+        this.applySorting();
         this.loading = false;
       },
       error: (_: any) => {
@@ -275,6 +317,68 @@ export class VendasListComponent extends BaseListComponent<Venda> {
     this.selectedVendas.clear();
     this.saveFiltersToStorage();
     this.loadItems();
+  }
+
+  toggleFiltersVisibility(): void {
+    this.filtersPanelOpen = !this.filtersPanelOpen;
+  }
+
+  editSelectedVenda(): void {
+    if (!this.canEditVenda()) {
+      return;
+    }
+    const venda = this.getSingleSelectedVenda(
+      'Selecione uma venda para editar.',
+      'Selecione apenas uma venda para editar.'
+    );
+    if (!venda) {
+      return;
+    }
+    this.openEditVendaModal(venda);
+  }
+
+  lancarBaixaSelecionada(): void {
+    if (!this.canLancarBaixa()) {
+      return;
+    }
+    const venda = this.getSingleSelectedVenda(
+      'Selecione uma venda para lançar baixa.',
+      'Selecione apenas uma venda para lançar baixa.'
+    );
+    if (!venda) {
+      return;
+    }
+    this.openBaixaModal(venda);
+  }
+
+  abrirAuditoriaVendaSelecionada(): void {
+    if (!this.canAuditVenda()) {
+      return;
+    }
+    const venda = this.getSingleSelectedVenda(
+      'Selecione uma venda para ver o histórico de auditoria.',
+      'Selecione apenas uma venda para ver o histórico.'
+    );
+    if (!venda) {
+      return;
+    }
+    this.openAuditHistory(venda);
+  }
+
+  onRowClick(event: MouseEvent, vendaId: string): void {
+    const target = event.target as HTMLElement;
+    const interactiveSelectors = ['button', 'a', 'input', 'select', 'textarea', '[role="button"]'];
+    if (target.closest(interactiveSelectors.join(','))) {
+      return;
+    }
+    this.toggleSelectVenda(vendaId);
+  }
+
+  onFiltersToggleKey(event: KeyboardEvent): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.toggleFiltersVisibility();
+    }
   }
 
   clearFilters(): void {
@@ -301,6 +405,261 @@ export class VendasListComponent extends BaseListComponent<Venda> {
     this.selectedVendas.clear();
     this.saveFiltersToStorage();
     this.loadItems();
+  }
+
+  get appliedFilters(): AppliedFilter[] {
+    const filters: AppliedFilter[] = [];
+    if (this.protocoloFilter.trim()) {
+      filters.push({ key: 'protocolo', label: 'Protocolo', value: this.protocoloFilter.trim() });
+    }
+    if (this.clienteFilter.trim()) {
+      filters.push({ key: 'cliente', label: 'Cliente', value: this.clienteFilter.trim() });
+    }
+    if (this.vendedorFilter.trim()) {
+      filters.push({ key: 'vendedor', label: 'Vendedor', value: this.vendedorFilter.trim() });
+    }
+    if (this.ativoFilter.trim()) {
+      filters.push({ key: 'ativo', label: 'Ativo', value: this.ativoFilter.trim() });
+    }
+    if (this.origemFilter) {
+      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(this.origemFilter as VendaOrigem) });
+    }
+    if (this.statusFilter) {
+      filters.push({ key: 'status', label: 'Status', value: this.getStatusLabel(this.statusFilter as VendaStatus) });
+    }
+    if (this.dataInicialFilter || this.dataFinalFilter) {
+      const from = this.dataInicialFilter ? this.formatDate(this.dataInicialFilter) : '';
+      const to = this.dataFinalFilter ? this.formatDate(this.dataFinalFilter) : '';
+      let value = '';
+      if (from && to) {
+        value = `${from} a ${to}`;
+      } else if (from) {
+        value = `A partir de ${from}`;
+      } else if (to) {
+        value = `Até ${to}`;
+      }
+      filters.push({ key: 'dataVenda', label: 'Data da Venda', value });
+    }
+    if (this.dataInicialFechamentoFilter || this.dataFinalFechamentoFilter) {
+      const from = this.dataInicialFechamentoFilter ? this.formatDate(this.dataInicialFechamentoFilter) : '';
+      const to = this.dataFinalFechamentoFilter ? this.formatDate(this.dataFinalFechamentoFilter) : '';
+      let value = '';
+      if (from && to) {
+        value = `${from} a ${to}`;
+      } else if (from) {
+        value = `A partir de ${from}`;
+      } else if (to) {
+        value = `Até ${to}`;
+      }
+      filters.push({ key: 'dataFechamento', label: 'Data de Fechamento', value });
+    }
+    if (this.unidadeFilter) {
+      filters.push({ key: 'unidade', label: 'Unidade', value: this.unidadeFilter });
+    }
+    return filters.filter(filter => filter.value);
+  }
+
+  clearAppliedFilter(key: string): void {
+    switch (key) {
+      case 'protocolo':
+        this.protocoloFilter = '';
+        break;
+      case 'cliente':
+        this.clienteFilter = '';
+        break;
+      case 'vendedor':
+        this.vendedorFilter = '';
+        break;
+      case 'ativo':
+        this.ativoFilter = '';
+        break;
+      case 'origem':
+        this.origemFilter = '';
+        break;
+      case 'status':
+        this.statusFilter = '';
+        break;
+      case 'dataVenda':
+        this.dataInicialFilter = '';
+        this.dataFinalFilter = '';
+        break;
+      case 'dataFechamento':
+        this.dataInicialFechamentoFilter = '';
+        this.dataFinalFechamentoFilter = '';
+        break;
+      case 'unidade':
+        if (!this.unidadeDisabled) {
+          this.unidadeFilter = '';
+        }
+        break;
+      default:
+        return;
+    }
+    this.onFilterChange();
+  }
+
+  onSort(field: SortableField): void {
+    if (this.sortField === field) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortField = field;
+      this.sortDirection = 'asc';
+    }
+    this.applySorting();
+  }
+
+  private applySorting(): void {
+    if (!this.sortField) {
+      return;
+    }
+    const direction = this.sortDirection === 'asc' ? 1 : -1;
+    const field = this.sortField;
+    this.items = [...this.items].sort((a, b) => {
+      const valueA = this.getSortableValue(a, field);
+      const valueB = this.getSortableValue(b, field);
+
+      if (valueA == null && valueB == null) return 0;
+      if (valueA == null) return 1;
+      if (valueB == null) return -1;
+
+      if (typeof valueA === 'number' && typeof valueB === 'number') {
+        if (valueA === valueB) return 0;
+        return valueA > valueB ? direction : -direction;
+      }
+
+      return valueA.toString().localeCompare(valueB.toString(), 'pt-BR', {
+        sensitivity: 'base',
+        numeric: true
+      }) * direction;
+    });
+  }
+
+  private getSortableValue(venda: Venda, field: SortableField): any {
+    switch (field) {
+      case 'protocolo':
+        return venda.protocolo;
+      case 'dataVenda':
+        return venda.dataVenda ? new Date(venda.dataVenda).getTime() : null;
+      case 'dataFechamento':
+        return venda.dataFechamento ? new Date(venda.dataFechamento).getTime() : null;
+      case 'cliente':
+        return venda.cliente;
+      case 'origem':
+        return this.getOrigemLabel(venda.origem);
+      case 'vendedor':
+        return venda.vendedor;
+      case 'ativo':
+        return venda.ativo;
+      case 'valorCompra':
+        return venda.valorCompra || 0;
+      case 'valorCliente':
+        return venda.valorCliente || 0;
+      case 'valorPago':
+        return this.getValorBaixadoForVenda(venda.id);
+      case 'status':
+        return this.getStatusLabel(venda.status);
+      case 'observacao':
+        return venda.observacao || '';
+      default:
+        return venda.protocolo;
+    }
+  }
+
+  private getSingleSelectedVenda(noSelectionMsg: string, multipleSelectionMsg: string): Venda | null {
+    if (this.selectedVendas.size === 0) {
+      this.errorModalService.show(noSelectionMsg, 'Atenção');
+      return null;
+    }
+
+    if (this.selectedVendas.size > 1) {
+      this.errorModalService.show(multipleSelectionMsg, 'Atenção');
+      return null;
+    }
+
+    const vendaId = Array.from(this.selectedVendas)[0];
+    const venda = this.items.find(item => item.id === vendaId);
+
+    if (!venda) {
+      this.errorModalService.show('Venda selecionada não encontrada na lista.', 'Atenção');
+      return null;
+    }
+
+    return venda;
+  }
+
+  openBulkDeleteModal(): void {
+    if (!this.canDeleteVenda()) {
+      return;
+    }
+
+    if (this.selectedVendas.size === 0) {
+      this.errorModalService.show('Selecione pelo menos uma venda para excluir.', 'Atenção');
+      return;
+    }
+
+    this.showBulkDeleteModal = true;
+  }
+
+  closeBulkDeleteModal(): void {
+    if (this.bulkDeleteLoading) {
+      return;
+    }
+    this.showBulkDeleteModal = false;
+  }
+
+  confirmBulkDelete(): void {
+    if (this.selectedVendas.size === 0) {
+      this.errorModalService.show('Selecione pelo menos uma venda para excluir.', 'Atenção');
+      this.closeBulkDeleteModal();
+      return;
+    }
+
+    if (this.selectedVendas.size === 0) {
+      this.errorModalService.show('Selecione pelo menos uma venda para fechar.', 'Atenção');
+      return;
+    }
+
+    const ids = Array.from(this.selectedVendas);
+    this.bulkDeleteLoading = true;
+
+    const deleteRequests = ids.map(id =>
+      this.vendaService.deleteVenda(id).pipe(
+        map(() => ({ id, error: null })),
+        catchError(error => of({ id, error }))
+      )
+    );
+
+    forkJoin(deleteRequests)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+      next: results => {
+        const failed = results.filter(result => !!result.error);
+        this.bulkDeleteLoading = false;
+        this.showBulkDeleteModal = false;
+        if (failed.length > 0) {
+          const detalhes = failed
+            .map(result => {
+              const venda = this.items.find(item => item.id === result.id);
+              const protocolo = venda?.protocolo || result.id;
+              const motivo = result.error?.error?.message || result.error?.message || 'Erro desconhecido';
+              return `• Protocolo ${protocolo}: ${motivo}`;
+            })
+            .join('\n');
+          this.errorModalService.show(
+            `Algumas vendas não puderam ser excluídas:\n${detalhes}`,
+            'Erro ao excluir'
+          );
+        } else {
+          this.errorModalService.show('Vendas excluídas com sucesso.', 'Sucesso');
+        }
+        this.selectedVendas.clear();
+        this.loadItems();
+      },
+      error: () => {
+        this.bulkDeleteLoading = false;
+        this.errorModalService.show('Erro ao excluir vendas selecionadas.', 'Erro');
+      }
+    });
   }
 
   // Métodos para registro direto na lista
@@ -422,32 +781,6 @@ export class VendasListComponent extends BaseListComponent<Venda> {
     return this.authService.hasPermission(Permission.VENDA_CANCELAR_FECHAMENTO);
   }
 
-  shouldDisableFecharVendasButton(): boolean {
-    return (
-      !this.canFecharVendas() ||
-      this.selectedVendas.size === 0 ||
-      this.loading ||
-      this.fechamentoLoading ||
-      this.cancelamentoLoading
-    );
-  }
-
-  getFecharVendasTooltip(): string {
-    if (!this.canFecharVendas()) {
-      return 'Você não possui permissão para fechar vendas.';
-    }
-
-    if (this.selectedVendas.size === 0) {
-      return 'Selecione pelo menos uma venda para fechar.';
-    }
-
-    if (this.loading || this.fechamentoLoading) {
-      return 'Aguarde o carregamento para fechar as vendas.';
-    }
-
-    return 'Fechar vendas com status PAGO e baixas iguais ao valor do cliente.';
-  }
-
   imprimirFechamentoAtual(): void {
     if (!this.canReadVenda()) {
       return;
@@ -467,8 +800,9 @@ export class VendasListComponent extends BaseListComponent<Venda> {
       );
       return;
     }
+    const reportTitle = 'Relatório de Vendas';
     const reportTimestamp = this.getReportTimestamp();
-    const reportTitle = `Relatório de Vendas ${reportTimestamp}`;
+    const reportDocumentTitle = `${reportTitle} ${reportTimestamp}`;
 
     const currentUser = this.authService.getCurrentUser();
     const usuarioLabel = currentUser?.nome || currentUser?.email || 'Usuário não identificado';
@@ -483,7 +817,7 @@ export class VendasListComponent extends BaseListComponent<Venda> {
     const geradoEmTexto = `Gerado em ${dataFormatada}, ${horaFormatada} por ${usuarioLabel}`;
 
     const logoUrl = this.getLogoRelatorioUrl();
-    const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo do sistema" />` : '';
+        const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo do sistema" />` : '';
 
     const totalValorCompra = vendasParaImprimir.reduce((total, venda) => total + (venda.valorCompra || 0), 0);
     const totalValorCliente = vendasParaImprimir.reduce((total, venda) => total + (venda.valorCliente || 0), 0);
@@ -607,7 +941,7 @@ export class VendasListComponent extends BaseListComponent<Venda> {
       <html lang="pt-BR">
         <head>
           <meta charset="utf-8" />
-          <title>${reportTitle}</title>
+        <title>${reportDocumentTitle}</title>
           <style>
             body { font-family: 'Segoe UI', Arial, sans-serif; margin: 16px; color: #1a202c; font-size: 12px; background: #fff; margin-bottom: 80px; }
             h1 { margin: 0; font-size: 20px; letter-spacing: 0.5px; }
@@ -664,7 +998,7 @@ export class VendasListComponent extends BaseListComponent<Venda> {
       </html>
     `);
     popup.document.close();
-    popup.document.title = reportTitle;
+    popup.document.title = reportDocumentTitle;
     popup.focus();
   }
 
@@ -746,6 +1080,8 @@ export class VendasListComponent extends BaseListComponent<Venda> {
         this.items.forEach(venda => {
           this.loadBaixasForVenda(venda.id);
         });
+        this.applySorting();
+        this.applySorting();
       },
       error: (_: any) => {
         this.loading = false;
@@ -905,6 +1241,11 @@ export class VendasListComponent extends BaseListComponent<Venda> {
       return;
     }
 
+    if (this.selectedVendas.size === 0) {
+      this.errorModalService.show('Selecione pelo menos uma venda para fechar.', 'Atenção');
+      return;
+    }
+
     const erros = this.validarVendasParaFechamento();
     if (erros.length > 0) {
       this.errorModalService.show(erros.join('\n'), 'Não é possível fechar as vendas selecionadas');
@@ -948,6 +1289,11 @@ export class VendasListComponent extends BaseListComponent<Venda> {
 
   cancelarFechamentosSelecionados(): void {
     if (!this.canCancelarFechamento()) {
+      return;
+    }
+
+    if (this.selectedVendas.size === 0) {
+      this.errorModalService.show('Selecione pelo menos uma venda para cancelar o fechamento.', 'Atenção');
       return;
     }
 
@@ -1118,7 +1464,7 @@ export class VendasListComponent extends BaseListComponent<Venda> {
   private getReportTimestamp(): string {
     const now = new Date();
     const pad = (value: number) => String(value).padStart(2, '0');
-    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(
+    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(
       now.getHours()
     )}${pad(now.getMinutes())}`;
   }
