@@ -1,15 +1,10 @@
 <div class="vendas-page">
-  <section *ngIf="loading" class="state-card">
-    <div class="spinner"></div>
-    <p>Carregando vendas...</p>
-  </section>
-
   <section *ngIf="error" class="state-card error-message">
     <i class="fas fa-exclamation-triangle"></i>
     {{ error }}
   </section>
 
-  <section class="results-card" *ngIf="!loading && !error">
+  <section class="results-card" *ngIf="!error">
     <div class="results-header">
       <div class="header-actions">
         <button
@@ -79,6 +74,10 @@
         </button>
       </div>
     </div>
+    <div class="inline-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Atualizando lista de vendas...</span>
+    </div>
     <div class="filters-inline">
       <div
         class="filters-panel-top"
@@ -124,7 +123,7 @@
             id="protocoloFilter"
             type="text"
             [(ngModel)]="protocoloFilter"
-            (input)="onFilterChange()"
+           
             placeholder="Buscar por protocolo..."
             class="form-control">
         </div>
@@ -135,7 +134,7 @@
             id="clienteFilter"
             type="text"
             [(ngModel)]="clienteFilter"
-            (input)="onFilterChange()"
+           
             placeholder="Buscar por cliente..."
             class="form-control">
         </div>
@@ -146,7 +145,7 @@
             id="vendedorFilter"
             type="text"
             [(ngModel)]="vendedorFilter"
-            (input)="onFilterChange()"
+           
             placeholder="Buscar por vendedor..."
             class="form-control">
         </div>
@@ -157,7 +156,7 @@
             id="ativoFilter"
             type="text"
             [(ngModel)]="ativoFilter"
-            (input)="onFilterChange()"
+           
             placeholder="Buscar por ativo..."
             class="form-control">
         </div>
@@ -167,7 +166,7 @@
           <select
             id="origemFilter"
             [(ngModel)]="origemFilter"
-            (change)="onFilterChange()"
+           
             class="form-control">
             <option value="">Todas</option>
             <option *ngFor="let origem of [VendaOrigem.GOIANIA, VendaOrigem.UBERABA, VendaOrigem.NEROPOLIS, VendaOrigem.OUTRO]" [value]="origem">
@@ -181,7 +180,7 @@
           <select
             id="statusFilter"
             [(ngModel)]="statusFilter"
-            (change)="onFilterChange()"
+           
             class="form-control">
             <option value="">Todos</option>
             <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL, VendaStatus.FECHADO]" [value]="status">
@@ -196,7 +195,7 @@
             id="dataInicialFilter"
             type="date"
             [(ngModel)]="dataInicialFilter"
-            (change)="onFilterChange()"
+           
             class="form-control">
         </div>
 
@@ -206,7 +205,7 @@
             id="dataFinalFilter"
             type="date"
             [(ngModel)]="dataFinalFilter"
-            (change)="onFilterChange()"
+           
             class="form-control">
         </div>
 
@@ -216,7 +215,7 @@
             id="dataInicialFechamentoFilter"
             type="date"
             [(ngModel)]="dataInicialFechamentoFilter"
-            (change)="onFilterChange()"
+           
             class="form-control">
         </div>
 
@@ -226,7 +225,7 @@
             id="dataFinalFechamentoFilter"
             type="date"
             [(ngModel)]="dataFinalFechamentoFilter"
-            (change)="onFilterChange()"
+           
             class="form-control">
         </div>
 
@@ -236,7 +235,7 @@
             id="unidadeFilter"
             [(ngModel)]="unidadeFilter"
             [disabled]="unidadeDisabled"
-            (change)="onFilterChange()"
+           
             class="form-control">
             <option value="">Todas</option>
             <option *ngFor="let unidade of unidades" [value]="unidade">
@@ -247,9 +246,14 @@
 
         <div class="filter-group filter-actions">
           <label>&nbsp;</label>
-          <button class="btn btn-limpar" type="button" (click)="clearFilters()">
-            Limpar Filtro
-          </button>
+          <div class="filter-action-buttons">
+            <button class="btn btn-limpar" type="button" (click)="clearFilters()">
+              Limpar Filtro
+            </button>
+            <button class="btn btn-aplicar" type="button" (click)="applyFilters()">
+              Aplicar Filtros
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -262,6 +262,11 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     this.onFilterChange();
   }
 
+  applyFilters(): void {
+    this.filtersPanelOpen = false;
+    this.loadBaixas(1);
+  }
+
   private getLogoRelatorioUrl(): string | null {
     if (!this.configuracao?.logoRelatorio) {
       return null;

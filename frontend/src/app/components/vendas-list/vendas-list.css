@@ -58,7 +58,8 @@
   margin-top: 1rem;
 }
 
-.header-actions .btn {
+.header-actions .btn,
+.filter-action-buttons .btn {
   min-height: 30px;
   padding: 0.25rem 0.65rem;
   border-radius: 8px;
@@ -71,13 +72,15 @@
   gap: 0.4rem;
 }
 
-.header-actions .btn:hover {
+.header-actions .btn:hover,
+.filter-action-buttons .btn:hover {
   background: #e0e7ff !important;
   border-color: #c7d2fe !important;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
 }
 
-.header-actions .btn:disabled {
+.header-actions .btn:disabled,
+.filter-action-buttons .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -160,6 +163,12 @@
   display: flex;
   grid-column: 1 / -1;
   justify-content: flex-start;
+}
+
+.filter-action-buttons {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .form-control {
@@ -303,6 +312,23 @@
   margin-bottom: 0.75rem;
 }
 
+.inline-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.inline-loading .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 .actions-cell {
   width: 88px !important;
   min-width: 88px !important;
@@ -391,6 +417,15 @@
 
 :host-context(body.theme-dark) .btn-toggle-filtros {
   color: #e2e8f0;
+}
+
+:host-context(body.theme-dark) .inline-loading {
+  color: #cbd5f5;
+}
+
+:host-context(body.theme-dark) .inline-loading .spinner {
+  border-color: rgba(148, 163, 184, 0.6);
+  border-top-color: #7dd3fc;
 }
 
 :host-context(body.theme-dark) .header-actions .btn {

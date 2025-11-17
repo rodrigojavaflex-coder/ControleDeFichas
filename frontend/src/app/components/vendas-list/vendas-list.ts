@@ -498,6 +498,11 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.onFilterChange();
   }
 
+  applyFilters(): void {
+    this.filtersPanelOpen = false;
+    this.onFilterChange();
+  }
+
   onSort(field: SortableField): void {
     if (this.sortField === field) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
