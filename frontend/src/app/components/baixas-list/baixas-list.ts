@@ -93,8 +93,8 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
 
     const now = new Date();
-    const firstDay = now;
-    const lastDay = now;
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
     const formatDate = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -102,8 +102,8 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       return `${year}-${month}-${day}`;
     };
 
-    this.dataInicialFilter = formatDate(firstDay);
-    this.dataFinalFilter = formatDate(lastDay);
+    this.dataInicialFilter = formatDate(yesterday);
+    this.dataFinalFilter = formatDate(now);
   }
 
   private initializeUnidadeFilter(): void {
