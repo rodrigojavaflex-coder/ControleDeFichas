@@ -208,6 +208,28 @@
   opacity: 0.8;
 }
 
+.user-unit,
+.user-session,
+.user-session-expiration {
+  font-size: 12px;
+  color: var(--text-secondary, #4b5563);
+}
+
+.user-session-expiration {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.user-session-expiration.warning {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.user-session-expiration.warning i {
+  color: #dc2626;
+}
+
 /* Indicador de dropdown ativo */
 
 .dropdown-divider {

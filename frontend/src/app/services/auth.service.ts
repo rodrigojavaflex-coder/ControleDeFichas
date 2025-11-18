@@ -33,6 +33,15 @@ export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(false);
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
+  private loginTimestampSubject = new BehaviorSubject<number | null>(null);
+  public loginTimestamp$ = this.loginTimestampSubject.asObservable();
+
+  private tokenExpirationSubject = new BehaviorSubject<number | null>(null);
+  public tokenExpiration$ = this.tokenExpirationSubject.asObservable();
+
+  private readonly LOGIN_TIMESTAMP_KEY = 'login_timestamp';
+  private readonly TOKEN_EXPIRATION_KEY = 'token_expiration';
+
   constructor() {
     // Verificar se há token salvo no localStorage
     this.checkStoredAuth();
@@ -49,10 +58,14 @@ export class AuthService {
       this.http.post<AuthResponse>(`${this.apiUrl}/login`, { email, password })
     );
 
+    const now = Date.now();
+
     // Salvar tokens no localStorage
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('refresh_token', response.refresh_token);
     localStorage.setItem('user', JSON.stringify(response.user));
+    this.setLoginTimestamp(now);
+    this.updateTokenExpiration(response.access_token);
 
     // Atualizar estado
     this.currentUserSubject.next(response.user);
@@ -100,6 +113,7 @@ export class AuthService {
       );
 
       localStorage.setItem('access_token', response.access_token);
+      this.updateTokenExpiration(response.access_token);
       return response.access_token;
     } catch (error) {
       // Se refresh falhar, fazer logout
@@ -205,6 +219,8 @@ export class AuthService {
         this.currentUserSubject.next(user);
         this.isAuthenticatedSubject.next(true);
         
+        this.loadStoredTimingInfo(token);
+
         // Inicializar tema com preferência do usuário (forçar reset no refresh)
         this.themeService.initializeTheme(user.id, user.tema, true);
         
@@ -242,15 +258,74 @@ export class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    localStorage.removeItem(this.LOGIN_TIMESTAMP_KEY);
+    localStorage.removeItem(this.TOKEN_EXPIRATION_KEY);
     
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
+    this.loginTimestampSubject.next(null);
+    this.tokenExpirationSubject.next(null);
     
     // Resetar o tema para permitir nova inicialização no próximo login
     this.themeService.resetTheme();
     
     if (shouldRedirect && !this.router.url.includes('/login')) {
       this.router.navigate(['/login']);
+    }
+  }
+
+  private setLoginTimestamp(timestamp: number): void {
+    this.loginTimestampSubject.next(timestamp);
+    localStorage.setItem(this.LOGIN_TIMESTAMP_KEY, timestamp.toString());
+  }
+
+  private updateTokenExpiration(token: string | null): void {
+    if (!token) {
+      this.tokenExpirationSubject.next(null);
+      localStorage.removeItem(this.TOKEN_EXPIRATION_KEY);
+      return;
+    }
+
+    const exp = this.decodeTokenExpiration(token);
+    if (exp) {
+      this.tokenExpirationSubject.next(exp);
+      localStorage.setItem(this.TOKEN_EXPIRATION_KEY, exp.toString());
+    } else {
+      this.tokenExpirationSubject.next(null);
+      localStorage.removeItem(this.TOKEN_EXPIRATION_KEY);
+    }
+  }
+
+  private loadStoredTimingInfo(token: string): void {
+    const storedLogin = Number(localStorage.getItem(this.LOGIN_TIMESTAMP_KEY));
+    if (storedLogin) {
+      this.loginTimestampSubject.next(storedLogin);
+    } else {
+      const now = Date.now();
+      this.setLoginTimestamp(now);
+    }
+
+    const storedExp = Number(localStorage.getItem(this.TOKEN_EXPIRATION_KEY));
+    if (storedExp) {
+      this.tokenExpirationSubject.next(storedExp);
+    } else {
+      this.updateTokenExpiration(token);
+    }
+  }
+
+  private decodeTokenExpiration(token: string): number | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+      const payload = JSON.parse(atob(parts[1]));
+      if (payload?.exp) {
+        return payload.exp * 1000;
+      }
+      return null;
+    } catch (error) {
+      return null;
     }
   }
 }

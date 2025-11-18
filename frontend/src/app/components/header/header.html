@@ -21,11 +21,21 @@
         </div>
         
         <!-- Dropdown Menu -->
-        <div class="user-dropdown" [class.show]="showUserDropdown">
+          <div class="user-dropdown" [class.show]="showUserDropdown">
           <div class="dropdown-header">
             <div class="user-info">
               <div class="user-name-horizontal">{{ user.nome }}</div>
               <div class="user-email">{{ user.email }}</div>
+              <div class="user-unit" *ngIf="user.unidade">
+                Unidade: {{ user.unidade }}
+              </div>
+              <div class="user-session" *ngIf="loginElapsedLabel">
+                Sessão ativa há {{ loginElapsedLabel }}
+              </div>
+              <div class="user-session-expiration" *ngIf="sessionExpirationLabel" [class.warning]="sessionNearExpiry">
+                <i class="fas fa-exclamation-triangle" *ngIf="sessionNearExpiry"></i>
+                Expira em {{ sessionExpirationLabel }}
+              </div>
             </div>
           </div>
           <div class="dropdown-divider"></div>
