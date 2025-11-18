@@ -39,6 +39,20 @@ interface AppliedFilter {
   value: string;
 }
 
+interface VendasFilterSnapshot {
+  protocolo: string;
+  cliente: string;
+  vendedor: string;
+  origem: string;
+  status: string;
+  ativo: string;
+  dataInicial: string;
+  dataFinal: string;
+  dataInicialFechamento: string;
+  dataFinalFechamento: string;
+  unidade: string;
+}
+
 @Component({
   selector: 'app-vendas-list',
   standalone: true,
@@ -75,6 +89,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   unidadeFilter: Unidade | '' = '';
   ativoFilter = '';
   unidadeDisabled = false;
+  private appliedFiltersSnapshot: VendasFilterSnapshot = this.createFilterSnapshot();
 
   // Storage key para persistência de filtros
   private readonly FILTERS_STORAGE_KEY = 'vendas_list_filters';
@@ -133,6 +148,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.restoreFiltersFromStorage();
     this.initializeDateFilters();
     this.initializeUnidadeFilter();
+    this.appliedFiltersSnapshot = this.createFilterSnapshot();
     this.configuracaoService.getConfiguracao().subscribe({
       next: config => (this.configuracao = config),
       error: () => (this.configuracao = null)
@@ -374,6 +390,26 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.toggleSelectVenda(vendaId);
   }
 
+  private createFilterSnapshot(): VendasFilterSnapshot {
+    return {
+      protocolo: this.protocoloFilter || '',
+      cliente: this.clienteFilter || '',
+      vendedor: this.vendedorFilter || '',
+      origem: this.origemFilter?.toString() || '',
+      status: this.statusFilter?.toString() || '',
+      ativo: this.ativoFilter || '',
+      dataInicial: this.dataInicialFilter || '',
+      dataFinal: this.dataFinalFilter || '',
+      dataInicialFechamento: this.dataInicialFechamentoFilter || '',
+      dataFinalFechamento: this.dataFinalFechamentoFilter || '',
+      unidade: this.unidadeFilter?.toString() || ''
+    };
+  }
+
+  private updateAppliedFiltersSnapshot(): void {
+    this.appliedFiltersSnapshot = this.createFilterSnapshot();
+  }
+
   onFiltersToggleKey(event: KeyboardEvent): void {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -404,32 +440,35 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.currentPage = 1;
     this.selectedVendas.clear();
     this.saveFiltersToStorage();
+    this.filtersPanelOpen = false;
+    this.updateAppliedFiltersSnapshot();
     this.loadItems();
   }
 
   get appliedFilters(): AppliedFilter[] {
     const filters: AppliedFilter[] = [];
-    if (this.protocoloFilter.trim()) {
-      filters.push({ key: 'protocolo', label: 'Protocolo', value: this.protocoloFilter.trim() });
+    const snapshot = this.appliedFiltersSnapshot;
+    if (snapshot.protocolo.trim()) {
+      filters.push({ key: 'protocolo', label: 'Protocolo', value: snapshot.protocolo.trim() });
     }
-    if (this.clienteFilter.trim()) {
-      filters.push({ key: 'cliente', label: 'Cliente', value: this.clienteFilter.trim() });
+    if (snapshot.cliente.trim()) {
+      filters.push({ key: 'cliente', label: 'Cliente', value: snapshot.cliente.trim() });
     }
-    if (this.vendedorFilter.trim()) {
-      filters.push({ key: 'vendedor', label: 'Vendedor', value: this.vendedorFilter.trim() });
+    if (snapshot.vendedor.trim()) {
+      filters.push({ key: 'vendedor', label: 'Vendedor', value: snapshot.vendedor.trim() });
     }
-    if (this.ativoFilter.trim()) {
-      filters.push({ key: 'ativo', label: 'Ativo', value: this.ativoFilter.trim() });
+    if (snapshot.ativo.trim()) {
+      filters.push({ key: 'ativo', label: 'Ativo', value: snapshot.ativo.trim() });
     }
-    if (this.origemFilter) {
-      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(this.origemFilter as VendaOrigem) });
+    if (snapshot.origem) {
+      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(snapshot.origem as VendaOrigem) });
     }
-    if (this.statusFilter) {
-      filters.push({ key: 'status', label: 'Status', value: this.getStatusLabel(this.statusFilter as VendaStatus) });
+    if (snapshot.status) {
+      filters.push({ key: 'status', label: 'Status', value: this.getStatusLabel(snapshot.status as VendaStatus) });
     }
-    if (this.dataInicialFilter || this.dataFinalFilter) {
-      const from = this.dataInicialFilter ? this.formatDate(this.dataInicialFilter) : '';
-      const to = this.dataFinalFilter ? this.formatDate(this.dataFinalFilter) : '';
+    if (snapshot.dataInicial || snapshot.dataFinal) {
+      const from = snapshot.dataInicial ? this.formatDate(snapshot.dataInicial) : '';
+      const to = snapshot.dataFinal ? this.formatDate(snapshot.dataFinal) : '';
       let value = '';
       if (from && to) {
         value = `${from} a ${to}`;
@@ -440,9 +479,9 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       }
       filters.push({ key: 'dataVenda', label: 'Data da Venda', value });
     }
-    if (this.dataInicialFechamentoFilter || this.dataFinalFechamentoFilter) {
-      const from = this.dataInicialFechamentoFilter ? this.formatDate(this.dataInicialFechamentoFilter) : '';
-      const to = this.dataFinalFechamentoFilter ? this.formatDate(this.dataFinalFechamentoFilter) : '';
+    if (snapshot.dataInicialFechamento || snapshot.dataFinalFechamento) {
+      const from = snapshot.dataInicialFechamento ? this.formatDate(snapshot.dataInicialFechamento) : '';
+      const to = snapshot.dataFinalFechamento ? this.formatDate(snapshot.dataFinalFechamento) : '';
       let value = '';
       if (from && to) {
         value = `${from} a ${to}`;
@@ -453,8 +492,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       }
       filters.push({ key: 'dataFechamento', label: 'Data de Fechamento', value });
     }
-    if (this.unidadeFilter) {
-      filters.push({ key: 'unidade', label: 'Unidade', value: this.unidadeFilter });
+    if (snapshot.unidade) {
+      filters.push({ key: 'unidade', label: 'Unidade', value: snapshot.unidade });
     }
     return filters.filter(filter => filter.value);
   }
@@ -500,6 +539,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
 
   applyFilters(): void {
     this.filtersPanelOpen = false;
+    this.updateAppliedFiltersSnapshot();
     this.onFilterChange();
   }
 

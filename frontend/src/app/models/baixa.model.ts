@@ -1,5 +1,5 @@
 import { Unidade } from './usuario.model';
-import { VendaOrigem } from './venda.model';
+import { Venda, VendaOrigem } from './venda.model';
 
 export enum TipoDaBaixa {
   DINHEIRO = 'DINHEIRO',
@@ -17,15 +17,7 @@ export interface Baixa {
   observacao?: string;
   criadoEm: string;
   atualizadoEm: string;
-  venda?: {
-    id: string;
-    protocolo: string;
-    cliente: string;
-    unidade?: Unidade;
-    origem?: VendaOrigem;
-    vendedor?: string;
-    dataVenda?: string;
-  };
+  venda?: Venda;
 }
 
 export interface CreateBaixaDto {

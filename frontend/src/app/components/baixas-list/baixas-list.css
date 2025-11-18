@@ -180,9 +180,11 @@
 }
 
 .filter-action-buttons {
-  display: inline-flex;
+  display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .form-control {
@@ -249,9 +251,9 @@ table {
 
 thead {
   background: #f1f5f9;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
+  text-transform: none;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
 }
 
 th,
@@ -261,7 +263,20 @@ td {
   text-align: left;
 }
 
-tbody tr:last-child td {
+.table-wrapper table tbody tr {
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.table-wrapper table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.table-wrapper table tbody tr.row-selected {
+  background: #e0f2fe;
+}
+
+.table-wrapper table tbody tr:last-child td {
   border-bottom: none;
 }
 
@@ -360,6 +375,13 @@ tbody tr:last-child td {
   background: #1e293b;
   color: #e2e8f0;
 }
+:host-context(body.theme-dark) .table-wrapper table tbody tr:hover {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+:host-context(body.theme-dark) .table-wrapper table tbody tr.row-selected {
+  background: rgba(96, 165, 250, 0.25);
+}
 
 :host-context(body.theme-dark) .filter-chip {
   background: rgba(59, 130, 246, 0.15);
@@ -401,6 +423,14 @@ body.theme-dark .baixas-page .header-actions .btn:hover {
   background: rgba(79, 70, 229, 0.25) !important;
   border-color: rgba(165, 180, 252, 0.4) !important;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+body.theme-dark .baixas-page .table-wrapper table tbody tr:hover {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+body.theme-dark .baixas-page .table-wrapper table tbody tr.row-selected {
+  background: rgba(96, 165, 250, 0.25);
 }
 
 body.theme-dark .baixas-page .filters-panel-top,

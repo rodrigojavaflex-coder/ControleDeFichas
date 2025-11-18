@@ -8,13 +8,13 @@
     <section class="results-card" *ngIf="!error">
       <div class="results-header">
         <div class="header-actions">
+          <button class="btn btn-baixa" type="button" (click)="abrirModalBaixaSelecionada()">
+            <i class="fas fa-dollar-sign"></i>
+            Baixa
+          </button>
           <button class="btn btn-imprimir" type="button" (click)="imprimirRelatorio()" [attr.disabled]="(loading || items.length === 0) ? 'disabled' : null">
             <i class="fas fa-print"></i>
             Imprimir
-          </button>
-          <button class="btn btn-atualizar" type="button" (click)="loadBaixas()" [attr.disabled]="loading ? 'disabled' : null">
-            <i class="fas fa-rotate"></i>
-            Atualizar
           </button>
         </div>
         <p class="results-info">{{ items.length }} baixas encontradas nesta página</p>
@@ -136,22 +136,18 @@
             <div class="range-fields">
               <input
                 id="valorMin"
-                type="number"
-                step="0.01"
+                type="text"
                 class="form-control small-field"
                 [(ngModel)]="valorMinFilter"
                 (blur)="onValorBlur('min')"
-               
                 placeholder="Mínimo">
               <span class="range-separator">até</span>
               <input
                 id="valorMax"
-                type="number"
-                step="0.01"
+                type="text"
                 class="form-control small-field"
                 [(ngModel)]="valorMaxFilter"
                 (blur)="onValorBlur('max')"
-               
                 placeholder="Máximo">
             </div>
           </div>
@@ -160,9 +156,11 @@
             <label>&nbsp;</label>
             <div class="filter-action-buttons">
               <button class="btn btn-limpar" type="button" (click)="clearFilters()">
+                <i class="fas fa-eraser"></i>
                 Limpar Filtro
               </button>
               <button class="btn btn-aplicar" type="button" (click)="applyFilters()">
+                <i class="fas fa-filter"></i>
                 Aplicar Filtros
               </button>
             </div>
@@ -180,7 +178,7 @@
           <table>
             <thead>
               <tr>
-                <th>Data Baixa</th>
+                <th>Data baixa</th>
                 <th>Protocolo</th>
                 <th>Cliente</th>
                 <th>Unidade</th>
@@ -196,7 +194,10 @@
                   Nenhuma baixa encontrada para os filtros selecionados.
                 </td>
               </tr>
-              <tr *ngFor="let baixa of items">
+              <tr
+                *ngFor="let baixa of items"
+                (click)="toggleSelectBaixa(baixa)"
+                [class.row-selected]="isBaixaSelected(baixa)">
                 <td>{{ baixa.dataBaixa | date: 'dd/MM/yyyy' }}</td>
                 <td>{{ baixa.venda?.protocolo || '-' }}</td>
                 <td>{{ baixa.venda?.cliente || '-' }}</td>
@@ -227,6 +228,12 @@
         </div>
       </ng-container>
     </section>
+    <app-lancar-baixa-modal
+      [showModal]="showBaixaModal"
+      [venda]="selectedVendaForBaixa"
+      (close)="closeBaixaModal()"
+      (modalClosed)="onBaixaModalClosed()">
+    </app-lancar-baixa-modal>
   </div>
 </ng-container>
 

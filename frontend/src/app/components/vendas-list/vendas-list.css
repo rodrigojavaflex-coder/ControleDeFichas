@@ -166,9 +166,11 @@
 }
 
 .filter-action-buttons {
-  display: inline-flex;
+  display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .form-control {

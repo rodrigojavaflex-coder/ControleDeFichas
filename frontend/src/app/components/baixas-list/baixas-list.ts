@@ -13,6 +13,8 @@ import { firstValueFrom } from 'rxjs';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
 import { PageContextService } from '../../services/page-context.service';
+import { LancarBaixaModalComponent } from '../lancar-baixa-modal/lancar-baixa-modal';
+import { ErrorModalService } from '../../services/error-modal.service';
 
 interface AppliedFilter {
   key: string;
@@ -20,10 +22,21 @@ interface AppliedFilter {
   value: string;
 }
 
+interface BaixasFilterSnapshot {
+  protocolo: string;
+  cliente: string;
+  dataInicial: string;
+  dataFinal: string;
+  unidade: string;
+  origem: string;
+  valorMin: string;
+  valorMax: string;
+}
+
 @Component({
   selector: 'app-baixas-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LancarBaixaModalComponent],
   templateUrl: './baixas-list.html',
   styleUrls: ['./baixas-list.css']
 })
@@ -33,6 +46,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   private vendaService = inject(VendaService);
   private configuracaoService = inject(ConfiguracaoService);
   private pageContextService = inject(PageContextService);
+  private errorModalService = inject(ErrorModalService);
 
   Permission = Permission;
   TipoDaBaixa = TipoDaBaixa;
@@ -62,6 +76,11 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   private vendaCache = new Map<string, Venda>();
   configuracao: Configuracao | null = null;
   filtersPanelOpen = false;
+  private appliedFiltersSnapshot: BaixasFilterSnapshot = this.createFilterSnapshot();
+  selectedBaixa: Baixa | null = null;
+  showBaixaModal = false;
+  selectedVendaForBaixa: Venda | null = null;
+  loadingVendaSelecionada = false;
 
   ngOnInit(): void {
     if (!this.canViewBaixas()) {
@@ -71,6 +90,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
     this.initializeDateFilters();
     this.initializeUnidadeFilter();
+    this.appliedFiltersSnapshot = this.createFilterSnapshot();
     this.loadConfiguracao();
     this.pageContextService.setContext({
       title: 'Baixas',
@@ -121,6 +141,23 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     });
   }
 
+  private createFilterSnapshot(): BaixasFilterSnapshot {
+    return {
+      protocolo: this.protocoloFilter || '',
+      cliente: this.clienteFilter || '',
+      dataInicial: this.dataInicialFilter || '',
+      dataFinal: this.dataFinalFilter || '',
+      unidade: this.unidadeFilter?.toString() || '',
+      origem: this.origemFilter?.toString() || '',
+      valorMin: this.valorMinFilter || '',
+      valorMax: this.valorMaxFilter || ''
+    };
+  }
+
+  private updateAppliedFiltersSnapshot(): void {
+    this.appliedFiltersSnapshot = this.createFilterSnapshot();
+  }
+
   loadBaixas(page: number = this.currentPage): void {
     if (!this.canViewBaixas()) {
       return;
@@ -155,6 +192,12 @@ export class BaixasListComponent implements OnInit, OnDestroy {
             this.totalItems = filteredData.length;
             this.totalPages = response.meta.totalPages || 1;
             this.loading = false;
+            // manter seleção se ainda existir
+            if (this.selectedBaixa) {
+              const stillExists = this.items.find(item => item.id === this.selectedBaixa!.id) || null;
+              this.selectedBaixa = stillExists;
+              this.selectedVendaForBaixa = stillExists ? this.resolveVendaFromBaixa(stillExists) : null;
+            }
           })
           .catch(() => {
             this.error = 'Erro ao carregar dados das vendas associadas.';
@@ -185,6 +228,8 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     this.valorMinFilter = '';
     this.valorMaxFilter = '';
     this.initializeDateFilters();
+    this.filtersPanelOpen = false;
+    this.updateAppliedFiltersSnapshot();
     this.loadBaixas(1);
   }
 
@@ -201,32 +246,33 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
   get appliedFilters(): AppliedFilter[] {
     const filters: AppliedFilter[] = [];
-    if (this.protocoloFilter.trim()) {
-      filters.push({ key: 'protocolo', label: 'Protocolo', value: this.protocoloFilter.trim() });
+    const snapshot = this.appliedFiltersSnapshot;
+    if (snapshot.protocolo.trim()) {
+      filters.push({ key: 'protocolo', label: 'Protocolo', value: snapshot.protocolo.trim() });
     }
-    if (this.clienteFilter.trim()) {
-      filters.push({ key: 'cliente', label: 'Cliente', value: this.clienteFilter.trim() });
+    if (snapshot.cliente.trim()) {
+      filters.push({ key: 'cliente', label: 'Cliente', value: snapshot.cliente.trim() });
     }
-    if (this.dataInicialFilter || this.dataFinalFilter) {
-      const inicio = this.formatDateDisplay(this.dataInicialFilter);
-      const fim = this.formatDateDisplay(this.dataFinalFilter);
+    if (snapshot.dataInicial || snapshot.dataFinal) {
+      const inicio = this.formatDateDisplay(snapshot.dataInicial);
+      const fim = this.formatDateDisplay(snapshot.dataFinal);
       let value = '';
       if (inicio && fim) value = `${inicio} a ${fim}`;
       else if (inicio) value = `A partir de ${inicio}`;
       else if (fim) value = `Até ${fim}`;
       filters.push({ key: 'periodo', label: 'Período', value });
     }
-    if (this.unidadeFilter) {
-      filters.push({ key: 'unidade', label: 'Unidade', value: this.unidadeFilter });
+    if (snapshot.unidade) {
+      filters.push({ key: 'unidade', label: 'Unidade', value: snapshot.unidade });
     }
-    if (this.origemFilter) {
-      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(this.origemFilter) });
+    if (snapshot.origem) {
+      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(snapshot.origem as VendaOrigem) });
     }
-    if (this.valorMinFilter || this.valorMaxFilter) {
+    if (snapshot.valorMin || snapshot.valorMax) {
       let value = '';
-      if (this.valorMinFilter && this.valorMaxFilter) value = `${this.valorMinFilter} a ${this.valorMaxFilter}`;
-      else if (this.valorMinFilter) value = `>= ${this.valorMinFilter}`;
-      else if (this.valorMaxFilter) value = `<= ${this.valorMaxFilter}`;
+      if (snapshot.valorMin && snapshot.valorMax) value = `${snapshot.valorMin} a ${snapshot.valorMax}`;
+      else if (snapshot.valorMin) value = `>= ${snapshot.valorMin}`;
+      else if (snapshot.valorMax) value = `<= ${snapshot.valorMax}`;
       filters.push({ key: 'valor', label: 'Valor da baixa', value });
     }
     return filters.filter(filter => filter.value);
@@ -259,12 +305,76 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       default:
         return;
     }
-    this.onFilterChange();
+    this.applyFilters();
   }
 
   applyFilters(): void {
     this.filtersPanelOpen = false;
+    this.updateAppliedFiltersSnapshot();
     this.loadBaixas(1);
+  }
+
+  isBaixaSelected(baixa: Baixa): boolean {
+    return this.selectedBaixa?.id === baixa.id;
+  }
+
+  toggleSelectBaixa(baixa: Baixa): void {
+    if (this.selectedBaixa?.id === baixa.id) {
+      this.selectedBaixa = null;
+      this.selectedVendaForBaixa = null;
+      return;
+    }
+
+    this.selectedBaixa = baixa;
+    this.selectedVendaForBaixa = this.resolveVendaFromBaixa(baixa);
+  }
+
+  abrirModalBaixaSelecionada(): void {
+    if (!this.selectedBaixa) {
+      this.errorModalService.show('Selecione uma baixa para abrir o modal.', 'Atenção');
+      return;
+    }
+
+    if (this.loadingVendaSelecionada) {
+      return;
+    }
+
+    const venda = this.resolveVendaFromBaixa(this.selectedBaixa);
+    if (!venda) {
+      if (this.selectedBaixa.idvenda) {
+        this.loadingVendaSelecionada = true;
+        this.vendaService.getVendaById(this.selectedBaixa.idvenda).subscribe({
+          next: vendaCompleta => {
+            this.vendaCache.set(vendaCompleta.id, vendaCompleta);
+            this.loadingVendaSelecionada = false;
+            this.selectedVendaForBaixa = vendaCompleta;
+            this.showBaixaModal = true;
+          },
+          error: () => {
+            this.loadingVendaSelecionada = false;
+            this.errorModalService.show('Não foi possível carregar os dados da venda selecionada.', 'Erro');
+          }
+        });
+        return;
+      }
+
+      this.errorModalService.show('Não foi possível identificar a venda vinculada a esta baixa.', 'Atenção');
+      return;
+    }
+
+    this.selectedVendaForBaixa = venda;
+    this.showBaixaModal = true;
+  }
+
+  closeBaixaModal(): void {
+    this.showBaixaModal = false;
+    this.selectedVendaForBaixa = null;
+  }
+
+  onBaixaModalClosed(): void {
+    this.showBaixaModal = false;
+    this.selectedVendaForBaixa = null;
+    this.loadBaixas(this.currentPage);
   }
 
   private getLogoRelatorioUrl(): string | null {
@@ -507,21 +617,21 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     const value = type === 'min' ? this.valorMinFilter : this.valorMaxFilter;
     const parsed = this.parseValorFilter(value);
     if (parsed !== null) {
-      const formatted = parsed
-        .toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const formatted = parsed.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
       if (type === 'min') {
         this.valorMinFilter = formatted;
       } else {
         this.valorMaxFilter = formatted;
       }
-      this.onFilterChange();
     } else if (!value) {
       if (type === 'min') {
         this.valorMinFilter = '';
       } else {
         this.valorMaxFilter = '';
       }
-      this.onFilterChange();
     }
   }
 
@@ -560,6 +670,16 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
 
     return filtered;
+  }
+
+  private resolveVendaFromBaixa(baixa: Baixa): Venda | null {
+    if (baixa.idvenda) {
+      const cachedVenda = this.vendaCache.get(baixa.idvenda);
+      if (cachedVenda) {
+        return cachedVenda;
+      }
+    }
+    return baixa.venda || null;
   }
 
   private parseValorFilter(value: string | number): number | null {
@@ -617,7 +737,20 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
     baixas.forEach(baixa => {
       const vendaId = baixa.idvenda;
-      if (!baixa.venda && vendaId && !this.vendaCache.has(vendaId)) {
+      if (!vendaId) {
+        return;
+      }
+
+      const hasDetailedVenda =
+        !!baixa.venda &&
+        typeof baixa.venda.valorCliente === 'number' &&
+        typeof baixa.venda.status === 'string';
+
+      if (hasDetailedVenda && !this.vendaCache.has(vendaId)) {
+        this.vendaCache.set(vendaId, baixa.venda as Venda);
+      }
+
+      if (!this.vendaCache.has(vendaId)) {
         requests[vendaId] = firstValueFrom(this.vendaService.getVendaById(vendaId));
       }
     });
@@ -631,20 +764,12 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
 
     return baixas.map(baixa => {
-      if (!baixa.venda && baixa.idvenda) {
+      if (baixa.idvenda) {
         const venda = this.vendaCache.get(baixa.idvenda);
         if (venda) {
-          baixa = {
+          return {
             ...baixa,
-            venda: {
-              id: venda.id,
-              protocolo: venda.protocolo,
-              cliente: venda.cliente,
-              unidade: venda.unidade,
-              origem: venda.origem,
-              vendedor: venda.vendedor,
-              dataVenda: venda.dataVenda
-            }
+            venda
           };
         }
       }
