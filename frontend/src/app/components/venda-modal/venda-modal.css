@@ -49,3 +49,35 @@
   padding: var(--espacamento-xs) var(--espacamento-md);
   height: auto;
 }
+
+.desconto-percentual .desconto-wrapper {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.desconto-percentual input.campo {
+  flex: 1;
+}
+
+.desconto-percentual .botao-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.85rem;
+  border-radius: 8px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #312e81;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.desconto-percentual .botao-icone:hover {
+  background: #e0e7ff;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+}
+
+.desconto-percentual .botao-icone i {
+  font-size: 0.95rem;
+}

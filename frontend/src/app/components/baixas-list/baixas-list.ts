@@ -305,6 +305,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       default:
         return;
     }
+    this.updateAppliedFiltersSnapshot();
     this.applyFilters();
   }
 

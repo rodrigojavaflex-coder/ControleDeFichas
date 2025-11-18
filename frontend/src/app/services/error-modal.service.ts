@@ -13,7 +13,8 @@ export class ErrorModalService {
   state$: Observable<ErrorModalState> = this.stateSubject.asObservable();
 
   show(message: string, title?: string): void {
-    this.stateSubject.next({ visible: true, title, message });
+    const formattedMessage = (message || '').replace(/\n/g, '<br>');
+    this.stateSubject.next({ visible: true, title, message: formattedMessage });
   }
 
   hide(): void {

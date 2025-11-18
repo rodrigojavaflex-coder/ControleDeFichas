@@ -16,6 +16,12 @@ import {
   PaginatedResponseDto,
   PaginationMetaDto,
 } from '../../common/dto/paginated-response.dto';
+import { ProcessarBaixasEmMassaDto } from './dto/processar-baixas-em-massa.dto';
+
+interface ProcessamentoBaixasEmMassaResult {
+  sucesso: { idvenda: string; protocolo?: string; valorProcessado: number }[];
+  falhas: { idvenda: string; protocolo?: string; motivo: string }[];
+}
 
 @Injectable()
 export class BaixasService {
@@ -36,13 +42,7 @@ export class BaixasService {
       }
 
       // Calcular total das baixas existentes para esta venda
-      const totalBaixasExistentes = await this.baixaRepository
-        .createQueryBuilder('baixa')
-        .select('SUM(baixa.valorBaixa)', 'total')
-        .where('baixa.idvenda = :idvenda', { idvenda: createBaixaDto.idvenda })
-        .getRawOne();
-
-      const totalPagoAnterior = parseFloat(totalBaixasExistentes?.total || '0');
+      const totalPagoAnterior = await this.getTotalBaixasParaVenda(createBaixaDto.idvenda);
       const valorCliente = venda.valorCliente || 0;
 
       // Validar se a soma das baixas não ultrapassará o valor do cliente
@@ -176,6 +176,16 @@ export class BaixasService {
     }
   }
 
+  private async getTotalBaixasParaVenda(idvenda: string): Promise<number> {
+    const totalBaixas = await this.baixaRepository
+      .createQueryBuilder('baixa')
+      .select('SUM(baixa.valorBaixa)', 'total')
+      .where('baixa.idvenda = :idvenda', { idvenda })
+      .getRawOne();
+
+    return parseFloat(totalBaixas?.total || '0');
+  }
+
   /**
    * Atualiza o status da venda baseado no total das baixas
    * 
@@ -231,5 +241,68 @@ export class BaixasService {
       this.logger.error(`Erro ao atualizar status da venda ${idvenda}:`, error);
       // Não lançar erro para não quebrar a criação/remoção da baixa
     }
+  }
+
+  async processarBaixasEmMassa(
+    processarDto: ProcessarBaixasEmMassaDto,
+  ): Promise<ProcessamentoBaixasEmMassaResult> {
+    const resultado: ProcessamentoBaixasEmMassaResult = { sucesso: [], falhas: [] };
+
+    for (const vendaId of processarDto.vendaIds) {
+      let venda: any = null;
+      try {
+        venda = await this.vendasService.findOne(vendaId);
+
+        if (
+          venda.status !== VendaStatus.REGISTRADO &&
+          venda.status !== VendaStatus.PAGO_PARCIAL
+        ) {
+          resultado.falhas.push({
+            idvenda: vendaId,
+            protocolo: venda?.protocolo,
+            motivo: `Status "${venda.status}" não permite processamento automático.`,
+          });
+          continue;
+        }
+
+        const totalPago = await this.getTotalBaixasParaVenda(vendaId);
+        const valorCliente = venda.valorCliente || 0;
+        const valorRestante = Number((valorCliente - totalPago).toFixed(2));
+
+        if (valorRestante <= 0) {
+          resultado.falhas.push({
+            idvenda: vendaId,
+            protocolo: venda?.protocolo,
+            motivo: 'Não há saldo pendente para essa venda.',
+          });
+          continue;
+        }
+
+        const baixa = this.baixaRepository.create({
+          idvenda: vendaId,
+          tipoDaBaixa: processarDto.tipoDaBaixa,
+          valorBaixa: valorRestante,
+          dataBaixa: processarDto.dataBaixa as any,
+          observacao: processarDto.observacao,
+        });
+
+        await this.baixaRepository.save(baixa);
+        await this.updateVendaStatus(vendaId);
+
+        resultado.sucesso.push({
+          idvenda: vendaId,
+          protocolo: venda?.protocolo,
+          valorProcessado: valorRestante,
+        });
+      } catch (error: any) {
+        resultado.falhas.push({
+          idvenda: vendaId,
+          protocolo: venda?.protocolo,
+          motivo: error?.message || 'Erro ao processar a baixa.',
+        });
+      }
+    }
+
+    return resultado;
   }
 }

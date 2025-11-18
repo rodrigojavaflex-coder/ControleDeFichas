@@ -699,6 +699,49 @@ body.theme-dark .vendas-page .btn.btn-cancelar-fechamento {
   color: #1f2937;
 }
 
+.mass-baixa-modal {
+  max-width: 520px;
+}
+
+.mass-baixa-modal .modal-body p {
+  margin: 0;
+  color: #475569;
+}
+
+.mass-baixa-modal .mass-baixa-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.mass-baixa-modal .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mass-baixa-modal .form-field label {
+  font-weight: 600;
+  color: #334155;
+}
+
+.mass-baixa-modal .form-field .campo,
+.mass-baixa-modal .form-field select,
+.mass-baixa-modal .form-field textarea {
+  width: 100%;
+  border: 1px solid #cbd5f5;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+.mass-baixa-modal .form-field textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
 .confirmation-modal .warning-text {
   display: flex;
   align-items: center;
@@ -735,6 +778,22 @@ body.theme-dark .vendas-page .btn.btn-cancelar-fechamento {
   color: #cbd5f5;
 }
 
+:host-context(body.theme-dark) .mass-baixa-modal .form-field label {
+  color: #e2e8f0;
+}
+
+:host-context(body.theme-dark) .mass-baixa-modal .form-field .campo,
+:host-context(body.theme-dark) .mass-baixa-modal .form-field select,
+:host-context(body.theme-dark) .mass-baixa-modal .form-field textarea {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #e2e8f0;
+}
+
+:host-context(body.theme-dark) .mass-baixa-modal .modal-body p {
+  color: #cbd5f5;
+}
+
 body.theme-dark .vendas-page .confirmation-modal {
   background: #0f172a;
   border-color: rgba(148, 163, 184, 0.3);
@@ -751,5 +810,21 @@ body.theme-dark .vendas-page .confirmation-modal .warning-text {
 }
 
 body.theme-dark .vendas-page .confirmation-modal .close-btn {
+  color: #cbd5f5;
+}
+
+body.theme-dark .vendas-page .mass-baixa-modal .form-field label {
+  color: #e2e8f0;
+}
+
+body.theme-dark .vendas-page .mass-baixa-modal .form-field .campo,
+body.theme-dark .vendas-page .mass-baixa-modal .form-field select,
+body.theme-dark .vendas-page .mass-baixa-modal .form-field textarea {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #e2e8f0;
+}
+
+body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   color: #cbd5f5;
 }

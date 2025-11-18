@@ -28,6 +28,7 @@ import { Permission } from '../../common/enums/permission.enum';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { ProcessarBaixasEmMassaDto } from './dto/processar-baixas-em-massa.dto';
 
 @ApiTags('Baixas')
 @Controller('baixas')
@@ -118,5 +119,18 @@ export class BaixasController {
   })
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.baixasService.remove(id);
+  }
+
+  @Post('processamento-massa')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.VENDA_BAIXAR)
+  @ApiOperation({ summary: 'Processar baixas em massa para vendas selecionadas' })
+  processarBaixasEmMassa(
+    @Body() processarDto: ProcessarBaixasEmMassaDto,
+  ): Promise<{
+    sucesso: { idvenda: string; protocolo?: string; valorProcessado: number }[];
+    falhas: { idvenda: string; protocolo?: string; motivo: string }[];
+  }> {
+    return this.baixasService.processarBaixasEmMassa(processarDto);
   }
 }

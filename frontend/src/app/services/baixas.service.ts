@@ -1,7 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Baixa, CreateBaixaDto, UpdateBaixaDto, FindBaixasDto, BaixaPaginatedResponse } from '../models/baixa.model';
+import {
+  Baixa,
+  CreateBaixaDto,
+  UpdateBaixaDto,
+  FindBaixasDto,
+  BaixaPaginatedResponse,
+  ProcessarBaixasEmMassaDto,
+  ProcessarBaixasEmMassaResultado
+} from '../models/baixa.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -68,5 +76,9 @@ export class BaixasService {
    */
   deleteBaixa(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  processarBaixasEmMassa(payload: ProcessarBaixasEmMassaDto): Observable<ProcessarBaixasEmMassaResultado> {
+    return this.http.post<ProcessarBaixasEmMassaResultado>(`${this.apiUrl}/processamento-massa`, payload);
   }
 }

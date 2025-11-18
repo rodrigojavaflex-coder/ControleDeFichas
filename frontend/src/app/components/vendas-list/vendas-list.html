@@ -464,6 +464,87 @@
   (modalClosed)="onBaixaModalClosed()">
 </app-lancar-baixa-modal>
 
+<div
+  class="confirmation-modal-overlay"
+  *ngIf="showMassBaixaModal"
+  (click)="massBaixaLoading ? null : closeMassBaixaModal()">
+  <div class="confirmation-modal mass-baixa-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Processar baixas em massa</h3>
+      <button
+        type="button"
+        class="close-btn"
+        (click)="closeMassBaixaModal()"
+        [attr.disabled]="massBaixaLoading ? 'disabled' : null">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>
+        Serão processadas {{ selectedVendas.size }} venda(s).
+        Apenas vendas com status
+        <strong *ngFor="let status of massBaixaAllowedStatuses; let last = last">
+          {{ getStatusLabel(status) }}<ng-container *ngIf="!last">, </ng-container>
+        </strong>
+        serão atualizadas automaticamente.
+      </p>
+      <div class="mass-baixa-form">
+        <div class="form-field">
+          <label for="massTipoBaixa">Tipo da baixa</label>
+          <select
+            id="massTipoBaixa"
+            class="campo"
+            [(ngModel)]="massBaixaForm.tipoDaBaixa"
+            [ngModelOptions]="{ standalone: true }"
+            [attr.disabled]="massBaixaLoading ? 'disabled' : null">
+            <option *ngFor="let tipo of tiposBaixa" [value]="tipo">
+              {{ tipo }}
+            </option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="massDataBaixa">Data da baixa</label>
+          <input
+            id="massDataBaixa"
+            type="date"
+            class="campo"
+            [(ngModel)]="massBaixaForm.dataBaixa"
+            [ngModelOptions]="{ standalone: true }"
+            [attr.disabled]="massBaixaLoading ? 'disabled' : null">
+        </div>
+        <div class="form-field">
+          <label for="massObservacao">Observação</label>
+          <textarea
+            id="massObservacao"
+            class="campo"
+            rows="3"
+            placeholder="Opcional"
+            [(ngModel)]="massBaixaForm.observacao"
+            [ngModelOptions]="{ standalone: true }"
+            [attr.disabled]="massBaixaLoading ? 'disabled' : null"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button
+        class="btn btn-cancelar"
+        type="button"
+        (click)="closeMassBaixaModal()"
+        [attr.disabled]="massBaixaLoading ? 'disabled' : null">
+        Cancelar
+      </button>
+      <button
+        class="btn btn-baixa"
+        type="button"
+        (click)="processarBaixasEmMassa()"
+        [attr.disabled]="massBaixaLoading ? 'disabled' : null">
+        <i class="fas" [ngClass]="massBaixaLoading ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+        {{ massBaixaLoading ? 'Processando...' : 'Processar baixas' }}
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="confirmation-modal-overlay" *ngIf="showDeleteModal || showBulkDeleteModal" (click)="showBulkDeleteModal ? closeBulkDeleteModal() : onDeleteCancelled()">
   <div class="confirmation-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">

@@ -29,6 +29,8 @@ export class VendaModalComponent implements OnInit, OnChanges {
   isEditing = false;
   isLoading = false;
   unidadeDisabled = false;
+  private readonly DEFAULT_DESCONTO_PERCENTUAL = 35;
+  descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
 
   // Enums para template
   VendaOrigem = VendaOrigem;
@@ -39,6 +41,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
   ngOnInit() {
     this.initializeForm();
     this.configureUnidadeField();
+    this.descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
   }
 
   private configureUnidadeField() {
@@ -119,6 +122,8 @@ export class VendaModalComponent implements OnInit, OnChanges {
       this.formatCurrencyOnBlur('valorCompra');
       this.formatCurrencyOnBlur('valorCliente');
     }, 50);
+
+    this.descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
   }
 
   closeModal() {
@@ -143,12 +148,11 @@ export class VendaModalComponent implements OnInit, OnChanges {
     this.vendaForm.get('status')?.disable();
     // Reconfigurar campo unidade baseado no usuário logado
     this.configureUnidadeField();
+    this.descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
   }
 
   onSubmit() {
     if (this.vendaForm.valid) {
-      this.isLoading = true;
-
       // Usar getRawValue() para incluir valores de controles desabilitados
       const formValue = this.vendaForm.getRawValue();
       
@@ -160,6 +164,13 @@ export class VendaModalComponent implements OnInit, OnChanges {
       const valorCliente = typeof formValue.valorCliente === 'string' 
         ? parseFloat(formValue.valorCliente.replace(/\D/g, '')) / 100 
         : formValue.valorCliente;
+
+      if (valorCompra > valorCliente) {
+        this.errorModalService.show('O valor da compra não pode ser maior que o valor do cliente.', 'Validação');
+        return;
+      }
+
+      this.isLoading = true;
       
       // Garantir que a data está no formato YYYY-MM-DD sem conversão
       const dataVenda = formValue.dataVenda;
@@ -204,6 +215,56 @@ export class VendaModalComponent implements OnInit, OnChanges {
     }
   }
 
+  aplicarDescontoValorCompra(): void {
+    const valorCliente = this.parseCurrencyControlValue('valorCliente');
+    const percentual = this.descontoPercentual;
+
+    if (valorCliente === null || valorCliente === undefined || valorCliente <= 0) {
+      this.errorModalService.show('Informe um valor válido para o cliente antes de aplicar o desconto.', 'Validação');
+      return;
+    }
+
+    if (percentual === null || percentual === undefined || isNaN(percentual)) {
+      this.errorModalService.show('Informe o percentual de desconto para aplicar.', 'Validação');
+      return;
+    }
+
+    const percentualNumerico = Number(percentual);
+
+    if (percentualNumerico < 0 || percentualNumerico > 100) {
+      this.errorModalService.show('O percentual de desconto deve estar entre 0 e 100.', 'Validação');
+      return;
+    }
+
+    const valorComDesconto = valorCliente * ((100 - percentualNumerico) / 100);
+    const valorFormatado = Number(valorComDesconto.toFixed(2));
+
+    this.vendaForm.get('valorCompra')?.setValue(valorFormatado);
+    this.formatCurrencyOnBlur('valorCompra');
+  }
+
+  aplicarDescontoSePossivel(): void {
+    const valorCompraAtual = this.parseCurrencyControlValue('valorCompra');
+    const valorCliente = this.parseCurrencyControlValue('valorCliente');
+
+    if (valorCompraAtual !== null && valorCompraAtual !== undefined && valorCompraAtual > 0) {
+      return;
+    }
+
+    if (
+      valorCliente === null ||
+      valorCliente === undefined ||
+      valorCliente <= 0 ||
+      this.descontoPercentual === null ||
+      this.descontoPercentual === undefined ||
+      isNaN(Number(this.descontoPercentual))
+    ) {
+      return;
+    }
+
+    this.aplicarDescontoValorCompra();
+  }
+
   private markFormGroupTouched() {
     Object.keys(this.vendaForm.controls).forEach(key => {
       const control = this.vendaForm.get(key);
@@ -220,6 +281,20 @@ export class VendaModalComponent implements OnInit, OnChanges {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private parseCurrencyControlValue(controlName: string): number | null {
+    const control = this.vendaForm.get(controlName);
+    const value = control?.value;
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    if (typeof value === 'number') {
+      return value;
+    }
+    const cleaned = value.toString().replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? null : parsed;
   }
 
   getFieldError(fieldName: string): string {

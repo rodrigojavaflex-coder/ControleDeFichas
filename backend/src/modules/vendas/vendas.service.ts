@@ -40,6 +40,16 @@ export class VendasService {
 
   async create(createVendaDto: CreateVendaDto): Promise<Venda> {
     try {
+      if (
+        createVendaDto.valorCompra !== undefined &&
+        createVendaDto.valorCliente !== undefined &&
+        Number(createVendaDto.valorCompra) > Number(createVendaDto.valorCliente)
+      ) {
+        throw new BadRequestException(
+          'O valor da compra não pode ser maior que o valor do cliente.',
+        );
+      }
+
       // Manter data como string YYYY-MM-DD para evitar conversão de timezone
       const venda = this.vendaRepository.create({
         ...createVendaDto,
@@ -193,6 +203,21 @@ export class VendasService {
       if (venda.status === VendaStatus.FECHADO) {
         throw new ConflictException(
           `Não é possível editar uma venda com status "Fechado". A venda está fechada.`
+        );
+      }
+
+      const valorCompraAtualizado =
+        updateVendaDto.valorCompra !== undefined ? updateVendaDto.valorCompra : venda.valorCompra;
+      const valorClienteAtualizado =
+        updateVendaDto.valorCliente !== undefined ? updateVendaDto.valorCliente : venda.valorCliente;
+
+      if (
+        valorCompraAtualizado !== undefined &&
+        valorClienteAtualizado !== undefined &&
+        Number(valorCompraAtualizado) > Number(valorClienteAtualizado)
+      ) {
+        throw new BadRequestException(
+          'O valor da compra não pode ser maior que o valor do cliente.',
         );
       }
 

@@ -57,3 +57,15 @@ export interface BaixaPaginatedResponse {
     hasNextPage: boolean;
   };
 }
+
+export interface ProcessarBaixasEmMassaDto {
+  vendaIds: string[];
+  tipoDaBaixa: TipoDaBaixa;
+  dataBaixa: string;
+  observacao?: string;
+}
+
+export interface ProcessarBaixasEmMassaResultado {
+  sucesso: { idvenda: string; protocolo?: string; valorProcessado: number }[];
+  falhas: { idvenda: string; protocolo?: string; motivo: string }[];
+}

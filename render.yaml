@@ -17,5 +17,5 @@ services:
         value: 10000
       - key: JWT_SECRET
         generateValue: true
-      - key: JWT_EXPIRATION
-        value: "1d"
+      - key: JWT_EXPIRES_IN
+        value: "12h"

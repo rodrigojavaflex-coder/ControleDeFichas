@@ -7,7 +7,7 @@ import { BaixasService } from '../../services/baixas.service';
 import { AuthService } from '../../services/auth.service';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Venda, VendaPaginatedResponse, FindVendasDto, VendaOrigem, VendaStatus, Unidade } from '../../models/venda.model';
-import { Baixa } from '../../models/baixa.model';
+import { Baixa, TipoDaBaixa, ProcessarBaixasEmMassaResultado } from '../../models/baixa.model';
 import { Permission } from '../../models/usuario.model';
 import { BaseListComponent } from '../base-list.component';
 import { VendaModalComponent } from '../venda-modal/venda-modal';
@@ -118,6 +118,13 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   filtersPanelOpen = false;
   sortField: SortableField | null = null;
   sortDirection: SortDirection = 'asc';
+  TipoDaBaixa = TipoDaBaixa;
+  tiposBaixa = Object.values(TipoDaBaixa);
+  massBaixaAllowedStatuses: VendaStatus[] = [VendaStatus.REGISTRADO, VendaStatus.PAGO_PARCIAL];
+  showMassBaixaModal = false;
+  massBaixaLoading = false;
+  massBaixaForm: { tipoDaBaixa: TipoDaBaixa; dataBaixa: string; observacao: string } =
+    this.getDefaultMassBaixaForm();
 
   // Modal de venda
   showVendaModal = false;
@@ -357,6 +364,16 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     if (!this.canLancarBaixa()) {
       return;
     }
+    if (this.selectedVendas.size === 0) {
+      this.errorModalService.show('Selecione ao menos uma venda para lançar baixa.', 'Atenção');
+      return;
+    }
+
+    if (this.selectedVendas.size > 1) {
+      this.openMassBaixaModal();
+      return;
+    }
+
     const venda = this.getSingleSelectedVenda(
       'Selecione uma venda para lançar baixa.',
       'Selecione apenas uma venda para lançar baixa.'
@@ -365,6 +382,73 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       return;
     }
     this.openBaixaModal(venda);
+  }
+
+  openMassBaixaModal(): void {
+    this.massBaixaForm = this.getDefaultMassBaixaForm();
+    this.showMassBaixaModal = true;
+  }
+
+  closeMassBaixaModal(): void {
+    if (this.massBaixaLoading) {
+      return;
+    }
+    this.showMassBaixaModal = false;
+  }
+
+  processarBaixasEmMassa(): void {
+    if (this.massBaixaLoading) {
+      return;
+    }
+
+    if (this.selectedVendas.size < 2) {
+      this.errorModalService.show('Selecione ao menos duas vendas para processamento em massa.', 'Atenção');
+      return;
+    }
+
+    if (!this.massBaixaForm.dataBaixa) {
+      this.errorModalService.show('Informe a data da baixa para continuar.', 'Validação');
+      return;
+    }
+
+    const payload = {
+      vendaIds: Array.from(this.selectedVendas),
+      tipoDaBaixa: this.massBaixaForm.tipoDaBaixa,
+      dataBaixa: this.massBaixaForm.dataBaixa,
+      observacao: this.massBaixaForm.observacao?.trim() || undefined
+    };
+
+    this.massBaixaLoading = true;
+    this.baixasService.processarBaixasEmMassa(payload).subscribe({
+      next: (resultado) => this.onMassBaixaProcessed(resultado),
+      error: (error) => {
+        this.massBaixaLoading = false;
+        const message = error.error?.message || 'Erro ao processar baixas em massa.';
+        this.errorModalService.show(message, 'Erro');
+      }
+    });
+  }
+
+  private onMassBaixaProcessed(resultado: ProcessarBaixasEmMassaResultado): void {
+    this.massBaixaLoading = false;
+    this.showMassBaixaModal = false;
+    this.massBaixaForm = this.getDefaultMassBaixaForm();
+    this.baixasCache.clear();
+    this.selectedVendas.clear();
+    this.loadItems();
+
+    let message = `${resultado.sucesso.length} baixa(s) processadas com sucesso.`;
+    let title = 'Sucesso';
+
+    if (resultado.falhas.length) {
+      const detalhes = resultado.falhas
+        .map(falha => `${falha.protocolo || falha.idvenda}: ${falha.motivo}`)
+        .join('\n');
+      message += `\n\nNão foi possível processar ${resultado.falhas.length} venda(s):\n${detalhes}`;
+      title = 'Processamento concluído com avisos';
+    }
+
+    this.errorModalService.show(message, title);
   }
 
   abrirAuditoriaVendaSelecionada(): void {
@@ -534,6 +618,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       default:
         return;
     }
+    this.updateAppliedFiltersSnapshot();
     this.onFilterChange();
   }
 
@@ -1213,6 +1298,14 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     }).format(value);
   }
 
+  private getTodayDateString(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   getOrigemLabel(origem: VendaOrigem): string {
     const labels = {
       [VendaOrigem.GOIANIA]: 'Goiânia',
@@ -1452,6 +1545,14 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
 
   private getSelectedVendaModels(): Venda[] {
     return this.items.filter(venda => this.selectedVendas.has(venda.id));
+  }
+
+  private getDefaultMassBaixaForm(): { tipoDaBaixa: TipoDaBaixa; dataBaixa: string; observacao: string } {
+    return {
+      tipoDaBaixa: TipoDaBaixa.CARTAO_PIX,
+      dataBaixa: this.getTodayDateString(),
+      observacao: ''
+    };
   }
 
   private validarVendasParaFechamento(): string[] {

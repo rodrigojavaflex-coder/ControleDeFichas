@@ -4,14 +4,66 @@ import {
   IsNotEmpty,
   IsString,
   MaxLength,
+  MinLength,
   IsDateString,
   IsEnum,
   IsNumber,
   IsOptional,
-  IsPositive,
+  Min,
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 import { VendaOrigem, VendaStatus } from '../../../common/enums/venda.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
+
+@ValidatorConstraint({ name: 'ValorCompraMenorOuIgualAoCliente', async: false })
+class ValorCompraMenorOuIgualAoClienteConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(value: any, args: ValidationArguments): boolean {
+    const object: any = args.object;
+    const valorCompra = object?.valorCompra;
+
+    if (
+      valorCompra === null ||
+      valorCompra === undefined ||
+      value === null ||
+      value === undefined
+    ) {
+      return true;
+    }
+
+    const valorCompraNumber = Number(valorCompra);
+    const valorClienteNumber = Number(value);
+
+    if (isNaN(valorCompraNumber) || isNaN(valorClienteNumber)) {
+      return true;
+    }
+
+    return valorCompraNumber <= valorClienteNumber;
+  }
+
+  defaultMessage(): string {
+    return 'O valor da compra não pode ser maior que o valor do cliente';
+  }
+}
+
+export function ValorCompraMenorOuIgualAoCliente(
+  validationOptions?: ValidationOptions,
+) {
+  return function (object: Object, propertyName: string) {
+    registerDecorator({
+      name: 'ValorCompraMenorOuIgualAoCliente',
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      validator: ValorCompraMenorOuIgualAoClienteConstraint,
+    });
+  };
+}
 
 export class CreateVendaDto {
   @ApiProperty({
@@ -21,6 +73,7 @@ export class CreateVendaDto {
   })
   @IsNotEmpty({ message: 'Protocolo é obrigatório' })
   @IsString({ message: 'Protocolo deve ser uma string' })
+  @MinLength(3, { message: 'Protocolo deve ter pelo menos 3 caracteres' })
   @MaxLength(30, { message: 'Protocolo não pode ter mais que 30 caracteres' })
   protocolo: string;
 
@@ -49,6 +102,7 @@ export class CreateVendaDto {
   })
   @IsNotEmpty({ message: 'Cliente é obrigatório' })
   @IsString({ message: 'Cliente deve ser uma string' })
+  @MinLength(2, { message: 'Cliente deve ter pelo menos 2 caracteres' })
   @MaxLength(300, { message: 'Cliente não pode ter mais que 300 caracteres' })
   cliente: string;
 
@@ -68,6 +122,7 @@ export class CreateVendaDto {
   })
   @IsNotEmpty({ message: 'Vendedor é obrigatório' })
   @IsString({ message: 'Vendedor deve ser uma string' })
+  @MinLength(2, { message: 'Vendedor deve ter pelo menos 2 caracteres' })
   @MaxLength(300, { message: 'Vendedor não pode ter mais que 300 caracteres' })
   vendedor: string;
 
@@ -77,7 +132,7 @@ export class CreateVendaDto {
   })
   @IsNotEmpty({ message: 'Valor da compra é obrigatório' })
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor da compra deve ser um número válido' })
-  @IsPositive({ message: 'Valor da compra deve ser maior que 0,00' })
+  @Min(0, { message: 'Valor da compra deve ser maior ou igual a 0,00' })
   valorCompra: number;
 
   @ApiProperty({
@@ -86,7 +141,10 @@ export class CreateVendaDto {
   })
   @IsNotEmpty({ message: 'Valor do cliente é obrigatório' })
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor do cliente deve ser um número válido' })
-  @IsPositive({ message: 'Valor do cliente deve ser maior que 0,00' })
+  @Min(0, { message: 'Valor do cliente deve ser maior ou igual a 0,00' })
+  @ValorCompraMenorOuIgualAoCliente({
+    message: 'O valor da compra não pode ser maior que o valor do cliente',
+  })
   valorCliente: number;
 
   @ApiProperty({
