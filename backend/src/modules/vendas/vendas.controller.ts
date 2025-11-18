@@ -39,7 +39,7 @@ export class VendasController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-  @Permissions(Permission.USER_CREATE) // TODO: Criar permissão específica para vendas
+  @Permissions(Permission.VENDA_CREATE)
   @ApiOperation({ summary: 'Criar nova venda' })
   @ApiResponse({
     status: HttpStatus.CREATED,
@@ -84,7 +84,7 @@ export class VendasController {
 
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-  @Permissions(Permission.USER_READ) // TODO: Criar permissão específica para vendas
+  @Permissions(Permission.VENDA_READ)
   @ApiOperation({ summary: 'Listar vendas com paginação e filtros' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -110,7 +110,7 @@ export class VendasController {
 
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-  @Permissions(Permission.USER_READ) // TODO: Criar permissão específica para vendas
+  @Permissions(Permission.VENDA_READ)
   @ApiOperation({ summary: 'Buscar venda por ID' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -127,7 +127,7 @@ export class VendasController {
 
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-  @Permissions(Permission.USER_UPDATE) // TODO: Criar permissão específica para vendas
+  @Permissions(Permission.VENDA_UPDATE)
   @ApiOperation({ summary: 'Atualizar venda' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -151,7 +151,7 @@ export class VendasController {
 
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-  @Permissions(Permission.USER_DELETE) // TODO: Criar permissão específica para vendas
+  @Permissions(Permission.VENDA_DELETE)
   @ApiOperation({ summary: 'Remover venda' })
   @ApiResponse({
     status: HttpStatus.OK,
