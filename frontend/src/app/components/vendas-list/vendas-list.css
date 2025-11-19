@@ -79,6 +79,7 @@
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
 }
 
+
 .header-actions .btn:disabled,
 .filter-action-buttons .btn:disabled {
   opacity: 0.6;
@@ -827,4 +828,63 @@ body.theme-dark .vendas-page .mass-baixa-modal .form-field textarea {
 
 body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   color: #cbd5f5;
+}
+
+.context-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 1210;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  overflow: hidden;
+}
+
+.context-menu button {
+  border: none;
+  background: transparent;
+  padding: 0.65rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: #0f172a;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  text-align: left;
+}
+
+.context-menu button:hover:not(:disabled) {
+  background: #edf2ff;
+}
+
+.context-menu button.danger {
+  color: #b91c1c;
+}
+
+.context-menu button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+:host-context(body.theme-dark) .context-menu {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+:host-context(body.theme-dark) .context-menu button {
+  color: #e2e8f0;
+}
+
+:host-context(body.theme-dark) .context-menu button:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.2);
 }

@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -50,8 +51,8 @@ export class VendasController {
     status: HttpStatus.CONFLICT,
     description: 'Protocolo já existe',
   })
-  create(@Body() createVendaDto: CreateVendaDto): Promise<Venda> {
-    return this.vendasService.create(createVendaDto);
+  create(@Body() createVendaDto: CreateVendaDto, @Req() req: any): Promise<Venda> {
+    return this.vendasService.create(createVendaDto, req?.user);
   }
 
   @Post('fechamento-massa')
@@ -145,8 +146,9 @@ export class VendasController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateVendaDto: UpdateVendaDto,
+    @Req() req: any,
   ): Promise<Venda> {
-    return this.vendasService.update(id, updateVendaDto);
+    return this.vendasService.update(id, updateVendaDto, req?.user);
   }
 
   @Delete(':id')

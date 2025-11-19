@@ -52,6 +52,7 @@ export enum Permission {
   VENDA_AUDIT = 'venda:audit',
   VENDA_FECHAR = 'venda:fechar',
   VENDA_CANCELAR_FECHAMENTO = 'venda:cancelar-fechamento',
+  VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
 }
 
 export const PERMISSION_GROUPS = {
@@ -114,6 +115,7 @@ export const PERMISSION_GROUPS = {
     { key: Permission.VENDA_AUDIT, label: 'Visualizar auditoria' },
     { key: Permission.VENDA_FECHAR, label: 'Fechar vendas' },
     { key: Permission.VENDA_CANCELAR_FECHAMENTO, label: 'Cancelar fechamento de vendas' },
+    { key: Permission.VENDA_VIEW_VALOR_COMPRA, label: 'Visualizar valor de compra' },
   ],
 };
 

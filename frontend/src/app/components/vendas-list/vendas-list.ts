@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ViewEncapsulation, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, OnInit, inject, ViewEncapsulation, ChangeDetectorRef, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of, Subject } from 'rxjs';
@@ -8,6 +8,7 @@ import { AuthService } from '../../services/auth.service';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Venda, VendaPaginatedResponse, FindVendasDto, VendaOrigem, VendaStatus, Unidade } from '../../models/venda.model';
 import { Baixa, TipoDaBaixa, ProcessarBaixasEmMassaResultado } from '../../models/baixa.model';
+import * as XLSX from 'xlsx';
 import { Permission } from '../../models/usuario.model';
 import { BaseListComponent } from '../base-list.component';
 import { VendaModalComponent } from '../venda-modal/venda-modal';
@@ -139,6 +140,9 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   selectedVendaForBaixa: Venda | null = null;
   showBulkDeleteModal = false;
   bulkDeleteLoading = false;
+  contextMenuVisible = false;
+  contextMenuPosition = { x: 0, y: 0 };
+  contextMenuVenda: Venda | null = null;
   private destroy$ = new Subject<void>();
 
   // Enums para template
@@ -171,6 +175,29 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.destroy$.next();
     this.destroy$.complete();
     this.pageContextService.resetContext();
+    this.closeContextMenu();
+  }
+
+  @HostListener('window:scroll')
+  @HostListener('window:resize')
+  onWindowChange(): void {
+    if (this.contextMenuVisible) {
+      this.closeContextMenu();
+    }
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.contextMenuVisible) {
+      this.closeContextMenu();
+    }
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.contextMenuVisible) {
+      this.closeContextMenu();
+    }
   }
 
   private restoreFiltersFromStorage(): void {
@@ -472,6 +499,37 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       return;
     }
     this.toggleSelectVenda(vendaId);
+    this.closeContextMenu();
+  }
+
+  onRowContextMenu(event: MouseEvent, venda: Venda): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.contextMenuVenda = venda;
+    this.contextMenuVisible = true;
+    const menuWidth = 220;
+    const menuHeight = 240;
+    let x = event.clientX;
+    let y = event.clientY;
+
+    if (x + menuWidth > window.innerWidth) {
+      x = window.innerWidth - menuWidth - 8;
+    }
+    if (y + menuHeight > window.innerHeight) {
+      y = window.innerHeight - menuHeight - 8;
+    }
+
+    this.contextMenuPosition = { x, y };
+
+    if (!this.isVendaSelected(venda.id)) {
+      this.selectedVendas.clear();
+      this.selectedVendas.add(venda.id);
+    }
+  }
+
+  closeContextMenu(): void {
+    this.contextMenuVisible = false;
+    this.contextMenuVenda = null;
   }
 
   private createFilterSnapshot(): VendasFilterSnapshot {
@@ -911,14 +969,73 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     return this.authService.hasPermission(Permission.VENDA_CANCELAR_FECHAMENTO);
   }
 
+  canViewValorCompra(): boolean {
+    return this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
+  }
+
+  private ensureContextSelection(): void {
+    if (this.contextMenuVenda) {
+      this.selectedVendas.clear();
+      this.selectedVendas.add(this.contextMenuVenda.id);
+    }
+  }
+
+  onContextEdit(): void {
+    if (this.contextMenuVenda && this.canEditVenda()) {
+      this.openEditVendaModal(this.contextMenuVenda);
+    }
+    this.closeContextMenu();
+  }
+
+  onContextBaixa(): void {
+    if (this.contextMenuVenda && this.canLancarBaixa()) {
+      this.openBaixaModal(this.contextMenuVenda);
+    }
+    this.closeContextMenu();
+  }
+
+  onContextFechar(): void {
+    if (this.contextMenuVenda && this.canFecharVendas()) {
+      this.ensureContextSelection();
+      this.closeContextMenu();
+      this.fecharVendasSelecionadas();
+      return;
+    }
+    this.closeContextMenu();
+  }
+
+  onContextCancelarFechamento(): void {
+    if (this.contextMenuVenda && this.canCancelarFechamento()) {
+      this.ensureContextSelection();
+      this.closeContextMenu();
+      this.cancelarFechamentosSelecionados();
+      return;
+    }
+    this.closeContextMenu();
+  }
+
+  onContextAuditoria(): void {
+    if (this.contextMenuVenda && this.canAuditVenda()) {
+      this.openAuditHistory(this.contextMenuVenda);
+    }
+    this.closeContextMenu();
+  }
+
+  onContextExcluir(): void {
+    if (this.contextMenuVenda && this.canDeleteVenda()) {
+      this.deleteVenda(this.contextMenuVenda);
+    }
+    this.closeContextMenu();
+  }
+
   imprimirFechamentoAtual(): void {
     if (!this.canReadVenda()) {
       return;
     }
 
-    const vendasParaImprimir = [...this.items];
+    const vendasParaImprimir = this.getSelectedVendaModels();
     if (vendasParaImprimir.length === 0) {
-      this.errorModalService.show('Nenhuma venda disponível na lista para imprimir.', 'Aviso');
+      this.errorModalService.show('Selecione ao menos uma venda para imprimir.', 'Aviso');
       return;
     }
 
@@ -947,9 +1064,12 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     const geradoEmTexto = `Gerado em ${dataFormatada}, ${horaFormatada} por ${usuarioLabel}`;
 
     const logoUrl = this.getLogoRelatorioUrl();
-        const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo do sistema" />` : '';
+    const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo do sistema" />` : '';
+    const podeVerValorCompra = this.canViewValorCompra();
 
-    const totalValorCompra = vendasParaImprimir.reduce((total, venda) => total + (venda.valorCompra || 0), 0);
+    const totalValorCompra = podeVerValorCompra
+      ? vendasParaImprimir.reduce((total, venda) => total + (venda.valorCompra || 0), 0)
+      : 0;
     const totalValorCliente = vendasParaImprimir.reduce((total, venda) => total + (venda.valorCliente || 0), 0);
     const totalBaixas = vendasParaImprimir.reduce(
       (total, venda) => total + this.getValorBaixadoForVenda(venda.id),
@@ -988,20 +1108,27 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         const origemBlocos = origensOrdenadas
           .map(origem => {
             const vendas = origemMap.get(origem)!;
-            const origemValorCompra = vendas.reduce((total, venda) => total + (venda.valorCompra || 0), 0);
+            const origemValorCompra = podeVerValorCompra
+              ? vendas.reduce((total, venda) => total + (venda.valorCompra || 0), 0)
+              : 0;
             const origemValorCliente = vendas.reduce((total, venda) => total + (venda.valorCliente || 0), 0);
             const origemValorBaixas = vendas.reduce(
               (total, venda) => total + this.getValorBaixadoForVenda(venda.id),
               0
             );
 
-            unidadeValorCompra += origemValorCompra;
+            if (podeVerValorCompra) {
+              unidadeValorCompra += origemValorCompra;
+            }
             unidadeValorCliente += origemValorCliente;
             unidadeValorBaixas += origemValorBaixas;
 
             const linhasVendas = vendas
               .map(venda => {
                 contador += 1;
+                const valorCompraColuna = podeVerValorCompra
+                  ? `<td>${this.formatCurrency(venda.valorCompra || 0)}</td>`
+                  : '';
                 return `
                   <tr>
                     <td>${contador}</td>
@@ -1010,7 +1137,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
                     <td>${venda.dataFechamento ? this.formatDate(venda.dataFechamento) : '-'}</td>
                     <td>${venda.cliente}</td>
                     <td>${venda.vendedor}</td>
-                    <td>${this.formatCurrency(venda.valorCompra || 0)}</td>
+                    ${valorCompraColuna}
                     <td>${this.formatCurrency(venda.valorCliente || 0)}</td>
                     <td>${this.formatCurrency(this.getValorBaixadoForVenda(venda.id))}</td>
                     <td>${this.getStatusLabel(venda.status)}</td>
@@ -1030,7 +1157,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
                         <th>Fechamento</th>
                         <th>Cliente</th>
                         <th>Vendedor</th>
-                        <th>Compra</th>
+                        ${podeVerValorCompra ? '<th>Compra</th>' : ''}
                         <th>Cliente</th>
                         <th>Pago</th>
                         <th>Status</th>
@@ -1040,7 +1167,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
                       ${linhasVendas}
                       <tr class="totals-row origem-total">
                         <td class="totals-label" colspan="6">Total Comprado em ${origem}</td>
-                        <td>${this.formatCurrency(origemValorCompra)}</td>
+                        ${podeVerValorCompra ? `<td>${this.formatCurrency(origemValorCompra)}</td>` : ''}
                         <td>${this.formatCurrency(origemValorCliente)}</td>
                         <td>${this.formatCurrency(origemValorBaixas)}</td>
                         <td></td>
@@ -1058,7 +1185,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
             ${origemBlocos}
             <div class="unit-total-row">
               <span>Total Unidade ${unidade}:</span>
-              <span><strong>Valor Compra:</strong> ${this.formatCurrency(unidadeValorCompra)}</span>
+              ${podeVerValorCompra ? `<span><strong>Valor Compra:</strong> ${this.formatCurrency(unidadeValorCompra)}</span>` : ''}
               <span><strong>Valor Cliente:</strong> ${this.formatCurrency(unidadeValorCliente)}</span>
               <span><strong>Total Pago:</strong> ${this.formatCurrency(unidadeValorBaixas)}</span>
             </div>
@@ -1117,7 +1244,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
           </header>
           ${tabelasPorUnidade}
           <div class="totals-summary">
-            <div><strong>Total Valor Compra:</strong> ${this.formatCurrency(totalValorCompra)}</div>
+            ${podeVerValorCompra ? `<div><strong>Total Valor Compra:</strong> ${this.formatCurrency(totalValorCompra)}</div>` : ''}
             <div><strong>Total Valor Cliente:</strong> ${this.formatCurrency(totalValorCliente)}</div>
             <div><strong>Total Pago:</strong> ${this.formatCurrency(totalBaixas)}</div>
           </div>
@@ -1130,6 +1257,47 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     popup.document.close();
     popup.document.title = reportDocumentTitle;
     popup.focus();
+  }
+
+  exportarSelecionadasParaExcel(): void {
+    if (!this.canReadVenda()) {
+      return;
+    }
+
+    if (this.selectedVendas.size === 0) {
+      this.errorModalService.show('Selecione ao menos uma venda para exportar.', 'Aviso');
+      return;
+    }
+
+    const vendas = this.getSelectedVendaModels();
+    const podeVerValorCompra = this.canViewValorCompra();
+    const planilha = vendas.map(venda => {
+      const linha: Record<string, string | number> = {
+        Protocolo: venda.protocolo,
+        'Data Venda': this.formatDate(venda.dataVenda),
+        'Data Fechamento': venda.dataFechamento ? this.formatDate(venda.dataFechamento) : '-',
+        Cliente: venda.cliente,
+        'Comprado em': this.getOrigemLabel(venda.origem),
+        Vendedor: venda.vendedor,
+        'Valor Cliente': venda.valorCliente || 0,
+        'Valor Pago': this.getValorBaixadoForVenda(venda.id),
+        Status: this.getStatusLabel(venda.status),
+        Observação: venda.observacao || ''
+      };
+
+      if (podeVerValorCompra) {
+        linha['Valor Compra'] = venda.valorCompra || 0;
+      }
+
+      return linha;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(planilha);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Vendas');
+
+    const nomeArquivo = `Relatorio_Vendas_${this.getReportTimestamp().replace(/[:\s]/g, '-')}.xlsx`;
+    XLSX.writeFile(workbook, nomeArquivo);
   }
 
   /** Abrir modal de histórico de auditoria */
@@ -1296,6 +1464,25 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  }
+
+  getAuditFieldLabels(): Record<string, string> {
+    const labels: Record<string, string> = {
+      protocolo: 'Protocolo',
+      dataVenda: 'Data Venda',
+      cliente: 'Cliente',
+      origem: 'Comprado em',
+      vendedor: 'Vendedor',
+      valorCliente: 'Valor Cliente',
+      status: 'Status',
+      observacao: 'Observação'
+    };
+
+    if (this.canViewValorCompra()) {
+      labels['valorCompra'] = 'Valor Compra';
+    }
+
+    return labels;
   }
 
   private getTodayDateString(): string {

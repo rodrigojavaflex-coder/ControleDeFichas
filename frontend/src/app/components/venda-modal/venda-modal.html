@@ -86,6 +86,9 @@
               {{ unit }}
             </option>
           </select>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('unidade')">
+            {{ getFieldError('unidade') }}
+          </div>
         </div>
       </div>
 
@@ -152,7 +155,7 @@
           </div>
         </div>
 
-        <div class="grupo-campo desconto-percentual">
+        <div class="grupo-campo desconto-percentual" *ngIf="podeVisualizarValorCompra">
           <label for="descontoPercentual" class="label-campo">Desconto (%)</label>
           <div class="grupo-input desconto-wrapper">
             <input
@@ -175,7 +178,7 @@
           </div>
         </div>
 
-        <div class="grupo-campo">
+        <div class="grupo-campo" *ngIf="podeVisualizarValorCompra; else valorCompraPlaceholder">
           <label for="valorCompra" class="label-campo obrigatorio">Valor Compra</label>
           <div class="grupo-input">
             <span class="prefixo-input">R$</span>
@@ -194,6 +197,10 @@
           </div>
         </div>
       </div>
+
+      <ng-template #valorCompraPlaceholder>
+        <input type="hidden" formControlName="valorCompra">
+      </ng-template>
 
       <!-- Observação -->
       <div class="grid-formulario">

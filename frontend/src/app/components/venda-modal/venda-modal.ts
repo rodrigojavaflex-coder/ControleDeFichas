@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, OnInit, OnChanges, inject, View
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Venda, VendaOrigem, VendaStatus, Unidade } from '../../models/venda.model';
+import { Permission } from '../../models/usuario.model';
 import { VendaService } from '../../services/vendas.service';
 import { AuthService } from '../../services/auth.service';
 import { ErrorModalService } from '../../services/error-modal.service';
@@ -31,17 +32,20 @@ export class VendaModalComponent implements OnInit, OnChanges {
   unidadeDisabled = false;
   private readonly DEFAULT_DESCONTO_PERCENTUAL = 35;
   descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
+  podeVisualizarValorCompra = false;
 
   // Enums para template
   VendaOrigem = VendaOrigem;
   VendaStatus = VendaStatus;
   Unidade = Unidade;
   unidades = Object.values(Unidade);
+  Permission = Permission;
 
   ngOnInit() {
     this.initializeForm();
     this.configureUnidadeField();
     this.descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
+    this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
   }
 
   private configureUnidadeField() {
@@ -81,7 +85,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
       valorCliente: [0, [Validators.required, Validators.min(0)]],
       observacao: [''],
       status: [{value: VendaStatus.REGISTRADO, disabled: true}, [Validators.required]],
-      unidade: [''],
+      unidade: ['', [Validators.required]],
       ativo: ['']
     });
   }
@@ -124,6 +128,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
     }, 50);
 
     this.descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
+    this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
   }
 
   closeModal() {
@@ -157,13 +162,24 @@ export class VendaModalComponent implements OnInit, OnChanges {
       const formValue = this.vendaForm.getRawValue();
       
       // Converter valores de moeda de string para número
-      const valorCompra = typeof formValue.valorCompra === 'string' 
+      let valorCompra = typeof formValue.valorCompra === 'string' 
         ? parseFloat(formValue.valorCompra.replace(/\D/g, '')) / 100 
         : formValue.valorCompra;
       
       const valorCliente = typeof formValue.valorCliente === 'string' 
         ? parseFloat(formValue.valorCliente.replace(/\D/g, '')) / 100 
         : formValue.valorCliente;
+
+      if (!valorCliente || valorCliente <= 0) {
+        this.errorModalService.show('Informe um valor válido para o cliente.', 'Validação');
+        return;
+      }
+
+      if (!valorCompra || valorCompra <= 0) {
+        valorCompra = Number((valorCliente * 0.35).toFixed(2));
+      }
+
+      this.vendaForm.get('valorCompra')?.setValue(valorCompra, { emitEvent: false });
 
       if (valorCompra > valorCliente) {
         this.errorModalService.show('O valor da compra não pode ser maior que o valor do cliente.', 'Validação');

@@ -18,6 +18,8 @@ import {
 } from '../../common/dto/paginated-response.dto';
 import { FecharVendasEmMassaDto } from './dto/fechar-vendas-em-massa.dto';
 import { CancelarFechamentosEmMassaDto } from './dto/cancelar-fechamentos-em-massa.dto';
+import { Usuario } from '../usuarios/entities/usuario.entity';
+import { Permission } from '../../common/enums/permission.enum';
 
 interface FecharVendaFalha {
   id: string;
@@ -38,8 +40,29 @@ export class VendasService {
     private readonly vendaRepository: Repository<Venda>,
   ) {}
 
-  async create(createVendaDto: CreateVendaDto): Promise<Venda> {
+  private usuarioPodeVerValorCompra(usuario?: Usuario | null): boolean {
+    if (!usuario) {
+      return true;
+    }
+    const permissoes = usuario.perfil?.permissoes || [];
+    return permissoes.includes(Permission.VENDA_VIEW_VALOR_COMPRA);
+  }
+
+  async create(createVendaDto: CreateVendaDto, usuario?: Usuario | null): Promise<Venda> {
     try {
+      const podeVerValorCompra = this.usuarioPodeVerValorCompra(usuario);
+      const valorClienteNumero = Number(createVendaDto.valorCliente || 0);
+
+      if (!podeVerValorCompra) {
+        createVendaDto.valorCompra = Number((valorClienteNumero * 0.35).toFixed(2));
+      } else if (
+        createVendaDto.valorCompra === undefined ||
+        createVendaDto.valorCompra === null ||
+        Number(createVendaDto.valorCompra) <= 0
+      ) {
+        createVendaDto.valorCompra = Number((valorClienteNumero * 0.35).toFixed(2));
+      }
+
       if (
         createVendaDto.valorCompra !== undefined &&
         createVendaDto.valorCliente !== undefined &&
@@ -195,9 +218,24 @@ export class VendasService {
     return venda;
   }
 
-  async update(id: string, updateVendaDto: UpdateVendaDto): Promise<Venda> {
+  async update(id: string, updateVendaDto: UpdateVendaDto, usuario?: Usuario | null): Promise<Venda> {
     try {
       const venda = await this.findOne(id);
+      const podeVerValorCompra = this.usuarioPodeVerValorCompra(usuario);
+      const valorClienteBase =
+        updateVendaDto.valorCliente !== undefined && updateVendaDto.valorCliente !== null
+          ? Number(updateVendaDto.valorCliente)
+          : Number(venda.valorCliente || 0);
+
+      if (!podeVerValorCompra) {
+        updateVendaDto.valorCompra = Number((valorClienteBase * 0.35).toFixed(2));
+      } else if (
+        updateVendaDto.valorCompra === undefined ||
+        updateVendaDto.valorCompra === null ||
+        Number(updateVendaDto.valorCompra) <= 0
+      ) {
+        updateVendaDto.valorCompra = Number((valorClienteBase * 0.35).toFixed(2));
+      }
 
       // Validação 1: Venda não pode estar FECHADA
       if (venda.status === VendaStatus.FECHADO) {
