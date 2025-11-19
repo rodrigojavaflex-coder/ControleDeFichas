@@ -38,7 +38,7 @@ export class LoginComponent {
       this.errorMessage = '';
 
       try {
-        const email = this.loginForm.value.email!;
+        const email = this.loginForm.value.email!.trim().toLowerCase();
         const password = this.loginForm.value.password!;
         
         await this.authService.login(email, password);

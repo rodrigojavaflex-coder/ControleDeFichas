@@ -125,7 +125,9 @@ export class UsuariosService {
   ): Promise<PaginatedResponseDto<Usuario>> {
     const { page = 1, limit = 10, nome, email } = findUsuariosDto;
 
-    const queryBuilder = this.usuarioRepository.createQueryBuilder('user');
+    const queryBuilder = this.usuarioRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.perfil', 'perfil');
 
     if (nome) {
       queryBuilder.andWhere('user.nome ILIKE :nome', { nome: `%${nome}%` });

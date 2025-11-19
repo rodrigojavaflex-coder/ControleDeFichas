@@ -80,7 +80,7 @@ export interface Usuario {
   nome: string;
   email: string;
   ativo: boolean;
-  perfil: Perfil;
+  perfil?: Perfil | null;
   tema?: string; // Tema preferido do usuário (Claro ou Escuro)
   unidade?: Unidade; // Unidade do usuário
   criadoEm: Date;

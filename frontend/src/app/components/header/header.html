@@ -29,6 +29,9 @@
               <div class="user-unit" *ngIf="user.unidade">
                 Unidade: {{ user.unidade }}
               </div>
+              <div class="user-profile-name" *ngIf="user.perfil?.nomePerfil">
+                Perfil: {{ user.perfil?.nomePerfil }}
+              </div>
               <div class="user-session" *ngIf="loginElapsedLabel">
                 Sessão ativa há {{ loginElapsedLabel }}
               </div>
