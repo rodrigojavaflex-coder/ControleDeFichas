@@ -329,6 +329,7 @@ td {
 
 :host-context(body.theme-dark) .filters {
   border-color: rgba(148, 163, 184, 0.2);
+  background: #0f172a;
 }
 
 :host-context(body.theme-dark) .filters-panel-top,
@@ -361,6 +362,16 @@ td {
 }
 
 :host-context(body.theme-dark) .header-actions .btn:hover {
+  background: rgba(79, 70, 229, 0.25) !important;
+  border-color: rgba(165, 180, 252, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+:host-context(body.theme-dark) .filter-action-buttons .btn {
+  color: #e0e7ff !important;
+}
+
+:host-context(body.theme-dark) .filter-action-buttons .btn:hover {
   background: rgba(79, 70, 229, 0.25) !important;
   border-color: rgba(165, 180, 252, 0.4) !important;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
