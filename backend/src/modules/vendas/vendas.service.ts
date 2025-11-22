@@ -48,19 +48,26 @@ export class VendasService {
     return permissoes.includes(Permission.VENDA_VIEW_VALOR_COMPRA);
   }
 
+  private calcularValorCompraPadrao(valorCliente: number): number {
+    const valorClienteNumero = Number(valorCliente || 0);
+    const desconto = valorClienteNumero * 0.35;
+    return Number((valorClienteNumero - desconto).toFixed(2));
+  }
+
   async create(createVendaDto: CreateVendaDto, usuario?: Usuario | null): Promise<Venda> {
     try {
       const podeVerValorCompra = this.usuarioPodeVerValorCompra(usuario);
       const valorClienteNumero = Number(createVendaDto.valorCliente || 0);
+      const valorCompraCalculado = this.calcularValorCompraPadrao(valorClienteNumero);
 
       if (!podeVerValorCompra) {
-        createVendaDto.valorCompra = Number((valorClienteNumero * 0.35).toFixed(2));
+        createVendaDto.valorCompra = valorCompraCalculado;
       } else if (
         createVendaDto.valorCompra === undefined ||
         createVendaDto.valorCompra === null ||
         Number(createVendaDto.valorCompra) <= 0
       ) {
-        createVendaDto.valorCompra = Number((valorClienteNumero * 0.35).toFixed(2));
+        createVendaDto.valorCompra = valorCompraCalculado;
       }
 
       if (
@@ -226,15 +233,16 @@ export class VendasService {
         updateVendaDto.valorCliente !== undefined && updateVendaDto.valorCliente !== null
           ? Number(updateVendaDto.valorCliente)
           : Number(venda.valorCliente || 0);
+      const valorCompraCalculado = this.calcularValorCompraPadrao(valorClienteBase);
 
       if (!podeVerValorCompra) {
-        updateVendaDto.valorCompra = Number((valorClienteBase * 0.35).toFixed(2));
+        updateVendaDto.valorCompra = valorCompraCalculado;
       } else if (
         updateVendaDto.valorCompra === undefined ||
         updateVendaDto.valorCompra === null ||
         Number(updateVendaDto.valorCompra) <= 0
       ) {
-        updateVendaDto.valorCompra = Number((valorClienteBase * 0.35).toFixed(2));
+        updateVendaDto.valorCompra = valorCompraCalculado;
       }
 
       // Validação 1: Venda não pode estar FECHADA
