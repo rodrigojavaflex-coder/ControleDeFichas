@@ -1,0 +1,7 @@
+export interface VendasTotalRow {
+  unidade: string;
+  data: string;
+  forma_pagamento: string;
+  total_pago: number;
+  qtde_linhas: number;
+}

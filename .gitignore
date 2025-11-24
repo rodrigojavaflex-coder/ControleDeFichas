@@ -15,6 +15,11 @@ frontend/.angular/
 frontend/.env
 frontend/.env.local
 
+# Agent
+agent/dist/
+agent/.env
+agent/agent-deploy/
+
 # Logs
 *.log
 npm-debug.log*
