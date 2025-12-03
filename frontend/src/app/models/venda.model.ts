@@ -1,5 +1,6 @@
 export enum VendaOrigem {
   GOIANIA = 'GOIANIA',
+  INHUMAS = 'INHUMAS',
   UBERABA = 'UBERABA',
   NEROPOLIS = 'NEROPOLIS',
   OUTRO = 'OUTRO',

@@ -47,7 +47,7 @@
             formControlName="origem"
             class="campo"
             [ngClass]="{'invalido': hasFieldError('origem')}">
-            <option *ngFor="let origem of [VendaOrigem.GOIANIA, VendaOrigem.UBERABA, VendaOrigem.NEROPOLIS, VendaOrigem.OUTRO]"
+            <option *ngFor="let origem of [VendaOrigem.GOIANIA, VendaOrigem.INHUMAS, VendaOrigem.UBERABA, VendaOrigem.NEROPOLIS, VendaOrigem.OUTRO]"
                     [value]="origem">
               {{ getOrigemLabel(origem) }}
             </option>

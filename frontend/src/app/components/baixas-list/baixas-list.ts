@@ -713,6 +713,8 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     switch (origem) {
       case VendaOrigem.GOIANIA:
         return 'Goiânia';
+      case VendaOrigem.INHUMAS:
+        return 'Inhumas';
       case VendaOrigem.UBERABA:
         return 'Uberaba';
       case VendaOrigem.NEROPOLIS:

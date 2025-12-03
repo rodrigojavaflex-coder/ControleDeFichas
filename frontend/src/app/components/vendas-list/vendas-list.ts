@@ -1496,6 +1496,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   getOrigemLabel(origem: VendaOrigem): string {
     const labels = {
       [VendaOrigem.GOIANIA]: 'Goiânia',
+      [VendaOrigem.INHUMAS]: 'Inhumas',
       [VendaOrigem.UBERABA]: 'Uberaba',
       [VendaOrigem.NEROPOLIS]: 'Nerópolis',
       [VendaOrigem.OUTRO]: 'Outro'

@@ -337,6 +337,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
   getOrigemLabel(origem: VendaOrigem): string {
     const labels = {
       [VendaOrigem.GOIANIA]: 'Goiânia',
+      [VendaOrigem.INHUMAS]: 'Inhumas',
       [VendaOrigem.UBERABA]: 'Uberaba',
       [VendaOrigem.NEROPOLIS]: 'Nerópolis',
       [VendaOrigem.OUTRO]: 'Outro'
