@@ -118,18 +118,7 @@ export class AuthService {
     }
 
     // Gerar tokens
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-    };
-
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get('JWT_EXPIRES_IN', '1h'),
-    });
-
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', '7d'),
-    });
+    const { accessToken, refreshToken } = this.createTokenPair(user);
 
     if (await this.shouldAuditAction(AuditAction.LOGIN)) {
       await this.auditoriaService.createLog({
@@ -140,23 +129,7 @@ export class AuthService {
       });
     }
 
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      token_type: 'Bearer',
-      expires_in: 3600, // 1 hora em segundos
-      user: {
-        id: user.id,
-        name: user.nome,
-        email: user.email,
-        isActive: user.ativo,
-        // Permissões agora vêm do perfil associado
-        permissions: user.perfil?.permissoes || [],
-        tema: user.tema || 'Claro',
-        criadoEm: user.criadoEm,
-        atualizadoEm: user.atualizadoEm,
-      },
-    };
+    return this.buildAuthResponse(user, accessToken, refreshToken);
   }
 
   async refreshToken(refreshToken: string): Promise<AuthResponseDto> {
@@ -187,7 +160,9 @@ export class AuthService {
         });
       }
 
-      return this.login({ email: user.email, password: user.senha });
+      const { accessToken, refreshToken: newRefreshToken } =
+        this.createTokenPair(user);
+      return this.buildAuthResponse(user, accessToken, newRefreshToken);
     } catch (error) {
       // Auditar falha geral no refresh
       if (await this.shouldAuditAction(AuditAction.READ)) {
@@ -199,6 +174,46 @@ export class AuthService {
       }
       throw new UnauthorizedException('Refresh token inválido ou expirado');
     }
+  }
+
+  private createTokenPair(user: Usuario) {
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get('JWT_EXPIRES_IN', '1h'),
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN', '7d'),
+    });
+
+    return { accessToken, refreshToken };
+  }
+
+  private buildAuthResponse(
+    user: Usuario,
+    accessToken: string,
+    refreshToken: string,
+  ): AuthResponseDto {
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token_type: 'Bearer',
+      expires_in: 3600, // 1 hora em segundos
+      user: {
+        id: user.id,
+        name: user.nome,
+        email: user.email,
+        isActive: user.ativo,
+        permissions: user.perfil?.permissoes || [],
+        tema: user.tema || 'Claro',
+        criadoEm: user.criadoEm,
+        atualizadoEm: user.atualizadoEm,
+      },
+    };
   }
 
   async validateUserById(userId: string): Promise<Usuario | null> {

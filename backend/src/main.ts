@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -60,6 +60,7 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
   const configService = app.get(ConfigService);
+  const logger = new Logger('bootstrap');
 
   // Configuração global de validação
   app.useGlobalPipes(
@@ -73,20 +74,33 @@ async function bootstrap() {
   // Filtro global de exceções genérico
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Configuração de CORS
+  // Configuração de CORS via env
+  const corsConfig = configService.get<{
+    origins?: string[];
+    methods?: string[];
+    credentials?: boolean;
+  }>('app.cors');
+  const corsOrigins =
+    corsConfig?.origins && corsConfig.origins.length > 0
+      ? corsConfig.origins
+      : ['http://localhost:4200', 'http://localhost:3000'];
+  const corsMethods =
+    corsConfig?.methods && corsConfig.methods.length > 0
+      ? corsConfig.methods
+      : ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production' 
-      ? [
-          'https://controledefichas.onrender.com',
-          'https://controle-de-fichas-api.onrender.com'
-        ]
-      : [
-          'http://localhost:4200',
-          'http://localhost:3000'
-        ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    credentials: true,
+    origin: corsOrigins,
+    methods: corsMethods,
+    credentials: corsConfig?.credentials ?? true,
   });
+
+  const jwtSecret = configService.get<string>('app.jwtSecret');
+  if (!jwtSecret) {
+    logger.warn(
+      'JWT_SECRET não definido. Configure uma chave segura no arquivo .env antes de subir para produção.',
+    );
+  }
 
   // Prefixo global para todas as rotas
   app.setGlobalPrefix('api');
@@ -105,8 +119,8 @@ async function bootstrap() {
 
   const port = process.env.PORT || configService.get('app.port') || 10000;
   await app.listen(port, '0.0.0.0');
-  console.log(`🚀 Aplicação rodando na porta ${port}`);
-  console.log(
+  logger.log(`🚀 Aplicação rodando na porta ${port}`);
+  logger.log(
     `📚 Documentação Swagger disponível em: http://localhost:${port}/api/docs`,
   );
 }

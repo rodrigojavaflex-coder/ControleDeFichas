@@ -11,5 +11,11 @@ export interface AgentDbConfig {
 export interface AgentConfig {
   port: number;
   authToken: string;
+  authTokenFallbacks: string[];
+  allowedIps: string[];
+  rateLimit: {
+    ttl: number;
+    limit: number;
+  };
   db: AgentDbConfig;
 }

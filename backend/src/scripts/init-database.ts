@@ -9,6 +9,10 @@ async function bootstrap() {
 
   const perfilService = app.get(PerfilService);
   const usuarioService = app.get(UsuariosService);
+  const adminEmail = process.env.ADMIN_DEFAULT_EMAIL || 'admin@sistema.com';
+  const adminPassword =
+    process.env.ADMIN_DEFAULT_PASSWORD || 'TroqueEssaSenha123!';
+  const adminName = process.env.ADMIN_DEFAULT_NAME || 'Administrador';
 
   try {
     // Verificar se já existe um perfil ADMIN
@@ -33,23 +37,25 @@ async function bootstrap() {
 
     // Verificar se já existe usuário admin
     const usuariosResponse = await usuarioService.findAll({});
-    const adminExistente = usuariosResponse.data.find(u => u.email === 'admin@sistema.com');
+    const adminExistente = usuariosResponse.data.find(
+      (u) => u.email === adminEmail,
+    );
 
     if (adminExistente) {
       console.log('✅ Usuário admin já existe');
     } else {
       // Criar usuário admin
       await usuarioService.create({
-        nome: 'Administrador',
-        email: 'admin@sistema.com',
-        senha: 'Ro112543*',
+        nome: adminName,
+        email: adminEmail,
+        senha: adminPassword,
         ativo: true,
         perfilId: perfilId,
-        tema: 'Claro'
+        tema: 'Claro',
       });
       console.log('✅ Usuário admin criado com sucesso');
-      console.log('📧 Email: admin@sistema.com');
-      console.log('🔑 Senha: Ro112543*');
+      console.log(`📧 Email: ${adminEmail}`);
+      console.log('🔐 Defina uma senha segura via variável de ambiente antes do uso em produção.');
     }
 
     console.log('🎉 Inicialização do banco concluída com sucesso!');
