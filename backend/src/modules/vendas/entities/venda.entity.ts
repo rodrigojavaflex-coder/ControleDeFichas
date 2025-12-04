@@ -118,9 +118,9 @@ export class Venda extends BaseEntity {
   @ApiProperty({
     description: 'Observação da venda',
     example: 'Venda realizada com sucesso',
-    maxLength: 30,
+    maxLength: 500,
   })
-  @Column({ length: 30, nullable: true })
+  @Column({ length: 500, nullable: true })
   observacao?: string;
 
   @ApiProperty({

@@ -150,13 +150,13 @@ export class CreateVendaDto {
   @ApiProperty({
     description: 'Observação da venda',
     example: 'Venda realizada com sucesso',
-    maxLength: 30,
+    maxLength: 500,
     required: false,
   })
   @IsOptional()
   @Transform(({ value }) => (value === '') ? null : value)
   @IsString({ message: 'Observação deve ser uma string' })
-  @MaxLength(30, { message: 'Observação não pode ter mais que 30 caracteres' })
+  @MaxLength(500, { message: 'Observação não pode ter mais que 500 caracteres' })
   observacao?: string;
 
   @ApiProperty({

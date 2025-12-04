@@ -83,7 +83,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
       vendedor: ['', [Validators.required, Validators.minLength(2)]],
       valorCompra: [0, [Validators.required, Validators.min(0)]],
       valorCliente: [0, [Validators.required, Validators.min(0)]],
-      observacao: [''],
+      observacao: ['', [Validators.maxLength(500)]],
       status: [{value: VendaStatus.REGISTRADO, disabled: true}, [Validators.required]],
       unidade: ['', [Validators.required]],
       ativo: ['']
@@ -321,6 +321,9 @@ export class VendaModalComponent implements OnInit, OnChanges {
       }
       if (field.errors['minlength']) {
         return `Mínimo ${field.errors['minlength'].requiredLength} caracteres`;
+      }
+      if (field.errors['maxlength']) {
+        return `Máximo ${field.errors['maxlength'].requiredLength} caracteres`;
       }
       if (field.errors['min']) {
         return 'Valor deve ser maior que zero';
