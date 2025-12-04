@@ -38,4 +38,3 @@ if (!allowLocalhost && /localhost|127\.0\.0\.1/i.test(apiUrl)) {
 }
 
 console.log('[env-check] environment.prod.ts aponta para', apiUrl);
-

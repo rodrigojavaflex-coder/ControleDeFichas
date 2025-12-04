@@ -125,4 +125,8 @@ async function bootstrap() {
   );
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  const logger = new Logger('bootstrap');
+  logger.error('Falha ao iniciar a aplicação', error instanceof Error ? error.stack : String(error));
+  process.exit(1);
+});
