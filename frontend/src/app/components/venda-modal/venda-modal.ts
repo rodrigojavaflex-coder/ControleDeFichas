@@ -39,6 +39,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
   VendaStatus = VendaStatus;
   Unidade = Unidade;
   unidades = Object.values(Unidade);
+  origens = Object.values(VendaOrigem);
   Permission = Permission;
 
   ngOnInit() {
@@ -346,6 +347,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
       [VendaOrigem.INHUMAS]: 'Inhumas',
       [VendaOrigem.UBERABA]: 'Uberaba',
       [VendaOrigem.NEROPOLIS]: 'Nerópolis',
+      [VendaOrigem.RIBEIRAO_PRETO]: 'Ribeirão Preto',
       [VendaOrigem.OUTRO]: 'Outro'
     };
     return labels[origem] || origem;

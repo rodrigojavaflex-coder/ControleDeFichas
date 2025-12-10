@@ -728,6 +728,8 @@ export class BaixasListComponent implements OnInit, OnDestroy {
         return 'Uberaba';
       case VendaOrigem.NEROPOLIS:
         return 'Nerópolis';
+      case VendaOrigem.RIBEIRAO_PRETO:
+        return 'Ribeirão Preto';
       case VendaOrigem.OUTRO:
         return 'Outro';
       default:

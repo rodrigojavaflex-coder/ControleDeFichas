@@ -154,6 +154,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   VendaStatus = VendaStatus;
   Unidade = Unidade;
   unidades = Object.values(Unidade);
+  origens = Object.values(VendaOrigem);
   Permission = Permission;
 
   /** Título do modal de confirmação de exclusão */
@@ -1537,6 +1538,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       [VendaOrigem.INHUMAS]: 'Inhumas',
       [VendaOrigem.UBERABA]: 'Uberaba',
       [VendaOrigem.NEROPOLIS]: 'Nerópolis',
+      [VendaOrigem.RIBEIRAO_PRETO]: 'Ribeirão Preto',
       [VendaOrigem.OUTRO]: 'Outro'
     };
     return labels[origem] || origem;

@@ -612,6 +612,7 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       [VendaOrigem.INHUMAS]: 'Inhumas',
       [VendaOrigem.UBERABA]: 'Uberaba',
       [VendaOrigem.NEROPOLIS]: 'Nerópolis',
+      [VendaOrigem.RIBEIRAO_PRETO]: 'Ribeirão Preto',
       [VendaOrigem.OUTRO]: 'Outro',
     };
     return labels[origem] || origem;
