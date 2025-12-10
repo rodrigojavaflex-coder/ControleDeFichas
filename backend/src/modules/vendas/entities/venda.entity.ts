@@ -59,6 +59,26 @@ export class Venda extends BaseEntity {
   dataFechamento?: Date | null;
 
   @ApiProperty({
+    description: 'Data de envio (opcional)',
+    example: '2025-11-05',
+    required: false,
+  })
+  @Column({
+    type: 'date',
+    nullable: true,
+    transformer: {
+      from: (value: string | null) => value,
+      to: (value: string | Date | null | undefined) => {
+        if (!value) return null;
+        if (typeof value === 'string') return value;
+        if (value instanceof Date) return value.toISOString().split('T')[0];
+        return null;
+      },
+    },
+  })
+  dataEnvio?: Date | null;
+
+  @ApiProperty({
     description: 'Nome do cliente',
     example: 'João da Silva',
     maxLength: 300,
@@ -84,6 +104,15 @@ export class Venda extends BaseEntity {
   })
   @Column({ length: 300 })
   vendedor: string;
+
+  @ApiProperty({
+    description: 'Nome do prescritor responsável',
+    example: 'Dr. João Almeida',
+    maxLength: 300,
+    required: false,
+  })
+  @Column({ length: 300, nullable: true })
+  prescritor?: string;
 
   @ApiProperty({
     description: 'Valor da compra',

@@ -100,6 +100,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
           route: '/relatorios/baixas',
           icon: 'feather-file-text',
           requiredPermissions: [Permission.VENDA_BAIXAR]
+        },
+        {
+          label: 'Acompanhar (Vendas)',
+          route: '/relatorios/acompanhar-vendas',
+          icon: 'feather-file-text',
+          requiredPermissions: [Permission.VENDA_ACOMPANHAR]
         }
       ]
     }

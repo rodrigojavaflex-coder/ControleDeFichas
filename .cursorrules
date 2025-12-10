@@ -1,0 +1,36 @@
+# Comportamento Geral
+- Responda sempre em Português do Brasil.
+- Seja conciso e direto. Evite explicações teóricas longas; foque no código.
+- Quando precisar alterar vários arquivos ou executar uma sequência complexa, descreva o plano antes de começar (não é uma ferramenta específica; documente os passos).
+
+# Angular (Frontend)
+- Utilize Standalone Components em todo desenvolvimento novo; recorra a NgModules apenas quando obrigatório por legado.
+- Prefira Signals para fluxos novos/refatorados; mantenha Observables/RxJS onde já existem pipelines consolidados.
+- Use `inject()` para dependências; utilize construtor só quando for necessário chamar `super()` ou executar inicializações específicas.
+- Tipar explicitamente todos os Observables/retornos HTTP; evite `any`.
+- Mantenha templates limpos, movendo lógica não trivial para o componente ou para pipes.
+
+# NestJS (Backend)
+- Preserve a arquitetura Controller → Service → TypeORM Repository.
+- Todos os endpoints devem usar DTOs decorados com `class-validator` e `@ApiProperty`; documente rotas com `@ApiResponse`.
+- Defina tipos de retorno explícitos em services/controllers (`Promise<T>`, etc.).
+- Leia variáveis de ambiente somente via `ConfigService`/configs `registerAs`, migrando gradualmente o código que ainda usa `process.env`.
+- Ao criar rotas novas, documente-as com decorators do Swagger.
+
+# Banco de Dados (PostgreSQL)
+- Prefira queries otimizadas e garanta índices coerentes com os filtros usados.
+- Sempre que alterar a estrutura, crie migrações reversíveis (`up/down`), mantendo nomes em snake_case e convenções de chave (UUID) / índices (`fk_`, `idx_`).
+- Use transações em operações críticas ou múltiplos updates para evitar inconsistências.
+- Defina `NOT NULL`, defaults e constraints (CHECK/UNIQUE) sempre que aplicável.
+- Para cargas grandes, considere `COPY`, bulk inserts ou jobs assíncronos para não degradar o sistema online.
+
+# UI/UX (Listagens e Telas de Gestão)
+
+- Toda tela de listagem deve usar a mesma estrutura da lista de vendas:
+  - Container principal `.vendas-page` dentro de um `.results-card`.
+  - Bloco de filtros com `filters-inline`, `filters-panel-top`, contador (`.filters-count`) e chips removíveis (`.filter-chip`). Inputs e selects seguem o padrão `form-control`.
+  - Botões principais dentro de `.header-actions`, reutilizando as classes `btn btn-<ação>` e ícones FontAwesome (ex.: `btn btn-imprimir`, `btn btn-exportar`). Estados de hover/disabled devem coincidir com o CSS atual.
+  - Tabelas com `.vendas-table`: colunas ordenáveis usando `th.sortable` e ícones `fa-sort-up/down`. Manter checkbox na primeira coluna e comportamento de clique na linha idêntico ao da tela de vendas (clicar na linha alterna a seleção).
+  - Estado vazio deve usar a linha `tr.no-data` com `<i class="fas fa-inbox"></i> Nenhuma venda encontrada`.
+- Títulos e descrições de página devem ser setados via `PageContextService` para aparecerem na barra superior (`PageContext`).
+- Qualquer ação extra (ex.: modais, exportação, filtros avançados) deve reaproveitar os mesmos estilos/classes definidos em `vendas-list` sempre que possível, evitando divergências visuais.

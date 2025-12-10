@@ -81,3 +81,9 @@
 .desconto-percentual .botao-icone i {
   font-size: 0.95rem;
 }
+
+/* Aumentar largura padrão do modal de vendas */
+.modal-conteudo.modal-grande.modal-venda {
+  max-width: 1100px;
+  width: min(1100px, 96vw);
+}

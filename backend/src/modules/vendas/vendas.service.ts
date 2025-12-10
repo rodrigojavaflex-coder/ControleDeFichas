@@ -11,7 +11,7 @@ import { Venda } from './entities/venda.entity';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
 import { FindVendasDto } from './dto/find-vendas.dto';
-import { VendaStatus } from '../../common/enums/venda.enum';
+import { VendaOrigem, VendaStatus } from '../../common/enums/venda.enum';
 import {
   PaginatedResponseDto,
   PaginationMetaDto,
@@ -20,6 +20,8 @@ import { FecharVendasEmMassaDto } from './dto/fechar-vendas-em-massa.dto';
 import { CancelarFechamentosEmMassaDto } from './dto/cancelar-fechamentos-em-massa.dto';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Permission } from '../../common/enums/permission.enum';
+import { Unidade } from '../../common/enums/unidade.enum';
+import { RegistrarEnvioDto } from './dto/registrar-envio.dto';
 
 interface FecharVendaFalha {
   id: string;
@@ -52,6 +54,23 @@ export class VendasService {
     const valorClienteNumero = Number(valorCliente || 0);
     const desconto = valorClienteNumero * 0.35;
     return Number((valorClienteNumero - desconto).toFixed(2));
+  }
+
+  private mapUnidadeParaOrigem(unidade?: Unidade | null): VendaOrigem | undefined {
+    if (!unidade) {
+      return undefined;
+    }
+
+    switch (unidade) {
+      case Unidade.INHUMAS:
+        return VendaOrigem.INHUMAS;
+      case Unidade.UBERABA:
+        return VendaOrigem.UBERABA;
+      case Unidade.NERÓPOLIS:
+        return VendaOrigem.NEROPOLIS;
+      default:
+        return undefined;
+    }
   }
 
   async create(createVendaDto: CreateVendaDto, usuario?: Usuario | null): Promise<Venda> {
@@ -150,6 +169,38 @@ export class VendasService {
     return { sucesso, falhas };
   }
 
+  async registrarEnvioEmMassa(
+    registrarEnvioDto: RegistrarEnvioDto,
+  ): Promise<ProcessamentoVendasEmMassaResult> {
+    const { vendaIds, dataEnvio } = registrarEnvioDto;
+
+    const vendas = await this.vendaRepository.find({
+      where: { id: In(vendaIds) },
+    });
+
+    const vendasMap = new Map(vendas.map((venda) => [venda.id, venda]));
+    const falhas: FecharVendaFalha[] = [];
+    const sucesso: Venda[] = [];
+
+    for (const vendaId of vendaIds) {
+      const venda = vendasMap.get(vendaId);
+
+      if (!venda) {
+        falhas.push({ id: vendaId, motivo: 'Venda não encontrada' });
+        continue;
+      }
+
+      await this.vendaRepository.update(vendaId, {
+        dataEnvio,
+      });
+
+      const vendaAtualizada = await this.findOne(vendaId);
+      sucesso.push(vendaAtualizada);
+    }
+
+    return { sucesso, falhas };
+  }
+
   async cancelarFechamentosEmMassa(
     cancelarDto: CancelarFechamentosEmMassaDto,
   ): Promise<ProcessamentoVendasEmMassaResult> {
@@ -189,6 +240,26 @@ export class VendasService {
   }
 
   async findAll(findVendasDto: FindVendasDto): Promise<PaginatedResponseDto<Venda>> {
+    return this.executeListQuery(findVendasDto);
+  }
+
+  async findAcompanhar(
+    findVendasDto: FindVendasDto,
+    usuario?: Usuario | null,
+  ): Promise<PaginatedResponseDto<Venda>> {
+    const filters: FindVendasDto = { ...findVendasDto };
+    const origem = this.mapUnidadeParaOrigem(usuario?.unidade);
+
+    if (origem) {
+      filters.origem = origem;
+    }
+
+    return this.executeListQuery(filters);
+  }
+
+  private async executeListQuery(
+    findVendasDto: FindVendasDto,
+  ): Promise<PaginatedResponseDto<Venda>> {
     const queryBuilder = this.vendaRepository.createQueryBuilder('venda');
 
     // Aplicar filtros
@@ -345,6 +416,12 @@ export class VendasService {
       });
     }
 
+    if (filters.prescritor) {
+      queryBuilder.andWhere('venda.prescritor ILIKE :prescritor', {
+        prescritor: `%${filters.prescritor}%`,
+      });
+    }
+
     if (filters.status) {
       queryBuilder.andWhere('venda.status = :status', {
         status: filters.status,
@@ -360,6 +437,18 @@ export class VendasService {
     if (filters.dataFinal) {
       queryBuilder.andWhere('venda.dataVenda <= :dataFinal', {
         dataFinal: filters.dataFinal,
+      });
+    }
+
+    if (filters.dataInicialEnvio) {
+      queryBuilder.andWhere('venda.dataEnvio >= :dataInicialEnvio', {
+        dataInicialEnvio: filters.dataInicialEnvio,
+      });
+    }
+
+    if (filters.dataFinalEnvio) {
+      queryBuilder.andWhere('venda.dataEnvio <= :dataFinalEnvio', {
+        dataFinalEnvio: filters.dataFinalEnvio,
       });
     }
 

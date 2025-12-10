@@ -79,27 +79,19 @@
               class="form-control"
               [(ngModel)]="clienteFilter"
              
-              placeholder="Buscar por cliente">
+              placeholder="Buscar por cliente"
+              (keyup.enter)="onFilterChange()">
           </div>
 
-          <div class="filter-group date-field">
-            <label for="dataInicial">Data Inicial</label>
-            <input
-              id="dataInicial"
-              type="date"
-              class="form-control"
-              [(ngModel)]="dataInicialFilter"
-             >
-          </div>
-
-          <div class="filter-group date-field">
-            <label for="dataFinal">Data Final</label>
-            <input
-              id="dataFinal"
-              type="date"
-              class="form-control"
-              [(ngModel)]="dataFinalFilter"
-             >
+          <div class="filter-group date-field date-range-field">
+            <app-date-range-filter
+              label="Data da Baixa"
+              startLabel="Início"
+              endLabel="Fim"
+              [start]="dataInicialFilter"
+              [end]="dataFinalFilter"
+              (rangeChange)="onPeriodoRangeChange($event)">
+            </app-date-range-filter>
           </div>
 
           <div class="filter-group">
@@ -109,7 +101,8 @@
               class="form-control"
               [(ngModel)]="unidadeFilter"
              
-              [disabled]="unidadeDisabled">
+              [disabled]="unidadeDisabled"
+              (change)="onFilterChange()">
               <option value="">Todas</option>
               <option *ngFor="let unidade of unidades" [value]="unidade">
                 {{ unidade }}
@@ -123,7 +116,7 @@
               id="origem"
               class="form-control"
               [(ngModel)]="origemFilter"
-             >
+              (change)="onFilterChange()">
               <option value="">Todas</option>
               <option *ngFor="let origem of origens" [value]="origem">
                 {{ getOrigemLabel(origem) }}
@@ -140,7 +133,8 @@
                 class="form-control small-field"
                 [(ngModel)]="valorMinFilter"
                 (blur)="onValorBlur('min')"
-                placeholder="Mínimo">
+                placeholder="Mínimo"
+                (keyup.enter)="onFilterChange()">
               <span class="range-separator">até</span>
               <input
                 id="valorMax"
@@ -148,7 +142,8 @@
                 class="form-control small-field"
                 [(ngModel)]="valorMaxFilter"
                 (blur)="onValorBlur('max')"
-                placeholder="Máximo">
+                placeholder="Máximo"
+                (keyup.enter)="onFilterChange()">
             </div>
           </div>
 

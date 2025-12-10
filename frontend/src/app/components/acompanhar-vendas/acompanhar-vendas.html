@@ -1,0 +1,394 @@
+<div class="vendas-page">
+  <section *ngIf="error" class="state-card error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </section>
+
+  <section class="results-card" *ngIf="!error">
+    <div class="results-header">
+      <div class="header-actions">
+        <button
+          class="btn btn-exportar"
+          (click)="exportarSelecionadasParaExcel()"
+          [attr.disabled]="(!hasSelection() || loading) ? 'disabled' : null"
+          title="Exportar vendas selecionadas para Excel">
+          <i class="fas fa-file-excel"></i>
+          Exportar
+        </button>
+        <button
+          class="btn btn-imprimir"
+          (click)="imprimirSelecionadas()"
+          [attr.disabled]="(!hasSelection() || loading) ? 'disabled' : null"
+          title="Imprimir vendas selecionadas">
+          <i class="fas fa-print"></i>
+          Imprimir
+        </button>
+        <button
+          class="btn btn-filtrar"
+          (click)="openRegistrarEnvioModal()"
+          [attr.disabled]="(!hasSelection() || loading) ? 'disabled' : null"
+          title="Registrar data de envio">
+          <i class="fas fa-paper-plane"></i>
+          Registrar envio
+        </button>
+      </div>
+      <div class="page-help">
+        <button
+          type="button"
+          class="help-icon-button"
+          (click)="openHelpModal()"
+          title="Ajuda da tela Acompanhar Vendas">
+          <i class="fas fa-info-circle"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="inline-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Atualizando lista...</span>
+    </div>
+
+    <div class="filters-inline">
+      <div
+        class="filters-panel-top"
+        role="button"
+        tabindex="0"
+        (click)="toggleFiltersVisibility()"
+        (keydown)="onFiltersToggleKey($event)">
+        <div class="filters-controls">
+          <div class="filters-toggle btn btn-toggle-filtros">
+            <span>{{ filtersPanelOpen ? 'Ocultar filtros' : 'Mostrar filtros' }}</span>
+            <span class="filters-count" *ngIf="appliedFilters.length">
+              {{ appliedFilters.length }}
+            </span>
+            <i
+              class="fas"
+              [class.fa-chevron-up]="filtersPanelOpen"
+              [class.fa-chevron-down]="!filtersPanelOpen"></i>
+          </div>
+          <div
+            class="applied-filters-inline"
+            *ngIf="appliedFilters.length"
+            (click)="$event.stopPropagation()"
+            (keydown)="$event.stopPropagation()">
+            <div class="applied-filters-list">
+              <span class="filter-chip" *ngFor="let filter of appliedFilters">
+                <strong>{{ filter.label }}:</strong> {{ filter.value }}
+                <button
+                  class="chip-remove"
+                  type="button"
+                  (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
+                  aria-label="Remover filtro {{ filter.label }}">
+                  ×
+                </button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="filters" *ngIf="filtersPanelOpen">
+        <div class="filter-group">
+          <label for="protocoloFilter">Protocolo</label>
+          <input
+            id="protocoloFilter"
+            type="text"
+            [(ngModel)]="protocoloFilter"
+            placeholder="Buscar por protocolo..."
+            class="form-control">
+        </div>
+
+        <div class="filter-group">
+          <label for="clienteFilter">Cliente</label>
+          <input
+            id="clienteFilter"
+            type="text"
+            [(ngModel)]="clienteFilter"
+            placeholder="Buscar por cliente..."
+            class="form-control"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="vendedorFilter">Vendedor</label>
+          <input
+            id="vendedorFilter"
+            type="text"
+            [(ngModel)]="vendedorFilter"
+            placeholder="Buscar por vendedor..."
+            class="form-control"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="prescritorFilter">Prescritor</label>
+          <input
+            id="prescritorFilter"
+            type="text"
+            [(ngModel)]="prescritorFilter"
+            placeholder="Buscar por prescritor..."
+            class="form-control"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="ativoFilter">Ativo</label>
+          <input
+            id="ativoFilter"
+            type="text"
+            [(ngModel)]="ativoFilter"
+            placeholder="Buscar por ativo..."
+            class="form-control"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="origemFilter">Comprado em</label>
+          <select
+            id="origemFilter"
+            [(ngModel)]="origemFilter"
+            class="form-control"
+            [disabled]="origemDisabled"
+            (change)="onSelectChange()">
+            <option value="">Todas</option>
+            <option *ngFor="let origem of origens" [value]="origem">
+              {{ getOrigemLabel(origem) }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group date-field date-range-field">
+          <app-date-range-filter
+            label="Data da Venda"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialFilter"
+            [end]="dataFinalFilter"
+            (rangeChange)="onVendaRangeChange($event)">
+          </app-date-range-filter>
+        </div>
+
+        <div class="filter-group date-field date-range-field">
+          <app-date-range-filter
+            label="Data de Envio"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialEnvioFilter"
+            [end]="dataFinalEnvioFilter"
+            (rangeChange)="onEnvioRangeChange($event)">
+          </app-date-range-filter>
+        </div>
+        <div class="filter-group">
+          <label for="unidadeFilter">Unidade</label>
+          <select
+            id="unidadeFilter"
+            [(ngModel)]="unidadeFilter"
+            class="form-control"
+            (change)="onSelectChange()">
+            <option value="">Todas</option>
+            <option *ngFor="let unidade of unidades" [value]="unidade">
+              {{ unidade }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group filter-actions">
+          <label>&nbsp;</label>
+          <div class="filter-action-buttons">
+            <button class="btn btn-limpar" type="button" (click)="clearFilters()">
+              <i class="fas fa-eraser"></i>
+              Limpar Filtro
+            </button>
+            <button class="btn btn-filtrar" type="button" (click)="applyFilters()">
+              <i class="fas fa-filter"></i>
+              Aplicar Filtros
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="vendas-table acompanhamento-table">
+        <thead>
+          <tr>
+            <th class="checkbox-column">
+              <input
+                type="checkbox"
+                [checked]="isAllSelected()"
+                [indeterminate]="isIndeterminate()"
+                (change)="toggleSelectAll($event)"
+                title="Selecionar todas as vendas">
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('protocolo')"
+              [class.sorted]="sortField === 'protocolo'">
+              Protocolo
+              <i class="fas sort-icon" *ngIf="sortField === 'protocolo'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('dataVenda')"
+              [class.sorted]="sortField === 'dataVenda'">
+              D. Venda
+              <i class="fas sort-icon" *ngIf="sortField === 'dataVenda'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+          <th
+            class="sortable"
+            (click)="onSort('dataEnvio')"
+            [class.sorted]="sortField === 'dataEnvio'">
+            D. Envio
+            <i class="fas sort-icon" *ngIf="sortField === 'dataEnvio'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+          </th>
+            <th
+              class="sortable"
+              (click)="onSort('cliente')"
+              [class.sorted]="sortField === 'cliente'">
+              Cliente
+              <i class="fas sort-icon" *ngIf="sortField === 'cliente'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('origem')"
+              [class.sorted]="sortField === 'origem'">
+              Comprado em
+              <i class="fas sort-icon" *ngIf="sortField === 'origem'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('vendedor')"
+              [class.sorted]="sortField === 'vendedor'">
+              Vendedor
+              <i class="fas sort-icon" *ngIf="sortField === 'vendedor'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('prescritor')"
+              [class.sorted]="sortField === 'prescritor'">
+              Prescritor
+              <i class="fas sort-icon" *ngIf="sortField === 'prescritor'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('unidade')"
+              [class.sorted]="sortField === 'unidade'">
+              Unidade
+              <i class="fas sort-icon" *ngIf="sortField === 'unidade'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('observacao')"
+              [class.sorted]="sortField === 'observacao'">
+              Observação
+              <i class="fas sort-icon" *ngIf="sortField === 'observacao'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let venda of items" (click)="onRowClick(venda, $event)" [class.has-envio]="!!venda.dataEnvio">
+            <td class="checkbox-column">
+              <input
+                type="checkbox"
+                [checked]="isVendaSelected(venda.id)"
+                (change)="toggleSelectVenda(venda.id, $event)"
+                title="Selecionar venda">
+            </td>
+            <td>{{ venda.protocolo }}</td>
+            <td>{{ formatDate(venda.dataVenda) }}</td>
+            <td>{{ formatDate(venda.dataEnvio) || '-' }}</td>
+            <td>{{ venda.cliente }}</td>
+            <td>{{ getOrigemLabel(venda.origem) }}</td>
+            <td>{{ venda.vendedor }}</td>
+            <td>{{ venda.prescritor || '-' }}</td>
+            <td>{{ venda.unidade || '-' }}</td>
+            <td class="observacao-cell">{{ venda.observacao || '-' }}</td>
+          </tr>
+          <tr *ngIf="!loading && items.length === 0">
+            <td colspan="10" class="text-center">
+              <i class="fas fa-inbox"></i>
+              Nenhuma venda encontrada
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="modal-backdrop" *ngIf="showRegistrarEnvioModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Registrar envio</h3>
+        </div>
+        <div class="modal-body">
+          <label for="dataEnvioInput">Data do envio</label>
+          <input
+            id="dataEnvioInput"
+            type="date"
+            [(ngModel)]="registrarEnvioDate"
+            class="form-control">
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-cancelar"
+            (click)="closeRegistrarEnvioModal()"
+            [attr.disabled]="registrarEnvioLoading ? 'disabled' : null">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-filtrar"
+            (click)="confirmarRegistrarEnvio()"
+            [attr.disabled]="registrarEnvioLoading ? 'disabled' : null">
+            <i class="fas fa-paper-plane"></i>
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" *ngIf="showHelpModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Como usar a tela</h3>
+        </div>
+        <div class="modal-body">
+          <p><strong>Objetivo:</strong> Acompanhar vendas que outras unidades compraram e registrar a data de envio.</p>
+          <ul>
+            <li>Filtros no topo para protocolo, cliente, status, datas e unidade.</li>
+            <li>Selecione as linhas para imprimir ou exportar Excel ou registrar a data de envio.</li>
+            <li>Registrar envio: Selecione as vendas, clique em “Registrar envio”, informe a data (vem com o dia atual) e confirme.</li>
+            <li>Linhas com data de envio ficam destacadas em amarelo.</li>
+            <li>Colunas ordenáveis: clique no título para alternar crescente/decrescente.</li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-cancelar" (click)="closeHelpModal()">Fechar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button
+        class="btn btn-sm btn-cancelar"
+        type="button"
+        (click)="onPageChange(currentPage - 1)"
+        [attr.disabled]="(currentPage === 1 || loading) ? 'disabled' : null">
+        <i class="fas fa-chevron-left"></i>
+        Anterior
+      </button>
+
+      <span class="page-info">
+        Página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} registros)
+      </span>
+
+      <button
+        class="btn btn-sm btn-cancelar"
+        type="button"
+        (click)="onPageChange(currentPage + 1)"
+        [attr.disabled]="(currentPage === totalPages || loading) ? 'disabled' : null">
+        Próximo
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </section>
+</div>

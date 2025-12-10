@@ -1,0 +1,27 @@
+<div class="date-range-filter">
+  <div class="range-row">
+    <div class="field">
+      <label>{{ label }}</label>
+      <select class="form-control" [(ngModel)]="preset" (change)="onPresetChange(preset)">
+        <option *ngFor="let p of presets" [value]="p.value" [title]="p.description">{{ p.label }}</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>{{ startLabel }}</label>
+      <input
+        type="date"
+        class="form-control"
+        [(ngModel)]="start"
+        (change)="onStartChange(start)">
+    </div>
+    <div class="field">
+      <label>{{ endLabel }}</label>
+      <input
+        type="date"
+        class="form-control"
+        [(ngModel)]="end"
+        (change)="onEndChange(end)">
+    </div>
+  </div>
+  <p class="range-description" *ngIf="description">{{ description }}</p>
+</div>

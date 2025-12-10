@@ -9,6 +9,7 @@ import { Unidade, Permission } from '../../models/usuario.model';
 import { VendaOrigem } from '../../models/venda.model';
 import { VendaService } from '../../services/vendas.service';
 import { Venda } from '../../models/venda.model';
+import { DateRangeFilterComponent, DateRangeValue } from '../date-range-filter/date-range-filter';
 import { firstValueFrom } from 'rxjs';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
@@ -36,7 +37,7 @@ interface BaixasFilterSnapshot {
 @Component({
   selector: 'app-baixas-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, LancarBaixaModalComponent],
+  imports: [CommonModule, FormsModule, LancarBaixaModalComponent, DateRangeFilterComponent],
   templateUrl: './baixas-list.html',
   styleUrls: ['./baixas-list.css']
 })
@@ -214,6 +215,14 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   onFilterChange(): void {
     this.currentPage = 1;
     this.loadBaixas();
+    this.filtersPanelOpen = false;
+    this.updateAppliedFiltersSnapshot();
+  }
+
+  onPeriodoRangeChange(range: DateRangeValue): void {
+    this.dataInicialFilter = range.start || '';
+    this.dataFinalFilter = range.end || '';
+    this.onFilterChange();
   }
 
   clearFilters(): void {

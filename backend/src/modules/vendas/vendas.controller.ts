@@ -31,6 +31,9 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { FecharVendasEmMassaDto } from './dto/fechar-vendas-em-massa.dto';
 import { CancelarFechamentosEmMassaDto } from './dto/cancelar-fechamentos-em-massa.dto';
+import { RegistrarEnvioDto } from './dto/registrar-envio.dto';
+import { AuditLog } from '../../common/interceptors/auditoria.interceptor';
+import { AuditAction } from '../../common/enums/auditoria.enum';
 
 @ApiTags('Vendas')
 @Controller('vendas')
@@ -83,6 +86,21 @@ export class VendasController {
     return this.vendasService.cancelarFechamentosEmMassa(cancelarDto);
   }
 
+  @Post('registrar-envio')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.VENDA_UPDATE, Permission.VENDA_ACOMPANHAR)
+  @AuditLog(AuditAction.UPDATE, 'vendas')
+  @ApiOperation({ summary: 'Registrar data de envio em massa' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Data de envio registrada',
+  })
+  registrarEnvio(
+    @Body() registrarEnvioDto: RegistrarEnvioDto,
+  ): Promise<{ sucesso: Venda[]; falhas: { id: string; motivo: string }[] }> {
+    return this.vendasService.registrarEnvioEmMassa(registrarEnvioDto);
+  }
+
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(Permission.VENDA_READ)
@@ -98,15 +116,50 @@ export class VendasController {
   @ApiQuery({ name: 'cliente', required: false, type: String })
   @ApiQuery({ name: 'origem', required: false, type: String })
   @ApiQuery({ name: 'vendedor', required: false, type: String })
+  @ApiQuery({ name: 'prescritor', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, type: String })
   @ApiQuery({ name: 'dataInicial', required: false, type: String })
   @ApiQuery({ name: 'dataFinal', required: false, type: String })
   @ApiQuery({ name: 'dataInicialFechamento', required: false, type: String })
   @ApiQuery({ name: 'dataFinalFechamento', required: false, type: String })
+  @ApiQuery({ name: 'dataInicialEnvio', required: false, type: String })
+  @ApiQuery({ name: 'dataFinalEnvio', required: false, type: String })
   @ApiQuery({ name: 'unidade', required: false, type: String })
   @ApiQuery({ name: 'ativo', required: false, type: String })
   findAll(@Query() findVendasDto: FindVendasDto): Promise<PaginatedResponseDto<Venda>> {
     return this.vendasService.findAll(findVendasDto);
+  }
+
+  @Get('acompanhar')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.VENDA_ACOMPANHAR)
+  @ApiOperation({ summary: 'Listar vendas para acompanhamento por unidade de origem' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Lista de vendas retornada com sucesso',
+    type: PaginatedResponseDto<Venda>,
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'protocolo', required: false, type: String })
+  @ApiQuery({ name: 'cliente', required: false, type: String })
+  @ApiQuery({ name: 'origem', required: false, type: String })
+  @ApiQuery({ name: 'vendedor', required: false, type: String })
+  @ApiQuery({ name: 'prescritor', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'dataInicial', required: false, type: String })
+  @ApiQuery({ name: 'dataFinal', required: false, type: String })
+  @ApiQuery({ name: 'dataInicialFechamento', required: false, type: String })
+  @ApiQuery({ name: 'dataFinalFechamento', required: false, type: String })
+  @ApiQuery({ name: 'dataInicialEnvio', required: false, type: String })
+  @ApiQuery({ name: 'dataFinalEnvio', required: false, type: String })
+  @ApiQuery({ name: 'unidade', required: false, type: String })
+  @ApiQuery({ name: 'ativo', required: false, type: String })
+  findAcompanhar(
+    @Query() findVendasDto: FindVendasDto,
+    @Req() req: any,
+  ): Promise<PaginatedResponseDto<Venda>> {
+    return this.vendasService.findAcompanhar(findVendasDto, req?.user);
   }
 
   @Get(':id')

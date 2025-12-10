@@ -1,0 +1,39 @@
+.date-range-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.field label {
+  white-space: nowrap;
+}
+
+/* Deixar selects/inputs herdarem altura/padding do .form-control global */
+.field select {
+  width: 150px;
+}
+
+.field input {
+  width: 140px;
+}
+
+.range-description {
+  margin: 0;
+  font-size: 12px;
+  color: #475569;
+}

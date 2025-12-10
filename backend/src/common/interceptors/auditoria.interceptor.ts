@@ -429,6 +429,32 @@ export class AuditoriaInterceptor implements NestInterceptor {
       return response.data.id;
     }
 
+    // Operações em massa: buscar arrays de IDs no body (genérico)
+    const body: any = request.body;
+    if (body && typeof body === 'object') {
+      // Priorizar chaves comuns
+      const commonKeys = ['ids', 'vendaIds', 'itemIds', 'entityIds'];
+      for (const key of commonKeys) {
+        if (Array.isArray(body[key]) && body[key].length > 0) {
+          return body[key].join(',');
+        }
+      }
+      // Fallback: primeira propriedade array de strings/UUIDs
+      for (const value of Object.values(body)) {
+        if (Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
+          return value.join(',');
+        }
+      }
+      // Fallback único ID
+      if (typeof body.id === 'string') {
+        return body.id;
+      }
+      const singleKey = Object.keys(body).find(k => k.toLowerCase().endsWith('id') && typeof body[k] === 'string');
+      if (singleKey) {
+        return body[singleKey];
+      }
+    }
+
     return undefined;
   }
 
@@ -462,7 +488,18 @@ export class AuditoriaInterceptor implements NestInterceptor {
         return { newData: this.sanitizeData(request.body) };
 
       case AuditAction.UPDATE:
-        // Para UPDATE, buscar objeto completo atualizado do banco
+        // Atualização em massa: focar apenas nos campos alterados
+        const bodyUpdate: any = request.body || {};
+        const idsFromBody = this.getIdsFromBody(bodyUpdate);
+        const isEntityIdList = typeof entityId === 'string' && entityId.includes(',');
+
+        if (idsFromBody || isEntityIdList) {
+          const ids = idsFromBody || entityId.split(',').filter(Boolean);
+          const changes = this.sanitizeData(this.stripIdsDeep(bodyUpdate));
+          return { newData: { ids, changes } };
+        }
+
+        // Atualização simples: tentar buscar objeto completo
         if (entityId) {
           try {
             const completeObject = await this.fetchCompleteObject(entityType, entityId);
@@ -787,5 +824,57 @@ export class AuditoriaInterceptor implements NestInterceptor {
 
   private toSnakeCase(str: string): string {
     return str.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+  }
+
+  /**
+   * Extrai um array de IDs de um body de requisição (operações em massa)
+   */
+  private getIdsFromBody(body: any): string[] | null {
+    if (!body || typeof body !== 'object') {
+      return null;
+    }
+    const commonKeys = ['ids', 'vendaIds', 'itemIds', 'entityIds'];
+    for (const key of commonKeys) {
+      if (Array.isArray(body[key]) && body[key].length > 0) {
+        return body[key].filter((v: any) => typeof v === 'string');
+      }
+    }
+    for (const value of Object.values(body)) {
+      if (Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Remove campos de IDs do body para registrar apenas os dados alterados
+   */
+  private stripIdsDeep(body: any): any {
+    if (!body || typeof body !== 'object') {
+      return body;
+    }
+
+    // Clonar como objeto plano para garantir propriedades enumeráveis
+    let clone: any;
+    try {
+      clone = JSON.parse(JSON.stringify(body));
+    } catch {
+      clone = { ...body };
+    }
+
+    const keysToRemove = Object.keys(clone).filter(
+      k => k.toLowerCase() === 'ids' || k.toLowerCase().endsWith('ids'),
+    );
+    keysToRemove.forEach(k => delete clone[k]);
+
+    // Limpar recursivamente estruturas aninhadas
+    Object.keys(clone).forEach(k => {
+      if (typeof clone[k] === 'object') {
+        clone[k] = this.stripIdsDeep(clone[k]);
+      }
+    });
+
+    return clone;
   }
 }

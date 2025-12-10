@@ -81,6 +81,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
       cliente: ['', [Validators.required, Validators.minLength(2)]],
       origem: [VendaOrigem.GOIANIA, [Validators.required]],
       vendedor: ['', [Validators.required, Validators.minLength(2)]],
+      prescritor: ['', [Validators.maxLength(300)]],
       valorCompra: [0, [Validators.required, Validators.min(0)]],
       valorCliente: [0, [Validators.required, Validators.min(0)]],
       observacao: ['', [Validators.maxLength(500)]],
@@ -117,6 +118,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
       observacao: venda.observacao || '',
       status: venda.status,
       unidade: venda.unidade || '',
+      prescritor: venda.prescritor || '',
       ativo: venda.ativo || ''
     }, { emitEvent: false });
 
@@ -147,6 +149,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
       valorCompra: 0,
       valorCliente: 0,
       observacao: '',
+      prescritor: '',
       status: VendaStatus.REGISTRADO
     });
     // Garantir que o status fique desabilitado

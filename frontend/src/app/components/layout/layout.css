@@ -1,18 +1,21 @@
 .layout-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: calc(100vh / var(--app-zoom-factor, 1));
+  height: auto;
   background-color: var(--bg-secondary, #f8fafc);
   transition: background-color 0.3s ease;
 }
 
-.layout-main {
+.layout-main,
+.main-content-wrapper {
   display: flex;
   flex: 1;
   overflow: visible;
   position: relative;
   background-color: var(--bg-secondary, #f8fafc);
   transition: background-color 0.3s ease;
+  min-height: calc((100vh - 64px) / var(--app-zoom-factor, 1));
 }
 
 .layout-sidebar {
@@ -21,8 +24,8 @@
   border-right: 1px solid var(--border-color, #e0e0e0);
   position: fixed;
   top: 64px;
-  bottom: 0;
   left: 0;
+  height: calc((100vh - 64px) / var(--app-zoom-factor, 1));
   transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out, visibility 0.3s ease-in-out, background-color 0.3s ease, border-color 0.3s ease;
   z-index: 998;
   transform: translateX(0);
@@ -34,12 +37,15 @@
 .layout-content {
   flex: 1;
   overflow-y: auto;
-  padding: 0 1.5rem 1.5rem;
+  overflow-x: hidden;
+  --layout-horizontal-padding: 1.5rem;
+  padding: 0 var(--layout-horizontal-padding) 1.5rem;
   transition: margin-left 0.3s ease-in-out;
   margin-left: 256px; /* Espaço para o menu por padrão */
   margin-top: 64px !important; /* Compensar header fixo */
   position: relative;
   z-index: 1;
+  min-height: calc((100vh - 64px) / var(--app-zoom-factor, 1));
 }
 
 /* Tema escuro - aplicado quando <body class="theme-dark"> */
@@ -49,7 +55,8 @@ body.theme-dark {
 }
 
 body.theme-dark .layout-container,
-body.theme-dark .layout-main {
+body.theme-dark .layout-main,
+body.theme-dark .main-content-wrapper {
   background-color: #020617;
 }
 
@@ -70,7 +77,7 @@ body.theme-dark .layout-content {
 
 .login-container {
   width: 100%;
-  height: 100vh;
+  min-height: calc(100vh / var(--app-zoom-factor, 1));
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   display: flex;
   align-items: center;
@@ -89,7 +96,7 @@ body.theme-dark .layout-content {
   top: 64px;
   left: 0;
   width: 100vw;
-  height: calc(100vh - 64px);
+  height: calc((100vh - 64px) / var(--app-zoom-factor, 1));
   background: rgba(0, 0, 0, 0.5);
   z-index: 997;
   opacity: 0;
@@ -134,7 +141,7 @@ body.theme-dark .layout-content {
     position: fixed;
     left: 0;
     top: 64px;
-    bottom: 0;
+    height: calc((100vh - 64px) / var(--app-zoom-factor, 1));
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     z-index: 1001;
@@ -145,8 +152,9 @@ body.theme-dark .layout-content {
   }
   
   .layout-content {
+    --layout-horizontal-padding: 1rem;
     margin-left: 0; /* Em mobile, sem margem */
-    padding: 0 1rem 1rem;
+    padding: 0 var(--layout-horizontal-padding) 1rem;
     margin-top: 64px !important; /* Compensar header fixo */
   }
 }

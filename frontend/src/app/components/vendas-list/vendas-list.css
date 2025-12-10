@@ -1,10 +1,21 @@
 .vendas-page {
-  padding: 0 1.2rem 1rem;
+  width: calc(100% + var(--layout-horizontal-padding, 1.5rem));
+  margin-left: 0;
+  margin-right: calc(-1 * var(--layout-horizontal-padding, 1.5rem));
+  padding: 0 0 1rem;
   background: #f8fafc;
   min-height: calc(100vh - 120px);
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+/* Quando o menu lateral estiver oculto (layout-content colapsado),
+   expandimos também para a esquerda para ocupar 100% da viewport */
+.layout-content.menu-collapsed .vendas-page {
+  width: calc(100% + (2 * var(--layout-horizontal-padding, 1.5rem)));
+  margin-left: calc(-1 * var(--layout-horizontal-padding, 1.5rem));
+  margin-right: calc(-1 * var(--layout-horizontal-padding, 1.5rem));
+}
+
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -171,6 +182,12 @@
   min-width: 0;
 }
 
+/* Reservar mais espaço para os blocos de intervalo de data */
+.filters .date-range-field {
+  grid-column: span 2;
+  min-width: 380px;
+}
+
 .filter-group label {
   font-weight: 600;
   color: #0f172a;
@@ -255,6 +272,7 @@
 }
 
 .results-card {
+  width: 100%;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;

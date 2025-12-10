@@ -59,7 +59,8 @@ export enum Permission {
   VENDA_AUDIT = 'venda:audit',
   VENDA_FECHAR = 'venda:fechar',
   VENDA_CANCELAR_FECHAMENTO = 'venda:cancelar-fechamento',
-  VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra'
+  VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
+  VENDA_ACOMPANHAR = 'venda:acompanhar'
 }
 
 export interface PermissionGroup {

@@ -14,6 +14,7 @@ import { BaseListComponent } from '../base-list.component';
 import { VendaModalComponent } from '../venda-modal/venda-modal';
 import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-auditoria.component';
 import { LancarBaixaModalComponent } from '../lancar-baixa-modal/lancar-baixa-modal';
+import { DateRangeFilterComponent, DateRangeValue } from '../date-range-filter/date-range-filter';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
 import { PageContextService } from '../../services/page-context.service';
@@ -27,6 +28,7 @@ type SortableField =
   | 'cliente'
   | 'origem'
   | 'vendedor'
+  | 'prescritor'
   | 'ativo'
   | 'valorCompra'
   | 'valorCliente'
@@ -44,6 +46,7 @@ interface VendasFilterSnapshot {
   protocolo: string;
   cliente: string;
   vendedor: string;
+  prescritor: string;
   origem: string;
   status: string;
   ativo: string;
@@ -57,7 +60,7 @@ interface VendasFilterSnapshot {
 @Component({
   selector: 'app-vendas-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, VendaModalComponent, HistoricoAuditoriaComponent, LancarBaixaModalComponent],
+  imports: [CommonModule, FormsModule, VendaModalComponent, HistoricoAuditoriaComponent, LancarBaixaModalComponent, DateRangeFilterComponent],
   templateUrl: './vendas-list.html',
   styleUrls: ['./vendas-list.css'],
   encapsulation: ViewEncapsulation.None
@@ -81,6 +84,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   protocoloFilter = '';
   clienteFilter = '';
   vendedorFilter = '';
+  prescritorFilter = '';
   origemFilter: VendaOrigem | '' = '';
   statusFilter: VendaStatus | '' = '';
   dataInicialFilter = '';
@@ -208,6 +212,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         this.protocoloFilter = filters.protocoloFilter || '';
         this.clienteFilter = filters.clienteFilter || '';
         this.vendedorFilter = filters.vendedorFilter || '';
+        this.prescritorFilter = filters.prescritorFilter || '';
         this.origemFilter = filters.origemFilter || '';
         this.statusFilter = filters.statusFilter || '';
         this.dataInicialFilter = filters.dataInicialFilter || '';
@@ -229,6 +234,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         protocoloFilter: this.protocoloFilter,
         clienteFilter: this.clienteFilter,
         vendedorFilter: this.vendedorFilter,
+        prescritorFilter: this.prescritorFilter,
         origemFilter: this.origemFilter,
         statusFilter: this.statusFilter,
         dataInicialFilter: this.dataInicialFilter,
@@ -307,6 +313,9 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     if (this.vendedorFilter.trim()) {
       filters.vendedor = this.vendedorFilter.trim();
     }
+    if (this.prescritorFilter.trim()) {
+      filters.prescritor = this.prescritorFilter.trim();
+    }
 
     if (this.origemFilter) {
       filters.origem = this.origemFilter as VendaOrigem;
@@ -366,7 +375,21 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.currentPage = 1;
     this.selectedVendas.clear();
     this.saveFiltersToStorage();
+    this.updateAppliedFiltersSnapshot();
     this.loadItems();
+    this.filtersPanelOpen = false;
+  }
+
+  onVendaRangeChange(range: DateRangeValue): void {
+    this.dataInicialFilter = range.start || '';
+    this.dataFinalFilter = range.end || '';
+    this.onFilterChange();
+  }
+
+  onFechamentoRangeChange(range: DateRangeValue): void {
+    this.dataInicialFechamentoFilter = range.start || '';
+    this.dataFinalFechamentoFilter = range.end || '';
+    this.onFilterChange();
   }
 
   toggleFiltersVisibility(): void {
@@ -537,6 +560,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       protocolo: this.protocoloFilter || '',
       cliente: this.clienteFilter || '',
       vendedor: this.vendedorFilter || '',
+      prescritor: this.prescritorFilter || '',
       origem: this.origemFilter?.toString() || '',
       status: this.statusFilter?.toString() || '',
       ativo: this.ativoFilter || '',
@@ -563,6 +587,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.protocoloFilter = '';
     this.clienteFilter = '';
     this.vendedorFilter = '';
+    this.prescritorFilter = '';
     this.origemFilter = '';
     this.statusFilter = '';
     this.ativoFilter = '';
@@ -598,6 +623,9 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     }
     if (snapshot.vendedor.trim()) {
       filters.push({ key: 'vendedor', label: 'Vendedor', value: snapshot.vendedor.trim() });
+    }
+    if (snapshot.prescritor.trim()) {
+      filters.push({ key: 'prescritor', label: 'Prescritor', value: snapshot.prescritor.trim() });
     }
     if (snapshot.ativo.trim()) {
       filters.push({ key: 'ativo', label: 'Ativo', value: snapshot.ativo.trim() });
@@ -650,6 +678,9 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         break;
       case 'vendedor':
         this.vendedorFilter = '';
+        break;
+      case 'prescritor':
+        this.prescritorFilter = '';
         break;
       case 'ativo':
         this.ativoFilter = '';
@@ -736,6 +767,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         return this.getOrigemLabel(venda.origem);
       case 'vendedor':
         return venda.vendedor;
+      case 'prescritor':
+        return venda.prescritor || '';
       case 'ativo':
         return venda.ativo;
       case 'valorCompra':
@@ -1279,6 +1312,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         Cliente: venda.cliente,
         'Comprado em': this.getOrigemLabel(venda.origem),
         Vendedor: venda.vendedor,
+        Prescritor: venda.prescritor || '-',
         'Valor Cliente': venda.valorCliente || 0,
         'Valor Pago': this.getValorBaixadoForVenda(venda.id),
         Status: this.getStatusLabel(venda.status),
@@ -1341,6 +1375,9 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     }
     if (this.vendedorFilter.trim()) {
       filters.vendedor = this.vendedorFilter.trim();
+    }
+    if (this.prescritorFilter.trim()) {
+      filters.prescritor = this.prescritorFilter.trim();
     }
     if (this.origemFilter) {
       filters.origem = this.origemFilter as VendaOrigem;
@@ -1473,6 +1510,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       cliente: 'Cliente',
       origem: 'Comprado em',
       vendedor: 'Vendedor',
+      prescritor: 'Prescritor',
       valorCliente: 'Valor Cliente',
       status: 'Status',
       observacao: 'Observação'

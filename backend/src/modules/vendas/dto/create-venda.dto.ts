@@ -127,6 +127,18 @@ export class CreateVendaDto {
   vendedor: string;
 
   @ApiProperty({
+    description: 'Nome do prescritor responsável',
+    example: 'Dr. João Almeida',
+    maxLength: 300,
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value === '') ? null : value)
+  @IsString({ message: 'Prescritor deve ser uma string' })
+  @MaxLength(300, { message: 'Prescritor não pode ter mais que 300 caracteres' })
+  prescritor?: string;
+
+  @ApiProperty({
     description: 'Valor da compra',
     example: 1500.50,
   })

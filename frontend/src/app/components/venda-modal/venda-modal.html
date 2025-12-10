@@ -92,8 +92,8 @@
         </div>
       </div>
 
-      <!-- Segunda linha: Cliente, Vendedor, Ativo -->
-      <div class="grid-formulario grid-formulario-3-colunas" style="margin-bottom: var(--espacamento-md);">
+      <!-- Segunda linha: Cliente, Vendedor, Prescritor, Ativo -->
+      <div class="grid-formulario grid-formulario-4-colunas" style="margin-bottom: var(--espacamento-md);">
         <div class="grupo-campo">
           <label for="cliente" class="label-campo obrigatorio">Cliente</label>
           <input
@@ -119,6 +119,21 @@
             placeholder="Nome do vendedor">
           <div class="mensagem-invalida" *ngIf="hasFieldError('vendedor')">
             {{ getFieldError('vendedor') }}
+          </div>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="prescritor" class="label-campo">Prescritor</label>
+          <input
+            id="prescritor"
+            type="text"
+            formControlName="prescritor"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('prescritor')}"
+            placeholder="Nome do prescritor"
+            maxlength="300">
+          <div class="mensagem-invalida" *ngIf="hasFieldError('prescritor')">
+            {{ getFieldError('prescritor') }}
           </div>
         </div>
 

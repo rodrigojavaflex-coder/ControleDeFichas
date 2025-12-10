@@ -41,6 +41,7 @@ export class AuthService {
 
   private readonly LOGIN_TIMESTAMP_KEY = 'login_timestamp';
   private readonly TOKEN_EXPIRATION_KEY = 'token_expiration';
+  private readonly REFRESH_EXPIRATION_KEY = 'refresh_expiration';
 
   constructor() {
     // Verificar se há token salvo no localStorage
@@ -65,7 +66,7 @@ export class AuthService {
     localStorage.setItem('refresh_token', response.refresh_token);
     localStorage.setItem('user', JSON.stringify(response.user));
     this.setLoginTimestamp(now);
-    this.updateTokenExpiration(response.access_token);
+    this.updateTokenExpirations(response.access_token, response.refresh_token);
 
     // Atualizar estado
     this.currentUserSubject.next(response.user);
@@ -105,15 +106,22 @@ export class AuthService {
       return null;
     }
 
+    // Se o refresh já expirou localmente, encerra sessão sem chamar backend
+    if (this.isRefreshExpired()) {
+      this.clearAuthData(true);
+      return null;
+    }
+
     try {
       const response = await firstValueFrom(
-        this.http.post<{ access_token: string }>(`${this.apiUrl}/refresh`, {
+        this.http.post<AuthResponse>(`${this.apiUrl}/refresh`, {
           refresh_token: refreshToken
         })
       );
 
       localStorage.setItem('access_token', response.access_token);
-      this.updateTokenExpiration(response.access_token);
+      localStorage.setItem('refresh_token', response.refresh_token);
+      this.updateTokenExpirations(response.access_token, response.refresh_token);
       return response.access_token;
     } catch (error) {
       // Se refresh falhar, fazer logout
@@ -172,6 +180,12 @@ export class AuthService {
    * Verifica se token ainda é válido no servidor
    */
   async validateToken(): Promise<boolean> {
+    // Antes de qualquer validação, se o refresh expirou, encerra sessão
+    if (this.isRefreshExpired()) {
+      this.clearAuthData(true);
+      return false;
+    }
+
     const token = this.getAccessToken();
     
     if (!token) {
@@ -210,6 +224,7 @@ export class AuthService {
    */
   private async checkStoredAuth(): Promise<void> {
     const token = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
     const userStr = localStorage.getItem('user');
 
     if (token && userStr) {
@@ -219,7 +234,7 @@ export class AuthService {
         this.currentUserSubject.next(user);
         this.isAuthenticatedSubject.next(true);
         
-        this.loadStoredTimingInfo(token);
+        this.loadStoredTimingInfo(token, refreshToken || undefined);
 
         // Inicializar tema com preferência do usuário (forçar reset no refresh)
         this.themeService.initializeTheme(user.id, user.tema, true);
@@ -260,6 +275,7 @@ export class AuthService {
     localStorage.removeItem('user');
     localStorage.removeItem(this.LOGIN_TIMESTAMP_KEY);
     localStorage.removeItem(this.TOKEN_EXPIRATION_KEY);
+    localStorage.removeItem(this.REFRESH_EXPIRATION_KEY);
     
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
@@ -279,24 +295,37 @@ export class AuthService {
     localStorage.setItem(this.LOGIN_TIMESTAMP_KEY, timestamp.toString());
   }
 
-  private updateTokenExpiration(token: string | null): void {
-    if (!token) {
-      this.tokenExpirationSubject.next(null);
+  private updateTokenExpirations(
+    accessToken: string | null,
+    refreshToken?: string | null,
+  ): void {
+    const accessExp = accessToken ? this.decodeTokenExpiration(accessToken) : null;
+    const refreshExp = refreshToken
+      ? this.decodeTokenExpiration(refreshToken)
+      : this.decodeTokenExpiration(localStorage.getItem('refresh_token') || '');
+
+    // A sessão expira no menor prazo entre access e refresh
+    const nextExp = [accessExp, refreshExp].filter((v): v is number => !!v).reduce<number | null>(
+      (acc, cur) => (acc === null ? cur : Math.min(acc, cur)),
+      null,
+    );
+
+    this.tokenExpirationSubject.next(nextExp);
+
+    if (accessExp) {
+      localStorage.setItem(this.TOKEN_EXPIRATION_KEY, accessExp.toString());
+    } else {
       localStorage.removeItem(this.TOKEN_EXPIRATION_KEY);
-      return;
     }
 
-    const exp = this.decodeTokenExpiration(token);
-    if (exp) {
-      this.tokenExpirationSubject.next(exp);
-      localStorage.setItem(this.TOKEN_EXPIRATION_KEY, exp.toString());
+    if (refreshExp) {
+      localStorage.setItem(this.REFRESH_EXPIRATION_KEY, refreshExp.toString());
     } else {
-      this.tokenExpirationSubject.next(null);
-      localStorage.removeItem(this.TOKEN_EXPIRATION_KEY);
+      localStorage.removeItem(this.REFRESH_EXPIRATION_KEY);
     }
   }
 
-  private loadStoredTimingInfo(token: string): void {
+  private loadStoredTimingInfo(accessToken: string, refreshToken?: string): void {
     const storedLogin = Number(localStorage.getItem(this.LOGIN_TIMESTAMP_KEY));
     if (storedLogin) {
       this.loginTimestampSubject.next(storedLogin);
@@ -305,12 +334,23 @@ export class AuthService {
       this.setLoginTimestamp(now);
     }
 
-    const storedExp = Number(localStorage.getItem(this.TOKEN_EXPIRATION_KEY));
-    if (storedExp) {
-      this.tokenExpirationSubject.next(storedExp);
-    } else {
-      this.updateTokenExpiration(token);
+    // Sempre recalcula com base nos tokens, mas mantém valores salvos se existirem
+    const storedAccessExp = Number(localStorage.getItem(this.TOKEN_EXPIRATION_KEY));
+    const storedRefreshExp = Number(localStorage.getItem(this.REFRESH_EXPIRATION_KEY));
+
+    if (storedAccessExp) {
+      this.tokenExpirationSubject.next(storedAccessExp);
     }
+    if (storedRefreshExp) {
+      // Garante que o menor prazo seja mantido
+      const currentExp = this.tokenExpirationSubject.value;
+      const nextExp =
+        currentExp === null ? storedRefreshExp : Math.min(currentExp, storedRefreshExp);
+      this.tokenExpirationSubject.next(nextExp);
+    }
+
+    // Recalcula a partir dos tokens para evitar drift
+    this.updateTokenExpirations(accessToken, refreshToken);
   }
 
   private decodeTokenExpiration(token: string): number | null {
@@ -327,5 +367,15 @@ export class AuthService {
     } catch (error) {
       return null;
     }
+  }
+
+  private isRefreshExpired(): boolean {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      return true;
+    }
+
+    const exp = this.decodeTokenExpiration(refreshToken);
+    return !!exp && Date.now() >= exp;
   }
 }

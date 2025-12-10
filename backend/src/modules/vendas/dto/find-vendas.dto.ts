@@ -39,6 +39,14 @@ export class FindVendasDto extends PaginationDto {
   vendedor?: string;
 
   @ApiPropertyOptional({
+    description: 'Nome do prescritor',
+    example: 'Dr. João Almeida',
+  })
+  @IsOptional()
+  @IsString({ message: 'Prescritor deve ser uma string' })
+  prescritor?: string;
+
+  @ApiPropertyOptional({
     description: 'Status da venda',
     example: VendaStatus.REGISTRADO,
     enum: VendaStatus,
@@ -95,4 +103,20 @@ export class FindVendasDto extends PaginationDto {
   @IsOptional()
   @IsString({ message: 'Ativo deve ser uma string' })
   ativo?: string;
+
+  @ApiPropertyOptional({
+    description: 'Data inicial de envio',
+    example: '2025-01-01',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'Data inicial de envio deve ter formato válido (YYYY-MM-DD)' })
+  dataInicialEnvio?: string;
+
+  @ApiPropertyOptional({
+    description: 'Data final de envio',
+    example: '2025-12-31',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'Data final de envio deve ter formato válido (YYYY-MM-DD)' })
+  dataFinalEnvio?: string;
 }

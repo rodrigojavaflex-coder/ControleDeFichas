@@ -30,45 +30,16 @@ export class VendaService {
    * Listar vendas com paginação e filtros
    */
   getVendas(findVendasDto?: FindVendasDto): Observable<VendaPaginatedResponse> {
-    let params = new HttpParams();
-
-    if (findVendasDto) {
-      if (findVendasDto.page) {
-        params = params.set('page', findVendasDto.page.toString());
-      }
-      if (findVendasDto.limit) {
-        params = params.set('limit', findVendasDto.limit.toString());
-      }
-      if (findVendasDto.protocolo) {
-        params = params.set('protocolo', findVendasDto.protocolo);
-      }
-      if (findVendasDto.cliente) {
-        params = params.set('cliente', findVendasDto.cliente);
-      }
-      if (findVendasDto.vendedor) {
-        params = params.set('vendedor', findVendasDto.vendedor);
-      }
-      if (findVendasDto.origem) {
-        params = params.set('origem', findVendasDto.origem);
-      }
-      if (findVendasDto.status) {
-        params = params.set('status', findVendasDto.status);
-      }
-      if (findVendasDto.dataInicial) {
-        params = params.set('dataInicial', findVendasDto.dataInicial);
-      }
-      if (findVendasDto.dataFinal) {
-        params = params.set('dataFinal', findVendasDto.dataFinal);
-      }
-      if (findVendasDto.unidade) {
-        params = params.set('unidade', findVendasDto.unidade);
-      }
-      if (findVendasDto.ativo) {
-        params = params.set('ativo', findVendasDto.ativo);
-      }
-    }
-
+    const params = this.buildQueryParams(findVendasDto);
     return this.http.get<VendaPaginatedResponse>(this.apiUrl, { params });
+  }
+
+  /**
+   * Listar vendas no modo acompanhamento
+   */
+  getAcompanhamentoVendas(findVendasDto?: FindVendasDto): Observable<VendaPaginatedResponse> {
+    const params = this.buildQueryParams(findVendasDto);
+    return this.http.get<VendaPaginatedResponse>(`${this.apiUrl}/acompanhar`, { params });
   }
 
   /**
@@ -110,11 +81,46 @@ export class VendaService {
   }
 
   /**
+   * Registrar data de envio em massa
+   */
+  registrarEnvio(vendaIds: string[], dataEnvio: string): Observable<FecharVendasEmMassaResponse> {
+    return this.http.post<FecharVendasEmMassaResponse>(`${this.apiUrl}/registrar-envio`, {
+      vendaIds,
+      dataEnvio
+    });
+  }
+
+  /**
    * Cancelar fechamento de vendas em massa
    */
   cancelarFechamentosEmMassa(vendaIds: string[]): Observable<FecharVendasEmMassaResponse> {
     return this.http.post<FecharVendasEmMassaResponse>(`${this.apiUrl}/cancelamento-massa`, {
       vendaIds
     });
+  }
+
+  private buildQueryParams(findVendasDto?: FindVendasDto): HttpParams {
+    let params = new HttpParams();
+
+    if (!findVendasDto) {
+      return params;
+    }
+
+    const entries = Object.entries(findVendasDto) as [keyof FindVendasDto, any][];
+
+    entries.forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') {
+        return;
+      }
+
+      if (key === 'page' || key === 'limit') {
+        params = params.set(key, value.toString());
+        return;
+      }
+
+      params = params.set(key as string, value);
+    });
+
+    return params;
   }
 }

@@ -25,9 +25,11 @@ export interface Venda {
   protocolo: string;
   dataVenda: string;
   dataFechamento?: string | null;
+  dataEnvio?: string | null;
   cliente: string;
   origem: VendaOrigem;
   vendedor: string;
+  prescritor?: string;
   valorCompra: number;
   valorCliente: number;
   observacao?: string;
@@ -42,9 +44,11 @@ export interface CreateVendaDto {
   protocolo: string;
   dataVenda: string;
   dataFechamento?: string;
+  dataEnvio?: string;
   cliente: string;
   origem: VendaOrigem;
   vendedor: string;
+  prescritor?: string;
   valorCompra: number;
   valorCliente: number;
   observacao?: string;
@@ -62,6 +66,7 @@ export interface FindVendasDto {
   cliente?: string;
   origem?: VendaOrigem;
   vendedor?: string;
+  prescritor?: string;
   status?: VendaStatus;
   dataInicial?: string;
   dataFinal?: string;
@@ -69,6 +74,9 @@ export interface FindVendasDto {
   dataFinalFechamento?: string;
   unidade?: Unidade;
   ativo?: string;
+  dataEnvio?: string;
+  dataInicialEnvio?: string;
+  dataFinalEnvio?: string;
 }
 
 export interface VendaPaginatedResponse {

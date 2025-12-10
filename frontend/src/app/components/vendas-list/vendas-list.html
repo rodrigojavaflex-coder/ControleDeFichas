@@ -132,9 +132,9 @@
             id="protocoloFilter"
             type="text"
             [(ngModel)]="protocoloFilter"
-           
             placeholder="Buscar por protocolo..."
-            class="form-control">
+            class="form-control"
+            (keyup.enter)="onFilterChange()">
         </div>
 
         <div class="filter-group">
@@ -143,9 +143,9 @@
             id="clienteFilter"
             type="text"
             [(ngModel)]="clienteFilter"
-           
             placeholder="Buscar por cliente..."
-            class="form-control">
+            class="form-control"
+            (keyup.enter)="onFilterChange()">
         </div>
 
         <div class="filter-group">
@@ -154,9 +154,20 @@
             id="vendedorFilter"
             type="text"
             [(ngModel)]="vendedorFilter"
-           
             placeholder="Buscar por vendedor..."
-            class="form-control">
+            class="form-control"
+            (keyup.enter)="onFilterChange()">
+        </div>
+
+        <div class="filter-group">
+          <label for="prescritorFilter">Prescritor</label>
+          <input
+            id="prescritorFilter"
+            type="text"
+            [(ngModel)]="prescritorFilter"
+            placeholder="Buscar por prescritor..."
+            class="form-control"
+            (keyup.enter)="onFilterChange()">
         </div>
 
         <div class="filter-group">
@@ -165,9 +176,9 @@
             id="ativoFilter"
             type="text"
             [(ngModel)]="ativoFilter"
-           
             placeholder="Buscar por ativo..."
-            class="form-control">
+            class="form-control"
+            (keyup.enter)="onFilterChange()">
         </div>
 
         <div class="filter-group">
@@ -175,8 +186,8 @@
           <select
             id="origemFilter"
             [(ngModel)]="origemFilter"
-           
-            class="form-control">
+            class="form-control"
+            (change)="onFilterChange()">
             <option value="">Todas</option>
             <option *ngFor="let origem of [VendaOrigem.GOIANIA, VendaOrigem.INHUMAS, VendaOrigem.UBERABA, VendaOrigem.NEROPOLIS, VendaOrigem.OUTRO]" [value]="origem">
               {{ getOrigemLabel(origem) }}
@@ -189,8 +200,8 @@
           <select
             id="statusFilter"
             [(ngModel)]="statusFilter"
-           
-            class="form-control">
+            class="form-control"
+            (change)="onFilterChange()">
             <option value="">Todos</option>
             <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL, VendaStatus.FECHADO]" [value]="status">
               {{ getStatusLabel(status) }}
@@ -198,44 +209,26 @@
           </select>
         </div>
 
-        <div class="filter-group date-field">
-          <label for="dataInicialFilter">Data Venda Inicial</label>
-          <input
-            id="dataInicialFilter"
-            type="date"
-            [(ngModel)]="dataInicialFilter"
-           
-            class="form-control">
+        <div class="filter-group date-field date-range-field">
+          <app-date-range-filter
+            label="Data da Venda"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialFilter"
+            [end]="dataFinalFilter"
+            (rangeChange)="onVendaRangeChange($event)">
+          </app-date-range-filter>
         </div>
 
-        <div class="filter-group date-field">
-          <label for="dataFinalFilter">Data Venda Final</label>
-          <input
-            id="dataFinalFilter"
-            type="date"
-            [(ngModel)]="dataFinalFilter"
-           
-            class="form-control">
-        </div>
-
-        <div class="filter-group date-field">
-          <label for="dataInicialFechamentoFilter">Fechamento Inicial</label>
-          <input
-            id="dataInicialFechamentoFilter"
-            type="date"
-            [(ngModel)]="dataInicialFechamentoFilter"
-           
-            class="form-control">
-        </div>
-
-        <div class="filter-group date-field">
-          <label for="dataFinalFechamentoFilter">Fechamento Final</label>
-          <input
-            id="dataFinalFechamentoFilter"
-            type="date"
-            [(ngModel)]="dataFinalFechamentoFilter"
-           
-            class="form-control">
+        <div class="filter-group date-field date-range-field">
+          <app-date-range-filter
+            label="Data de Fechamento"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialFechamentoFilter"
+            [end]="dataFinalFechamentoFilter"
+            (rangeChange)="onFechamentoRangeChange($event)">
+          </app-date-range-filter>
         </div>
 
         <div class="filter-group">
@@ -244,8 +237,8 @@
             id="unidadeFilter"
             [(ngModel)]="unidadeFilter"
             [disabled]="unidadeDisabled"
-           
-            class="form-control">
+            class="form-control"
+            (change)="onFilterChange()">
             <option value="">Todas</option>
             <option *ngFor="let unidade of unidades" [value]="unidade">
               {{ unidade }}
@@ -330,6 +323,14 @@
             </th>
             <th
               class="sortable"
+              (click)="onSort('prescritor')"
+              [class.sorted]="sortField === 'prescritor'"
+              [attr.aria-sort]="sortField === 'prescritor' ? sortDirection : 'none'">
+              Prescritor
+              <i class="fas sort-icon" *ngIf="sortField === 'prescritor'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
               (click)="onSort('ativo')"
               [class.sorted]="sortField === 'ativo'"
               [attr.aria-sort]="sortField === 'ativo' ? sortDirection : 'none'">
@@ -399,6 +400,7 @@
             <td>{{ venda.cliente }}</td>
             <td>{{ getOrigemLabel(venda.origem) }}</td>
             <td>{{ venda.vendedor }}</td>
+            <td>{{ venda.prescritor || '-' }}</td>
             <td>{{ venda.ativo || '-' }}</td>
             <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorCompra) }}</td>
             <td>{{ formatCurrency(venda.valorCliente) }}</td>
@@ -411,7 +413,7 @@
             <td class="observacao-cell">{{ venda.observacao || '-' }}</td>
           </tr>
           <tr *ngIf="items.length === 0 && !loading" class="no-data">
-            <td colspan="14" class="text-center">
+            <td [attr.colspan]="canViewValorCompra() ? 14 : 13" class="text-center">
               <i class="fas fa-inbox"></i>
               Nenhuma venda encontrada
             </td>

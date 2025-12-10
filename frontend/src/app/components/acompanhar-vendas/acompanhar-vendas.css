@@ -1,0 +1,115 @@
+.acompanhamento-table th,
+.acompanhamento-table td {
+  white-space: nowrap;
+}
+
+.acompanhamento-table .observacao-cell {
+  white-space: normal;
+}
+
+.acompanhamento-table tr.has-envio {
+  background: #fff8d1;
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.page-help {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.help-icon-button {
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.help-icon-button:hover {
+  color: #2563eb;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-actions,
+.modal-footer {
+  padding: 12px 20px 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Bloco de data de envio ocupa 2 colunas quando houver espaço (não sobrepõe) */
+.filters .date-range-field {
+  grid-column: span 2;
+  min-width: 360px;
+}
+
+/* Garantir que o filtro de intervalo ocupe a linha toda e não colida com Unidade */
+
