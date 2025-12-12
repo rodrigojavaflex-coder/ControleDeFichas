@@ -299,6 +299,14 @@
             </th>
             <th
               class="sortable"
+              (click)="onSort('dataEnvio')"
+              [class.sorted]="sortField === 'dataEnvio'"
+              [attr.aria-sort]="sortField === 'dataEnvio' ? sortDirection : 'none'">
+              D. Envio
+              <i class="fas sort-icon" *ngIf="sortField === 'dataEnvio'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
               (click)="onSort('cliente')"
               [class.sorted]="sortField === 'cliente'"
               [attr.aria-sort]="sortField === 'cliente' ? sortDirection : 'none'">
@@ -397,6 +405,7 @@
             <td>{{ venda.protocolo }}</td>
             <td>{{ formatDate(venda.dataVenda) }}</td>
             <td>{{ venda.dataFechamento ? formatDate(venda.dataFechamento) : '-' }}</td>
+            <td>{{ venda.dataEnvio ? formatDate(venda.dataEnvio) : '-' }}</td>
             <td>{{ venda.cliente }}</td>
             <td>{{ getOrigemLabel(venda.origem) }}</td>
             <td>{{ venda.vendedor }}</td>
@@ -413,7 +422,7 @@
             <td class="observacao-cell">{{ venda.observacao || '-' }}</td>
           </tr>
           <tr *ngIf="items.length === 0 && !loading" class="no-data">
-            <td [attr.colspan]="canViewValorCompra() ? 14 : 13" class="text-center">
+            <td [attr.colspan]="canViewValorCompra() ? 15 : 14" class="text-center">
               <i class="fas fa-inbox"></i>
               Nenhuma venda encontrada
             </td>

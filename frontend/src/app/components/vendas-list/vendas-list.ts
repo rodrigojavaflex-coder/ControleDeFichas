@@ -25,6 +25,7 @@ type SortableField =
   | 'protocolo'
   | 'dataVenda'
   | 'dataFechamento'
+  | 'dataEnvio'
   | 'cliente'
   | 'origem'
   | 'vendedor'
@@ -762,6 +763,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         return venda.dataVenda ? new Date(venda.dataVenda).getTime() : null;
       case 'dataFechamento':
         return venda.dataFechamento ? new Date(venda.dataFechamento).getTime() : null;
+      case 'dataEnvio':
+        return venda.dataEnvio ? new Date(venda.dataEnvio).getTime() : null;
       case 'cliente':
         return venda.cliente;
       case 'origem':
