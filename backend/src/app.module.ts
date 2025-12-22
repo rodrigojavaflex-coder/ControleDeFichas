@@ -16,13 +16,14 @@ import { VendasModule } from './modules/vendas/vendas.module';
 import { BaixasModule } from './modules/baixas/baixas.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
+import agentesConfig from './config/agentes.config';
 import { Configuracao } from './modules/configuracao/entities/configuracao.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, appConfig],
+      load: [databaseConfig, appConfig, agentesConfig],
       envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({

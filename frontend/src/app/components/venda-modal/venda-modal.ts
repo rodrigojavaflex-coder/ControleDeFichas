@@ -30,8 +30,6 @@ export class VendaModalComponent implements OnInit, OnChanges {
   isEditing = false;
   isLoading = false;
   unidadeDisabled = false;
-  private readonly DEFAULT_DESCONTO_PERCENTUAL = 35;
-  descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
   podeVisualizarValorCompra = false;
 
   // Enums para template
@@ -45,7 +43,6 @@ export class VendaModalComponent implements OnInit, OnChanges {
   ngOnInit() {
     this.initializeForm();
     this.configureUnidadeField();
-    this.descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
     this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
   }
 
@@ -83,7 +80,8 @@ export class VendaModalComponent implements OnInit, OnChanges {
       origem: [VendaOrigem.GOIANIA, [Validators.required]],
       vendedor: ['', [Validators.required, Validators.minLength(2)]],
       prescritor: ['', [Validators.maxLength(300)]],
-      valorCompra: [0, [Validators.required, Validators.min(0)]],
+      valorCompra: [null, [Validators.min(0)]],
+      valorPago: [null, [Validators.min(0)]],
       valorCliente: [0, [Validators.required, Validators.min(0)]],
       observacao: ['', [Validators.maxLength(500)]],
       status: [{value: VendaStatus.REGISTRADO, disabled: true}, [Validators.required]],
@@ -114,6 +112,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
       vendedor: venda.vendedor,
       dataVenda: dataVendaFormatted,
       valorCompra: venda.valorCompra,
+      valorPago: venda.valorPago,
       valorCliente: venda.valorCliente,
       origem: venda.origem,
       observacao: venda.observacao || '',
@@ -130,7 +129,6 @@ export class VendaModalComponent implements OnInit, OnChanges {
       this.formatCurrencyOnBlur('valorCliente');
     }, 50);
 
-    this.descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
     this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
   }
 
@@ -147,7 +145,8 @@ export class VendaModalComponent implements OnInit, OnChanges {
       cliente: '',
       origem: VendaOrigem.GOIANIA,
       vendedor: '',
-      valorCompra: 0,
+      valorCompra: null,
+      valorPago: null,
       valorCliente: 0,
       observacao: '',
       prescritor: '',
@@ -157,7 +156,6 @@ export class VendaModalComponent implements OnInit, OnChanges {
     this.vendaForm.get('status')?.disable();
     // Reconfigurar campo unidade baseado no usuário logado
     this.configureUnidadeField();
-    this.descontoPercentual = this.DEFAULT_DESCONTO_PERCENTUAL;
   }
 
   onSubmit() {
@@ -166,10 +164,13 @@ export class VendaModalComponent implements OnInit, OnChanges {
       const formValue = this.vendaForm.getRawValue();
       
       // Converter valores de moeda de string para número
-      let valorCompra = typeof formValue.valorCompra === 'string' 
+      const valorCompraRaw = typeof formValue.valorCompra === 'string' 
         ? parseFloat(formValue.valorCompra.replace(/\D/g, '')) / 100 
         : formValue.valorCompra;
-      
+      const valorPagoRaw = typeof formValue.valorPago === 'string'
+        ? parseFloat(formValue.valorPago.replace(/\D/g, '')) / 100
+        : formValue.valorPago;
+
       const valorCliente = typeof formValue.valorCliente === 'string' 
         ? parseFloat(formValue.valorCliente.replace(/\D/g, '')) / 100 
         : formValue.valorCliente;
@@ -179,13 +180,22 @@ export class VendaModalComponent implements OnInit, OnChanges {
         return;
       }
 
-      if (!valorCompra || valorCompra <= 0) {
-        valorCompra = Number((valorCliente * 0.35).toFixed(2));
-      }
+      const valorCompra =
+        valorCompraRaw !== null &&
+        valorCompraRaw !== undefined &&
+        !isNaN(valorCompraRaw) &&
+        valorCompraRaw > 0
+          ? Number(Number(valorCompraRaw).toFixed(2))
+          : undefined;
+      const valorPago =
+        valorPagoRaw !== null &&
+        valorPagoRaw !== undefined &&
+        !isNaN(valorPagoRaw) &&
+        valorPagoRaw > 0
+          ? Number(Number(valorPagoRaw).toFixed(2))
+          : undefined;
 
-      this.vendaForm.get('valorCompra')?.setValue(valorCompra, { emitEvent: false });
-
-      if (valorCompra > valorCliente) {
+      if (valorCompra !== undefined && valorCompra > valorCliente) {
         this.errorModalService.show('O valor da compra não pode ser maior que o valor do cliente.', 'Validação');
         return;
       }
@@ -197,8 +207,9 @@ export class VendaModalComponent implements OnInit, OnChanges {
       
       let vendaData: any = {
         ...formValue,
-        valorCompra,
         valorCliente,
+        ...(valorCompra !== undefined ? { valorCompra } : {}),
+        ...(valorPago !== undefined ? { valorPago } : {}),
         dataVenda: typeof dataVenda === 'string' ? dataVenda : dataVenda.toISOString().split('T')[0]
       };
 
@@ -235,55 +246,19 @@ export class VendaModalComponent implements OnInit, OnChanges {
     }
   }
 
-  aplicarDescontoValorCompra(): void {
-    const valorCliente = this.parseCurrencyControlValue('valorCliente');
-    const percentual = this.descontoPercentual;
+  aplicarDescontoValorPago(): void {
+    const valorCompra = this.parseCurrencyControlValue('valorCompra');
 
-    if (valorCliente === null || valorCliente === undefined || valorCliente <= 0) {
-      this.errorModalService.show('Informe um valor válido para o cliente antes de aplicar o desconto.', 'Validação');
+    if (valorCompra === null || valorCompra === undefined || valorCompra <= 0) {
+      this.errorModalService.show('Informe um valor de compra válido antes de aplicar o desconto.', 'Validação');
       return;
     }
 
-    if (percentual === null || percentual === undefined || isNaN(percentual)) {
-      this.errorModalService.show('Informe o percentual de desconto para aplicar.', 'Validação');
-      return;
-    }
-
-    const percentualNumerico = Number(percentual);
-
-    if (percentualNumerico < 0 || percentualNumerico > 100) {
-      this.errorModalService.show('O percentual de desconto deve estar entre 0 e 100.', 'Validação');
-      return;
-    }
-
-    const valorComDesconto = valorCliente * ((100 - percentualNumerico) / 100);
-    const valorFormatado = Number(valorComDesconto.toFixed(2));
-
-    this.vendaForm.get('valorCompra')?.setValue(valorFormatado);
-    this.formatCurrencyOnBlur('valorCompra');
+    const valorComDesconto = Number((valorCompra * 0.65).toFixed(2));
+    this.vendaForm.get('valorPago')?.setValue(valorComDesconto);
+    this.formatCurrencyOnBlur('valorPago');
   }
 
-  aplicarDescontoSePossivel(): void {
-    const valorCompraAtual = this.parseCurrencyControlValue('valorCompra');
-    const valorCliente = this.parseCurrencyControlValue('valorCliente');
-
-    if (valorCompraAtual !== null && valorCompraAtual !== undefined && valorCompraAtual > 0) {
-      return;
-    }
-
-    if (
-      valorCliente === null ||
-      valorCliente === undefined ||
-      valorCliente <= 0 ||
-      this.descontoPercentual === null ||
-      this.descontoPercentual === undefined ||
-      isNaN(Number(this.descontoPercentual))
-    ) {
-      return;
-    }
-
-    this.aplicarDescontoValorCompra();
-  }
 
   private markFormGroupTouched() {
     Object.keys(this.vendaForm.controls).forEach(key => {

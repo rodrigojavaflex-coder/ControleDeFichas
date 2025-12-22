@@ -54,6 +54,7 @@ export enum Permission {
   VENDA_CANCELAR_FECHAMENTO = 'venda:cancelar-fechamento',
   VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
   VENDA_ACOMPANHAR = 'venda:acompanhar',
+  VENDA_ACESSAR_FECHAMENTO = 'venda:acessar-fechamento',
 }
 
 export const PERMISSION_GROUPS = {
@@ -118,6 +119,7 @@ export const PERMISSION_GROUPS = {
     { key: Permission.VENDA_CANCELAR_FECHAMENTO, label: 'Cancelar fechamento de vendas' },
     { key: Permission.VENDA_VIEW_VALOR_COMPRA, label: 'Visualizar valor de compra' },
     { key: Permission.VENDA_ACOMPANHAR, label: 'Acompanhar vendas por unidade' },
+    { key: Permission.VENDA_ACESSAR_FECHAMENTO, label: 'Acessar tela de fechamento de vendas' },
   ],
 };
 

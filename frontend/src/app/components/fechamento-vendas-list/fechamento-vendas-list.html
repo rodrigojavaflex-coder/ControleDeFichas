@@ -8,50 +8,37 @@
     <div class="results-header">
       <div class="header-actions">
         <button
-          *ngIf="canCreateVenda()"
-          class="btn btn-novo"
-          (click)="openNewVendaModal()"
-          [attr.disabled]="loading ? 'disabled' : null">
-          <i class="fas fa-plus"></i>
-          Nova Venda
+          *ngIf="canFecharVendas()"
+          class="btn btn-fechar"
+          (click)="fecharVendasSelecionadas()"
+          [attr.disabled]="atualizarValorCompraLoading ? 'disabled' : null"
+          title="Fechar vendas selecionadas">
+          <i class="fas fa-lock"></i>
+          Fechar Vendas
         </button>
         <button
-          *ngIf="canEditVenda()"
-          class="btn btn-editar"
-          (click)="editSelectedVenda()"
-          title="Editar venda selecionada">
-          <i class="fas fa-pen"></i>
-          Editar
+          *ngIf="canCancelarFechamento()"
+          class="btn btn-cancelar-fechamento"
+          (click)="cancelarFechamentosSelecionados()"
+          [attr.disabled]="atualizarValorCompraLoading ? 'disabled' : null"
+          title="Cancelar fechamento das vendas selecionadas">
+          <i class="fas fa-unlock"></i>
+          Cancelar Fechamento
         </button>
         <button
-          *ngIf="canLancarBaixa()"
-          class="btn btn-baixa"
-          (click)="lancarBaixaSelecionada()"
-          title="Lançar baixa para venda selecionada">
-          <i class="fas fa-dollar-sign"></i>
-          Baixa
-        </button>
-        <button
-          *ngIf="canAuditVenda()"
-          class="btn btn-auditoria"
-          (click)="abrirAuditoriaVendaSelecionada()"
-          title="Ver histórico da venda selecionada">
-          <i class="fas fa-history"></i>
-          Auditoria
-        </button>
-        <button
-          *ngIf="canDeleteVenda()"
-          class="btn btn-excluir"
-          (click)="openBulkDeleteModal()"
-          title="Excluir vendas selecionadas">
-          <i class="fas fa-trash"></i>
-          Excluir
+          *ngIf="canViewValorCompra()"
+          class="btn btn-atualizar-valor-compra"
+          (click)="atualizarValorCompraSelecionadas()"
+          [attr.disabled]="selectedVendas.size === 0 || atualizarValorCompraLoading ? 'disabled' : null"
+          title="Atualizar valor de compra das vendas selecionadas via agente">
+          <i class="fas fa-sync-alt" [class.fa-spin]="atualizarValorCompraLoading"></i>
+          Atualizar Valor Compra
         </button>
         <button
           *ngIf="canReadVenda()"
           class="btn btn-imprimir"
           (click)="imprimirFechamentoAtual()"
-          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          [attr.disabled]="selectedVendas.size === 0 || loading || atualizarValorCompraLoading ? 'disabled' : null"
           title="Imprimir vendas selecionadas">
           <i class="fas fa-print"></i>
           Imprimir
@@ -60,7 +47,7 @@
           *ngIf="canReadVenda()"
           class="btn btn-exportar"
           (click)="exportarSelecionadasParaExcel()"
-          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          [attr.disabled]="selectedVendas.size === 0 || loading || atualizarValorCompraLoading ? 'disabled' : null"
           title="Exportar vendas selecionadas para Excel">
           <i class="fas fa-file-excel"></i>
           Exportar
@@ -171,6 +158,7 @@
             id="origemFilter"
             [(ngModel)]="origemFilter"
             class="form-control"
+            [disabled]="origemDisabled"
             (change)="onFilterChange()">
             <option value="">Todas</option>
             <option *ngFor="let origem of origens" [value]="origem">
@@ -261,6 +249,7 @@
               class="sortable"
               (click)="onSort('protocolo')"
               [class.sorted]="sortField === 'protocolo'"
+              [class.processing-disabled]="atualizarValorCompraLoading"
               [attr.aria-sort]="sortField === 'protocolo' ? sortDirection : 'none'">
               Protocolo
               <i class="fas sort-icon" *ngIf="sortField === 'protocolo'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
@@ -274,12 +263,13 @@
               <i class="fas sort-icon" *ngIf="sortField === 'dataVenda'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
             </th>
             <th
+              *ngIf="canFecharVendas()"
               class="sortable"
-              (click)="onSort('dataEnvio')"
-              [class.sorted]="sortField === 'dataEnvio'"
-              [attr.aria-sort]="sortField === 'dataEnvio' ? sortDirection : 'none'">
-              D. Envio
-              <i class="fas sort-icon" *ngIf="sortField === 'dataEnvio'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+              (click)="onSort('dataFechamento')"
+              [class.sorted]="sortField === 'dataFechamento'"
+              [attr.aria-sort]="sortField === 'dataFechamento' ? sortDirection : 'none'">
+              D. Fechamento
+              <i class="fas sort-icon" *ngIf="sortField === 'dataFechamento'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
             </th>
             <th
               class="sortable"
@@ -327,8 +317,17 @@
               (click)="onSort('valorCompra')"
               [class.sorted]="sortField === 'valorCompra'"
               [attr.aria-sort]="sortField === 'valorCompra' ? sortDirection : 'none'">
-              V. Compras
+              V. Compra
               <i class="fas sort-icon" *ngIf="sortField === 'valorCompra'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              *ngIf="canViewValorCompra()"
+              class="sortable"
+              (click)="onSort('valorPago')"
+              [class.sorted]="sortField === 'valorPago'"
+              [attr.aria-sort]="sortField === 'valorPago' ? sortDirection : 'none'">
+              V.Pg(Compra)
+              <i class="fas sort-icon" *ngIf="sortField === 'valorPago'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
             </th>
             <th
               class="sortable"
@@ -343,7 +342,7 @@
               (click)="onSort('valorPago')"
               [class.sorted]="sortField === 'valorPago'"
               [attr.aria-sort]="sortField === 'valorPago' ? sortDirection : 'none'">
-              V. Pago
+              V.Pg(Cliente)
               <i class="fas sort-icon" *ngIf="sortField === 'valorPago'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
             </th>
             <th
@@ -359,7 +358,7 @@
               (click)="onSort('observacao')"
               [class.sorted]="sortField === 'observacao'"
               [attr.aria-sort]="sortField === 'observacao' ? sortDirection : 'none'">
-              Observação
+              Obs
               <i class="fas sort-icon" *ngIf="sortField === 'observacao'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
             </th>
           </tr>
@@ -369,24 +368,27 @@
             *ngFor="let venda of items"
             (click)="onRowClick($event, venda.id)"
             (contextmenu)="onRowContextMenu($event, venda)"
-            [class.row-selected]="isVendaSelected(venda.id)">
+            [class.row-selected]="isVendaSelected(venda.id)"
+            [class.processing-disabled]="atualizarValorCompraLoading">
             <td class="checkbox-column">
               <input
                 type="checkbox"
                 [checked]="isVendaSelected(venda.id)"
                 (click)="$event.stopPropagation()"
                 (change)="toggleSelectVenda(venda.id)"
+                [disabled]="atualizarValorCompraLoading"
                 title="Selecionar venda">
             </td>
             <td>{{ venda.protocolo }}</td>
             <td>{{ formatDate(venda.dataVenda) }}</td>
-            <td>{{ venda.dataEnvio ? formatDate(venda.dataEnvio) : '-' }}</td>
+            <td *ngIf="canFecharVendas()">{{ venda.dataFechamento ? formatDate(venda.dataFechamento) : '-' }}</td>
             <td>{{ venda.cliente }}</td>
             <td>{{ getOrigemLabel(venda.origem) }}</td>
             <td>{{ venda.vendedor }}</td>
             <td>{{ venda.prescritor || '-' }}</td>
             <td>{{ venda.ativo || '-' }}</td>
             <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorCompra) }}</td>
+            <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorPago || 0) }}</td>
             <td>{{ formatCurrency(venda.valorCliente) }}</td>
             <td>{{ formatCurrency(getValorBaixadoForVenda(venda.id)) }}</td>
             <td>
@@ -397,7 +399,7 @@
             <td class="observacao-cell">{{ venda.observacao || '-' }}</td>
           </tr>
           <tr *ngIf="items.length === 0 && !loading" class="no-data">
-            <td [attr.colspan]="canViewValorCompra() ? 14 : 13" class="text-center">
+            <td [attr.colspan]="getColspanForEmptyRow()" class="text-center">
               <i class="fas fa-inbox"></i>
               Nenhuma venda encontrada
             </td>
@@ -410,7 +412,7 @@
       <button
         class="btn btn-sm btn-cancelar"
         (click)="onPageChange(currentPage - 1)"
-        [attr.disabled]="(currentPage === 1 || loading) ? 'disabled' : null">
+        [attr.disabled]="(currentPage === 1 || loading || atualizarValorCompraLoading) ? 'disabled' : null">
         <i class="fas fa-chevron-left"></i> Anterior
       </button>
 
@@ -421,7 +423,7 @@
       <button
         class="btn btn-sm btn-cancelar"
         (click)="onPageChange(currentPage + 1)"
-        [attr.disabled]="(currentPage === totalPages || loading) ? 'disabled' : null">
+        [attr.disabled]="(currentPage === totalPages || loading || atualizarValorCompraLoading) ? 'disabled' : null">
         Próximo <i class="fas fa-chevron-right"></i>
       </button>
     </div>
@@ -439,17 +441,17 @@
   *ngIf="contextMenuVisible"
   [ngStyle]="{ top: contextMenuPosition.y + 'px', left: contextMenuPosition.x + 'px' }"
   (click)="$event.stopPropagation()">
-  <button type="button" (click)="onContextEdit()" [disabled]="!canEditVenda()">
-    <i class="fas fa-pen"></i> Editar
+  <button type="button" (click)="onContextFechar()" [disabled]="!canFecharVendas()">
+    <i class="fas fa-lock"></i> Fechar
   </button>
-  <button type="button" (click)="onContextBaixa()" [disabled]="!canLancarBaixa()">
-    <i class="fas fa-dollar-sign"></i> Baixa
+  <button type="button" (click)="onContextCancelarFechamento()" [disabled]="!canCancelarFechamento()">
+    <i class="fas fa-unlock"></i> Cancelar Fechamento
   </button>
-  <button type="button" (click)="onContextAuditoria()" [disabled]="!canAuditVenda()">
-    <i class="fas fa-history"></i> Auditoria
+  <button type="button" (click)="imprimirFechamentoAtual()" [disabled]="selectedVendas.size === 0 || loading">
+    <i class="fas fa-print"></i> Imprimir
   </button>
-  <button type="button" class="danger" (click)="onContextExcluir()" [disabled]="!canDeleteVenda()">
-    <i class="fas fa-trash"></i> Excluir
+  <button type="button" (click)="exportarSelecionadasParaExcel()" [disabled]="selectedVendas.size === 0 || loading">
+    <i class="fas fa-file-excel"></i> Exportar
   </button>
 </div>
 
@@ -475,6 +477,64 @@
   (close)="closeBaixaModal()"
   (modalClosed)="onBaixaModalClosed()">
 </app-lancar-baixa-modal>
+
+<div
+  class="confirmation-modal-overlay"
+  *ngIf="showConfirmAtualizarValorCompraModal"
+  (click)="atualizarValorCompraLoading ? null : cancelarAtualizarValorCompra()">
+  <div class="confirmation-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Confirmar Atualização de Valor de Compra</h3>
+      <button
+        type="button"
+        class="close-btn"
+        (click)="cancelarAtualizarValorCompra()"
+        [attr.disabled]="atualizarValorCompraLoading ? 'disabled' : null">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>
+        Confirmar atualização de valor de compra de <strong>{{ selectedVendas.size }}</strong> venda(s) selecionada(s)?
+      </p>
+      <p class="text-muted">
+        Os valores serão buscados no agente correspondente à origem de cada venda.
+      </p>
+      <div class="form-field" style="margin-top: 16px;">
+        <label style="display: flex; align-items: flex-start; cursor: pointer; gap: 8px;">
+          <input 
+            type="checkbox" 
+            [(ngModel)]="atualizarComValorCliente"
+            [attr.disabled]="atualizarValorCompraLoading ? 'disabled' : null"
+            style="margin-top: 4px;">
+          <span>
+            Atualizar as vendas que não foi possível encontrar no Formula Certa o valor de compra de acordo com valor pago pelo cliente
+          </span>
+        </label>
+        <p class="text-muted small" style="margin-top: 8px; margin-left: 24px; font-size: 12px;">
+          *As vendas com status fechada não serão atualizadas de forma nenhuma
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn btn-cancelar"
+        (click)="cancelarAtualizarValorCompra()"
+        [attr.disabled]="atualizarValorCompraLoading ? 'disabled' : null">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="confirmarAtualizarValorCompra()"
+        [attr.disabled]="atualizarValorCompraLoading ? 'disabled' : null">
+        <i class="fas fa-sync-alt" [class.fa-spin]="atualizarValorCompraLoading"></i>
+        {{ atualizarValorCompraLoading ? 'Processando...' : 'Confirmar' }}
+      </button>
+    </div>
+  </div>
+</div>
 
 <div
   class="confirmation-modal-overlay"
@@ -585,6 +645,18 @@
         <i class="fas fa-trash"></i>
         {{ showBulkDeleteModal ? (bulkDeleteLoading ? 'Excluindo...' : 'Excluir') : 'Excluir' }}
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay de Loading durante processamento de atualização de valor de compra -->
+<div class="processing-overlay" *ngIf="atualizarValorCompraLoading">
+  <div class="processing-modal">
+    <div class="processing-content">
+      <div class="spinner-large"></div>
+      <h3>Processando Atualização de Valor de Compra</h3>
+      <p>Por favor, aguarde enquanto os valores são atualizados...</p>
+      <p class="processing-note">Esta operação pode levar alguns segundos.</p>
     </div>
   </div>
 </div>

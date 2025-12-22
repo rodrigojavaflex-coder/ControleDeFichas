@@ -11,7 +11,7 @@ import {
   VendaOrigem,
   FindVendasDto,
 } from '../../models/venda.model';
-import { Unidade, Usuario } from '../../models/usuario.model';
+import { Permission, Unidade, Usuario } from '../../models/usuario.model';
 import { PageContextService } from '../../services/page-context.service';
 import { DateRangeFilterComponent, DateRangeValue } from '../date-range-filter/date-range-filter';
 
@@ -21,6 +21,8 @@ type SortableField =
   | 'dataVenda'
   | 'cliente'
   | 'origem'
+  | 'valorCompra'
+  | 'valorPago'
   | 'vendedor'
   | 'prescritor'
   | 'unidade'
@@ -83,6 +85,7 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
   filtersPanelOpen = false;
   sortField: SortableField | null = null;
   sortDirection: SortDirection = 'asc';
+  podeVisualizarValorCompra = false;
 
   private appliedFiltersSnapshot: AcompanhamentoFilterSnapshot =
     this.createFilterSnapshot();
@@ -98,11 +101,13 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUser();
+    this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
     this.setDefaultVendaDateRange();
     this.configureOrigemFilter();
     this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(user => {
       const previousOrigem = this.origemFilter;
       this.currentUser = user;
+      this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
       this.configureOrigemFilter();
       if (this.origemFilter !== previousOrigem && this.origemFilter) {
         this.applyFilters();
@@ -286,13 +291,18 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const podeVerValorCompra = this.canViewValorCompra();
     const linhas = vendas
       .map(venda => {
+        const valorCompraCol = podeVerValorCompra ? `<td>${this.formatCurrency(venda.valorCompra || 0)}</td>` : '';
+        const valorPagoCol = podeVerValorCompra ? `<td>${this.formatCurrency(venda.valorPago || 0)}</td>` : '';
         return `
           <tr>
             <td>${venda.protocolo}</td>
             <td>${this.formatDate(venda.dataVenda)}</td>
             <td>${this.formatDate(venda.dataEnvio) || '-'}</td>
+            ${valorCompraCol}
+            ${valorPagoCol}
             <td>${venda.cliente}</td>
             <td>${this.getOrigemLabel(venda.origem)}</td>
             <td>${venda.vendedor}</td>
@@ -327,6 +337,8 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
                 <th>Protocolo</th>
                 <th>Data Venda</th>
                 <th>Data Envio</th>
+                ${podeVerValorCompra ? '<th>Valor Compra</th>' : ''}
+                ${podeVerValorCompra ? '<th>Valor Pago</th>' : ''}
                 <th>Cliente</th>
                 <th>Comprado em</th>
                 <th>Vendedor</th>
@@ -352,7 +364,8 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const planilha = vendas.map(venda => ({
+    const planilha = vendas.map(venda => {
+      const linha: Record<string, string | number> = {
       Protocolo: venda.protocolo,
       'Data Venda': this.formatDate(venda.dataVenda),
       'Data Envio': this.formatDate(venda.dataEnvio) || '-',
@@ -361,7 +374,15 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       Vendedor: venda.vendedor,
       Prescritor: venda.prescritor || '-',
       Observação: venda.observacao || '',
-    }));
+      };
+
+      if (this.canViewValorCompra()) {
+        linha['Valor Compra'] = venda.valorCompra || 0;
+        linha['Valor Pago'] = venda.valorPago || 0;
+      }
+
+      return linha;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(planilha);
     const workbook = XLSX.utils.book_new();
@@ -618,6 +639,20 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     return labels[origem] || origem;
   }
 
+  canViewValorCompra(): boolean {
+    return this.podeVisualizarValorCompra;
+  }
+
+  formatCurrency(value: number | null | undefined): string {
+    const amount = Number(value || 0);
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+
   private mapUnidadeParaOrigem(unidade: Unidade | string | null | undefined): VendaOrigem | '' {
     if (!unidade) {
       return '';
@@ -684,6 +719,10 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
         return venda.cliente;
       case 'origem':
         return this.getOrigemLabel(venda.origem);
+      case 'valorCompra':
+        return venda.valorCompra ?? 0;
+      case 'valorPago':
+        return venda.valorPago ?? 0;
       case 'vendedor':
         return venda.vendedor;
       case 'prescritor':

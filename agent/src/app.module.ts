@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule, ThrottlerModuleOptions } from '@nestjs/throttler';
 import agentConfig from './config/agent.config';
 import { AuthTokenGuard } from './common/guards/auth-token.guard';
 import { HealthModule } from './health/health.module';
@@ -16,14 +16,19 @@ import { VendasModule } from './vendas/vendas.module';
     }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
+      useFactory: (configService: ConfigService): ThrottlerModuleOptions => {
         const rateLimit = configService.get('agent.rateLimit') || {
           ttl: 60,
           limit: 30,
         };
         return {
-          ttl: rateLimit.ttl,
-          limit: rateLimit.limit,
+          throttlers: [
+            {
+              name: 'default',
+              ttl: Number(rateLimit.ttl) || 60,
+              limit: Number(rateLimit.limit) || 30,
+            },
+          ],
         };
       },
     }),

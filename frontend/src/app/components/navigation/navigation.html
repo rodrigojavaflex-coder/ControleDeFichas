@@ -76,6 +76,9 @@
                       @if (child.icon === 'feather-file-text') {
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7z"></path><polyline points="14 2 14 7 19 7"></polyline><line x1="12" y1="11" x2="8" y2="11"></line><line x1="12" y1="15" x2="8" y2="15"></line></svg>
                       }
+                      @if (child.icon === 'feather-check-circle') {
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                      }
                     </span>
                     @if (shouldShowExpanded) {
                       <span class="nav-text">{{ child.label }}</span>

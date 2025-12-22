@@ -14,3 +14,8 @@ export enum VendaStatus {
   PAGO_PARCIAL = 'PAGO_PARCIAL',
   FECHADO = 'FECHADO',
 }
+
+export enum TipoAtualizacao {
+  FORMULA_CERTA_AGENTE = 'FORMULA_CERTA_AGENTE',
+  VALOR_CLIENTE = 'VALOR_CLIENTE',
+}

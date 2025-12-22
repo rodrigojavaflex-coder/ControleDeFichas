@@ -5,3 +5,8 @@ export interface VendasTotalRow {
   total_pago: number;
   qtde_linhas: number;
 }
+
+export interface ValorCompraRow {
+  protocolo: number;
+  valor_compra: number;
+}

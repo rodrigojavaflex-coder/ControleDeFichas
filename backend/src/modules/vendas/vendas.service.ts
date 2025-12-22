@@ -7,11 +7,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Venda } from './entities/venda.entity';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
 import { FindVendasDto } from './dto/find-vendas.dto';
-import { VendaOrigem, VendaStatus } from '../../common/enums/venda.enum';
+import { VendaOrigem, VendaStatus, TipoAtualizacao } from '../../common/enums/venda.enum';
 import {
   PaginatedResponseDto,
   PaginationMetaDto,
@@ -19,12 +20,13 @@ import {
 import { FecharVendasEmMassaDto } from './dto/fechar-vendas-em-massa.dto';
 import { CancelarFechamentosEmMassaDto } from './dto/cancelar-fechamentos-em-massa.dto';
 import { Usuario } from '../usuarios/entities/usuario.entity';
-import { Permission } from '../../common/enums/permission.enum';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { RegistrarEnvioDto } from './dto/registrar-envio.dto';
+import { AtualizarValorCompraDto } from './dto/atualizar-valor-compra.dto';
 
 interface FecharVendaFalha {
   id: string;
+  protocolo?: string;
   motivo: string;
 }
 
@@ -40,21 +42,8 @@ export class VendasService {
   constructor(
     @InjectRepository(Venda)
     private readonly vendaRepository: Repository<Venda>,
+    private readonly configService: ConfigService,
   ) {}
-
-  private usuarioPodeVerValorCompra(usuario?: Usuario | null): boolean {
-    if (!usuario) {
-      return true;
-    }
-    const permissoes = usuario.perfil?.permissoes || [];
-    return permissoes.includes(Permission.VENDA_VIEW_VALOR_COMPRA);
-  }
-
-  private calcularValorCompraPadrao(valorCliente: number): number {
-    const valorClienteNumero = Number(valorCliente || 0);
-    const desconto = valorClienteNumero * 0.35;
-    return Number((valorClienteNumero - desconto).toFixed(2));
-  }
 
   private mapUnidadeParaOrigem(unidade?: Unidade | null): VendaOrigem | undefined {
     if (!unidade) {
@@ -75,20 +64,6 @@ export class VendasService {
 
   async create(createVendaDto: CreateVendaDto, usuario?: Usuario | null): Promise<Venda> {
     try {
-      const podeVerValorCompra = this.usuarioPodeVerValorCompra(usuario);
-      const valorClienteNumero = Number(createVendaDto.valorCliente || 0);
-      const valorCompraCalculado = this.calcularValorCompraPadrao(valorClienteNumero);
-
-      if (!podeVerValorCompra) {
-        createVendaDto.valorCompra = valorCompraCalculado;
-      } else if (
-        createVendaDto.valorCompra === undefined ||
-        createVendaDto.valorCompra === null ||
-        Number(createVendaDto.valorCompra) <= 0
-      ) {
-        createVendaDto.valorCompra = valorCompraCalculado;
-      }
-
       if (
         createVendaDto.valorCompra !== undefined &&
         createVendaDto.valorCliente !== undefined &&
@@ -131,14 +106,15 @@ export class VendasService {
       const venda = vendasMap.get(vendaId);
 
       if (!venda) {
-        falhas.push({ id: vendaId, motivo: 'Venda não encontrada' });
+        falhas.push({ id: vendaId, protocolo: undefined, motivo: 'Venda não encontrada' });
         continue;
       }
 
       if (venda.status !== VendaStatus.PAGO) {
         falhas.push({
           id: vendaId,
-          motivo: `Venda ${venda.protocolo} está com status ${venda.status}. Apenas vendas PAGO podem ser fechadas.`,
+          protocolo: venda.protocolo,
+          motivo: `Venda está com status ${venda.status}. Apenas vendas PAGO podem ser fechadas.`,
         });
         continue;
       }
@@ -151,7 +127,8 @@ export class VendasService {
       if (totalBaixasFixed !== valorClienteFixed) {
         falhas.push({
           id: vendaId,
-          motivo: `Venda ${venda.protocolo} possui valor baixado (${totalBaixasFixed.toFixed(
+          protocolo: venda.protocolo,
+          motivo: `Venda possui valor baixado (${totalBaixasFixed.toFixed(
             2,
           )}) diferente do valor do cliente (${valorClienteFixed.toFixed(2)}).`,
         });
@@ -186,7 +163,7 @@ export class VendasService {
       const venda = vendasMap.get(vendaId);
 
       if (!venda) {
-        falhas.push({ id: vendaId, motivo: 'Venda não encontrada' });
+        falhas.push({ id: vendaId, protocolo: undefined, motivo: 'Venda não encontrada' });
         continue;
       }
 
@@ -216,14 +193,15 @@ export class VendasService {
       const venda = vendasMap.get(vendaId);
 
       if (!venda) {
-        falhas.push({ id: vendaId, motivo: 'Venda não encontrada' });
+        falhas.push({ id: vendaId, protocolo: undefined, motivo: 'Venda não encontrada' });
         continue;
       }
 
       if (venda.status !== VendaStatus.FECHADO) {
         falhas.push({
           id: vendaId,
-          motivo: `Venda ${venda.protocolo} precisa estar com status FECHADO para cancelar o fechamento.`,
+          protocolo: venda.protocolo,
+          motivo: `Venda precisa estar com status FECHADO para cancelar o fechamento.`,
         });
         continue;
       }
@@ -299,22 +277,6 @@ export class VendasService {
   async update(id: string, updateVendaDto: UpdateVendaDto, usuario?: Usuario | null): Promise<Venda> {
     try {
       const venda = await this.findOne(id);
-      const podeVerValorCompra = this.usuarioPodeVerValorCompra(usuario);
-      const valorClienteBase =
-        updateVendaDto.valorCliente !== undefined && updateVendaDto.valorCliente !== null
-          ? Number(updateVendaDto.valorCliente)
-          : Number(venda.valorCliente || 0);
-      const valorCompraCalculado = this.calcularValorCompraPadrao(valorClienteBase);
-
-      if (!podeVerValorCompra) {
-        updateVendaDto.valorCompra = valorCompraCalculado;
-      } else if (
-        updateVendaDto.valorCompra === undefined ||
-        updateVendaDto.valorCompra === null ||
-        Number(updateVendaDto.valorCompra) <= 0
-      ) {
-        updateVendaDto.valorCompra = valorCompraCalculado;
-      }
 
       // Validação 1: Venda não pode estar FECHADA
       if (venda.status === VendaStatus.FECHADO) {
@@ -537,5 +499,416 @@ export class VendasService {
     );
 
     return parseFloat(result[0]?.total || '0');
+  }
+
+  async atualizarValorCompraEmMassa(
+    dto: AtualizarValorCompraDto,
+  ): Promise<ProcessamentoVendasEmMassaResult> {
+    const vendas = await this.vendaRepository.find({
+      where: { id: In(dto.vendaIds) },
+    });
+
+    if (vendas.length === 0) {
+      throw new NotFoundException('Nenhuma venda encontrada com os IDs fornecidos');
+    }
+
+    // Agrupar vendas por origem/unidade para chamar o agente correto
+    const vendasPorOrigem = new Map<VendaOrigem, typeof vendas>();
+    const vendasSemOrigem: typeof vendas = [];
+    
+    for (const venda of vendas) {
+      // Validar se o status não é FECHADO - não processar essas vendas
+      if (venda.status === VendaStatus.FECHADO) {
+        continue;
+      }
+      
+      if (!venda.origem) {
+        vendasSemOrigem.push(venda);
+        continue;
+      }
+      if (!vendasPorOrigem.has(venda.origem)) {
+        vendasPorOrigem.set(venda.origem, []);
+      }
+      vendasPorOrigem.get(venda.origem)!.push(venda);
+    }
+
+    const sucesso: Venda[] = [];
+    const falhas: FecharVendaFalha[] = [];
+
+    // Processar vendas com status FECHADO - adicionar às falhas
+    for (const venda of vendas) {
+      if (venda.status === VendaStatus.FECHADO) {
+        falhas.push({
+          id: venda.id,
+          protocolo: venda.protocolo,
+          motivo: 'Não é possível atualizar o valor de compra de uma venda com status FECHADO.',
+        });
+      }
+    }
+
+    // Processar vendas sem origem
+    for (const venda of vendasSemOrigem) {
+      falhas.push({
+        id: venda.id,
+        protocolo: venda.protocolo,
+        motivo: 'Venda não possui origem definida',
+      });
+    }
+
+    // Processar cada grupo de vendas por origem
+    for (const [origem, vendasGrupo] of vendasPorOrigem.entries()) {
+      try {
+        // Mapear origem para configuração do agente
+        const agenteConfig = this.getAgenteConfigByOrigem(origem);
+        if (!agenteConfig || !agenteConfig.url || !agenteConfig.token) {
+          // Se não houver agente configurado e o usuário quer atualizar com valor do cliente
+          if (dto.atualizarComValorCliente === true) {
+            // Processar apenas vendas com protocolo válido
+            for (const venda of vendasGrupo) {
+              if (!venda.protocolo) {
+                continue;
+              }
+              
+              const protocoloStr = venda.protocolo.toString().trim();
+              if (!/^\d+$/.test(protocoloStr)) {
+                continue;
+              }
+
+              // Atualizar com valor do cliente
+              const valorCliente = Number(venda.valorCliente || 0);
+              const valorPago = valorCliente * 0.65; // 35% de desconto
+
+              await this.vendaRepository.update(venda.id, {
+                valorCompra: valorCliente,
+                valorPago: Math.round(valorPago * 100) / 100, // Arredondar para 2 casas decimais
+                tipoAtualizacao: TipoAtualizacao.VALOR_CLIENTE,
+              });
+
+              const vendaAtualizada = await this.vendaRepository.findOne({
+                where: { id: venda.id },
+              });
+
+              if (vendaAtualizada) {
+                sucesso.push(vendaAtualizada);
+              }
+            }
+          } else {
+            // Se não houver agente configurado e não quiser atualizar com valor do cliente, marcar todas como falha
+            const nomeUnidade = this.getNomeUnidadePorOrigem(origem);
+            for (const venda of vendasGrupo) {
+              falhas.push({
+                id: venda.id,
+                protocolo: venda.protocolo,
+                motivo: `Agente não configurado para unidade: ${nomeUnidade}`,
+              });
+            }
+          }
+          continue;
+        }
+
+        // Separar vendas com protocolos válidos e inválidos
+        const vendasComProtocoloValido: typeof vendasGrupo = [];
+        const vendasComProtocoloInvalido: typeof vendasGrupo = [];
+
+        for (const venda of vendasGrupo) {
+          if (!venda.protocolo) {
+            vendasComProtocoloInvalido.push(venda);
+            continue;
+          }
+          
+          // Validar se o protocolo contém apenas números
+          const protocoloStr = venda.protocolo.toString().trim();
+          if (!/^\d+$/.test(protocoloStr)) {
+            vendasComProtocoloInvalido.push(venda);
+            continue;
+          }
+          
+          vendasComProtocoloValido.push(venda);
+        }
+
+        // Processar vendas com protocolo inválido
+        for (const venda of vendasComProtocoloInvalido) {
+          // Se o usuário quer atualizar com valor do cliente, atualizar mesmo com protocolo inválido
+          if (dto.atualizarComValorCliente === true) {
+            const valorCliente = Number(venda.valorCliente || 0);
+            const valorPago = valorCliente * 0.65; // 35% de desconto
+
+            await this.vendaRepository.update(venda.id, {
+              valorCompra: valorCliente,
+              valorPago: Math.round(valorPago * 100) / 100, // Arredondar para 2 casas decimais
+              tipoAtualizacao: TipoAtualizacao.VALOR_CLIENTE,
+            });
+
+            const vendaAtualizada = await this.vendaRepository.findOne({
+              where: { id: venda.id },
+            });
+
+            if (vendaAtualizada) {
+              sucesso.push(vendaAtualizada);
+            }
+          } else {
+            // Se não quiser atualizar com valor do cliente, adicionar às falhas
+            falhas.push({
+              id: venda.id,
+              protocolo: venda.protocolo,
+              motivo: 'Protocolo inválido. O protocolo deve conter apenas números.',
+            });
+          }
+        }
+
+        // Se não houver vendas válidas e não atualizou com valor do cliente, continuar para o próximo grupo
+        if (vendasComProtocoloValido.length === 0) {
+          continue;
+        }
+
+        // Extrair protocolos das vendas válidas (converter string para number)
+        const protocolos = vendasComProtocoloValido
+          .map((v) => parseInt(v.protocolo!, 10))
+          .filter((p): p is number => !isNaN(p));
+
+        // Chamar o agente usando fetch nativo com timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
+
+        let response: Response;
+        try {
+          response = await fetch(
+            `${agenteConfig.url}/api/v1/vendas/valor-compra`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${agenteConfig.token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                unit: agenteConfig.unit,
+                protocolos,
+              }),
+              signal: controller.signal,
+            },
+          );
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          
+          // Tratar diferentes tipos de erro
+          if (fetchError.name === 'AbortError') {
+            throw new Error('Timeout: O agente não respondeu dentro do tempo esperado (30 segundos)');
+          }
+          
+          if (fetchError.cause) {
+            const cause = fetchError.cause;
+            const nomeUnidade = this.getNomeUnidadePorOrigem(origem);
+            if (cause.code === 'ENOTFOUND' || cause.code === 'ECONNREFUSED') {
+              throw new Error(`Não foi possível conectar à unidade: ${nomeUnidade}`);
+            }
+            if (cause.code === 'ETIMEDOUT') {
+              throw new Error(`Timeout ao conectar à unidade: ${nomeUnidade}. O serviço pode estar sobrecarregado.`);
+            }
+          }
+          
+          throw new Error(`Erro ao chamar agente: ${fetchError.message || 'Erro desconhecido'}`);
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        if (!response.ok) {
+          let errorText = 'Erro desconhecido';
+          try {
+            errorText = await response.text();
+          } catch {
+            // Se não conseguir ler o texto do erro, usar mensagem padrão
+          }
+          
+          const statusMessage = response.status === 404
+            ? 'Endpoint não encontrado no agente'
+            : response.status === 401 || response.status === 403
+            ? 'Erro de autenticação com o agente'
+            : response.status >= 500
+            ? 'Erro interno no agente'
+            : `Erro HTTP ${response.status}`;
+          
+          throw new Error(`${statusMessage}: ${errorText}`);
+        }
+
+        const responseData: {
+          unit: number;
+          resultados: Array<{ protocolo: number; valor_compra: number }>;
+        } = await response.json();
+
+        // Criar mapa de protocolo -> valor_compra
+        const valorCompraMap = new Map<number, number>();
+        for (const resultado of responseData.resultados) {
+          valorCompraMap.set(resultado.protocolo, resultado.valor_compra);
+        }
+
+        // Atualizar vendas com os valores retornados (apenas as válidas)
+        for (const venda of vendasComProtocoloValido) {
+          const protocoloNum = parseInt(venda.protocolo!, 10);
+          const valorCompra = valorCompraMap.get(protocoloNum);
+          
+          if (valorCompra === undefined) {
+            // Se não encontrou no agente e o usuário quer atualizar com valor do cliente
+            if (dto.atualizarComValorCliente === true) {
+              const valorCliente = Number(venda.valorCliente || 0);
+              const valorPago = valorCliente * 0.65; // 35% de desconto
+
+              await this.vendaRepository.update(venda.id, {
+                valorCompra: valorCliente,
+                valorPago: Math.round(valorPago * 100) / 100, // Arredondar para 2 casas decimais
+                tipoAtualizacao: TipoAtualizacao.VALOR_CLIENTE,
+              });
+
+              const vendaAtualizada = await this.vendaRepository.findOne({
+                where: { id: venda.id },
+              });
+
+              if (vendaAtualizada) {
+                sucesso.push(vendaAtualizada);
+              }
+            } else {
+              falhas.push({
+                id: venda.id,
+                protocolo: venda.protocolo,
+                motivo: `Protocolo ${venda.protocolo} não encontrado no Formula Certa`,
+              });
+            }
+            continue;
+          }
+
+          // Atualizar valor de compra e valor pago (35% de desconto)
+          const valorPago = valorCompra * 0.65; // 35% de desconto
+
+          await this.vendaRepository.update(venda.id, {
+            valorCompra,
+            valorPago: Math.round(valorPago * 100) / 100, // Arredondar para 2 casas decimais
+            tipoAtualizacao: TipoAtualizacao.FORMULA_CERTA_AGENTE,
+          });
+
+          const vendaAtualizada = await this.vendaRepository.findOne({
+            where: { id: venda.id },
+          });
+
+          if (vendaAtualizada) {
+            sucesso.push(vendaAtualizada);
+          }
+        }
+      } catch (error: any) {
+        this.logger.error(
+          `[atualizarValorCompraEmMassa] Erro ao processar vendas de origem ${origem}:`,
+          error,
+        );
+
+        // Se o usuário quer atualizar com valor do cliente, atualizar mesmo em caso de erro
+        if (dto.atualizarComValorCliente === true) {
+          // Processar apenas vendas válidas (com protocolo válido)
+          for (const venda of vendasGrupo) {
+            if (!venda.protocolo) {
+              falhas.push({
+                id: venda.id,
+                protocolo: venda.protocolo,
+                motivo: 'Protocolo inválido. O protocolo deve conter apenas números.',
+              });
+              continue;
+            }
+
+            const protocoloStr = venda.protocolo.toString().trim();
+            if (!/^\d+$/.test(protocoloStr)) {
+              falhas.push({
+                id: venda.id,
+                protocolo: venda.protocolo,
+                motivo: 'Protocolo inválido. O protocolo deve conter apenas números.',
+              });
+              continue;
+            }
+
+            // Atualizar com valor do cliente
+            const valorCliente = Number(venda.valorCliente || 0);
+            const valorPago = valorCliente * 0.65; // 35% de desconto
+
+            await this.vendaRepository.update(venda.id, {
+              valorCompra: valorCliente,
+              valorPago: Math.round(valorPago * 100) / 100, // Arredondar para 2 casas decimais
+              tipoAtualizacao: TipoAtualizacao.VALOR_CLIENTE,
+            });
+
+            const vendaAtualizada = await this.vendaRepository.findOne({
+              where: { id: venda.id },
+            });
+
+            if (vendaAtualizada) {
+              sucesso.push(vendaAtualizada);
+            }
+          }
+        } else {
+          // Se não quiser atualizar com valor do cliente, adicionar às falhas
+          let errorMessage = 'Erro ao buscar valor de compra no agente';
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          } else if (typeof error === 'object' && error !== null) {
+            errorMessage = (error as any).message || JSON.stringify(error);
+          }
+
+          for (const venda of vendasGrupo) {
+            falhas.push({
+              id: venda.id,
+              protocolo: venda.protocolo,
+              motivo: errorMessage,
+            });
+          }
+        }
+      }
+    }
+
+    return { sucesso, falhas };
+  }
+
+  private getNomeUnidadePorOrigem(origem: VendaOrigem): string {
+    const nomes: Record<VendaOrigem, string> = {
+      [VendaOrigem.INHUMAS]: 'Inhumas',
+      [VendaOrigem.UBERABA]: 'Uberaba',
+      [VendaOrigem.NEROPOLIS]: 'Nerópolis',
+      [VendaOrigem.GOIANIA]: 'Goiânia',
+      [VendaOrigem.RIBEIRAO_PRETO]: 'Ribeirão Preto',
+      [VendaOrigem.OUTRO]: 'Outro',
+    };
+    return nomes[origem] || origem;
+  }
+
+  private getAgenteConfigByOrigem(origem: VendaOrigem): {
+    url: string;
+    token: string;
+    unit: number;
+  } | null {
+    const agentes = this.configService.get('agentes');
+    if (!agentes) {
+      this.logger.warn('[getAgenteConfigByOrigem] Configuração de agentes não encontrada');
+      return null;
+    }
+
+    let config: { url: string; token: string; unit: number } | null = null;
+
+    switch (origem) {
+      case VendaOrigem.INHUMAS:
+        config = agentes.inhumas || null;
+        break;
+      case VendaOrigem.UBERABA:
+        config = agentes.uberaba || null;
+        break;
+      case VendaOrigem.NEROPOLIS:
+        config = agentes.neropolis || null;
+        break;
+      default:
+        this.logger.warn(`[getAgenteConfigByOrigem] Origem não mapeada: ${origem}`);
+        return null;
+    }
+
+    if (config && (!config.url || !config.token)) {
+      this.logger.warn(
+        `[getAgenteConfigByOrigem] Configuração incompleta para origem ${origem}`,
+      );
+      return null;
+    }
+
+    return config;
   }
 }

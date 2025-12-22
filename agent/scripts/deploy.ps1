@@ -1,11 +1,32 @@
 param(
   [string]$Output = "agent-deploy",
-  [switch]$IncludeNodeModules
+  [switch]$IncludeNodeModules,
+  [int]$RemoveRetries = 3,
+  [int]$RetryDelaySeconds = 2
 )
 
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $agentRoot = Split-Path -Parent $scriptDir
+
+function Remove-PathWithRetry {
+  param(
+    [string]$Path,
+    [int]$Retries = 3,
+    [int]$DelaySeconds = 2
+  )
+
+  for ($attempt = 1; $attempt -le $Retries; $attempt++) {
+    try {
+      Remove-Item -Path $Path -Recurse -Force -ErrorAction Stop
+      return
+    } catch {
+      if ($attempt -eq $Retries) { throw }
+      Write-Host "[agente] caminho em uso, tentando novamente em $DelaySeconds s (tentativa $attempt de $Retries)" -ForegroundColor Yellow
+      Start-Sleep -Seconds $DelaySeconds
+    }
+  }
+}
 
 Push-Location $agentRoot
 try {
@@ -16,7 +37,7 @@ try {
 
   if (Test-Path $Output) {
     Write-Host "[agente] Limpando saída anterior em $Output" -ForegroundColor Yellow
-    Remove-Item -Recurse -Force $Output
+    Remove-PathWithRetry -Path $Output -Retries $RemoveRetries -DelaySeconds $RetryDelaySeconds
   }
 
   New-Item -ItemType Directory -Path $Output | Out-Null

@@ -21,6 +21,11 @@ export enum Unidade {
   UBERABA = 'UBERABA',
 }
 
+export enum TipoAtualizacao {
+  FORMULA_CERTA_AGENTE = 'FORMULA_CERTA_AGENTE',
+  VALOR_CLIENTE = 'VALOR_CLIENTE',
+}
+
 export interface Venda {
   id: string;
   protocolo: string;
@@ -33,10 +38,12 @@ export interface Venda {
   prescritor?: string;
   valorCompra: number;
   valorCliente: number;
+  valorPago?: number;
   observacao?: string;
   status: VendaStatus;
   unidade?: Unidade;
   ativo?: string;
+  tipoAtualizacao?: TipoAtualizacao;
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -94,6 +101,7 @@ export interface VendaPaginatedResponse {
 
 export interface FecharVendaFalha {
   id: string;
+  protocolo?: string;
   motivo: string;
 }
 

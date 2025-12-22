@@ -32,6 +32,7 @@ import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { FecharVendasEmMassaDto } from './dto/fechar-vendas-em-massa.dto';
 import { CancelarFechamentosEmMassaDto } from './dto/cancelar-fechamentos-em-massa.dto';
 import { RegistrarEnvioDto } from './dto/registrar-envio.dto';
+import { AtualizarValorCompraDto } from './dto/atualizar-valor-compra.dto';
 import { AuditLog } from '../../common/interceptors/auditoria.interceptor';
 import { AuditAction } from '../../common/enums/auditoria.enum';
 
@@ -84,6 +85,24 @@ export class VendasController {
     @Body() cancelarDto: CancelarFechamentosEmMassaDto,
   ): Promise<{ sucesso: Venda[]; falhas: { id: string; motivo: string }[] }> {
     return this.vendasService.cancelarFechamentosEmMassa(cancelarDto);
+  }
+
+  @Post('atualizar-valor-compra-massa')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.VENDA_UPDATE)
+  @ApiOperation({ summary: 'Atualizar valor de compra em massa via agente' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Valores de compra atualizados com sucesso',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Nenhuma venda encontrada',
+  })
+  atualizarValorCompraEmMassa(
+    @Body() dto: AtualizarValorCompraDto,
+  ): Promise<{ sucesso: Venda[]; falhas: { id: string; motivo: string }[] }> {
+    return this.vendasService.atualizarValorCompraEmMassa(dto);
   }
 
   @Post('registrar-envio')

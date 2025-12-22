@@ -1,7 +1,7 @@
 import { Entity, Column } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
-import { VendaOrigem, VendaStatus } from '../../../common/enums/venda.enum';
+import { VendaOrigem, VendaStatus, TipoAtualizacao } from '../../../common/enums/venda.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
 @Entity('vendas')
@@ -117,17 +117,36 @@ export class Venda extends BaseEntity {
   @ApiProperty({
     description: 'Valor da compra',
     example: 1500.50,
+    required: false,
   })
   @Column({ 
     type: 'decimal', 
     precision: 10, 
     scale: 2,
+    nullable: true,
     transformer: {
-      from: (value: string) => parseFloat(value),
-      to: (value: number) => value,
+      from: (value: string | null) => (value === null ? null : parseFloat(value)),
+      to: (value: number | null | undefined) => (value === null || value === undefined ? null : value),
     }
   })
-  valorCompra: number;
+  valorCompra?: number | null;
+
+  @ApiProperty({
+    description: 'Valor pago (total recebido)',
+    example: 1500.50,
+    required: false,
+  })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: {
+      from: (value: string | null) => (value === null ? null : parseFloat(value)),
+      to: (value: number | null | undefined) => (value === null || value === undefined ? null : value),
+    },
+  })
+  valorPago?: number | null;
 
   @ApiProperty({
     description: 'Valor pago pelo cliente',
@@ -185,4 +204,17 @@ export class Venda extends BaseEntity {
   })
   @Column({ length: 300, nullable: true })
   ativo?: string;
+
+  @ApiProperty({
+    description: 'Tipo de atualização do valor de compra',
+    example: TipoAtualizacao.FORMULA_CERTA_AGENTE,
+    enum: TipoAtualizacao,
+    required: false,
+  })
+  @Column({
+    type: 'enum',
+    enum: TipoAtualizacao,
+    nullable: true,
+  })
+  tipoAtualizacao?: TipoAtualizacao;
 }

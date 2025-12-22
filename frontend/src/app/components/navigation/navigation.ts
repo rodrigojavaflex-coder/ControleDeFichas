@@ -87,6 +87,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
           route: '/vendas',
           icon: 'feather-shopping-cart',
           requiredPermissions: [Permission.VENDA_CREATE, Permission.VENDA_READ, Permission.VENDA_UPDATE, Permission.VENDA_DELETE]
+        },
+        {
+          label: 'Fechamento de Vendas',
+          route: '/fechamento-vendas',
+          icon: 'feather-check-circle',
+          requiredPermissions: [Permission.VENDA_ACESSAR_FECHAMENTO]
         }
       ]
     },

@@ -242,6 +242,22 @@
           </th>
             <th
               class="sortable"
+              *ngIf="canViewValorCompra()"
+              (click)="onSort('valorCompra')"
+              [class.sorted]="sortField === 'valorCompra'">
+              Valor Compra
+              <i class="fas sort-icon" *ngIf="sortField === 'valorCompra'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              *ngIf="canViewValorCompra()"
+              (click)="onSort('valorPago')"
+              [class.sorted]="sortField === 'valorPago'">
+              Valor Pago
+              <i class="fas sort-icon" *ngIf="sortField === 'valorPago'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
               (click)="onSort('cliente')"
               [class.sorted]="sortField === 'cliente'">
               Cliente
@@ -296,6 +312,8 @@
             <td>{{ venda.protocolo }}</td>
             <td>{{ formatDate(venda.dataVenda) }}</td>
             <td>{{ formatDate(venda.dataEnvio) || '-' }}</td>
+            <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorCompra) }}</td>
+            <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorPago) }}</td>
             <td>{{ venda.cliente }}</td>
             <td>{{ getOrigemLabel(venda.origem) }}</td>
             <td>{{ venda.vendedor }}</td>
@@ -304,7 +322,7 @@
             <td class="observacao-cell">{{ venda.observacao || '-' }}</td>
           </tr>
           <tr *ngIf="!loading && items.length === 0">
-            <td colspan="10" class="text-center">
+            <td [attr.colspan]="canViewValorCompra() ? 12 : 10" class="text-center">
               <i class="fas fa-inbox"></i>
               Nenhuma venda encontrada
             </td>

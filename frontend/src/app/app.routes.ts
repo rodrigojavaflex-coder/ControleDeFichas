@@ -15,6 +15,7 @@ import { CertificadoFormComponent } from './components/certificado-form/certific
 import { VendasListComponent } from './components/vendas-list/vendas-list';
 import { BaixasListComponent } from './components/baixas-list/baixas-list';
 import { AcompanharVendasComponent } from './components/acompanhar-vendas/acompanhar-vendas';
+import { FechamentoVendasListComponent } from './components/fechamento-vendas-list/fechamento-vendas-list';
 
 export const routes: Routes = [
   // Rota de configuração
@@ -83,6 +84,11 @@ export const routes: Routes = [
   {
     path: 'vendas',
     component: VendasListComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'fechamento-vendas',
+    component: FechamentoVendasListComponent,
     canActivate: [authGuard]
   },
   {

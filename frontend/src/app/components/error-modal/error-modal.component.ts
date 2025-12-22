@@ -8,7 +8,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
   imports: [CommonModule],
   template: `
     <div class="error-backdrop" *ngIf="visible">
-      <div class="error-modal" [ngClass]="currentTheme">
+      <div class="error-modal" [ngClass]="{'modal-wide': title === 'Aviso'}" [class.light]="currentTheme === 'light'" [class.dark]="currentTheme === 'dark'">
         <div class="modal-header">
           <h3 class="modal-title">{{ title || 'Erro' }}</h3>
           <button type="button" class="close-icon" (click)="close()">×</button>
@@ -45,6 +45,9 @@ import { ThemeService, Theme } from '../../services/theme.service';
         transition: background 0.3s, color 0.3s;
         z-index: 99999;
         pointer-events: auto;
+      }
+      .error-modal.modal-wide {
+        max-width: 600px;
       }
       .modal-header {
         display: flex;

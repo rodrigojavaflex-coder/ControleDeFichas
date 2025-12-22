@@ -141,11 +141,24 @@ export class CreateVendaDto {
   @ApiProperty({
     description: 'Valor da compra',
     example: 1500.50,
+    required: false,
   })
-  @IsNotEmpty({ message: 'Valor da compra é obrigatório' })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null) ? undefined : value)
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor da compra deve ser um número válido' })
   @Min(0, { message: 'Valor da compra deve ser maior ou igual a 0,00' })
-  valorCompra: number;
+  valorCompra?: number;
+
+  @ApiProperty({
+    description: 'Valor pago (total recebido)',
+    example: 1500.50,
+    required: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null) ? undefined : value)
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor pago deve ser um número válido' })
+  @Min(0, { message: 'Valor pago deve ser maior ou igual a 0,00' })
+  valorPago?: number;
 
   @ApiProperty({
     description: 'Valor pago pelo cliente',

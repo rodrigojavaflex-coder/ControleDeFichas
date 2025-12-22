@@ -27,15 +27,15 @@ html, body {
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
-  /* Ajuste global para replicar zoom de 85% do navegador */
-  zoom: var(--app-zoom-factor, 0.85);
+  /* Ajuste global para replicar zoom de 70% do navegador */
+  zoom: var(--app-zoom-factor, 0.75);
   min-height: calc(100vh / var(--app-zoom-factor, 1));
   background-color: var(--bg-secondary, #f8fafc);
 }
 
 /* Fator de zoom exposto para fácil ajuste futuro */
 :root {
-  --app-zoom-factor: 0.85;
+  --app-zoom-factor: 0.75;
 }
 
 /* Fallback específico para Firefox, que não suporta zoom */

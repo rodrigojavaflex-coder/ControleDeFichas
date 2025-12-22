@@ -148,8 +148,8 @@
         </div>
       </div>
 
-      <!-- Terceira linha: Valor Cliente, Desconto %, Valor Compra -->
-      <div class="grid-formulario grid-formulario-3-colunas">
+      <!-- Terceira linha: Valor Cliente, Valor Compra, Valor Pago -->
+      <div class="grid-formulario grid-formulario-3-colunas" style="grid-template-columns: 1fr 0.8fr 0.2fr 0.8fr;">
         <div class="grupo-campo">
           <label for="valorCliente" class="label-campo obrigatorio">Valor Cliente</label>
           <div class="grupo-input">
@@ -162,38 +162,15 @@
               [ngClass]="{'invalido': hasFieldError('valorCliente')}"
               placeholder="0,00"
               (input)="formatCurrency($event, 'valorCliente')"
-              (blur)="formatCurrencyOnBlur('valorCliente'); aplicarDescontoSePossivel()">
+              (blur)="formatCurrencyOnBlur('valorCliente')">
           </div>
           <div class="mensagem-invalida" *ngIf="hasFieldError('valorCliente')">
             {{ getFieldError('valorCliente') }}
           </div>
         </div>
 
-        <div class="grupo-campo desconto-percentual" *ngIf="podeVisualizarValorCompra">
-          <label for="descontoPercentual" class="label-campo">Desconto (%)</label>
-          <div class="grupo-input desconto-wrapper">
-            <input
-              id="descontoPercentual"
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              class="campo"
-              [(ngModel)]="descontoPercentual"
-              [ngModelOptions]="{ standalone: true }"
-              placeholder="0">
-            <button
-              type="button"
-              class="botao botao-icone"
-              (click)="aplicarDescontoValorCompra()"
-              title="Carregar valor de compra">
-              <i class="fas fa-percentage"></i>
-            </button>
-          </div>
-        </div>
-
         <div class="grupo-campo" *ngIf="podeVisualizarValorCompra; else valorCompraPlaceholder">
-          <label for="valorCompra" class="label-campo obrigatorio">Valor Compra</label>
+          <label for="valorCompra" class="label-campo">Valor Compra</label>
           <div class="grupo-input">
             <span class="prefixo-input">R$</span>
             <input
@@ -210,10 +187,44 @@
             {{ getFieldError('valorCompra') }}
           </div>
         </div>
+
+        <div class="grupo-campo" *ngIf="podeVisualizarValorCompra">
+          <label class="label-campo">&nbsp;</label>
+          <button
+            type="button"
+            class="botao botao-icone botao-primario"
+            style="height: 38px; width: 100%; border-radius: 6px;"
+            title="Aplicar 35% de desconto do valor da compra no valor pago"
+            (click)="aplicarDescontoValorPago()">
+            %
+          </button>
+        </div>
+
+        <div class="grupo-campo" *ngIf="podeVisualizarValorCompra; else valorPagoPlaceholder">
+          <label for="valorPago" class="label-campo">Valor Pago (Compra)</label>
+          <div class="grupo-input">
+            <span class="prefixo-input">R$</span>
+            <input
+              id="valorPago"
+              type="text"
+              formControlName="valorPago"
+              class="campo"
+              [ngClass]="{'invalido': hasFieldError('valorPago')}"
+              placeholder="0,00"
+              (input)="formatCurrency($event, 'valorPago')"
+              (blur)="formatCurrencyOnBlur('valorPago')">
+          </div>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('valorPago')">
+            {{ getFieldError('valorPago') }}
+          </div>
+        </div>
       </div>
 
       <ng-template #valorCompraPlaceholder>
         <input type="hidden" formControlName="valorCompra">
+      </ng-template>
+      <ng-template #valorPagoPlaceholder>
+        <input type="hidden" formControlName="valorPago">
       </ng-template>
 
       <!-- Observação -->

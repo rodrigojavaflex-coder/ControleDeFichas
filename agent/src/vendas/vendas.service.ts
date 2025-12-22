@@ -2,11 +2,22 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { VendasTotalRow } from '../database/database.types';
 import { TotalDiaDto } from './dto/total-dia.dto';
+import { ValorCompraDto } from './dto/valor-compra.dto';
 
-interface TotalDiaResponse {
+export interface TotalDiaResponse {
   date: string;
   unit: number;
   items: VendasTotalRow[];
+}
+
+export interface ValorCompraItem {
+  protocolo: number;
+  valor_compra: number;
+}
+
+export interface ValorCompraResponse {
+  unit: number;
+  resultados: ValorCompraItem[];
 }
 
 @Injectable()
@@ -23,6 +34,28 @@ export class VendasService {
       date: this.formatDate(queryDate),
       unit,
       items,
+    };
+  }
+
+  async buscarValorCompra(dto: ValorCompraDto): Promise<ValorCompraResponse> {
+    const { unit, protocolos } = dto;
+
+    if (!protocolos?.length) {
+      throw new BadRequestException('Lista de protocolos não pode ser vazia.');
+    }
+
+    if (protocolos.length > 1000) {
+      throw new BadRequestException('Limite máximo de 1000 protocolos por chamada.');
+    }
+
+    const resultados = await this.databaseService.valorCompraPorProtocolos(
+      unit,
+      protocolos,
+    );
+
+    return {
+      unit,
+      resultados,
     };
   }
 

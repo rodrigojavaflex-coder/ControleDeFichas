@@ -99,6 +99,16 @@ export class VendaService {
     });
   }
 
+  /**
+   * Atualizar valor de compra em massa via agente
+   */
+  atualizarValorCompraEmMassa(vendaIds: string[], atualizarComValorCliente?: boolean): Observable<FecharVendasEmMassaResponse> {
+    return this.http.post<FecharVendasEmMassaResponse>(`${this.apiUrl}/atualizar-valor-compra-massa`, {
+      vendaIds,
+      atualizarComValorCliente
+    });
+  }
+
   private buildQueryParams(findVendasDto?: FindVendasDto): HttpParams {
     let params = new HttpParams();
 

@@ -122,7 +122,7 @@ if (-not (Test-Path (Join-Path $TargetPath "node_modules"))) {
 & $nssmExe set $ServiceName AppStderr (Join-Path $TargetPath "logs\\stderr.log")
 & $nssmExe set $ServiceName AppRotateFiles 1
 & $nssmExe set $ServiceName AppRotateBytes 1048576
-& $nssmExe set $ServiceName AppRotateKeep 5
+# AppRotateKeep não existe na NSSM 2.24; faça limpeza/retencao via job externo se necessário
 
 & $nssmExe start $ServiceName
 Write-Host "[serviço] serviço '$ServiceName' iniciado." -ForegroundColor Green
