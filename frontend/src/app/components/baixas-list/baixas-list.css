@@ -5,7 +5,7 @@
   padding: 0;
   background: #f8fafc;
   /* Ocupa toda altura disponível menos o header (aumentado em 20%) */
-  height: calc((100vh - 64px) * 1.32);
+  height: calc((100vh - 64px) * 1.23);
   /* Remove margin-top negativo para colar no header */
   margin-top: 0;
   display: flex;

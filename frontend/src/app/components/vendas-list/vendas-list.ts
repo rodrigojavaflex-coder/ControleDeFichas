@@ -1796,8 +1796,9 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     }
 
     selecionadas.forEach(venda => {
-      if (venda.status !== VendaStatus.PAGO) {
-        erros.push(`Venda ${venda.protocolo} precisa estar com status PAGO.`);
+      // Verificar se já tem fechamento registrado
+      if (venda.dataFechamento) {
+        erros.push(`Venda ${venda.protocolo} já possui fechamento registrado em ${this.formatDate(venda.dataFechamento)}.`);
         return;
       }
 
@@ -1830,8 +1831,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     }
 
     selecionadas.forEach(venda => {
-      if (venda.status !== VendaStatus.FECHADO) {
-        erros.push(`Venda ${venda.protocolo} precisa estar com status FECHADO.`);
+      if (!venda.dataFechamento) {
+        erros.push(`Venda ${venda.protocolo} não possui fechamento registrado para cancelar.`);
       }
     });
 

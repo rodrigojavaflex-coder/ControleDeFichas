@@ -175,7 +175,7 @@
             class="form-control"
             (change)="onFilterChange()">
             <option value="">Todos</option>
-            <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL, VendaStatus.FECHADO]" [value]="status">
+            <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL]" [value]="status">
               {{ getStatusLabel(status) }}
             </option>
           </select>

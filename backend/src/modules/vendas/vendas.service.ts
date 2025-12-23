@@ -110,11 +110,12 @@ export class VendasService {
         continue;
       }
 
-      if (venda.status !== VendaStatus.PAGO) {
+      // Verificar se já está fechada (tem dataFechamento)
+      if (venda.dataFechamento) {
         falhas.push({
           id: vendaId,
           protocolo: venda.protocolo,
-          motivo: `Venda está com status ${venda.status}. Apenas vendas PAGO podem ser fechadas.`,
+          motivo: `Venda já possui fechamento registrado em ${venda.dataFechamento}.`,
         });
         continue;
       }
@@ -135,8 +136,8 @@ export class VendasService {
         continue;
       }
 
+      // Apenas atualizar dataFechamento, não alterar status
       await this.vendaRepository.update(vendaId, {
-        status: VendaStatus.FECHADO,
         dataFechamento,
       });
       const vendaAtualizada = await this.findOne(vendaId);
@@ -197,17 +198,18 @@ export class VendasService {
         continue;
       }
 
-      if (venda.status !== VendaStatus.FECHADO) {
+      // Verificar dataFechamento ao invés de status
+      if (!venda.dataFechamento) {
         falhas.push({
           id: vendaId,
           protocolo: venda.protocolo,
-          motivo: `Venda precisa estar com status FECHADO para cancelar o fechamento.`,
+          motivo: `Venda não possui fechamento registrado para cancelar.`,
         });
         continue;
       }
 
+      // Apenas limpar dataFechamento, não alterar status
       await this.vendaRepository.update(vendaId, {
-        status: VendaStatus.PAGO,
         dataFechamento: null,
       });
       const vendaAtualizada = await this.findOne(vendaId);
@@ -278,10 +280,10 @@ export class VendasService {
     try {
       const venda = await this.findOne(id);
 
-      // Validação 1: Venda não pode estar FECHADA
-      if (venda.status === VendaStatus.FECHADO) {
+      // Validação: Venda com fechamento registrado não pode ser editada
+      if (venda.dataFechamento) {
         throw new ConflictException(
-          `Não é possível editar uma venda com status "Fechado". A venda está fechada.`
+          `Não é possível editar uma venda com fechamento registrado em ${venda.dataFechamento}.`
         );
       }
 
@@ -446,7 +448,8 @@ export class VendasService {
    * - REGISTRADO: Nenhuma baixa (totalPago = 0)
    * - PAGO_PARCIAL: Valor baixado > 0 E menor que valorCliente
    * - PAGO: Valor baixado >= valorCliente
-   * - FECHADO: Não é alterado por este método (status permanece)
+   * 
+   * O status é sempre atualizado baseado nas baixas, independente de dataFechamento.
    * 
    * @param idvenda - ID da venda para atualizar o status
    */
@@ -476,12 +479,7 @@ export class VendasService {
         novoStatus = VendaStatus.PAGO_PARCIAL;
       }
 
-      // Não alterar status se venda estiver FECHADA
-      if (venda.status === VendaStatus.FECHADO) {
-        return;
-      }
-
-      // Só atualizar se o status mudou
+      // Sempre atualizar baseado nas baixas, independente de dataFechamento
       if (venda.status !== novoStatus) {
         await this.vendaRepository.update(idvenda, { status: novoStatus });
       }
@@ -517,8 +515,8 @@ export class VendasService {
     const vendasSemOrigem: typeof vendas = [];
     
     for (const venda of vendas) {
-      // Validar se o status não é FECHADO - não processar essas vendas
-      if (venda.status === VendaStatus.FECHADO) {
+      // Validar se tem dataFechamento - não processar essas vendas
+      if (venda.dataFechamento) {
         continue;
       }
       
@@ -535,13 +533,13 @@ export class VendasService {
     const sucesso: Venda[] = [];
     const falhas: FecharVendaFalha[] = [];
 
-    // Processar vendas com status FECHADO - adicionar às falhas
+    // Processar vendas com dataFechamento - adicionar às falhas
     for (const venda of vendas) {
-      if (venda.status === VendaStatus.FECHADO) {
+      if (venda.dataFechamento) {
         falhas.push({
           id: venda.id,
           protocolo: venda.protocolo,
-          motivo: 'Não é possível atualizar o valor de compra de uma venda com status FECHADO.',
+          motivo: 'Não é possível atualizar o valor de compra de uma venda com fechamento registrado.',
         });
       }
     }

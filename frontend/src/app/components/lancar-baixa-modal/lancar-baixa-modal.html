@@ -105,9 +105,9 @@
                       type="button"
                       class="btn btn-sm btn-editar"
                       (click)="onEditarBaixa(baixa)"
-                      [attr.disabled]="venda.status === 'FECHADO' ? 'disabled' : null"
-                      [title]="venda.status === 'FECHADO' ? 'Venda fechada - edição não permitida' : 'Editar baixa'"
-                      [ngClass]="{'opacity-50': venda.status === 'FECHADO'}">
+                      [attr.disabled]="venda.dataFechamento ? 'disabled' : null"
+                      [title]="venda.dataFechamento ? 'Venda fechada - edição não permitida' : 'Editar baixa'"
+                      [ngClass]="{'opacity-50': venda.dataFechamento}">
                       Editar
                     </button>
                     <button
@@ -115,9 +115,9 @@
                       type="button"
                       class="btn btn-sm btn-excluir"
                       (click)="onRemoverBaixa(baixa)"
-                      [attr.disabled]="(deletingBaixaId === baixa.id || venda.status === 'FECHADO') ? 'disabled' : null"
-                      [title]="venda.status === 'FECHADO' ? 'Venda fechada - exclusão não permitida' : 'Remover baixa'"
-                      [ngClass]="{'opacity-50': venda.status === 'FECHADO'}">
+                      [attr.disabled]="(deletingBaixaId === baixa.id || venda.dataFechamento) ? 'disabled' : null"
+                      [title]="venda.dataFechamento ? 'Venda fechada - exclusão não permitida' : 'Remover baixa'"
+                      [ngClass]="{'opacity-50': venda.dataFechamento}">
                       Excluir
                     </button>
                     <button

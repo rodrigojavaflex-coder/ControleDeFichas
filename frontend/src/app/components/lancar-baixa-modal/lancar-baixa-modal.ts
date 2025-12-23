@@ -347,10 +347,10 @@ export class LancarBaixaModalComponent {
       return;
     }
 
-    // Validar se venda está FECHADA
-    if (this.venda && this.venda.status === VendaStatus.FECHADO) {
+    // Validar se venda tem fechamento registrado
+    if (this.venda && this.venda.dataFechamento) {
       this.errorModalService.show(
-        'Não é possível editar baixas de uma venda com status "Fechado". A venda está fechada.',
+        `Não é possível editar baixas de uma venda com fechamento registrado em ${this.formatDateDisplay(this.venda.dataFechamento)}.`,
         'Venda Fechada'
       );
       return;
@@ -382,10 +382,10 @@ export class LancarBaixaModalComponent {
       return;
     }
 
-    // Validar se venda está FECHADA
-    if (this.venda && this.venda.status === VendaStatus.FECHADO) {
+    // Validar se venda tem fechamento registrado
+    if (this.venda && this.venda.dataFechamento) {
       this.errorModalService.show(
-        'Não é possível remover baixas de uma venda com status "Fechado". A venda está fechada.',
+        `Não é possível remover baixas de uma venda com fechamento registrado em ${this.formatDateDisplay(this.venda.dataFechamento)}.`,
         'Venda Fechada'
       );
       return;

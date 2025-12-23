@@ -133,11 +133,11 @@ export class BaixasService {
   async remove(id: string): Promise<void> {
     const baixa = await this.findOne(id);
 
-    // Validar status da venda antes de permitir exclusão
+    // Validar dataFechamento antes de permitir exclusão
     const venda = await this.vendasService.findOne(baixa.idvenda);
-    if (venda.status === VendaStatus.FECHADO) {
+    if (venda.dataFechamento) {
       throw new ConflictException(
-        `Não é possível remover baixas de uma venda com status "${VendaStatus.FECHADO}". A venda está fechada.`
+        `Não é possível remover baixas de uma venda com fechamento registrado em ${venda.dataFechamento}.`
       );
     }
 
@@ -193,7 +193,8 @@ export class BaixasService {
    * - REGISTRADO: Nenhuma baixa (totalPago = 0)
    * - PAGO_PARCIAL: Valor baixado > 0 E menor que valorCliente
    * - PAGO: Valor baixado >= valorCliente
-   * - FECHADO: Não é alterado por este método (status permanece)
+   * 
+   * O status é sempre atualizado baseado nas baixas, independente de dataFechamento.
    * 
    * @param idvenda - ID da venda para atualizar o status
    */
@@ -226,16 +227,9 @@ export class BaixasService {
         novoStatus = VendaStatus.PAGO_PARCIAL;
       }
 
-      // Não alterar status se venda estiver FECHADA ou se o status já é correto
-      if (venda.status === VendaStatus.FECHADO) {
-        return;
-      }
-
-      // Só atualizar se o status mudou
+      // Sempre atualizar baseado nas baixas, independente de dataFechamento
       if (venda.status !== novoStatus) {
         await this.vendasService.update(idvenda, { status: novoStatus });
-      } else {
-        // Nenhuma alteração necessária
       }
     } catch (error) {
       this.logger.error(`Erro ao atualizar status da venda ${idvenda}:`, error);

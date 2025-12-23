@@ -63,7 +63,7 @@
             formControlName="status"
             class="campo"
             [ngClass]="{'invalido': hasFieldError('status')}">
-            <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL, VendaStatus.FECHADO]"
+            <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL]"
                     [value]="status">
               {{ getStatusLabel(status) }}
             </option>
