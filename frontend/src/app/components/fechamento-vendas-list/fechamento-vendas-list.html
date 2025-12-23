@@ -326,23 +326,7 @@
               (click)="onSort('valorPago')"
               [class.sorted]="sortField === 'valorPago'"
               [attr.aria-sort]="sortField === 'valorPago' ? sortDirection : 'none'">
-              V.Pg(Compra)
-              <i class="fas sort-icon" *ngIf="sortField === 'valorPago'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
-            </th>
-            <th
-              class="sortable"
-              (click)="onSort('valorCliente')"
-              [class.sorted]="sortField === 'valorCliente'"
-              [attr.aria-sort]="sortField === 'valorCliente' ? sortDirection : 'none'">
-              V. Cliente
-              <i class="fas sort-icon" *ngIf="sortField === 'valorCliente'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
-            </th>
-            <th
-              class="sortable"
-              (click)="onSort('valorPago')"
-              [class.sorted]="sortField === 'valorPago'"
-              [attr.aria-sort]="sortField === 'valorPago' ? sortDirection : 'none'">
-              V.Pg(Cliente)
+              V.Fechamento
               <i class="fas sort-icon" *ngIf="sortField === 'valorPago'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
             </th>
             <th
@@ -389,8 +373,6 @@
             <td>{{ venda.ativo || '-' }}</td>
             <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorCompra) }}</td>
             <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorPago || 0) }}</td>
-            <td>{{ formatCurrency(venda.valorCliente) }}</td>
-            <td>{{ formatCurrency(getValorBaixadoForVenda(venda.id)) }}</td>
             <td>
               <span class="status-badge {{ getStatusClass(venda.status) }}">
                 {{ getStatusLabel(venda.status) }}

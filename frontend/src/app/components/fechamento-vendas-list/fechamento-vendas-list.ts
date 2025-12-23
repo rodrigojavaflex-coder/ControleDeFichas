@@ -31,7 +31,6 @@ type SortableField =
   | 'prescritor'
   | 'ativo'
   | 'valorCompra'
-  | 'valorCliente'
   | 'valorPago'
   | 'status'
   | 'observacao';
@@ -840,8 +839,6 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         return venda.ativo;
       case 'valorCompra':
         return venda.valorCompra || 0;
-      case 'valorCliente':
-        return venda.valorCliente || 0;
       case 'valorPago':
         return venda.valorPago || 0;
       case 'status':
@@ -1957,14 +1954,14 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
 
 
   getColspanForEmptyRow(): number {
-    // Base: checkbox + protocolo + dataVenda + cliente + origem + vendedor + prescritor + ativo + V.Cliente + V.Pg(Cliente) + Status + Obs = 12
-    let colspan = 12;
+    // Base: checkbox + protocolo + dataVenda + cliente + origem + vendedor + prescritor + ativo + Status + Obs = 10
+    let colspan = 10;
     // Ajustar baseado nas colunas condicionais
     if (this.canFecharVendas()) {
       colspan += 1; // D. Fechamento
     }
     if (this.canViewValorCompra()) {
-      colspan += 2; // V. Compra + V.Pg(Compra)
+      colspan += 2; // V. Compra + V.Fechamento
     }
     return colspan;
   }
