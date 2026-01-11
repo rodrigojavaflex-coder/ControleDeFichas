@@ -6,7 +6,7 @@ import { VendaService } from '../../services/vendas.service';
 import { BaixasService } from '../../services/baixas.service';
 import { AuthService } from '../../services/auth.service';
 import { ConfiguracaoService } from '../../services/configuracao.service';
-import { Venda, VendaPaginatedResponse, FindVendasDto, VendaOrigem, VendaStatus, Unidade, TipoAtualizacao } from '../../models/venda.model';
+import { Venda, VendaPaginatedResponse, FindVendasDto, VendaOrigem, VendaStatus, Unidade, TipoAtualizacao, CreateVendaDto } from '../../models/venda.model';
 import { Baixa, TipoDaBaixa, ProcessarBaixasEmMassaResultado } from '../../models/baixa.model';
 import * as XLSX from 'xlsx';
 import { Permission, Usuario } from '../../models/usuario.model';
@@ -107,13 +107,13 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
   // Storage key para persistência de filtros
   private readonly FILTERS_STORAGE_KEY = 'fechamento_vendas_list_filters';
 
-  // Nova venda (para registro direto na lista)
-  novaVenda: Partial<Venda> = {
+  // Nova venda (para registro direto na lista - funcionalidade descontinuada, usar modal)
+  novaVenda: Partial<CreateVendaDto> = {
     protocolo: '',
     dataVenda: new Date().toISOString().split('T')[0], // Data atual
-    cliente: '',
+    clienteId: '',
     origem: VendaOrigem.GOIANIA,
-    vendedor: '',
+    vendedorId: '',
     valorCompra: 0,
     valorCliente: 0,
     observacao: '',
@@ -828,13 +828,13 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       case 'dataFechamento':
         return venda.dataFechamento ? new Date(venda.dataFechamento).getTime() : null;
       case 'cliente':
-        return venda.cliente;
+        return this.getClienteNome(venda);
       case 'origem':
         return this.getOrigemLabel(venda.origem);
       case 'vendedor':
-        return venda.vendedor;
+        return this.getVendedorNome(venda);
       case 'prescritor':
-        return venda.prescritor || '';
+        return this.getPrescritorNome(venda) || '';
       case 'ativo':
         return venda.ativo;
       case 'valorCompra':
@@ -949,18 +949,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
 
   // Métodos para registro direto na lista
   showNewVendaRow(): void {
-    this.showNewRow = true;
-    this.novaVenda = {
-      protocolo: '',
-      dataVenda: new Date().toISOString().split('T')[0],
-      cliente: '',
-      origem: VendaOrigem.GOIANIA,
-      vendedor: '',
-      valorCompra: 0,
-      valorCliente: 0,
-      observacao: '',
-      status: VendaStatus.REGISTRADO
-    };
+    // Funcionalidade descontinuada - usar modal de venda ao invés
+    this.openNewVendaModal();
   }
 
   cancelNewVenda(): void {
@@ -969,7 +959,9 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
   }
 
   saveNewVenda(): void {
-    if (!this.novaVenda.protocolo || !this.novaVenda.cliente || !this.novaVenda.vendedor) {
+    // Esta funcionalidade foi descontinuada - usar o modal de venda ao invés
+    // Mantido para compatibilidade, mas deve usar modal com autocomplete
+    if (!this.novaVenda.protocolo || !this.novaVenda.clienteId || !this.novaVenda.vendedorId) {
       this.errorModalService.show('Preencha todos os campos obrigatórios', 'Erro de Validação');
       return;
     }
@@ -1242,8 +1234,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
                     <td>${contador}</td>
                     <td>${venda.protocolo}</td>
                     <td>${this.formatDate(venda.dataVenda)}</td>
-                    <td>${venda.cliente}</td>
-                    <td>${venda.vendedor}</td>
+                    <td>${this.getClienteNome(venda)}</td>
+                    <td>${this.getVendedorNome(venda)}</td>
                     ${valorCompraColuna}
                     ${valorPagoCompraColuna}
                     <td>${this.getTipoAtualizacaoLabel(venda.tipoAtualizacao)}</td>
@@ -1380,11 +1372,11 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         'Data Venda': this.formatDate(venda.dataVenda),
         'Data Fechamento': venda.dataFechamento ? this.formatDate(venda.dataFechamento) : '-',
         'Data Envio': venda.dataEnvio ? this.formatDate(venda.dataEnvio) : '-',
-        Cliente: venda.cliente,
+        Cliente: this.getClienteNome(venda),
         'Comprado em': this.getOrigemLabel(venda.origem),
         Unidade: venda.unidade || '-',
-        Vendedor: venda.vendedor,
-        Prescritor: venda.prescritor || '-',
+        Vendedor: this.getVendedorNome(venda),
+        Prescritor: this.getPrescritorNome(venda) || '-',
         'Valor Cliente': venda.valorCliente || 0,
         'Valor Pago': this.getValorBaixadoForVenda(venda.id),
         Status: this.getStatusLabel(venda.status),
@@ -1627,6 +1619,30 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       [VendaStatus.FECHADO]: 'Fechado'
     };
     return labels[status] || status;
+  }
+
+  getClienteNome(venda: Venda): string {
+    if (venda.cliente && typeof venda.cliente === 'object') {
+      return venda.cliente.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.cliente as any) || '-';
+  }
+
+  getVendedorNome(venda: Venda): string {
+    if (venda.vendedor && typeof venda.vendedor === 'object') {
+      return venda.vendedor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.vendedor as any) || '-';
+  }
+
+  getPrescritorNome(venda: Venda): string | null {
+    if (venda.prescritor && typeof venda.prescritor === 'object') {
+      return venda.prescritor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.prescritor as any) || null;
   }
 
   getStatusClass(status: VendaStatus): string {

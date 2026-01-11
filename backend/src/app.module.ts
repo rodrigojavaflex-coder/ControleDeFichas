@@ -14,16 +14,21 @@ import { CertificadoModule } from './modules/certificado/certificado.module';
 import { AuditoriaInterceptor } from './common/interceptors/auditoria.interceptor';
 import { VendasModule } from './modules/vendas/vendas.module';
 import { BaixasModule } from './modules/baixas/baixas.module';
+import { ClientesModule } from './modules/clientes/clientes.module';
+import { VendedoresModule } from './modules/vendedores/vendedores.module';
+import { PrescritoresModule } from './modules/prescritores/prescritores.module';
+import { MigracaoModule } from './modules/migracao/migracao.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 import agentesConfig from './config/agentes.config';
+import legacyDatabasesConfig from './config/legacy-database.config';
 import { Configuracao } from './modules/configuracao/entities/configuracao.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, appConfig, agentesConfig],
+      load: [databaseConfig, appConfig, agentesConfig, legacyDatabasesConfig],
       envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
@@ -41,6 +46,10 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
   CertificadoModule,
   VendasModule,
   BaixasModule,
+    ClientesModule,
+    VendedoresModule,
+    PrescritoresModule,
+    MigracaoModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],

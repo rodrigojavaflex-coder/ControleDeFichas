@@ -1,0 +1,158 @@
+<!-- Modal de Criação Rápida de Cliente -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-conteudo modal-pequeno" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Criar Novo Cliente</h3>
+      <button 
+        type="button" 
+        class="modal-fechar" 
+        (click)="closeModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="quickForm" (ngSubmit)="onSubmit()" class="modal-corpo">
+      <div class="grid-formulario">
+        <!-- Nome -->
+        <div class="grupo-campo">
+          <label for="nome" class="label-campo obrigatorio">Nome</label>
+          <input
+            id="nome"
+            type="text"
+            formControlName="nome"
+            class="campo"
+            autocomplete="name"
+            [ngClass]="{'invalido': hasFieldError('nome')}"
+            placeholder="Digite o nome do cliente"
+            maxlength="500"
+            (input)="onNomeInput($event)"
+            autofocus>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('nome')">
+            {{ getFieldError('nome') }}
+          </div>
+        </div>
+
+        <!-- Unidade -->
+        <div class="grupo-campo">
+          <label for="unidade" class="label-campo obrigatorio">Unidade</label>
+          <select
+            id="unidade"
+            formControlName="unidade"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('unidade')}">
+            <option value="">Selecione uma unidade</option>
+            <option *ngFor="let unit of unidades" [value]="unit">
+              {{ unit }}
+            </option>
+          </select>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('unidade')">
+            {{ getFieldError('unidade') }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão para campos adicionais -->
+      <div style="margin-top: var(--espacamento-md); margin-bottom: var(--espacamento-sm);">
+        <button
+          type="button"
+          class="botao botao-fantasma"
+          style="width: 100%; font-size: var(--tamanho-fonte-sm);"
+          (click)="toggleAdditionalFields()">
+          <i class="fas" [class.fa-chevron-down]="!showAdditionalFields" [class.fa-chevron-up]="showAdditionalFields"></i>
+          {{ showAdditionalFields ? 'Ocultar' : 'Mostrar' }} campos adicionais
+        </button>
+      </div>
+
+      <!-- Campos Adicionais -->
+      <div *ngIf="showAdditionalFields" class="grid-formulario" style="margin-top: var(--espacamento-md); padding-top: var(--espacamento-md); border-top: 1px solid var(--cor-borda-base);">
+        <!-- Código do Cliente -->
+        <div class="grupo-campo">
+          <label for="cdcliente" class="label-campo">Código (Sistema de Produção)</label>
+          <input
+            id="cdcliente"
+            type="number"
+            formControlName="cdcliente"
+            class="campo"
+            autocomplete="off"
+            placeholder="Código no sistema de produção">
+        </div>
+
+        <!-- CPF -->
+        <div class="grupo-campo">
+          <label for="cpf" class="label-campo">CPF</label>
+          <input
+            id="cpf"
+            type="text"
+            formControlName="cpf"
+            class="campo"
+            autocomplete="off"
+            placeholder="000.000.000-00"
+            maxlength="14">
+          <div class="form-help" style="font-size: var(--tamanho-fonte-xs); color: var(--cor-texto-secundario); margin-top: 0.25rem;">
+            Formato: 000.000.000-00 ou 00000000000
+          </div>
+        </div>
+
+        <!-- Data de Nascimento -->
+        <div class="grupo-campo">
+          <label for="dataNascimento" class="label-campo">Data de Nascimento</label>
+          <input
+            id="dataNascimento"
+            type="date"
+            formControlName="dataNascimento"
+            class="campo"
+            autocomplete="bday">
+        </div>
+
+        <!-- Email -->
+        <div class="grupo-campo">
+          <label for="email" class="label-campo">Email</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            class="campo"
+            autocomplete="email"
+            [ngClass]="{'invalido': hasFieldError('email')}"
+            placeholder="cliente@exemplo.com">
+          <div class="mensagem-invalida" *ngIf="hasFieldError('email')">
+            {{ getFieldError('email') }}
+          </div>
+        </div>
+
+        <!-- Telefone -->
+        <div class="grupo-campo">
+          <label for="telefone" class="label-campo">Telefone</label>
+          <input
+            id="telefone"
+            type="text"
+            formControlName="telefone"
+            class="campo"
+            autocomplete="tel"
+            placeholder="(00) 00000-0000"
+            maxlength="20">
+        </div>
+      </div>
+    </form>
+
+    <!-- Actions -->
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="closeModal()"
+        title="Cancelar">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="botao botao-primario"
+        (click)="onSubmit()"
+        [ngClass]="{'botao-carregando': isLoading}">
+        {{ isLoading ? 'Criando...' : 'Criar Cliente' }}
+      </button>
+    </div>
+  </div>
+</div>

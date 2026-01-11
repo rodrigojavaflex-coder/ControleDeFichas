@@ -45,45 +45,102 @@
             <!-- Submenu -->
             @if (item.children && item.isOpen) {
               <ul class="submenu">
-                @for (child of item.children; track child.route) {
+                @for (child of item.children; track child.label) {
                 <li class="submenu-item">
-                  <a 
-                    [routerLink]="child.route" 
-                    [class.active]="child.route && isRouteActive(child.route)"
-                    class="nav-link submenu-link"
-                    [attr.title]="!shouldShowExpanded ? child.label : null"
-                    (click)="onMenuItemClick()"
-                  >
-                    <span class="submenu-icon">
-                      @if (child.icon === 'feather-eye') {
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  @if (child.children) {
+                    <!-- Submenu aninhado -->
+                    <div 
+                      class="nav-link submenu-link submenu-toggle-nested"
+                      [class.active]="isSubmenuActive(child)"
+                      [attr.title]="!shouldShowExpanded ? child.label : null"
+                      (click)="toggleSubmenu(child)"
+                    >
+                      <span class="submenu-icon">
+                        @if (child.icon === 'feather-layers') {
+                          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 2 17 12 22 22 17 22 7 12 2"></polygon><polyline points="2 7 12 12 22 7"></polyline><polyline points="2 17 12 12 22 17"></polyline></svg>
+                        }
+                        @if (child.icon === 'feather-shopping-cart') {
+                          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                        }
+                        @if (child.icon === 'feather-user') {
+                          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        }
+                      </span>
+                      @if (shouldShowExpanded) {
+                        <span class="nav-text">{{ child.label }}</span>
+                        <span class="submenu-arrow" [class.open]="child.isOpen">▶</span>
                       }
-                      @if (child.icon === 'feather-users') {
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-3-3.87"></path><path d="M9 21v-2a4 4 0 0 1 3-3.87"></path><path d="M7 7a4 4 0 1 1 8 0 4 4 0 0 1-8 0z"></path></svg>
-                      }
-                      @if (child.icon === 'feather-shield') {
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                      }
-                      @if (child.icon === 'feather-sliders') {
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="12" x2="15" y2="12"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-                      }
-                      @if (child.icon === 'feather-layers') {
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 2 17 12 22 22 17 22 7 12 2"></polygon><polyline points="2 7 12 12 22 7"></polyline><polyline points="2 17 12 12 22 17"></polyline></svg>
-                      }
-                      @if (child.icon === 'feather-shopping-cart') {
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                      }
-                      @if (child.icon === 'feather-file-text') {
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7z"></path><polyline points="14 2 14 7 19 7"></polyline><line x1="12" y1="11" x2="8" y2="11"></line><line x1="12" y1="15" x2="8" y2="15"></line></svg>
-                      }
-                      @if (child.icon === 'feather-check-circle') {
-                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                      }
-                    </span>
-                    @if (shouldShowExpanded) {
-                      <span class="nav-text">{{ child.label }}</span>
+                    </div>
+                    @if (child.children && child.isOpen) {
+                      <ul class="submenu-nested">
+                        @for (nestedChild of child.children; track nestedChild.route) {
+                        <li class="submenu-item">
+                          <a 
+                            [routerLink]="nestedChild.route" 
+                            [class.active]="nestedChild.route && isRouteActive(nestedChild.route)"
+                            class="nav-link submenu-link"
+                            [attr.title]="!shouldShowExpanded ? nestedChild.label : null"
+                            (click)="onMenuItemClick()"
+                          >
+                            <span class="submenu-icon">
+                              @if (nestedChild.icon === 'feather-layers') {
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 2 17 12 22 22 17 22 7 12 2"></polygon><polyline points="2 7 12 12 22 7"></polyline><polyline points="2 17 12 12 22 17"></polyline></svg>
+                              }
+                              @if (nestedChild.icon === 'feather-shopping-cart') {
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                              }
+                              @if (nestedChild.icon === 'feather-check-circle') {
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                              }
+                              @if (nestedChild.icon === 'feather-user') {
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                              }
+                              @if (nestedChild.icon === 'feather-user-check') {
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+                              }
+                              @if (nestedChild.icon === 'feather-user-plus') {
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                              }
+                            </span>
+                            @if (shouldShowExpanded) {
+                              <span class="nav-text">{{ nestedChild.label }}</span>
+                            }
+                          </a>
+                        </li>
+                        }
+                      </ul>
                     }
-                  </a>
+                  } @else {
+                    <!-- Item de menu normal (com rota) -->
+                    <a 
+                      [routerLink]="child.route" 
+                      [class.active]="child.route && isRouteActive(child.route)"
+                      class="nav-link submenu-link"
+                      [attr.title]="!shouldShowExpanded ? child.label : null"
+                      (click)="onMenuItemClick()"
+                    >
+                      <span class="submenu-icon">
+                        @if (child.icon === 'feather-eye') {
+                          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        }
+                        @if (child.icon === 'feather-users') {
+                          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-3-3.87"></path><path d="M9 21v-2a4 4 0 0 1 3-3.87"></path><path d="M7 7a4 4 0 1 1 8 0 4 4 0 0 1-8 0z"></path></svg>
+                        }
+                        @if (child.icon === 'feather-shield') {
+                          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        }
+                        @if (child.icon === 'feather-sliders') {
+                          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="12" x2="15" y2="12"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                        }
+                        @if (child.icon === 'feather-file-text') {
+                          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7z"></path><polyline points="14 2 14 7 19 7"></polyline><line x1="12" y1="11" x2="8" y2="11"></line><line x1="12" y1="15" x2="8" y2="15"></line></svg>
+                        }
+                      </span>
+                      @if (shouldShowExpanded) {
+                        <span class="nav-text">{{ child.label }}</span>
+                      }
+                    </a>
+                  }
                 </li>
                 }
               </ul>

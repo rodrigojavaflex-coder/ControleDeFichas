@@ -9,6 +9,7 @@ import { Usuario, PaginatedResponse, FindUsuariosDto, Permission } from '../../m
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-auditoria.component';
 import { BaseListComponent } from '../base-list.component';
+import { PageContextService } from '../../services/page-context.service';
 
 @Component({
   selector: 'app-user-list',
@@ -21,6 +22,7 @@ export class UserListComponent extends BaseListComponent<Usuario> {
   private userService = inject(UserService);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private pageContextService = inject(PageContextService);
 
   // Paginação
   currentPage = 1;
@@ -40,6 +42,10 @@ export class UserListComponent extends BaseListComponent<Usuario> {
 
   override ngOnInit(): void {
     super.ngOnInit();
+    this.pageContextService.setContext({
+      title: 'Lista de Usuários',
+      description: 'Consulte e gerencie todos os usuários cadastrados.'
+    });
   }
 
   protected override loadItems(): void {

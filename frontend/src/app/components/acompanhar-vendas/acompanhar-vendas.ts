@@ -303,10 +303,10 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
             <td>${this.formatDate(venda.dataEnvio) || '-'}</td>
             ${valorCompraCol}
             ${valorPagoCol}
-            <td>${venda.cliente}</td>
+            <td>${this.getClienteNome(venda)}</td>
             <td>${this.getOrigemLabel(venda.origem)}</td>
-            <td>${venda.vendedor}</td>
-            <td>${venda.prescritor || '-'}</td>
+            <td>${this.getVendedorNome(venda)}</td>
+            <td>${this.getPrescritorNome(venda) || '-'}</td>
             <td>${venda.observacao || '-'}</td>
           </tr>
         `;
@@ -369,10 +369,10 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       Protocolo: venda.protocolo,
       'Data Venda': this.formatDate(venda.dataVenda),
       'Data Envio': this.formatDate(venda.dataEnvio) || '-',
-      Cliente: venda.cliente,
+      Cliente: this.getClienteNome(venda),
       'Comprado em': this.getOrigemLabel(venda.origem),
-      Vendedor: venda.vendedor,
-      Prescritor: venda.prescritor || '-',
+      Vendedor: this.getVendedorNome(venda),
+      Prescritor: this.getPrescritorNome(venda) || '-',
       Observação: venda.observacao || '',
       };
 
@@ -639,6 +639,30 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     return labels[origem] || origem;
   }
 
+  getClienteNome(venda: Venda): string {
+    if (venda.cliente && typeof venda.cliente === 'object') {
+      return venda.cliente.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.cliente as any) || '-';
+  }
+
+  getVendedorNome(venda: Venda): string {
+    if (venda.vendedor && typeof venda.vendedor === 'object') {
+      return venda.vendedor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.vendedor as any) || '-';
+  }
+
+  getPrescritorNome(venda: Venda): string | null {
+    if (venda.prescritor && typeof venda.prescritor === 'object') {
+      return venda.prescritor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.prescritor as any) || null;
+  }
+
   canViewValorCompra(): boolean {
     return this.podeVisualizarValorCompra;
   }
@@ -716,7 +740,7 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       case 'dataVenda':
         return venda.dataVenda ? new Date(venda.dataVenda).getTime() : null;
       case 'cliente':
-        return venda.cliente;
+        return this.getClienteNome(venda);
       case 'origem':
         return this.getOrigemLabel(venda.origem);
       case 'valorCompra':
@@ -724,9 +748,9 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       case 'valorPago':
         return venda.valorPago ?? 0;
       case 'vendedor':
-        return venda.vendedor;
+        return this.getVendedorNome(venda);
       case 'prescritor':
-        return venda.prescritor || '';
+        return this.getPrescritorNome(venda) || '';
       case 'unidade':
         return venda.unidade || '';
       case 'observacao':

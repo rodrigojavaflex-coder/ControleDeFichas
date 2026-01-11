@@ -1,0 +1,142 @@
+<div class="prescritores-list-container">
+  <!-- Filtros -->
+  <div class="filters">
+    <div class="filter-group">
+      <input 
+        type="text" 
+        placeholder="Filtrar por nome"
+        [(ngModel)]="nomeFilter"
+        (input)="onFilterChange()"
+        class="form-control"
+      >
+    </div>
+    <div class="filter-group">
+      <input 
+        type="number" 
+        placeholder="Filtrar por CRM"
+        [(ngModel)]="numeroCRMFilter"
+        (input)="onFilterChange()"
+        class="form-control"
+      >
+    </div>
+    <button class="btn btn-limpar" (click)="clearFilters()">
+      Limpar Filtros
+    </button>
+    @if (canCreatePrescritor()) {
+      <button class="btn btn-novo" (click)="createPrescritor()">
+        Novo Prescritor
+      </button>
+    }
+  </div>
+
+  <!-- Loading -->
+  @if (loading) {
+    <div class="loading">
+      Carregando prescritores...
+    </div>
+  }
+
+  <!-- Error -->
+  @if (error) {
+    <div class="alert alert-error">
+      {{ error }}
+    </div>
+  }
+
+  <!-- Tabela de prescritores -->
+  @if (!loading && !error) {
+    <div class="table-container">
+      <table class="prescritores-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CRM</th>
+            <th>Criado em</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let prescritor of items">
+            <td>{{ prescritor.nome }}</td>
+            <td>{{ getCRMFormat(prescritor) }}</td>
+            <td>{{ formatDate(prescritor.criadoEm) }}</td>
+            <td class="action-buttons">
+              @if (canEditPrescritor()) {
+                <button class="btn btn-sm btn-editar" (click)="editPrescritor(prescritor)">
+                  Editar
+                </button>
+              }
+              @if (canAuditPrescritor()) {
+                <button class="btn btn-sm btn-auditoria" (click)="abrirAuditoriaPrescritor(prescritor)" title="Ver histórico de auditoria">
+                  <i class="fas fa-history"></i>
+                  Auditoria
+                </button>
+              }
+              @if (canDeletePrescritor()) {
+                <button class="btn btn-sm btn-excluir" (click)="deletePrescritor(prescritor)">
+                  Excluir
+                </button>
+              }
+            </td>
+          </tr>
+          @if (items.length === 0) {
+            <tr class="no-data">
+              <td colspan="4" class="text-center">
+                <i class="fas fa-inbox"></i>
+                Nenhum prescritor encontrado
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Paginação -->
+  @if (totalPages > 1) {
+    <div class="pagination">
+      <button 
+        class="btn btn-sm btn-cancelar" 
+        (click)="onPageChange(currentPage - 1)"
+        [disabled]="currentPage <= 1"
+      >
+        Anterior
+      </button>
+      
+      <span class="page-info">
+        Página {{ currentPage }} de {{ totalPages }} 
+        ({{ totalItems }} prescritores)
+      </span>
+      
+      <button 
+        class="btn btn-sm btn-cancelar" 
+        (click)="onPageChange(currentPage + 1)"
+        [disabled]="currentPage >= totalPages"
+      >
+        Próxima
+      </button>
+    </div>
+  }
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<app-confirmation-modal
+  [isVisible]="showDeleteModal"
+  [title]="deleteModalTitle"
+  [message]="deleteModalMessage"
+  confirmText="Excluir"
+  cancelText="Cancelar"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+></app-confirmation-modal>
+
+<!-- Modal de histórico de auditoria -->
+<app-historico-auditoria
+  *ngIf="selectedPrescritorForAudit"
+  [entidade]="'prescritores'"
+  [entidadeId]="selectedPrescritorForAudit.id"
+  [fieldLabels]="getAuditFieldLabels()"
+  [showModal]="showAuditModal"
+  (modalClosed)="closeAuditModal()">
+</app-historico-auditoria>
+

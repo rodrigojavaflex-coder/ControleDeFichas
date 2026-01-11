@@ -16,6 +16,12 @@ import { VendasListComponent } from './components/vendas-list/vendas-list';
 import { BaixasListComponent } from './components/baixas-list/baixas-list';
 import { AcompanharVendasComponent } from './components/acompanhar-vendas/acompanhar-vendas';
 import { FechamentoVendasListComponent } from './components/fechamento-vendas-list/fechamento-vendas-list';
+import { ClientesListComponent } from './components/clientes-list/clientes-list';
+import { ClienteFormComponent } from './components/cliente-form/cliente-form';
+import { VendedoresListComponent } from './components/vendedores-list/vendedores-list';
+import { VendedorFormComponent } from './components/vendedor-form/vendedor-form';
+import { PrescritoresListComponent } from './components/prescritores-list/prescritores-list';
+import { PrescritorFormComponent } from './components/prescritor-form/prescritor-form';
 
 export const routes: Routes = [
   // Rota de configuração
@@ -117,6 +123,54 @@ export const routes: Routes = [
     component: PerfilListComponent,
     canActivate: [authGuard],
     pathMatch: 'full'
+  },
+  // Rotas de Clientes
+  {
+    path: 'clientes',
+    component: ClientesListComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'clientes/new',
+    component: ClienteFormComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'clientes/edit/:id',
+    component: ClienteFormComponent,
+    canActivate: [authGuard]
+  },
+  // Rotas de Vendedores
+  {
+    path: 'vendedores',
+    component: VendedoresListComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'vendedores/new',
+    component: VendedorFormComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'vendedores/edit/:id',
+    component: VendedorFormComponent,
+    canActivate: [authGuard]
+  },
+  // Rotas de Prescritores
+  {
+    path: 'prescritores',
+    component: PrescritoresListComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'prescritores/new',
+    component: PrescritorFormComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'prescritores/edit/:id',
+    component: PrescritorFormComponent,
+    canActivate: [authGuard]
   },
   
   // Home padrão

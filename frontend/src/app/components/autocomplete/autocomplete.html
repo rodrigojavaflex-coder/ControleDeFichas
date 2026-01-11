@@ -1,0 +1,89 @@
+<div class="autocomplete-wrapper">
+  <div class="autocomplete-input-wrapper">
+    <input
+      #inputElement
+      [attr.id]="id || null"
+      type="text"
+      class="campo"
+      autocomplete="off"
+      [class.invalido]="error"
+      [placeholder]="placeholder"
+      [disabled]="disabled"
+      [(ngModel)]="searchText"
+      (ngModelChange)="onInputChange($event)"
+      (keydown)="onInputKeyDown($event)"
+      (focus)="onInputFocus()"
+      (blur)="onTouched()">
+    
+    <button
+      *ngIf="selectedItem && !disabled"
+      type="button"
+      class="autocomplete-clear"
+      (click)="clearSelection(); $event.stopPropagation()"
+      title="Limpar seleção">
+      <i class="fas fa-times"></i>
+    </button>
+    
+    <button
+      *ngIf="!selectedItem && !disabled"
+      type="button"
+      class="autocomplete-search-icon"
+      [class.loading]="loading"
+      disabled>
+      <i *ngIf="!loading" class="fas fa-search"></i>
+      <i *ngIf="loading" class="fas fa-spinner fa-spin"></i>
+    </button>
+  </div>
+
+  <div
+    *ngIf="showDropdown"
+    #dropdown
+    class="autocomplete-dropdown">
+    <div
+      *ngIf="loading"
+      class="autocomplete-item autocomplete-loading">
+      <i class="fas fa-spinner fa-spin"></i> Buscando...
+    </div>
+    
+    <div
+      *ngIf="!loading && results.length === 0 && searchText.trim().length >= 2 && !selectedItem"
+      class="autocomplete-item autocomplete-empty">
+      <div style="padding: 1rem; text-align: center;">
+        <div style="margin-bottom: 0.75rem; color: var(--cor-texto-secundario);">
+          Nenhum resultado encontrado
+        </div>
+        <button
+          *ngIf="canCreateNew()"
+          type="button"
+          class="autocomplete-create-new"
+          (click)="onCreateNew(); $event.stopPropagation()"
+          [class.highlighted]="highlightedIndex === -1">
+          <i class="fas fa-plus"></i>
+          Criar novo {{ type === 'cliente' ? 'cliente' : 'prescritor' }}: "{{ searchText }}"
+        </button>
+      </div>
+    </div>
+    
+    <div
+      *ngFor="let item of results; let i = index"
+      class="autocomplete-item"
+      (click)="selectItem(item)"
+      [class.selected]="selectedItem?.id === item.id"
+      [class.highlighted]="highlightedIndex === i">
+      <div class="autocomplete-item-primary">
+        {{ getDisplayText(item) }}
+      </div>
+      <div
+        *ngIf="getSecondaryText(item)"
+        class="autocomplete-item-secondary">
+        {{ getSecondaryText(item) }}
+      </div>
+    </div>
+  </div>
+
+  <div
+    *ngIf="error"
+    class="autocomplete-error">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+  </div>
+</div>

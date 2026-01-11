@@ -23,6 +23,9 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { RegistrarEnvioDto } from './dto/registrar-envio.dto';
 import { AtualizarValorCompraDto } from './dto/atualizar-valor-compra.dto';
+import { Cliente } from '../clientes/entities/cliente.entity';
+import { Vendedor } from '../vendedores/entities/vendedor.entity';
+import { Prescritor } from '../prescritores/entities/prescritor.entity';
 
 interface FecharVendaFalha {
   id: string;
@@ -42,6 +45,12 @@ export class VendasService {
   constructor(
     @InjectRepository(Venda)
     private readonly vendaRepository: Repository<Venda>,
+    @InjectRepository(Cliente)
+    private readonly clienteRepository: Repository<Cliente>,
+    @InjectRepository(Vendedor)
+    private readonly vendedorRepository: Repository<Vendedor>,
+    @InjectRepository(Prescritor)
+    private readonly prescritorRepository: Repository<Prescritor>,
     private readonly configService: ConfigService,
   ) {}
 
@@ -74,17 +83,63 @@ export class VendasService {
         );
       }
 
+      // Validar que os IDs existem
+      const cliente = await this.clienteRepository.findOneBy({ id: createVendaDto.clienteId });
+      if (!cliente) {
+        throw new NotFoundException(`Cliente com ID ${createVendaDto.clienteId} não encontrado`);
+      }
+
+      const vendedor = await this.vendedorRepository.findOneBy({ id: createVendaDto.vendedorId });
+      if (!vendedor) {
+        throw new NotFoundException(`Vendedor com ID ${createVendaDto.vendedorId} não encontrado`);
+      }
+
+      if (createVendaDto.prescritorId) {
+        const prescritor = await this.prescritorRepository.findOneBy({ id: createVendaDto.prescritorId });
+        if (!prescritor) {
+          throw new NotFoundException(`Prescritor com ID ${createVendaDto.prescritorId} não encontrado`);
+        }
+      }
+
+      // Buscar prescritor se fornecido
+      let prescritor: Prescritor | null = null;
+      if (createVendaDto.prescritorId) {
+        prescritor = await this.prescritorRepository.findOneBy({ id: createVendaDto.prescritorId });
+        if (!prescritor) {
+          throw new NotFoundException(`Prescritor com ID ${createVendaDto.prescritorId} não encontrado`);
+        }
+      }
+
       // Manter data como string YYYY-MM-DD para evitar conversão de timezone
+      // IMPORTANTE: Passar os objetos relacionados ao invés de apenas IDs
+      // O TypeORM precisa dos objetos para criar os relacionamentos corretamente
       const venda = this.vendaRepository.create({
-        ...createVendaDto,
-        dataVenda: createVendaDto.dataVenda as any, // TypeORM transformer cuidará da conversão
+        protocolo: createVendaDto.protocolo,
+        dataVenda: createVendaDto.dataVenda as any,
+        dataFechamento: createVendaDto.dataFechamento || null,
+        origem: createVendaDto.origem,
+        valorCompra: createVendaDto.valorCompra,
+        valorPago: createVendaDto.valorPago,
+        valorCliente: createVendaDto.valorCliente,
+        observacao: createVendaDto.observacao,
+        status: createVendaDto.status || VendaStatus.REGISTRADO,
+        unidade: createVendaDto.unidade,
+        ativo: createVendaDto.ativo,
+        // Passar os objetos relacionados
+        cliente: cliente,
+        vendedor: vendedor,
+        prescritor: prescritor || undefined,
       });
 
       const savedVenda = await this.vendaRepository.save(venda);
 
-      return savedVenda;
+      // Retornar venda com relacionamentos carregados
+      return await this.findOne(savedVenda.id);
     } catch (error) {
       this.logger.error('Error creating venda:', error);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
       throw error;
     }
   }
@@ -242,6 +297,11 @@ export class VendasService {
   ): Promise<PaginatedResponseDto<Venda>> {
     const queryBuilder = this.vendaRepository.createQueryBuilder('venda');
 
+    // Sempre fazer LEFT JOIN com as entidades relacionadas para garantir que os nomes estejam disponíveis
+    queryBuilder.leftJoinAndSelect('venda.cliente', 'cliente');
+    queryBuilder.leftJoinAndSelect('venda.vendedor', 'vendedor');
+    queryBuilder.leftJoinAndSelect('venda.prescritor', 'prescritor');
+
     // Aplicar filtros
     this.applyFilters(queryBuilder, findVendasDto);
 
@@ -267,7 +327,10 @@ export class VendasService {
   }
 
   async findOne(id: string): Promise<Venda> {
-    const venda = await this.vendaRepository.findOneBy({ id });
+    const venda = await this.vendaRepository.findOne({
+      where: { id },
+      relations: ['cliente', 'vendedor', 'prescritor'],
+    });
 
     if (!venda) {
       throw new NotFoundException(`Venda com ID ${id} não encontrada`);
@@ -285,6 +348,35 @@ export class VendasService {
         throw new ConflictException(
           `Não é possível editar uma venda com fechamento registrado em ${venda.dataFechamento}.`
         );
+      }
+
+      // Validar e buscar os objetos relacionados (se estiverem sendo atualizados)
+      let cliente: Cliente | null | undefined = undefined;
+      if (updateVendaDto.clienteId) {
+        cliente = await this.clienteRepository.findOneBy({ id: updateVendaDto.clienteId });
+        if (!cliente) {
+          throw new NotFoundException(`Cliente com ID ${updateVendaDto.clienteId} não encontrado`);
+        }
+      }
+
+      let vendedor: Vendedor | null | undefined = undefined;
+      if (updateVendaDto.vendedorId) {
+        vendedor = await this.vendedorRepository.findOneBy({ id: updateVendaDto.vendedorId });
+        if (!vendedor) {
+          throw new NotFoundException(`Vendedor com ID ${updateVendaDto.vendedorId} não encontrado`);
+        }
+      }
+
+      let prescritor: Prescritor | null | undefined = undefined;
+      if (updateVendaDto.prescritorId !== undefined) {
+        if (updateVendaDto.prescritorId) {
+          prescritor = await this.prescritorRepository.findOneBy({ id: updateVendaDto.prescritorId });
+          if (!prescritor) {
+            throw new NotFoundException(`Prescritor com ID ${updateVendaDto.prescritorId} não encontrado`);
+          }
+        } else {
+          prescritor = null; // Explicitamente null para remover o relacionamento
+        }
       }
 
       const valorCompraAtualizado =
@@ -324,13 +416,30 @@ export class VendasService {
         }
       }
 
-      // Manter data como string YYYY-MM-DD para evitar conversão de timezone
-      const updateData = {
-        ...updateVendaDto,
+      // Preparar dados de atualização
+      // IMPORTANTE: Remover os IDs do DTO e usar os objetos relacionados
+      const { clienteId, vendedorId, prescritorId, ...updateDataWithoutIds } = updateVendaDto;
+      
+      // Construir objeto de atualização com objetos relacionados
+      const updateData: any = {
+        ...updateDataWithoutIds,
         ...(updateVendaDto.dataVenda && { dataVenda: updateVendaDto.dataVenda as any }),
       };
 
-      await this.vendaRepository.update(id, updateData);
+      // Adicionar objetos relacionados se foram fornecidos
+      if (cliente !== undefined) {
+        updateData.cliente = cliente;
+      }
+      if (vendedor !== undefined) {
+        updateData.vendedor = vendedor;
+      }
+      if (prescritor !== undefined) {
+        updateData.prescritor = prescritor;
+      }
+
+      // Usar save() ao invés de update() para poder atualizar relacionamentos
+      Object.assign(venda, updateData);
+      await this.vendaRepository.save(venda);
 
       
       // Após atualizar a venda, recalcular o status baseado nas baixas
@@ -363,7 +472,8 @@ export class VendasService {
     }
 
     if (filters.cliente) {
-      queryBuilder.andWhere('venda.cliente ILIKE :cliente', {
+      // Buscar nas tabelas relacionadas usando LEFT JOIN (já feito no executeListQuery)
+      queryBuilder.andWhere('cliente.nome ILIKE :cliente', {
         cliente: `%${filters.cliente}%`,
       });
     }
@@ -375,13 +485,15 @@ export class VendasService {
     }
 
     if (filters.vendedor) {
-      queryBuilder.andWhere('venda.vendedor ILIKE :vendedor', {
+      // Buscar nas tabelas relacionadas usando LEFT JOIN (já feito no executeListQuery)
+      queryBuilder.andWhere('vendedor.nome ILIKE :vendedor', {
         vendedor: `%${filters.vendedor}%`,
       });
     }
 
     if (filters.prescritor) {
-      queryBuilder.andWhere('venda.prescritor ILIKE :prescritor', {
+      // Buscar nas tabelas relacionadas usando LEFT JOIN (já feito no executeListQuery)
+      queryBuilder.andWhere('prescritor.nome ILIKE :prescritor', {
         prescritor: `%${filters.prescritor}%`,
       });
     }

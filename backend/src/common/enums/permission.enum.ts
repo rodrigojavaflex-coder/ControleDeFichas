@@ -55,6 +55,27 @@ export enum Permission {
   VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
   VENDA_ACOMPANHAR = 'venda:acompanhar',
   VENDA_ACESSAR_FECHAMENTO = 'venda:acessar-fechamento',
+
+  // Clientes
+  CLIENTE_CREATE = 'cliente:create',
+  CLIENTE_READ = 'cliente:read',
+  CLIENTE_UPDATE = 'cliente:update',
+  CLIENTE_DELETE = 'cliente:delete',
+  CLIENTE_AUDIT = 'cliente:audit',
+
+  // Vendedores
+  VENDEDOR_CREATE = 'vendedor:create',
+  VENDEDOR_READ = 'vendedor:read',
+  VENDEDOR_UPDATE = 'vendedor:update',
+  VENDEDOR_DELETE = 'vendedor:delete',
+  VENDEDOR_AUDIT = 'vendedor:audit',
+
+  // Prescritores
+  PRESCRITOR_CREATE = 'prescritor:create',
+  PRESCRITOR_READ = 'prescritor:read',
+  PRESCRITOR_UPDATE = 'prescritor:update',
+  PRESCRITOR_DELETE = 'prescritor:delete',
+  PRESCRITOR_AUDIT = 'prescritor:audit',
 }
 
 export const PERMISSION_GROUPS = {
@@ -120,6 +141,27 @@ export const PERMISSION_GROUPS = {
     { key: Permission.VENDA_VIEW_VALOR_COMPRA, label: 'Visualizar valor de compra' },
     { key: Permission.VENDA_ACOMPANHAR, label: 'Acompanhar vendas por unidade' },
     { key: Permission.VENDA_ACESSAR_FECHAMENTO, label: 'Acessar tela de fechamento de vendas' },
+  ],
+  Clientes: [
+    { key: Permission.CLIENTE_CREATE, label: 'Criar clientes' },
+    { key: Permission.CLIENTE_READ, label: 'Visualizar clientes' },
+    { key: Permission.CLIENTE_UPDATE, label: 'Editar clientes' },
+    { key: Permission.CLIENTE_DELETE, label: 'Excluir clientes' },
+    { key: Permission.CLIENTE_AUDIT, label: 'Visualizar auditoria' },
+  ],
+  Vendedores: [
+    { key: Permission.VENDEDOR_CREATE, label: 'Criar vendedores' },
+    { key: Permission.VENDEDOR_READ, label: 'Visualizar vendedores' },
+    { key: Permission.VENDEDOR_UPDATE, label: 'Editar vendedores' },
+    { key: Permission.VENDEDOR_DELETE, label: 'Excluir vendedores' },
+    { key: Permission.VENDEDOR_AUDIT, label: 'Visualizar auditoria' },
+  ],
+  Prescritores: [
+    { key: Permission.PRESCRITOR_CREATE, label: 'Criar prescritores' },
+    { key: Permission.PRESCRITOR_READ, label: 'Visualizar prescritores' },
+    { key: Permission.PRESCRITOR_UPDATE, label: 'Editar prescritores' },
+    { key: Permission.PRESCRITOR_DELETE, label: 'Excluir prescritores' },
+    { key: Permission.PRESCRITOR_AUDIT, label: 'Visualizar auditoria' },
   ],
 };
 

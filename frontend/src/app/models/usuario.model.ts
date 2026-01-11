@@ -61,7 +61,28 @@ export enum Permission {
   VENDA_CANCELAR_FECHAMENTO = 'venda:cancelar-fechamento',
   VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
   VENDA_ACOMPANHAR = 'venda:acompanhar',
-  VENDA_ACESSAR_FECHAMENTO = 'venda:acessar-fechamento'
+  VENDA_ACESSAR_FECHAMENTO = 'venda:acessar-fechamento',
+
+  // Clientes
+  CLIENTE_CREATE = 'cliente:create',
+  CLIENTE_READ = 'cliente:read',
+  CLIENTE_UPDATE = 'cliente:update',
+  CLIENTE_DELETE = 'cliente:delete',
+  CLIENTE_AUDIT = 'cliente:audit',
+
+  // Vendedores
+  VENDEDOR_CREATE = 'vendedor:create',
+  VENDEDOR_READ = 'vendedor:read',
+  VENDEDOR_UPDATE = 'vendedor:update',
+  VENDEDOR_DELETE = 'vendedor:delete',
+  VENDEDOR_AUDIT = 'vendedor:audit',
+
+  // Prescritores
+  PRESCRITOR_CREATE = 'prescritor:create',
+  PRESCRITOR_READ = 'prescritor:read',
+  PRESCRITOR_UPDATE = 'prescritor:update',
+  PRESCRITOR_DELETE = 'prescritor:delete',
+  PRESCRITOR_AUDIT = 'prescritor:audit'
 }
 
 export interface PermissionGroup {

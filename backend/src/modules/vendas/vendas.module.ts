@@ -6,13 +6,16 @@ import { VendasService } from './vendas.service';
 import { VendasController } from './vendas.controller';
 import { Venda } from './entities/venda.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
+import { Cliente } from '../clientes/entities/cliente.entity';
+import { Vendedor } from '../vendedores/entities/vendedor.entity';
+import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 import { BaixasModule } from '../baixas/baixas.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Venda, Usuario]),
+    TypeOrmModule.forFeature([Venda, Usuario, Cliente, Vendedor, Prescritor]),
     JwtModule,
     ConfigModule,
     forwardRef(() => AuditoriaModule),

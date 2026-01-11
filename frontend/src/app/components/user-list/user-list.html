@@ -1,13 +1,4 @@
 <div class="user-list-container">
-  <div class="header">
-    <h2>Lista de Usuários</h2>
-    @if (canCreateUser()) {
-      <button class="btn btn-novo" (click)="createUser()">
-        Novo Usuário
-      </button>
-    }
-  </div>
-
   <!-- Filtros -->
   <div class="filters">
     <div class="filter-group">
@@ -31,6 +22,11 @@
     <button class="btn btn-limpar" (click)="clearFilters()">
       Limpar Filtros
     </button>
+    @if (canCreateUser()) {
+      <button class="btn btn-novo" (click)="createUser()">
+        Novo Usuário
+      </button>
+    }
   </div>
 
   <!-- Loading -->

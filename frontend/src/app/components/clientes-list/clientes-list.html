@@ -1,0 +1,161 @@
+<div class="clientes-list-container">
+  <!-- Filtros -->
+  <div class="filters">
+    <div class="filter-group">
+      <input 
+        type="text" 
+        placeholder="Filtrar por nome"
+        [(ngModel)]="nomeFilter"
+        (input)="onFilterChange()"
+        class="form-control"
+      >
+    </div>
+    <div class="filter-group">
+      <input 
+        type="text" 
+        placeholder="Filtrar por CPF"
+        [(ngModel)]="cpfFilter"
+        (input)="onFilterChange()"
+        class="form-control"
+      >
+    </div>
+    <div class="filter-group">
+      <select 
+        [(ngModel)]="unidadeFilter"
+        (change)="onFilterChange()"
+        class="form-control"
+        [disabled]="unidadeDisabled"
+      >
+        <option value="">Todas as unidades</option>
+        <option *ngFor="let unidade of unidades" [value]="unidade">
+          {{ unidade }}
+        </option>
+      </select>
+    </div>
+    <button class="btn btn-limpar" (click)="clearFilters()">
+      Limpar Filtros
+    </button>
+    @if (canCreateCliente()) {
+      <button class="btn btn-novo" (click)="createCliente()">
+        Novo Cliente
+      </button>
+    }
+  </div>
+
+  <!-- Loading -->
+  @if (loading) {
+    <div class="loading">
+      Carregando clientes...
+    </div>
+  }
+
+  <!-- Error -->
+  @if (error) {
+    <div class="alert alert-error">
+      {{ error }}
+    </div>
+  }
+
+  <!-- Tabela de clientes -->
+  @if (!loading && !error) {
+    <div class="table-container">
+      <table class="clientes-table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Email</th>
+            <th>Telefone</th>
+            <th>Unidade</th>
+            <th>Criado em</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cliente of items">
+            <td>{{ cliente.nome }}</td>
+            <td>{{ cliente.cpf || '-' }}</td>
+            <td>{{ cliente.email || '-' }}</td>
+            <td>{{ cliente.telefone || '-' }}</td>
+            <td>{{ getUnidadeLabel(cliente.unidade) }}</td>
+            <td>{{ formatDate(cliente.criadoEm) }}</td>
+            <td class="action-buttons">
+              @if (canEditCliente()) {
+                <button class="btn btn-sm btn-editar" (click)="editCliente(cliente)">
+                  Editar
+                </button>
+              }
+              @if (canAuditCliente()) {
+                <button class="btn btn-sm btn-auditoria" (click)="abrirAuditoriaCliente(cliente)" title="Ver histórico de auditoria">
+                  <i class="fas fa-history"></i>
+                  Auditoria
+                </button>
+              }
+              @if (canDeleteCliente()) {
+                <button class="btn btn-sm btn-excluir" (click)="deleteCliente(cliente)">
+                  Excluir
+                </button>
+              }
+            </td>
+          </tr>
+          @if (items.length === 0) {
+            <tr class="no-data">
+              <td colspan="7" class="text-center">
+                <i class="fas fa-inbox"></i>
+                Nenhum cliente encontrado
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Paginação -->
+  @if (totalPages > 1) {
+    <div class="pagination">
+      <button 
+        class="btn btn-sm btn-cancelar" 
+        (click)="onPageChange(currentPage - 1)"
+        [disabled]="currentPage <= 1"
+      >
+        Anterior
+      </button>
+      
+      <span class="page-info">
+        Página {{ currentPage }} de {{ totalPages }} 
+        ({{ totalItems }} clientes)
+      </span>
+      
+      <button 
+        class="btn btn-sm btn-cancelar" 
+        (click)="onPageChange(currentPage + 1)"
+        [disabled]="currentPage >= totalPages"
+      >
+        Próxima
+      </button>
+    </div>
+  }
+</div>
+
+<!-- Modal de confirmação de exclusão -->
+<app-confirmation-modal
+  [isVisible]="showDeleteModal"
+  [title]="deleteModalTitle"
+  [message]="deleteModalMessage"
+  confirmText="Excluir"
+  cancelText="Cancelar"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+></app-confirmation-modal>
+
+<!-- Modal de histórico de auditoria -->
+<app-historico-auditoria
+  *ngIf="selectedClienteForAudit"
+  [entidade]="'clientes'"
+  [entidadeId]="selectedClienteForAudit.id"
+  [fieldLabels]="getAuditFieldLabels()"
+  [showModal]="showAuditModal"
+  (modalClosed)="closeAuditModal()">
+</app-historico-auditoria>
+

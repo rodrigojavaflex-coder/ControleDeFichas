@@ -292,6 +292,30 @@ export class LancarBaixaModalComponent {
     return labels[status] || status;
   }
 
+  getClienteNome(venda: Venda): string {
+    if (venda.cliente && typeof venda.cliente === 'object') {
+      return venda.cliente.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.cliente as any) || 'Cliente não informado';
+  }
+
+  getVendedorNome(venda: Venda): string {
+    if (venda.vendedor && typeof venda.vendedor === 'object') {
+      return venda.vendedor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.vendedor as any) || 'Não informado';
+  }
+
+  getPrescritorNome(venda: Venda): string | null {
+    if (venda.prescritor && typeof venda.prescritor === 'object') {
+      return venda.prescritor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.prescritor as any) || null;
+  }
+
   getStatusClass(status: VendaStatus): string {
     const classes = {
       [VendaStatus.REGISTRADO]: 'status-registrado',
@@ -446,8 +470,8 @@ export class LancarBaixaModalComponent {
       return;
     }
 
-    const vendedor = this.venda.vendedor || 'Não informado';
-    const cliente = this.venda.cliente || 'Cliente não informado';
+    const vendedor = this.getVendedorNome(this.venda);
+    const cliente = this.getClienteNome(this.venda);
     const protocolo = this.venda.protocolo || '-';
     const valorPago = this.formatCurrency(baixa.valorBaixa || 0);
     const tipoLabel = this.getTipoBaixaLabel(baixa.tipoDaBaixa);

@@ -6,7 +6,7 @@ import { VendaService } from '../../services/vendas.service';
 import { BaixasService } from '../../services/baixas.service';
 import { AuthService } from '../../services/auth.service';
 import { ConfiguracaoService } from '../../services/configuracao.service';
-import { Venda, VendaPaginatedResponse, FindVendasDto, VendaOrigem, VendaStatus, Unidade } from '../../models/venda.model';
+import { Venda, VendaPaginatedResponse, FindVendasDto, VendaOrigem, VendaStatus, Unidade, CreateVendaDto } from '../../models/venda.model';
 import { Baixa, TipoDaBaixa, ProcessarBaixasEmMassaResultado } from '../../models/baixa.model';
 import * as XLSX from 'xlsx';
 import { Permission } from '../../models/usuario.model';
@@ -100,13 +100,13 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   // Storage key para persistência de filtros
   private readonly FILTERS_STORAGE_KEY = 'vendas_list_filters';
 
-  // Nova venda (para registro direto na lista)
-  novaVenda: Partial<Venda> = {
+  // Nova venda (para registro direto na lista - funcionalidade descontinuada, usar modal)
+  novaVenda: Partial<CreateVendaDto> = {
     protocolo: '',
     dataVenda: new Date().toISOString().split('T')[0], // Data atual
-    cliente: '',
+    clienteId: '',
     origem: VendaOrigem.GOIANIA,
-    vendedor: '',
+    vendedorId: '',
     valorCompra: 0,
     valorCliente: 0,
     observacao: '',
@@ -766,13 +766,13 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       case 'dataEnvio':
         return venda.dataEnvio ? new Date(venda.dataEnvio).getTime() : null;
       case 'cliente':
-        return venda.cliente;
+        return this.getClienteNome(venda);
       case 'origem':
         return this.getOrigemLabel(venda.origem);
       case 'vendedor':
-        return venda.vendedor;
+        return this.getVendedorNome(venda);
       case 'prescritor':
-        return venda.prescritor || '';
+        return this.getPrescritorNome(venda) || '';
       case 'ativo':
         return venda.ativo;
       case 'valorCompra':
@@ -889,18 +889,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
 
   // Métodos para registro direto na lista
   showNewVendaRow(): void {
-    this.showNewRow = true;
-    this.novaVenda = {
-      protocolo: '',
-      dataVenda: new Date().toISOString().split('T')[0],
-      cliente: '',
-      origem: VendaOrigem.GOIANIA,
-      vendedor: '',
-      valorCompra: 0,
-      valorCliente: 0,
-      observacao: '',
-      status: VendaStatus.REGISTRADO
-    };
+    // Funcionalidade descontinuada - usar modal de venda ao invés
+    this.openNewVendaModal();
   }
 
   cancelNewVenda(): void {
@@ -909,8 +899,10 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   }
 
   saveNewVenda(): void {
-    if (!this.novaVenda.protocolo || !this.novaVenda.cliente || !this.novaVenda.vendedor) {
-      this.errorModalService.show('Preencha todos os campos obrigatórios', 'Erro de Validação');
+    // Esta funcionalidade foi descontinuada - usar o modal de venda ao invés
+    // Mantido para compatibilidade, mas deve usar modal com autocomplete
+    if (!this.novaVenda.protocolo || !this.novaVenda.clienteId || !this.novaVenda.vendedorId) {
+      this.errorModalService.show('Preencha todos os campos obrigatórios. Use o botão "Nova Venda" para criar vendas.', 'Erro de Validação');
       return;
     }
 
@@ -1172,8 +1164,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
                     <td>${venda.protocolo}</td>
                     <td>${this.formatDate(venda.dataVenda)}</td>
                     <td>${venda.dataFechamento ? this.formatDate(venda.dataFechamento) : '-'}</td>
-                    <td>${venda.cliente}</td>
-                    <td>${venda.vendedor}</td>
+                    <td>${this.getClienteNome(venda)}</td>
+                    <td>${this.getVendedorNome(venda)}</td>
                     ${valorCompraColuna}
                     <td>${this.formatCurrency(venda.valorCliente || 0)}</td>
                     <td>${this.formatCurrency(this.getValorBaixadoForVenda(venda.id))}</td>
@@ -1313,10 +1305,10 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         Protocolo: venda.protocolo,
         'Data Venda': this.formatDate(venda.dataVenda),
         'Data Fechamento': venda.dataFechamento ? this.formatDate(venda.dataFechamento) : '-',
-        Cliente: venda.cliente,
+        Cliente: this.getClienteNome(venda),
         'Comprado em': this.getOrigemLabel(venda.origem),
-        Vendedor: venda.vendedor,
-        Prescritor: venda.prescritor || '-',
+        Vendedor: this.getVendedorNome(venda),
+        Prescritor: this.getPrescritorNome(venda) || '-',
         'Valor Cliente': venda.valorCliente || 0,
         'Valor Pago': this.getValorBaixadoForVenda(venda.id),
         Status: this.getStatusLabel(venda.status),
@@ -1545,6 +1537,30 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       [VendaOrigem.OUTRO]: 'Outro'
     };
     return labels[origem] || origem;
+  }
+
+  getClienteNome(venda: Venda): string {
+    if (venda.cliente && typeof venda.cliente === 'object') {
+      return venda.cliente.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.cliente as any) || '-';
+  }
+
+  getVendedorNome(venda: Venda): string {
+    if (venda.vendedor && typeof venda.vendedor === 'object') {
+      return venda.vendedor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.vendedor as any) || '-';
+  }
+
+  getPrescritorNome(venda: Venda): string | null {
+    if (venda.prescritor && typeof venda.prescritor === 'object') {
+      return venda.prescritor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.prescritor as any) || null;
   }
 
   getStatusLabel(status: VendaStatus): string {

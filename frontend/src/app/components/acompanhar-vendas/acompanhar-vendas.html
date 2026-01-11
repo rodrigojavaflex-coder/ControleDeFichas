@@ -314,10 +314,10 @@
             <td>{{ formatDate(venda.dataEnvio) || '-' }}</td>
             <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorCompra) }}</td>
             <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorPago) }}</td>
-            <td>{{ venda.cliente }}</td>
+            <td>{{ getClienteNome(venda) }}</td>
             <td>{{ getOrigemLabel(venda.origem) }}</td>
-            <td>{{ venda.vendedor }}</td>
-            <td>{{ venda.prescritor || '-' }}</td>
+            <td>{{ getVendedorNome(venda) }}</td>
+            <td>{{ getPrescritorNome(venda) || '-' }}</td>
             <td>{{ venda.unidade || '-' }}</td>
             <td class="observacao-cell">{{ venda.observacao || '-' }}</td>
           </tr>

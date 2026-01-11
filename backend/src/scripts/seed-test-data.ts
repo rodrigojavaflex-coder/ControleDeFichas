@@ -14,14 +14,23 @@ async function seedTestData() {
 
   try {
     console.log('🌱 Iniciando seed de dados de teste...');
-
+    console.log('⚠️  ATENÇÃO: Este script precisa ser atualizado para usar clienteId e vendedorId.');
+    console.log('⚠️  Por favor, crie primeiro os clientes e vendedores necessários.');
+    
+    // TODO: Atualizar este script para criar clientes/vendedores primeiro
+    // e depois criar vendas usando clienteId e vendedorId
+    /*
+    // Criar cliente e vendedor primeiro
+    const cliente = await clientesService.create({ ... });
+    const vendedor = await vendedoresService.create({ ... });
+    
     // Criar uma venda de teste
     const venda = await vendasService.create({
       protocolo: 'TEST-001',
       dataVenda: '2025-10-28',
-      cliente: 'Cliente Teste',
+      clienteId: cliente.id,
       origem: VendaOrigem.GOIANIA,
-      vendedor: 'Vendedor Teste',
+      vendedorId: vendedor.id,
       valorCompra: 1400.00,
       valorCliente: 1500.00,
       status: VendaStatus.REGISTRADO,
@@ -30,7 +39,10 @@ async function seedTestData() {
     });
 
     console.log('✅ Venda criada:', venda.id);
-
+    */
+    throw new Error('Script de seed precisa ser atualizado para usar clienteId e vendedorId');
+    
+    /*
     // Criar algumas baixas para esta venda
     const baixa1 = await baixasService.create({
       idvenda: venda.id,
@@ -61,6 +73,7 @@ async function seedTestData() {
     console.log('Valor Restante:', valorRestante);
 
     console.log('🎉 Seed concluído com sucesso!');
+    */
   } catch (error) {
     console.error('❌ Erro durante seed:', error);
   } finally {

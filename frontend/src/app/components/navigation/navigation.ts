@@ -72,27 +72,66 @@ export class NavigationComponent implements OnInit, OnDestroy {
       ]
     },
     {
-      label: 'Cadastro',
+      label: 'Principal',
       icon: 'feather-file-text',
       requiredPermissions: [],
       children: [
         {
-          label: 'Fichas Técnicas',
-          route: '/fichas-tecnicas',
+          label: 'Fichas',
           icon: 'feather-layers',
-          requiredPermissions: [Permission.FICHA_TECNICA_CREATE, Permission.FICHA_TECNICA_READ, Permission.FICHA_TECNICA_UPDATE, Permission.FICHA_TECNICA_DELETE]
+          requiredPermissions: [],
+          children: [
+            {
+              label: 'Fichas Técnicas',
+              route: '/fichas-tecnicas',
+              icon: 'feather-layers',
+              requiredPermissions: [Permission.FICHA_TECNICA_CREATE, Permission.FICHA_TECNICA_READ, Permission.FICHA_TECNICA_UPDATE, Permission.FICHA_TECNICA_DELETE]
+            }
+          ]
         },
         {
           label: 'Vendas',
-          route: '/vendas',
           icon: 'feather-shopping-cart',
-          requiredPermissions: [Permission.VENDA_CREATE, Permission.VENDA_READ, Permission.VENDA_UPDATE, Permission.VENDA_DELETE]
+          requiredPermissions: [],
+          children: [
+            {
+              label: 'Vendas',
+              route: '/vendas',
+              icon: 'feather-shopping-cart',
+              requiredPermissions: [Permission.VENDA_CREATE, Permission.VENDA_READ, Permission.VENDA_UPDATE, Permission.VENDA_DELETE]
+            },
+            {
+              label: 'Fechamento',
+              route: '/fechamento-vendas',
+              icon: 'feather-check-circle',
+              requiredPermissions: [Permission.VENDA_ACESSAR_FECHAMENTO]
+            }
+          ]
         },
         {
-          label: 'Fechamento de Vendas',
-          route: '/fechamento-vendas',
-          icon: 'feather-check-circle',
-          requiredPermissions: [Permission.VENDA_ACESSAR_FECHAMENTO]
+          label: 'Cadastros',
+          icon: 'feather-user',
+          requiredPermissions: [],
+          children: [
+            {
+              label: 'Clientes',
+              route: '/clientes',
+              icon: 'feather-user',
+              requiredPermissions: [Permission.CLIENTE_CREATE, Permission.CLIENTE_READ, Permission.CLIENTE_UPDATE, Permission.CLIENTE_DELETE]
+            },
+            {
+              label: 'Vendedores',
+              route: '/vendedores',
+              icon: 'feather-user-check',
+              requiredPermissions: [Permission.VENDEDOR_CREATE, Permission.VENDEDOR_READ, Permission.VENDEDOR_UPDATE, Permission.VENDEDOR_DELETE]
+            },
+            {
+              label: 'Prescritores',
+              route: '/prescritores',
+              icon: 'feather-user-plus',
+              requiredPermissions: [Permission.PRESCRITOR_CREATE, Permission.PRESCRITOR_READ, Permission.PRESCRITOR_UPDATE, Permission.PRESCRITOR_DELETE]
+            }
+          ]
         }
       ]
     },
@@ -211,7 +250,11 @@ export class NavigationComponent implements OnInit, OnDestroy {
    */
   isSubmenuActive(item: MenuItem): boolean {
     if (!item.children) return false;
-    return item.children.some(child => child.route && this.isRouteActive(child.route));
+    return item.children.some(child => {
+      if (child.route && this.isRouteActive(child.route)) return true;
+      if (child.children) return this.isSubmenuActive(child);
+      return false;
+    });
   }
 
   /**

@@ -1,6 +1,25 @@
 <div class="configuracao-container">
   <h2 class="form-title">Configuração do Sistema</h2>
-  <form [formGroup]="form" (ngSubmit)="onSubmit()">
+  
+  <!-- Tabs -->
+  <div class="tabs">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'geral'"
+      (click)="activeTab = 'geral'">
+      Configurações Gerais
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'migracao'"
+      (click)="activeTab = 'migracao'">
+      Migrações
+    </button>
+  </div>
+
+  <!-- Tab: Configurações Gerais -->
+  @if (activeTab === 'geral') {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
     <div class="form-group">
       <label for="nomeCliente" class="form-label">Nome do Cliente</label>
       <input id="nomeCliente" type="text" formControlName="nomeCliente" class="form-input" placeholder="Digite o nome do cliente" />
@@ -79,19 +98,218 @@
         }
       </div>
     </div>
-    <button type="submit" class="btn-primary" [disabled]="loading || form.invalid">
-      {{ loading ? 'Salvando...' : 'Salvar Configuração' }}
-    </button>
-  </form>
+      <button type="submit" class="btn-primary" [disabled]="loading || form.invalid">
+        {{ loading ? 'Salvando...' : 'Salvar Configuração' }}
+      </button>
+    </form>
+  }
 
-  @if (success) {
-    <div class="alert alert-success">
-      {{ success }}
+  <!-- Tab: Migrações -->
+  @if (activeTab === 'migracao') {
+    <div class="migracao-section">
+      <h3 class="section-title">Migração de Dados</h3>
+      <p class="section-description">
+        Execute as migrations do banco de dados e importe dados dos bancos legados Firebird.
+      </p>
+
+      <!-- Executar Migration -->
+      <div class="migracao-item">
+        <div class="migracao-header">
+          <h4>1. Executar Migration do Banco</h4>
+          <p>Adiciona as colunas de relacionamento (clienteId, vendedorId, prescritorId) na tabela vendas.</p>
+        </div>
+        <button 
+          type="button" 
+          class="btn-migracao" 
+          (click)="executarMigration()"
+          [disabled]="migrationLoading">
+          @if (migrationLoading) {
+            Executando...
+          } @else {
+            Executar Migration
+          }
+        </button>
+        @if (migrationResult) {
+          <div class="result-box success">
+            <strong>✓ Sucesso:</strong> {{ migrationResult.message }}
+          </div>
+        }
+      </div>
+
+      <!-- Importar Dados -->
+      <div class="migracao-item">
+        <div class="migracao-header">
+          <h4>2. Importar Dados dos Bancos Legados</h4>
+          <p>Busca dados nos bancos Firebird e cria/vincula os relacionamentos nas vendas.</p>
+        </div>
+        <button 
+          type="button" 
+          class="btn-migracao" 
+          (click)="importarDados()"
+          [disabled]="importLoading || !migrationResult">
+          @if (importLoading) {
+            Importando...
+          } @else {
+            Importar Dados
+          }
+        </button>
+        
+        <!-- Barra de Progresso -->
+        @if (importProgress && importLoading) {
+          <div class="progress-container">
+            <div class="progress-header">
+              <span class="progress-text">
+                Processando: {{ importProgress.vendasProcessadas }} de {{ importProgress.totalVendas }} vendas
+                ({{ getProgressPercent() }}%)
+              </span>
+            </div>
+            <div class="progress-bar">
+              <div 
+                class="progress-fill" 
+                [style.width.%]="getProgressPercent()">
+              </div>
+            </div>
+            <div class="progress-stats">
+              <span>Clientes: {{ importProgress.clientesCriados }}</span>
+              <span>Vendedores: {{ importProgress.vendedoresCriados }}</span>
+              <span>Prescritores: {{ importProgress.prescritoresCriados }}</span>
+              @if (importProgress.erros > 0) {
+                <span class="error">Erros: {{ importProgress.erros }}</span>
+              }
+            </div>
+          </div>
+        }
+        
+        @if (importResult) {
+          <div class="result-box success">
+            <strong>✓ Importação Concluída:</strong>
+            <ul>
+              <li>Total de vendas processadas: {{ importResult.totalVendas }}</li>
+              <li>Vendas atualizadas: {{ importResult.vendasAtualizadas }}</li>
+              <li>Clientes criados: {{ importResult.clientesCriados }}</li>
+              <li>Vendedores criados: {{ importResult.vendedoresCriados }}</li>
+              <li>Prescritores criados: {{ importResult.prescritoresCriados }}</li>
+              @if (importResult.erros.length > 0) {
+                <li class="error">Erros: {{ importResult.erros.length }}</li>
+              }
+            </ul>
+            @if (importResult.erros.length > 0) {
+              <details class="erros-details">
+                <summary>Ver erros</summary>
+                <ul>
+                  @for (erro of importResult.erros; track erro.vendaId) {
+                    <li>{{ erro.protocolo }}: {{ erro.motivo }}</li>
+                  }
+                </ul>
+              </details>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Importar Todos os Cadastros -->
+      <div class="migracao-item">
+        <div class="migracao-header">
+          <h4>3. Importar Todos os Cadastros das Bases Legadas</h4>
+          <p>Migra TODOS os clientes e prescritores das bases Firebird, facilitando consultas e cadastros de vendas futuras. Vendedores são migrados apenas durante a migração de vendas.</p>
+        </div>
+        <button 
+          type="button" 
+          class="btn-migracao" 
+          (click)="importarTodosCadastros()"
+          [disabled]="cadastrosLoading">
+          @if (cadastrosLoading) {
+            Importando Cadastros...
+          } @else {
+            Importar Todos os Cadastros
+          }
+        </button>
+        
+        <!-- Barra de Progresso Cadastros -->
+        @if (cadastrosProgress && cadastrosLoading) {
+          <div class="progress-container">
+            <div class="progress-header">
+              <span class="progress-text">
+                {{ getEtapaTexto() }} - {{ getCadastrosProgressPercent() }}%
+              </span>
+            </div>
+            <div class="progress-bar">
+              <div 
+                class="progress-fill" 
+                [style.width.%]="getCadastrosProgressPercent()">
+              </div>
+            </div>
+            <div class="progress-stats">
+              <span>Clientes: {{ cadastrosProgress.clientesProcessados }}/{{ cadastrosProgress.totalClientes }} ({{ cadastrosProgress.clientesCriados }} novos)</span>
+              <span>Prescritores: {{ cadastrosProgress.prescritoresProcessados }}/{{ cadastrosProgress.totalPrescritores }} ({{ cadastrosProgress.prescritoresCriados }} novos)</span>
+              @if (cadastrosProgress.erros > 0) {
+                <span class="error">Erros: {{ cadastrosProgress.erros }}</span>
+              }
+            </div>
+          </div>
+        }
+        
+        @if (cadastrosResult) {
+          <div class="result-box success">
+            <strong>✓ Migração de Cadastros Concluída:</strong>
+            <ul>
+              <li>Clientes criados: {{ cadastrosResult.clientesCriados }}</li>
+              <li>Prescritores criados: {{ cadastrosResult.prescritoresCriados }}</li>
+              @if (cadastrosResult.erros > 0) {
+                <li class="error">Erros: {{ cadastrosResult.erros }}</li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+
+      <!-- Remover Campos Texto -->
+      <div class="migracao-item migracao-item-warning">
+        <div class="migracao-header">
+          <h4>4. Remover Campos Texto (⚠️ IRREVERSÍVEL)</h4>
+          <p>
+            <strong>⚠️ ATENÇÃO:</strong> Esta operação remove permanentemente os campos texto (cliente, vendedor, prescritor) 
+            da tabela vendas. Execute APENAS após validar que todos os dados foram migrados corretamente e 
+            que você fez backup do banco de dados. A migration inclui verificações de segurança que bloqueiam 
+            a execução se houver vendas sem relacionamento válido.
+          </p>
+          <div class="warning-box">
+            <strong>✓ Checklist antes de executar:</strong>
+            <ul>
+              <li>Fez backup completo do banco de dados</li>
+              <li>Executou e validou o passo 2 (Importar Dados dos Bancos Legados)</li>
+              <li>Verificou que todas as vendas têm clienteId e vendedorId válidos</li>
+              <li>Todos os relacionamentos estão funcionando corretamente</li>
+            </ul>
+          </div>
+        </div>
+        <button 
+          type="button" 
+          class="btn-migracao btn-migracao-danger" 
+          (click)="removerCamposTexto()"
+          [disabled]="removerCamposTextoLoading">
+          @if (removerCamposTextoLoading) {
+            Removendo Campos...
+          } @else {
+            ⚠️ Remover Campos Texto
+          }
+        </button>
+        
+        @if (removerCamposTextoResult) {
+          <div class="result-box" [class.success]="removerCamposTextoResult.success" [class.error]="!removerCamposTextoResult.success">
+            <strong>{{ removerCamposTextoResult.success ? '✓' : '✗' }} {{ removerCamposTextoResult.success ? 'Sucesso' : 'Erro' }}:</strong>
+            {{ removerCamposTextoResult.message }}
+          </div>
+        }
+      </div>
     </div>
   }
+
+  <!-- Mensagens de sucesso/erro -->
+  @if (success && activeTab === 'geral') {
+    <div class="alert alert-success">{{ success }}</div>
+  }
   @if (error) {
-    <div class="alert alert-danger">
-      {{ error }}
-    </div>
+    <div class="alert alert-danger">{{ error }}</div>
   }
 </div>

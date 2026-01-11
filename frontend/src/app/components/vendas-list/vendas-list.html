@@ -381,12 +381,12 @@
             <td>{{ venda.protocolo }}</td>
             <td>{{ formatDate(venda.dataVenda) }}</td>
             <td>{{ venda.dataEnvio ? formatDate(venda.dataEnvio) : '-' }}</td>
-            <td>{{ venda.cliente }}</td>
+            <td>{{ getClienteNome(venda) }}</td>
             <td>{{ getOrigemLabel(venda.origem) }}</td>
-            <td>{{ venda.vendedor }}</td>
-            <td>{{ venda.prescritor || '-' }}</td>
+            <td>{{ getVendedorNome(venda) }}</td>
+            <td>{{ getPrescritorNome(venda) || '-' }}</td>
             <td>{{ venda.ativo || '-' }}</td>
-            <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorCompra) }}</td>
+            <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorCompra || 0) }}</td>
             <td>{{ formatCurrency(venda.valorCliente) }}</td>
             <td>{{ formatCurrency(getValorBaixadoForVenda(venda.id)) }}</td>
             <td>

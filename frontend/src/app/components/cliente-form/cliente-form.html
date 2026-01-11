@@ -1,0 +1,150 @@
+<div class="cliente-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar Cliente' : 'Novo Cliente' }}</h2>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    Carregando dados do cliente...
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+  </div>
+
+  <!-- Formulário -->
+  <form *ngIf="!loading" [formGroup]="clienteForm" (ngSubmit)="onSubmit()" class="cliente-form">
+    
+    <!-- Nome -->
+    <div class="form-group">
+      <label for="nome" class="form-label">Nome *</label>
+      <input
+        id="nome"
+        type="text"
+        formControlName="nome"
+        class="form-control"
+        [class.error]="nome?.invalid && nome?.touched"
+        placeholder="Digite o nome completo"
+      >
+      <div *ngIf="nome?.invalid && nome?.touched" class="error-message">
+        {{ getErrorMessage('nome') }}
+      </div>
+    </div>
+
+    <!-- Código do Cliente -->
+    <div class="form-group">
+      <label for="cdcliente" class="form-label">Código (Sistema de Produção)</label>
+      <input
+        id="cdcliente"
+        type="number"
+        formControlName="cdcliente"
+        class="form-control"
+        placeholder="Código no sistema de produção"
+      >
+    </div>
+
+    <!-- CPF -->
+    <div class="form-group">
+      <label for="cpf" class="form-label">CPF</label>
+      <input
+        id="cpf"
+        type="text"
+        formControlName="cpf"
+        class="form-control"
+        placeholder="000.000.000-00"
+        maxlength="14"
+      >
+      <div class="form-help">
+        Formato: 000.000.000-00 ou 00000000000
+      </div>
+    </div>
+
+    <!-- Data de Nascimento -->
+    <div class="form-group">
+      <label for="dataNascimento" class="form-label">Data de Nascimento</label>
+      <input
+        id="dataNascimento"
+        type="date"
+        formControlName="dataNascimento"
+        class="form-control"
+      >
+    </div>
+
+    <!-- Email -->
+    <div class="form-group">
+      <label for="email" class="form-label">Email</label>
+      <input
+        id="email"
+        type="email"
+        formControlName="email"
+        class="form-control"
+        [class.error]="email?.invalid && email?.touched"
+        placeholder="cliente@exemplo.com"
+      >
+      <div *ngIf="email?.invalid && email?.touched" class="error-message">
+        {{ getErrorMessage('email') }}
+      </div>
+    </div>
+
+    <!-- Telefone -->
+    <div class="form-group">
+      <label for="telefone" class="form-label">Telefone</label>
+      <input
+        id="telefone"
+        type="text"
+        formControlName="telefone"
+        class="form-control"
+        placeholder="(00) 00000-0000"
+        maxlength="20"
+      >
+    </div>
+
+    <!-- Unidade -->
+    <div class="form-group">
+      <label for="unidade" class="form-label">Unidade *</label>
+      <select
+        id="unidade"
+        class="form-control"
+        formControlName="unidade"
+        [class.error]="unidade?.invalid && unidade?.touched"
+        [attr.disabled]="unidadeDisabled ? 'disabled' : null"
+      >
+        <option value="" disabled>Selecione uma unidade</option>
+        <option *ngFor="let unit of unidades" [value]="unit">
+          {{ unit }}
+        </option>
+      </select>
+      <div *ngIf="unidade?.invalid && unidade?.touched" class="error-message">
+        {{ getErrorMessage('unidade') }}
+      </div>
+    </div>
+
+    <!-- Botões -->
+    <div class="form-actions">
+      <button
+        type="button"
+        class="btn btn-cancelar"
+        (click)="onCancel()"
+        [disabled]="isSubmitting"
+      >
+        Cancelar
+      </button>
+      
+      <button
+        type="submit"
+        class="btn btn-salvar"
+        [disabled]="clienteForm.invalid || isSubmitting"
+      >
+        <span *ngIf="isSubmitting">
+          {{ isEditMode ? 'Atualizando...' : 'Salvando...' }}
+        </span>
+        <span *ngIf="!isSubmitting">
+          {{ isEditMode ? 'Atualizar Cliente' : 'Criar Cliente' }}
+        </span>
+      </button>
+    </div>
+
+  </form>
+</div>
+

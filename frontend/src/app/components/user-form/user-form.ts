@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil, Unidade } from '../../models/usuario.model';
+import { PageContextService } from '../../services/page-context.service';
 
 @Component({
   selector: 'app-user-form',
@@ -13,6 +14,12 @@ import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil, Unidade } from '..
   styleUrls: ['./user-form.css']
 })
 export class UserFormComponent implements OnInit {
+  private fb = inject(FormBuilder);
+  private userService = inject(UserService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private pageContextService = inject(PageContextService);
+
   userForm: FormGroup;
   isEditMode = false;
   userId?: string;
@@ -27,12 +34,7 @@ export class UserFormComponent implements OnInit {
   Unidade = Unidade;
   unidades = Object.values(Unidade);
 
-  constructor(
-    private fb: FormBuilder,
-    private userService: UserService,
-    private router: Router,
-    private route: ActivatedRoute
-  ) {
+  constructor() {
     this.userForm = this.createForm();
     this.availableProfiles = [];
   }
@@ -76,12 +78,21 @@ export class UserFormComponent implements OnInit {
         this.availableProfiles = profiles;
         // Após carregar perfis, prosseguir com checagem de modo (create/edit)
         this.checkEditMode();
+        this.setPageContext();
       },
       error: (error) => {
         console.error('Erro ao carregar perfis:', error);
         // Mesmo em caso de erro, verificar modo de edição
         this.checkEditMode();
+        this.setPageContext();
       }
+    });
+  }
+
+  private setPageContext(): void {
+    this.pageContextService.setContext({
+      title: 'Cadastro de Usuário',
+      description: this.isEditMode ? 'Edite as informações do usuário' : 'Cadastre um novo usuário'
     });
   }
 

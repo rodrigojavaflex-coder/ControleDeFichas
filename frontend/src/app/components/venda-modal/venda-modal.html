@@ -1,5 +1,5 @@
 <!-- Modal de Venda - Design System -->
-<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+<div class="modal-overlay" *ngIf="showModal" (click)="!isLoading && closeModal()">
   <div class="modal-conteudo modal-grande modal-venda" (click)="$event.stopPropagation()">
     <!-- Header -->
     <div class="modal-cabecalho">
@@ -16,10 +16,12 @@
         <div class="grupo-campo">
           <label for="protocolo" class="label-campo obrigatorio">Protocolo</label>
           <input
+            #protocoloInput
             id="protocolo"
             type="text"
             formControlName="protocolo"
             class="campo"
+            autocomplete="off"
             [ngClass]="{'invalido': hasFieldError('protocolo')}"
             placeholder="Digite o protocolo">
           <div class="mensagem-invalida" *ngIf="hasFieldError('protocolo')">
@@ -34,6 +36,7 @@
             type="date"
             formControlName="dataVenda"
             class="campo"
+            autocomplete="off"
             [ngClass]="{'invalido': hasFieldError('dataVenda')}">
           <div class="mensagem-invalida" *ngIf="hasFieldError('dataVenda')">
             {{ getFieldError('dataVenda') }}
@@ -94,45 +97,49 @@
       <!-- Segunda linha: Cliente, Vendedor, Prescritor, Ativo -->
       <div class="grid-formulario grid-formulario-4-colunas" style="margin-bottom: var(--espacamento-md);">
         <div class="grupo-campo">
-          <label for="cliente" class="label-campo obrigatorio">Cliente</label>
-          <input
-            id="cliente"
-            type="text"
-            formControlName="cliente"
-            class="campo"
-            [ngClass]="{'invalido': hasFieldError('cliente')}"
-            placeholder="Nome completo do cliente">
-          <div class="mensagem-invalida" *ngIf="hasFieldError('cliente')">
-            {{ getFieldError('cliente') }}
+          <label for="clienteId" class="label-campo obrigatorio">Cliente</label>
+          <app-autocomplete
+            #clienteAutocomplete
+            id="clienteId"
+            type="cliente"
+            formControlName="clienteId"
+            placeholder="Digite o nome do cliente..."
+            [required]="true"
+            (createNew)="onCreateCliente($event)">
+          </app-autocomplete>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('clienteId')">
+            {{ getFieldError('clienteId') }}
           </div>
         </div>
 
         <div class="grupo-campo">
-          <label for="vendedor" class="label-campo obrigatorio">Vendedor</label>
-          <input
-            id="vendedor"
-            type="text"
-            formControlName="vendedor"
-            class="campo"
-            [ngClass]="{'invalido': hasFieldError('vendedor')}"
-            placeholder="Nome do vendedor">
-          <div class="mensagem-invalida" *ngIf="hasFieldError('vendedor')">
-            {{ getFieldError('vendedor') }}
+          <label for="vendedorId" class="label-campo obrigatorio">Vendedor</label>
+          <app-autocomplete
+            #vendedorAutocomplete
+            id="vendedorId"
+            type="vendedor"
+            formControlName="vendedorId"
+            placeholder="Digite o nome do vendedor..."
+            [required]="true">
+          </app-autocomplete>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('vendedorId')">
+            {{ getFieldError('vendedorId') }}
           </div>
         </div>
 
         <div class="grupo-campo">
-          <label for="prescritor" class="label-campo">Prescritor</label>
-          <input
-            id="prescritor"
-            type="text"
-            formControlName="prescritor"
-            class="campo"
-            [ngClass]="{'invalido': hasFieldError('prescritor')}"
-            placeholder="Nome do prescritor"
-            maxlength="300">
-          <div class="mensagem-invalida" *ngIf="hasFieldError('prescritor')">
-            {{ getFieldError('prescritor') }}
+          <label for="prescritorId" class="label-campo">Prescritor</label>
+          <app-autocomplete
+            #prescritorAutocomplete
+            id="prescritorId"
+            type="prescritor"
+            formControlName="prescritorId"
+            placeholder="Digite o nome do prescritor..."
+            [required]="false"
+            (createNew)="onCreatePrescritor($event)">
+          </app-autocomplete>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('prescritorId')">
+            {{ getFieldError('prescritorId') }}
           </div>
         </div>
 
@@ -143,6 +150,7 @@
             type="text"
             formControlName="ativo"
             class="campo"
+            autocomplete="on"
             placeholder="Ex: Ativa, Pendente, etc"
             maxlength="300">
         </div>
@@ -159,6 +167,7 @@
               type="text"
               formControlName="valorCliente"
               class="campo"
+              autocomplete="off"
               [ngClass]="{'invalido': hasFieldError('valorCliente')}"
               placeholder="0,00"
               (input)="formatCurrency($event, 'valorCliente')"
@@ -169,24 +178,27 @@
           </div>
         </div>
 
-        <div class="grupo-campo" *ngIf="podeVisualizarValorCompra; else valorCompraPlaceholder">
-          <label for="valorCompra" class="label-campo">Valor Compra</label>
-          <div class="grupo-input">
-            <span class="prefixo-input">R$</span>
-            <input
-              id="valorCompra"
-              type="text"
-              formControlName="valorCompra"
-              class="campo"
-              [ngClass]="{'invalido': hasFieldError('valorCompra')}"
-              placeholder="0,00"
-              (input)="formatCurrency($event, 'valorCompra')"
-              (blur)="formatCurrencyOnBlur('valorCompra')">
+        <ng-container *ngIf="podeVisualizarValorCompra; else valorCompraPlaceholder">
+          <div class="grupo-campo">
+            <label for="valorCompra" class="label-campo">Valor Compra</label>
+            <div class="grupo-input">
+              <span class="prefixo-input">R$</span>
+              <input
+                id="valorCompra"
+                type="text"
+                formControlName="valorCompra"
+                class="campo"
+                autocomplete="off"
+                [ngClass]="{'invalido': hasFieldError('valorCompra')}"
+                placeholder="0,00"
+                (input)="formatCurrency($event, 'valorCompra')"
+                (blur)="formatCurrencyOnBlur('valorCompra')">
+            </div>
+            <div class="mensagem-invalida" *ngIf="hasFieldError('valorCompra')">
+              {{ getFieldError('valorCompra') }}
+            </div>
           </div>
-          <div class="mensagem-invalida" *ngIf="hasFieldError('valorCompra')">
-            {{ getFieldError('valorCompra') }}
-          </div>
-        </div>
+        </ng-container>
 
         <div class="grupo-campo" *ngIf="podeVisualizarValorCompra">
           <label class="label-campo">&nbsp;</label>
@@ -200,24 +212,27 @@
           </button>
         </div>
 
-        <div class="grupo-campo" *ngIf="podeVisualizarValorCompra; else valorPagoPlaceholder">
-          <label for="valorPago" class="label-campo">Valor Pago (Compra)</label>
-          <div class="grupo-input">
-            <span class="prefixo-input">R$</span>
-            <input
-              id="valorPago"
-              type="text"
-              formControlName="valorPago"
-              class="campo"
-              [ngClass]="{'invalido': hasFieldError('valorPago')}"
-              placeholder="0,00"
-              (input)="formatCurrency($event, 'valorPago')"
-              (blur)="formatCurrencyOnBlur('valorPago')">
+        <ng-container *ngIf="podeVisualizarValorCompra; else valorPagoPlaceholder">
+          <div class="grupo-campo">
+            <label for="valorPago" class="label-campo">Valor Pago (Compra)</label>
+            <div class="grupo-input">
+              <span class="prefixo-input">R$</span>
+              <input
+                id="valorPago"
+                type="text"
+                formControlName="valorPago"
+                class="campo"
+                autocomplete="off"
+                [ngClass]="{'invalido': hasFieldError('valorPago')}"
+                placeholder="0,00"
+                (input)="formatCurrency($event, 'valorPago')"
+                (blur)="formatCurrencyOnBlur('valorPago')">
+            </div>
+            <div class="mensagem-invalida" *ngIf="hasFieldError('valorPago')">
+              {{ getFieldError('valorPago') }}
+            </div>
           </div>
-          <div class="mensagem-invalida" *ngIf="hasFieldError('valorPago')">
-            {{ getFieldError('valorPago') }}
-          </div>
-        </div>
+        </ng-container>
       </div>
 
       <ng-template #valorCompraPlaceholder>
@@ -235,6 +250,7 @@
             id="observacao"
             formControlName="observacao"
             class="campo"
+            autocomplete="off"
             maxlength="500"
             rows="3"
             placeholder="Observações adicionais (opcional)">
@@ -264,3 +280,32 @@
     </div>
   </div>
 </div>
+
+<!-- Modal de Criação Rápida de Cliente -->
+<app-cliente-quick-create-modal
+  *ngIf="showClienteQuickCreateModal"
+  [initialNome]="quickCreateClienteNome"
+  [showModal]="showClienteQuickCreateModal"
+  (created)="onClienteCreated($event)"
+  (cancelled)="onClienteCreateCancelled()">
+</app-cliente-quick-create-modal>
+
+<!-- Modal de Criação Rápida de Prescritor -->
+<app-prescritor-quick-create-modal
+  *ngIf="showPrescritorQuickCreateModal"
+  [initialNome]="quickCreatePrescritorNome"
+  [showModal]="showPrescritorQuickCreateModal"
+  (created)="onPrescritorCreated($event)"
+  (cancelled)="onPrescritorCreateCancelled()">
+</app-prescritor-quick-create-modal>
+
+<!-- Modal de Confirmação de Fechamento -->
+<app-confirmation-modal
+  [isVisible]="showConfirmCloseModal"
+  title="Confirmar Fechamento"
+  message="Existem alterações não salvas. Tem certeza que deseja fechar o modal? Todas as alterações serão perdidas."
+  confirmText="Fechar"
+  cancelText="Continuar Editando"
+  (confirmed)="confirmClose()"
+  (cancelled)="cancelClose()">
+</app-confirmation-modal>

@@ -1,8 +1,11 @@
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { VendaOrigem, VendaStatus, TipoAtualizacao } from '../../../common/enums/venda.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
+import { Cliente } from '../../clientes/entities/cliente.entity';
+import { Vendedor } from '../../vendedores/entities/vendedor.entity';
+import { Prescritor } from '../../prescritores/entities/prescritor.entity';
 
 @Entity('vendas')
 export class Venda extends BaseEntity {
@@ -79,14 +82,6 @@ export class Venda extends BaseEntity {
   dataEnvio?: Date | null;
 
   @ApiProperty({
-    description: 'Nome do cliente',
-    example: 'João da Silva',
-    maxLength: 300,
-  })
-  @Column({ length: 300 })
-  cliente: string;
-
-  @ApiProperty({
     description: 'Origem da venda',
     example: VendaOrigem.GOIANIA,
     enum: VendaOrigem,
@@ -96,23 +91,6 @@ export class Venda extends BaseEntity {
     enum: VendaOrigem,
   })
   origem: VendaOrigem;
-
-  @ApiProperty({
-    description: 'Nome do vendedor',
-    example: 'Maria Santos',
-    maxLength: 300,
-  })
-  @Column({ length: 300 })
-  vendedor: string;
-
-  @ApiProperty({
-    description: 'Nome do prescritor responsável',
-    example: 'Dr. João Almeida',
-    maxLength: 300,
-    required: false,
-  })
-  @Column({ length: 300, nullable: true })
-  prescritor?: string;
 
   @ApiProperty({
     description: 'Valor da compra',
@@ -217,4 +195,30 @@ export class Venda extends BaseEntity {
     nullable: true,
   })
   tipoAtualizacao?: TipoAtualizacao;
+
+  // Relacionamentos
+  @ApiProperty({
+    description: 'Cliente relacionado',
+    type: () => Cliente,
+  })
+  @ManyToOne(() => Cliente, { nullable: false })
+  @JoinColumn({ name: 'clienteId' })
+  cliente: Cliente;
+
+  @ApiProperty({
+    description: 'Vendedor relacionado',
+    type: () => Vendedor,
+  })
+  @ManyToOne(() => Vendedor, { nullable: false })
+  @JoinColumn({ name: 'vendedorId' })
+  vendedor: Vendedor;
+
+  @ApiProperty({
+    description: 'Prescritor relacionado',
+    type: () => Prescritor,
+    required: false,
+  })
+  @ManyToOne(() => Prescritor, { nullable: true })
+  @JoinColumn({ name: 'prescritorId' })
+  prescritor?: Prescritor;
 }

@@ -1,0 +1,84 @@
+<!-- Modal de Criação Rápida de Prescritor -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-conteudo modal-pequeno" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Criar Novo Prescritor</h3>
+      <button 
+        type="button" 
+        class="modal-fechar" 
+        (click)="closeModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="quickForm" (ngSubmit)="onSubmit()" class="modal-corpo">
+      <div class="grid-formulario">
+        <!-- Nome -->
+        <div class="grupo-campo">
+          <label for="nome" class="label-campo obrigatorio">Nome</label>
+          <input
+            id="nome"
+            type="text"
+            formControlName="nome"
+            class="campo"
+            autocomplete="name"
+            [ngClass]="{'invalido': hasFieldError('nome')}"
+            placeholder="Digite o nome do prescritor"
+            maxlength="500"
+            (input)="onNomeInput($event)"
+            autofocus>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('nome')">
+            {{ getFieldError('nome') }}
+          </div>
+        </div>
+
+        <!-- Número CRM -->
+        <div class="grupo-campo">
+          <label for="numeroCRM" class="label-campo">Número CRM</label>
+          <input
+            id="numeroCRM"
+            type="number"
+            formControlName="numeroCRM"
+            class="campo"
+            autocomplete="off"
+            placeholder="Número do CRM">
+        </div>
+
+        <!-- UF CRM -->
+        <div class="grupo-campo">
+          <label for="UFCRM" class="label-campo">UF CRM</label>
+          <select
+            id="UFCRM"
+            formControlName="UFCRM"
+            class="campo"
+            autocomplete="off">
+            <option value="">Selecione a UF</option>
+            <option *ngFor="let uf of ufs" [value]="uf">
+              {{ uf }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </form>
+
+    <!-- Actions -->
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="closeModal()"
+        title="Cancelar">
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        class="botao botao-primario"
+        (click)="onSubmit()"
+        [ngClass]="{'botao-carregando': isLoading}">
+        {{ isLoading ? 'Criando...' : 'Criar Prescritor' }}
+      </button>
+    </div>
+  </div>
+</div>

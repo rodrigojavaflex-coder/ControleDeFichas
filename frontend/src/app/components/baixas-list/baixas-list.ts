@@ -447,7 +447,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
               <tr>
                 <td>${baixa.dataBaixa ? new Date(baixa.dataBaixa).toLocaleDateString('pt-BR') : '-'}</td>
                 <td>${baixa.venda?.protocolo || '-'}</td>
-                <td>${baixa.venda?.cliente || '-'}</td>
+                <td>${this.getClienteNome(baixa.venda) || '-'}</td>
                 <td>${baixa.venda?.unidade || '-'}</td>
                 <td>${origemLabel}</td>
                 <td>${baixa.tipoDaBaixa || '-'}</td>
@@ -666,7 +666,12 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
     if (this.clienteFilter.trim()) {
       const cliente = this.clienteFilter.trim().toLowerCase();
-      filtered = filtered.filter(baixa => baixa.venda?.cliente?.toLowerCase().includes(cliente));
+      filtered = filtered.filter(baixa => {
+        const clienteNome = baixa.venda?.cliente && typeof baixa.venda.cliente === 'object' 
+          ? baixa.venda.cliente.nome 
+          : (baixa.venda?.cliente as any) || '';
+        return clienteNome.toLowerCase().includes(cliente);
+      });
     }
 
     const valorMin = this.parseValorFilter(this.valorMinFilter);
@@ -828,5 +833,32 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     const month = String(parsed.getMonth() + 1).padStart(2, '0');
     const day = String(parsed.getDate()).padStart(2, '0');
     return `${day}/${month}/${year}`;
+  }
+
+  getClienteNome(venda: Venda | undefined): string {
+    if (!venda) return '-';
+    if (venda.cliente && typeof venda.cliente === 'object') {
+      return venda.cliente.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.cliente as any) || '-';
+  }
+
+  getVendedorNome(venda: Venda | undefined): string {
+    if (!venda) return '-';
+    if (venda.vendedor && typeof venda.vendedor === 'object') {
+      return venda.vendedor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.vendedor as any) || '-';
+  }
+
+  getPrescritorNome(venda: Venda | undefined): string | null {
+    if (!venda) return null;
+    if (venda.prescritor && typeof venda.prescritor === 'object') {
+      return venda.prescritor.nome;
+    }
+    // Compatibilidade temporária com campo texto (será removido após migration)
+    return (venda.prescritor as any) || null;
   }
 }

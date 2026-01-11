@@ -195,7 +195,7 @@
                 [class.row-selected]="isBaixaSelected(baixa)">
                 <td>{{ baixa.dataBaixa | date: 'dd/MM/yyyy' }}</td>
                 <td>{{ baixa.venda?.protocolo || '-' }}</td>
-                <td>{{ baixa.venda?.cliente || '-' }}</td>
+                <td>{{ getClienteNome(baixa.venda) }}</td>
                 <td>{{ baixa.venda?.unidade || '-' }}</td>
                 <td>{{ getOrigemLabel(baixa.venda?.origem) }}</td>
                 <td>{{ baixa.tipoDaBaixa }}</td>

@@ -1,16 +1,28 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, inject, ViewEncapsulation } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, inject, ViewEncapsulation, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { firstValueFrom, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { Venda, VendaOrigem, VendaStatus, Unidade } from '../../models/venda.model';
 import { Permission } from '../../models/usuario.model';
 import { VendaService } from '../../services/vendas.service';
 import { AuthService } from '../../services/auth.service';
 import { ErrorModalService } from '../../services/error-modal.service';
+import { AutocompleteComponent } from '../autocomplete/autocomplete';
+import { ClienteQuickCreateModalComponent } from '../cliente-quick-create-modal/cliente-quick-create-modal';
+import { PrescritorQuickCreateModalComponent } from '../prescritor-quick-create-modal/prescritor-quick-create-modal';
+import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+import { ClientesService } from '../../services/clientes.service';
+import { VendedoresService } from '../../services/vendedores.service';
+import { PrescritoresService } from '../../services/prescritores.service';
+import { Cliente } from '../../models/cliente.model';
+import { Vendedor } from '../../models/vendedor.model';
+import { Prescritor } from '../../models/prescritor.model';
 
 @Component({
   selector: 'app-venda-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, AutocompleteComponent, ClienteQuickCreateModalComponent, PrescritorQuickCreateModalComponent, ConfirmationModalComponent],
   templateUrl: './venda-modal.html',
   styleUrls: ['./venda-modal.css'],
   encapsulation: ViewEncapsulation.None
@@ -25,12 +37,25 @@ export class VendaModalComponent implements OnInit, OnChanges {
   private vendaService = inject(VendaService);
   private authService = inject(AuthService);
   private errorModalService = inject(ErrorModalService);
+  private clientesService = inject(ClientesService);
+  private vendedoresService = inject(VendedoresService);
+  private prescritoresService = inject(PrescritoresService);
+
+  @ViewChild('clienteAutocomplete') clienteAutocomplete?: AutocompleteComponent;
+  @ViewChild('vendedorAutocomplete') vendedorAutocomplete?: AutocompleteComponent;
+  @ViewChild('prescritorAutocomplete') prescritorAutocomplete?: AutocompleteComponent;
+  @ViewChild('protocoloInput', { read: ElementRef }) protocoloInput?: ElementRef<HTMLInputElement>;
 
   vendaForm!: FormGroup;
   isEditing = false;
   isLoading = false;
   unidadeDisabled = false;
   podeVisualizarValorCompra = false;
+  showClienteQuickCreateModal = false;
+  quickCreateClienteNome = '';
+  showPrescritorQuickCreateModal = false;
+  quickCreatePrescritorNome = '';
+  showConfirmCloseModal = false;
 
   // Enums para template
   VendaOrigem = VendaOrigem;
@@ -66,9 +91,19 @@ export class VendaModalComponent implements OnInit, OnChanges {
     if (changes['showModal'] && this.showModal && this.venda) {
       this.isEditing = true;
       this.initializeFormWithData(this.venda);
+      // Focar no protocolo após um pequeno delay para garantir que o modal está renderizado
+      setTimeout(() => this.focusProtocolo(), 100);
     } else if (changes['showModal'] && this.showModal && !this.venda) {
       this.isEditing = false;
       this.resetForm();
+      // Focar no protocolo após resetar o formulário
+      setTimeout(() => this.focusProtocolo(), 100);
+    }
+  }
+
+  private focusProtocolo(): void {
+    if (this.protocoloInput?.nativeElement) {
+      this.protocoloInput.nativeElement.focus();
     }
   }
 
@@ -76,10 +111,10 @@ export class VendaModalComponent implements OnInit, OnChanges {
     this.vendaForm = this.fb.group({
       protocolo: ['', [Validators.required, Validators.minLength(3)]],
       dataVenda: [this.formatDateForInput(new Date()), [Validators.required]],
-      cliente: ['', [Validators.required, Validators.minLength(2)]],
+      clienteId: ['', [Validators.required]],
       origem: [VendaOrigem.GOIANIA, [Validators.required]],
-      vendedor: ['', [Validators.required, Validators.minLength(2)]],
-      prescritor: ['', [Validators.maxLength(300)]],
+      vendedorId: ['', [Validators.required]],
+      prescritorId: [null],
       valorCompra: [null, [Validators.min(0)]],
       valorPago: [null, [Validators.min(0)]],
       valorCliente: [0, [Validators.required, Validators.min(0)]],
@@ -90,26 +125,38 @@ export class VendaModalComponent implements OnInit, OnChanges {
     });
   }
 
-  private initializeFormWithData(venda: any) {
+  private initializeFormWithData(venda: Venda) {
     // Extrair apenas a data (YYYY-MM-DD) sem conversão de timezone
     let dataVendaFormatted = '';
     
     if (typeof venda.dataVenda === 'string') {
       // Se já é string, extrair apenas a parte da data
       dataVendaFormatted = venda.dataVenda.split('T')[0];
-    } else if (venda.dataVenda instanceof Date) {
-      // Se é Date, converter para ISO string e extrair data
-      dataVendaFormatted = venda.dataVenda.toISOString().split('T')[0];
     } else {
-      // Fallback: tentar criar Date e extrair data
-      dataVendaFormatted = new Date(venda.dataVenda).toISOString().split('T')[0];
+      // Fallback: tentar criar Date e extrair data (dataVenda sempre vem como string do backend)
+      try {
+        const dateObj = new Date(venda.dataVenda as any);
+        if (!isNaN(dateObj.getTime())) {
+          dataVendaFormatted = dateObj.toISOString().split('T')[0];
+        } else {
+          dataVendaFormatted = '';
+        }
+      } catch {
+        dataVendaFormatted = '';
+      }
     }
+
+    // Verificar se já temos as entidades relacionadas ou precisamos buscar
+    const cliente = (venda.cliente && typeof venda.cliente === 'object') ? venda.cliente : null;
+    const vendedor = (venda.vendedor && typeof venda.vendedor === 'object') ? venda.vendedor : null;
+    const prescritor = (venda.prescritor && typeof venda.prescritor === 'object') ? venda.prescritor : null;
 
     // Atualizar formulário com os valores
     this.vendaForm.patchValue({
       protocolo: venda.protocolo,
-      cliente: venda.cliente,
-      vendedor: venda.vendedor,
+      clienteId: venda.clienteId || '',
+      vendedorId: venda.vendedorId || '',
+      prescritorId: venda.prescritorId || null,
       dataVenda: dataVendaFormatted,
       valorCompra: venda.valorCompra,
       valorPago: venda.valorPago,
@@ -118,48 +165,135 @@ export class VendaModalComponent implements OnInit, OnChanges {
       observacao: venda.observacao || '',
       status: venda.status,
       unidade: venda.unidade || '',
-      prescritor: venda.prescritor || '',
       ativo: venda.ativo || ''
     }, { emitEvent: false });
 
-    // Aguardar o ciclo de detecção de mudanças do Angular
-    setTimeout(() => {
-      // Formatar valores de moeda para exibição
-      this.formatCurrencyOnBlur('valorCompra');
-      this.formatCurrencyOnBlur('valorCliente');
-    }, 50);
+    // Buscar entidades relacionadas se não estiverem carregadas
+    const observables = [];
+    if (!cliente && venda.clienteId) {
+      observables.push(this.clientesService.findOne(venda.clienteId).pipe(catchError(() => of(null))));
+    } else {
+      observables.push(of(cliente));
+    }
+
+    if (!vendedor && venda.vendedorId) {
+      observables.push(this.vendedoresService.findOne(venda.vendedorId).pipe(catchError(() => of(null))));
+    } else {
+      observables.push(of(vendedor));
+    }
+
+    if (!prescritor && venda.prescritorId) {
+      observables.push(this.prescritoresService.findOne(venda.prescritorId).pipe(catchError(() => of(null))));
+    } else {
+      observables.push(of(prescritor));
+    }
+
+    // Buscar todas as entidades em paralelo
+    forkJoin(observables).subscribe(([clienteLoaded, vendedorLoaded, prescritorLoaded]) => {
+      // Inicializar autocompletes com os itens selecionados
+      setTimeout(() => {
+        if (clienteLoaded && this.clienteAutocomplete) {
+          this.clienteAutocomplete.setSelectedItem(clienteLoaded);
+        }
+        if (vendedorLoaded && this.vendedorAutocomplete) {
+          this.vendedorAutocomplete.setSelectedItem(vendedorLoaded);
+        }
+        if (prescritorLoaded && this.prescritorAutocomplete) {
+          this.prescritorAutocomplete.setSelectedItem(prescritorLoaded);
+        }
+        // Formatar valores de moeda para exibição
+        this.formatCurrencyOnBlur('valorCompra');
+        this.formatCurrencyOnBlur('valorCliente');
+      }, 100);
+    });
 
     this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
   }
 
   closeModal() {
+    // Verificar se o formulário foi modificado
+    if (this.hasUnsavedChanges()) {
+      this.showConfirmCloseModal = true;
+      return;
+    }
+    
+    // Se não há alterações, fechar diretamente
+    this.doCloseModal();
+  }
+
+  // Verificar se há alterações não salvas
+  hasUnsavedChanges(): boolean {
+    // Verificar se o formulário foi modificado (dirty = valores alterados)
+    return this.vendaForm.dirty;
+  }
+
+  // Método para fechar o modal de fato
+  doCloseModal() {
     this.showModal = false;
+    this.showConfirmCloseModal = false;
     this.resetForm();
     this.close.emit();
+  }
+
+  // Método para confirmar o fechamento
+  confirmClose() {
+    this.doCloseModal();
+  }
+
+  // Método para cancelar o fechamento
+  cancelClose() {
+    this.showConfirmCloseModal = false;
   }
 
   private resetForm() {
     this.vendaForm.reset({
       protocolo: '',
       dataVenda: this.formatDateForInput(new Date()),
-      cliente: '',
+      clienteId: '',
       origem: VendaOrigem.GOIANIA,
-      vendedor: '',
+      vendedorId: '',
+      prescritorId: null,
       valorCompra: null,
       valorPago: null,
       valorCliente: 0,
       observacao: '',
-      prescritor: '',
       status: VendaStatus.REGISTRADO
     });
     // Garantir que o status fique desabilitado
     this.vendaForm.get('status')?.disable();
+    // Reabilitar campos de autocomplete (caso tenham sido desabilitados)
+    this.vendaForm.get('clienteId')?.enable({ emitEvent: false });
+    this.vendaForm.get('vendedorId')?.enable({ emitEvent: false });
+    this.vendaForm.get('prescritorId')?.enable({ emitEvent: false });
+    // Limpar autocompletes
+    setTimeout(() => {
+      this.clienteAutocomplete?.clearSelection();
+      this.vendedorAutocomplete?.clearSelection();
+      this.prescritorAutocomplete?.clearSelection();
+    }, 50);
     // Reconfigurar campo unidade baseado no usuário logado
     this.configureUnidadeField();
   }
 
   onSubmit() {
     if (this.vendaForm.valid) {
+      // Garantir que os valores dos autocompletes estão sincronizados com o FormControl
+      // IMPORTANTE: Fazer isso ANTES de qualquer outra operação
+      const clienteId = this.clienteAutocomplete?.selectedItem?.id || this.vendaForm.get('clienteId')?.value;
+      const vendedorId = this.vendedorAutocomplete?.selectedItem?.id || this.vendaForm.get('vendedorId')?.value;
+      const prescritorId = this.prescritorAutocomplete?.selectedItem?.id || this.vendaForm.get('prescritorId')?.value;
+      
+      // Atualizar FormControl com os valores garantidos
+      if (clienteId) {
+        this.vendaForm.patchValue({ clienteId }, { emitEvent: false });
+      }
+      if (vendedorId) {
+        this.vendaForm.patchValue({ vendedorId }, { emitEvent: false });
+      }
+      if (prescritorId) {
+        this.vendaForm.patchValue({ prescritorId }, { emitEvent: false });
+      }
+      
       // Usar getRawValue() para incluir valores de controles desabilitados
       const formValue = this.vendaForm.getRawValue();
       
@@ -200,13 +334,22 @@ export class VendaModalComponent implements OnInit, OnChanges {
         return;
       }
 
+      // Desabilitar campos durante o submit
+      this.vendaForm.get('clienteId')?.disable({ emitEvent: false });
+      this.vendaForm.get('vendedorId')?.disable({ emitEvent: false });
+      this.vendaForm.get('prescritorId')?.disable({ emitEvent: false });
+      
       this.isLoading = true;
       
       // Garantir que a data está no formato YYYY-MM-DD sem conversão
       const dataVenda = formValue.dataVenda;
       
+      // Garantir que os IDs estão presentes no objeto final
       let vendaData: any = {
         ...formValue,
+        clienteId: clienteId || formValue.clienteId,
+        vendedorId: vendedorId || formValue.vendedorId,
+        prescritorId: prescritorId || formValue.prescritorId,
         valorCliente,
         ...(valorCompra !== undefined ? { valorCompra } : {}),
         ...(valorPago !== undefined ? { valorPago } : {}),
@@ -232,11 +375,21 @@ export class VendaModalComponent implements OnInit, OnChanges {
       operation.subscribe({
         next: (venda) => {
           this.isLoading = false;
+          // Reabilitar campos após sucesso
+          this.vendaForm.get('clienteId')?.enable({ emitEvent: false });
+          this.vendaForm.get('vendedorId')?.enable({ emitEvent: false });
+          this.vendaForm.get('prescritorId')?.enable({ emitEvent: false });
+          // Marcar formulário como pristine após salvar com sucesso
+          this.vendaForm.markAsPristine();
           this.saved.emit(venda);
           this.closeModal();
         },
         error: (error) => {
           this.isLoading = false;
+          // Reabilitar campos após erro
+          this.vendaForm.get('clienteId')?.enable({ emitEvent: false });
+          this.vendaForm.get('vendedorId')?.enable({ emitEvent: false });
+          this.vendaForm.get('prescritorId')?.enable({ emitEvent: false });
           const message = error.error?.message || 'Erro ao salvar venda';
           this.errorModalService.show(message, 'Erro');
         }
@@ -306,6 +459,9 @@ export class VendaModalComponent implements OnInit, OnChanges {
       }
       if (field.errors['min']) {
         return 'Valor deve ser maior que zero';
+      }
+      if (field.errors['uuid']) {
+        return 'ID inválido';
       }
     }
     return '';
@@ -378,5 +534,43 @@ export class VendaModalComponent implements OnInit, OnChanges {
         input.value = formatted;
       }
     }
+  }
+
+  onCreateCliente(nome: string): void {
+    this.quickCreateClienteNome = nome;
+    this.showClienteQuickCreateModal = true;
+  }
+
+  onClienteCreated(cliente: Cliente): void {
+    // Selecionar o cliente recém-criado no autocomplete
+    if (this.clienteAutocomplete) {
+      this.clienteAutocomplete.setSelectedItem(cliente);
+    }
+    this.showClienteQuickCreateModal = false;
+    this.quickCreateClienteNome = '';
+  }
+
+  onClienteCreateCancelled(): void {
+    this.showClienteQuickCreateModal = false;
+    this.quickCreateClienteNome = '';
+  }
+
+  onCreatePrescritor(nome: string): void {
+    this.quickCreatePrescritorNome = nome;
+    this.showPrescritorQuickCreateModal = true;
+  }
+
+  onPrescritorCreated(prescritor: Prescritor): void {
+    // Selecionar o prescritor recém-criado no autocomplete
+    if (this.prescritorAutocomplete) {
+      this.prescritorAutocomplete.setSelectedItem(prescritor);
+    }
+    this.showPrescritorQuickCreateModal = false;
+    this.quickCreatePrescritorNome = '';
+  }
+
+  onPrescritorCreateCancelled(): void {
+    this.showPrescritorQuickCreateModal = false;
+    this.quickCreatePrescritorNome = '';
   }
 }

@@ -26,19 +26,26 @@ export enum TipoAtualizacao {
   VALOR_CLIENTE = 'VALOR_CLIENTE',
 }
 
+import { Cliente } from './cliente.model';
+import { Vendedor } from './vendedor.model';
+import { Prescritor } from './prescritor.model';
+
 export interface Venda {
   id: string;
   protocolo: string;
   dataVenda: string;
   dataFechamento?: string | null;
   dataEnvio?: string | null;
-  cliente: string;
+  clienteId: string;
+  cliente: Cliente;
   origem: VendaOrigem;
-  vendedor: string;
-  prescritor?: string;
-  valorCompra: number;
+  vendedorId: string;
+  vendedor: Vendedor;
+  prescritorId?: string;
+  prescritor?: Prescritor;
+  valorCompra?: number | null;
   valorCliente: number;
-  valorPago?: number;
+  valorPago?: number | null;
   observacao?: string;
   status: VendaStatus;
   unidade?: Unidade;
@@ -53,12 +60,13 @@ export interface CreateVendaDto {
   dataVenda: string;
   dataFechamento?: string;
   dataEnvio?: string;
-  cliente: string;
+  clienteId: string;
   origem: VendaOrigem;
-  vendedor: string;
-  prescritor?: string;
-  valorCompra: number;
+  vendedorId: string;
+  prescritorId?: string;
+  valorCompra?: number;
   valorCliente: number;
+  valorPago?: number;
   observacao?: string;
   status?: VendaStatus;
   unidade?: Unidade;

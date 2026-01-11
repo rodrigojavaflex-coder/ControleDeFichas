@@ -10,6 +10,7 @@ import {
   IsNumber,
   IsOptional,
   Min,
+  IsUUID,
   registerDecorator,
   ValidationOptions,
   ValidationArguments,
@@ -96,15 +97,12 @@ export class CreateVendaDto {
   dataFechamento?: string;
 
   @ApiProperty({
-    description: 'Nome do cliente',
-    example: 'João da Silva',
-    maxLength: 300,
+    description: 'ID do cliente',
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsNotEmpty({ message: 'Cliente é obrigatório' })
-  @IsString({ message: 'Cliente deve ser uma string' })
-  @MinLength(2, { message: 'Cliente deve ter pelo menos 2 caracteres' })
-  @MaxLength(300, { message: 'Cliente não pode ter mais que 300 caracteres' })
-  cliente: string;
+  @IsUUID('4', { message: 'ID do cliente inválido' })
+  clienteId: string;
 
   @ApiProperty({
     description: 'Origem da venda',
@@ -116,27 +114,22 @@ export class CreateVendaDto {
   origem: VendaOrigem;
 
   @ApiProperty({
-    description: 'Nome do vendedor',
-    example: 'Maria Santos',
-    maxLength: 300,
+    description: 'ID do vendedor',
+    example: '123e4567-e89b-12d3-a456-426614174001',
   })
   @IsNotEmpty({ message: 'Vendedor é obrigatório' })
-  @IsString({ message: 'Vendedor deve ser uma string' })
-  @MinLength(2, { message: 'Vendedor deve ter pelo menos 2 caracteres' })
-  @MaxLength(300, { message: 'Vendedor não pode ter mais que 300 caracteres' })
-  vendedor: string;
+  @IsUUID('4', { message: 'ID do vendedor inválido' })
+  vendedorId: string;
 
   @ApiProperty({
-    description: 'Nome do prescritor responsável',
-    example: 'Dr. João Almeida',
-    maxLength: 300,
+    description: 'ID do prescritor responsável',
+    example: '123e4567-e89b-12d3-a456-426614174002',
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value === '') ? null : value)
-  @IsString({ message: 'Prescritor deve ser uma string' })
-  @MaxLength(300, { message: 'Prescritor não pode ter mais que 300 caracteres' })
-  prescritor?: string;
+  @Transform(({ value }) => (value === '' || value === null) ? undefined : value)
+  @IsUUID('4', { message: 'ID do prescritor inválido' })
+  prescritorId?: string;
 
   @ApiProperty({
     description: 'Valor da compra',
