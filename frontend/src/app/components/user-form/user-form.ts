@@ -1,15 +1,17 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
 import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil, Unidade } from '../../models/usuario.model';
 import { PageContextService } from '../../services/page-context.service';
+import { AutocompleteComponent } from '../autocomplete/autocomplete';
+import { VendedoresService } from '../../services/vendedores.service';
 
 @Component({
   selector: 'app-user-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, AutocompleteComponent],
   templateUrl: './user-form.html',
   styleUrls: ['./user-form.css']
 })
@@ -19,6 +21,9 @@ export class UserFormComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private pageContextService = inject(PageContextService);
+  private vendedoresService = inject(VendedoresService);
+
+  @ViewChild('vendedorAutocomplete') vendedorAutocomplete?: AutocompleteComponent;
 
   userForm: FormGroup;
   isEditMode = false;
@@ -50,7 +55,8 @@ export class UserFormComponent implements OnInit {
       password: ['', [Validators.minLength(6)]],
       isActive: [true],
       perfilId: ['', Validators.required],
-      unidade: [''] // Campo opcional para unidade
+      unidade: [''], // Campo opcional para unidade
+      vendedorId: [''] // Campo opcional para vendedor
     });
   }
 
@@ -102,13 +108,45 @@ export class UserFormComponent implements OnInit {
 
     this.userService.getUserById(id).subscribe({
       next: (user) => {
+        console.log('🔍 UserForm - Usuário carregado:', user);
+        console.log('🔍 UserForm - Vendedor:', user.vendedor);
+        
         this.userForm.patchValue({
           name: user.nome,
           email: user.email,
           isActive: user.ativo,
           perfilId: user.perfil?.id,
-          unidade: user.unidade || ''
+          unidade: user.unidade || '',
+          vendedorId: user.vendedor?.id || ''
         });
+
+        // Se o usuário tiver vendedor, definir no autocomplete
+        if (user.vendedor) {
+          console.log('🔍 UserForm - Tentando definir vendedor no autocomplete:', user.vendedor);
+          // Usar setTimeout com delay maior para garantir que o autocomplete esteja renderizado
+          // Tentar múltiplas vezes para garantir que o ViewChild esteja disponível
+          const trySetVendedor = (attempts: number = 0) => {
+            if (attempts > 5) {
+              console.warn('⚠️ UserForm - Não foi possível definir vendedor no autocomplete após múltiplas tentativas');
+              return;
+            }
+            
+            setTimeout(() => {
+              if (this.vendedorAutocomplete) {
+                console.log('✅ UserForm - Vendedor definido no autocomplete');
+                this.vendedorAutocomplete.setSelectedItem(user.vendedor!);
+              } else {
+                console.log(`🔄 UserForm - Tentativa ${attempts + 1}: autocomplete ainda não disponível`);
+                trySetVendedor(attempts + 1);
+              }
+            }, 100 * (attempts + 1));
+          };
+          
+          trySetVendedor();
+        } else {
+          console.log('ℹ️ UserForm - Usuário não tem vendedor associado');
+        }
+        
         this.loading = false;
       },
       error: (error) => {
@@ -159,12 +197,16 @@ export class UserFormComponent implements OnInit {
   }
 
   private updateUser(formValue: any): void {
+    // Obter vendedorId do autocomplete se selecionado
+    const vendedorId = this.vendedorAutocomplete?.selectedItem?.id || formValue.vendedorId || null;
+    
     const updateUsuarioDto: UpdateUsuarioDto = {
       nome: formValue.name,
       email: formValue.email,
       ativo: formValue.isActive,
       perfilId: formValue.perfilId,
-      unidade: formValue.unidade || null
+      unidade: formValue.unidade || null,
+      vendedorId: vendedorId
     };
 
     // Adiciona senha apenas se foi informada

@@ -124,6 +124,22 @@
       </div>
     </div>
 
+    <!-- Vendedor -->
+    <div class="form-group">
+      <label for="vendedorId" class="form-label">Vendedor</label>
+      <app-autocomplete
+        #vendedorAutocomplete
+        id="vendedorId"
+        type="vendedor"
+        formControlName="vendedorId"
+        placeholder="Digite o nome do vendedor..."
+        [required]="false">
+      </app-autocomplete>
+      <div class="form-help">
+        Selecione o vendedor associado ao usuário (opcional)
+      </div>
+    </div>
+
     <!-- Botões -->
     <div class="form-actions">
       <button

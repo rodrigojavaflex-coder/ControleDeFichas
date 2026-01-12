@@ -6,12 +6,13 @@ import { UsuariosService } from './usuarios.service';
 import { UsuariosController } from './usuarios.controller';
 import { Usuario } from './entities/usuario.entity';
 import { Perfil } from '../perfil/entities/perfil.entity';
+import { Vendedor } from '../vendedores/entities/vendedor.entity';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 
 @Module({
   imports: [
-  TypeOrmModule.forFeature([Usuario, Perfil]),
+  TypeOrmModule.forFeature([Usuario, Perfil, Vendedor]),
     JwtModule,
     ConfigModule,
     forwardRef(() => AuditoriaModule),

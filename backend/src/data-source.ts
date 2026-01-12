@@ -17,7 +17,7 @@ export const AppDataSource = new DataSource({
   migrationsTableName: 'migrations',
   synchronize: false,
   logging: process.env.DATABASE_LOGGING === 'true',
-  ssl: process.env.NODE_ENV === 'production' 
+  ssl: process.env.DATABASE_SSL === 'true' 
     ? { rejectUnauthorized: false } 
     : false,
 });

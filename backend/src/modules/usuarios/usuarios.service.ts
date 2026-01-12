@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Perfil } from '../perfil/entities/perfil.entity';
+import { Vendedor } from '../vendedores/entities/vendedor.entity';
 import * as bcrypt from 'bcrypt';
 import { Usuario } from './entities/usuario.entity';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
@@ -27,6 +28,8 @@ export class UsuariosService {
     private readonly usuarioRepository: Repository<Usuario>,
     @InjectRepository(Perfil)
     private readonly perfilRepository: Repository<Perfil>,
+    @InjectRepository(Vendedor)
+    private readonly vendedorRepository: Repository<Vendedor>,
   ) {}
 
   async create(createUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
@@ -57,6 +60,20 @@ export class UsuariosService {
           `Perfil com ID ${createUsuarioDto.perfilId} não encontrado`,
         );
       }
+
+      // Buscar vendedor pelo ID se fornecido
+      let vendedor: Vendedor | null = null;
+      if (createUsuarioDto.vendedorId) {
+        vendedor = await this.vendedorRepository.findOne({
+          where: { id: createUsuarioDto.vendedorId },
+        });
+        if (!vendedor) {
+          throw new NotFoundException(
+            `Vendedor com ID ${createUsuarioDto.vendedorId} não encontrado`,
+          );
+        }
+      }
+
       // Montar dados do usuário
       const userData = {
         nome: createUsuarioDto.nome,
@@ -66,6 +83,7 @@ export class UsuariosService {
         tema: createUsuarioDto.tema || 'Claro',
         unidade: createUsuarioDto.unidade,
         perfil,
+        vendedor: vendedor || undefined,
       };
 
 
@@ -148,10 +166,10 @@ export class UsuariosService {
   }
 
   async findOne(id: string): Promise<Usuario> {
-    // Carregar usuário incluindo a relação com Perfil para que user.perfil esteja disponível
+    // Carregar usuário incluindo a relação com Perfil e Vendedor
     const user = await this.usuarioRepository.findOne({
       where: { id },
-      relations: ['perfil'],
+      relations: ['perfil', 'vendedor'],
     });
 
     if (!user) {
@@ -208,6 +226,24 @@ export class UsuariosService {
     }
     if (updateUsuarioDto.tema !== undefined) user.tema = updateUsuarioDto.tema;
     if (updateUsuarioDto.unidade !== undefined) user.unidade = updateUsuarioDto.unidade;
+    
+    // Atualizar vendedor se fornecido
+    if (updateUsuarioDto.vendedorId !== undefined) {
+      if (updateUsuarioDto.vendedorId === null || updateUsuarioDto.vendedorId === '') {
+        // Se vendedorId for null ou string vazia, remover o vendedor
+        user.vendedor = null as any;
+      } else {
+        const vendedor = await this.vendedorRepository.findOne({
+          where: { id: updateUsuarioDto.vendedorId },
+        });
+        if (!vendedor) {
+          throw new NotFoundException(
+            `Vendedor com ID ${updateUsuarioDto.vendedorId} não encontrado`,
+          );
+        }
+        user.vendedor = vendedor;
+      }
+    }
 
     try {
       return await this.usuarioRepository.save(user);

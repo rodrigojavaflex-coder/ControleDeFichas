@@ -10,6 +10,7 @@ import {
   IsArray,
   IsEnum,
   IsIn,
+  IsUUID,
 } from 'class-validator';
 import { Permission } from '../../../common/enums/permission.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
@@ -82,4 +83,13 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsEnum(Unidade, { message: 'Unidade deve ser um valor válido (INHUMAS, NERÓPOLIS, UBERABA)' })
   unidade?: Unidade;
+
+  @ApiProperty({
+    description: 'ID do vendedor associado ao usuário',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID(4, { message: 'vendedorId deve ser um UUID válido' })
+  vendedorId?: string;
 }

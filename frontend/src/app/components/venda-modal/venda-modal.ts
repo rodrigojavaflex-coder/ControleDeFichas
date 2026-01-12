@@ -246,12 +246,16 @@ export class VendaModalComponent implements OnInit, OnChanges {
   }
 
   private resetForm() {
+    // Verificar se o usuário logado tem vendedor associado
+    const currentUser = this.authService.getCurrentUser();
+    const vendedorIdInicial = currentUser?.vendedor?.id || '';
+    
     this.vendaForm.reset({
       protocolo: '',
       dataVenda: this.formatDateForInput(new Date()),
       clienteId: '',
       origem: VendaOrigem.GOIANIA,
-      vendedorId: '',
+      vendedorId: vendedorIdInicial,
       prescritorId: null,
       valorCompra: null,
       valorPago: null,
@@ -265,10 +269,16 @@ export class VendaModalComponent implements OnInit, OnChanges {
     this.vendaForm.get('clienteId')?.enable({ emitEvent: false });
     this.vendaForm.get('vendedorId')?.enable({ emitEvent: false });
     this.vendaForm.get('prescritorId')?.enable({ emitEvent: false });
-    // Limpar autocompletes
+    
+    // Limpar autocompletes (exceto vendedor se usuário tiver vendedor)
     setTimeout(() => {
       this.clienteAutocomplete?.clearSelection();
-      this.vendedorAutocomplete?.clearSelection();
+      // Se o usuário tem vendedor, pré-selecionar no autocomplete ao invés de limpar
+      if (currentUser?.vendedor && this.vendedorAutocomplete) {
+        this.vendedorAutocomplete.setSelectedItem(currentUser.vendedor);
+      } else {
+        this.vendedorAutocomplete?.clearSelection();
+      }
       this.prescritorAutocomplete?.clearSelection();
     }, 50);
     // Reconfigurar campo unidade baseado no usuário logado

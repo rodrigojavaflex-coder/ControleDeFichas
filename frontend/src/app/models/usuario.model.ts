@@ -1,3 +1,5 @@
+import { Vendedor } from './vendedor.model';
+
 export enum Unidade {
   INHUMAS = 'INHUMAS',
   NERÓPOLIS = 'NERÓPOLIS',
@@ -106,6 +108,7 @@ export interface Usuario {
   perfil?: Perfil | null;
   tema?: string; // Tema preferido do usuário (Claro ou Escuro)
   unidade?: Unidade; // Unidade do usuário
+  vendedor?: Vendedor | null; // Vendedor associado ao usuário
   criadoEm: Date;
   atualizadoEm: Date;
 }
@@ -124,6 +127,7 @@ export interface CreateUsuarioDto {
   tema?: string; // Tema preferido (Claro ou Escuro)
   unidade?: Unidade | null; // Unidade do usuário (null para sem unidade)
   perfilId: string; // ID do perfil do usuário
+  vendedorId?: string | null; // ID do vendedor associado ao usuário
 }
 
 export interface UpdateUsuarioDto {
@@ -134,6 +138,7 @@ export interface UpdateUsuarioDto {
   tema?: string; // Permitir atualizar tema do usuário (Claro ou Escuro)
   unidade?: Unidade | null; // Permitir atualizar unidade do usuário (null para limpar)
   perfilId?: string; // Atualizar perfil do usuário
+  vendedorId?: string | null; // Atualizar vendedor associado ao usuário (null para remover)
 }
 
 export interface FindUsuariosDto {

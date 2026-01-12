@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Permission } from '../../../common/enums/permission.enum';
+import { Unidade } from '../../../common/enums/unidade.enum';
 
 export class AuthResponseDto {
   @ApiProperty({
@@ -39,5 +40,12 @@ export class AuthResponseDto {
     tema: string;
     criadoEm: Date;
     atualizadoEm: Date;
+    vendedor?: {
+      id: string;
+      nome: string;
+      unidade: Unidade;
+      criadoEm: Date;
+      atualizadoEm: Date;
+    } | null;
   };
 }

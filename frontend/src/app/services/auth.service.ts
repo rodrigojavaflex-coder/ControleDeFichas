@@ -61,19 +61,49 @@ export class AuthService {
 
     const now = Date.now();
 
+    // Mapear resposta do backend para formato Usuario
+    const user = this.mapAuthResponseToUsuario(response.user);
+
     // Salvar tokens no localStorage
     localStorage.setItem('access_token', response.access_token);
     localStorage.setItem('refresh_token', response.refresh_token);
-    localStorage.setItem('user', JSON.stringify(response.user));
+    localStorage.setItem('user', JSON.stringify(user));
     this.setLoginTimestamp(now);
     this.updateTokenExpirations(response.access_token, response.refresh_token);
 
     // Atualizar estado
-    this.currentUserSubject.next(response.user);
+    this.currentUserSubject.next(user);
     this.isAuthenticatedSubject.next(true);
     
     // Inicializar tema com preferência do usuário após login
-    this.themeService.initializeTheme(response.user.id, response.user.tema, false);
+    this.themeService.initializeTheme(user.id, user.tema, false);
+  }
+
+  /**
+   * Mapeia a resposta de autenticação do backend para o formato Usuario do frontend
+   */
+  private mapAuthResponseToUsuario(authUser: any): Usuario {
+    return {
+      id: authUser.id,
+      nome: authUser.name || authUser.nome,
+      email: authUser.email,
+      ativo: authUser.isActive !== undefined ? authUser.isActive : authUser.ativo,
+      tema: authUser.tema || 'Claro',
+      vendedor: authUser.vendedor ? {
+        id: authUser.vendedor.id,
+        nome: authUser.vendedor.nome,
+        unidade: authUser.vendedor.unidade || 'INHUMAS' as any,
+        criadoEm: authUser.vendedor.criadoEm || new Date(),
+        atualizadoEm: authUser.vendedor.atualizadoEm || new Date(),
+      } : null,
+      criadoEm: authUser.criadoEm,
+      atualizadoEm: authUser.atualizadoEm,
+      perfil: authUser.permissions ? {
+        id: '',
+        nomePerfil: '',
+        permissoes: authUser.permissions,
+      } : null,
+    };
   }
 
   /**
@@ -119,8 +149,13 @@ export class AuthService {
         })
       );
 
+      // Mapear resposta do backend para formato Usuario
+      const user = this.mapAuthResponseToUsuario(response.user);
+
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('refresh_token', response.refresh_token);
+      localStorage.setItem('user', JSON.stringify(user));
+      this.currentUserSubject.next(user);
       this.updateTokenExpirations(response.access_token, response.refresh_token);
       return response.access_token;
     } catch (error) {

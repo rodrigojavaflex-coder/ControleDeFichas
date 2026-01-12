@@ -1,6 +1,7 @@
 import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Perfil } from '../../perfil/entities/perfil.entity';
+import { Vendedor } from '../../vendedores/entities/vendedor.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
@@ -68,4 +69,9 @@ export class Usuario extends BaseEntity {
     nullable: true,
   })
   unidade?: Unidade;
+
+  @ApiProperty({ description: 'Vendedor associado ao usuário', type: () => Vendedor, required: false })
+  @ManyToOne(() => Vendedor, { nullable: true, eager: false })
+  @JoinColumn({ name: 'vendedorId' })
+  vendedor?: Vendedor;
 }

@@ -74,8 +74,11 @@ export class AuthService {
   async login(loginDto: LoginDto, req?: any): Promise<AuthResponseDto> {
     const { email, password } = loginDto;
 
-    // Buscar usuário pelo email
-    const user = await this.userRepository.findOneBy({ email });
+    // Buscar usuário pelo email com relações
+    const user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['perfil', 'vendedor'],
+    });
     if (!user) {
       if (await this.shouldAuditAction(AuditAction.LOGIN_FAILED)) {
         await this.auditoriaService.createLog({
@@ -135,7 +138,10 @@ export class AuthService {
   async refreshToken(refreshToken: string): Promise<AuthResponseDto> {
     try {
       const payload = this.jwtService.verify(refreshToken);
-      const user = await this.userRepository.findOneBy({ id: payload.sub });
+      const user = await this.userRepository.findOne({
+        where: { id: payload.sub },
+        relations: ['perfil', 'vendedor'],
+      });
 
       if (!user || !user.ativo) {
         // Auditar tentativa de refresh com token inválido
@@ -212,12 +218,22 @@ export class AuthService {
         tema: user.tema || 'Claro',
         criadoEm: user.criadoEm,
         atualizadoEm: user.atualizadoEm,
+        vendedor: user.vendedor ? {
+          id: user.vendedor.id,
+          nome: user.vendedor.nome,
+          unidade: user.vendedor.unidade,
+          criadoEm: user.vendedor.criadoEm,
+          atualizadoEm: user.vendedor.atualizadoEm,
+        } : null,
       },
     };
   }
 
   async validateUserById(userId: string): Promise<Usuario | null> {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['perfil', 'vendedor'],
+    });
     if (user && user.ativo) {
       return user;
     }
@@ -225,7 +241,10 @@ export class AuthService {
   }
 
   async getProfile(userId: string): Promise<Usuario> {
-    const user = await this.userRepository.findOneBy({ id: userId });
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['perfil', 'vendedor'],
+    });
     if (!user) {
       // Auditar tentativa de acesso a perfil inexistente
       if (await this.shouldAuditAction(AuditAction.READ)) {
