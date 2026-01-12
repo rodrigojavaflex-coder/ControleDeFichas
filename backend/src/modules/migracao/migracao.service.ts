@@ -753,7 +753,7 @@ export class MigracaoService {
       
       const executedNames = new Set(executedMigrations.map((m: any) => m.name));
       
-      // Filtrar apenas as migrations estruturais pendentes (timestamp <= 1735000002000)
+      // Filtrar apenas as migrations estruturais pendentes (timestamp <= 1735000004000)
       // Excluir a migration de remoção de campos texto (1735000003000)
       const structuralMigrations = allMigrations.filter((migration: any) => {
         // migration é uma classe de migration
@@ -780,9 +780,13 @@ export class MigracaoService {
         const match = migrationName.match(/(\d+)$/);
         if (match) {
           const timestamp = parseInt(match[1], 10);
-          // Executar apenas migrations estruturais (até 1735000002000)
-          // Isso inclui: 1735000000000 (add-venda-relations), 1735000001000 (create-cadastros-tables), 1735000002000 (add-venda-foreign-keys)
-          return timestamp <= 1735000002000;
+          // Executar apenas migrations estruturais (até 1735000004000)
+          // Isso inclui: 
+          // - 1735000000000 (add-venda-relations)
+          // - 1735000001000 (create-cadastros-tables)
+          // - 1735000002000 (add-venda-foreign-keys)
+          // - 1735000004000 (add-vendedor-to-usuarios)
+          return timestamp <= 1735000004000;
         }
         return false;
       });

@@ -11,7 +11,6 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "prestart:prod": "node scripts/check-and-run-migrations.js",
     "start:prod": "node dist/main",
     "migration:run-dev": "ts-node -r tsconfig-paths/register src/scripts/run-migrations.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
