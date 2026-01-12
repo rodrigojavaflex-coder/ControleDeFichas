@@ -8,7 +8,7 @@ import { AuthService } from '../../services/auth.service';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Venda, VendaPaginatedResponse, FindVendasDto, VendaOrigem, VendaStatus, Unidade, CreateVendaDto } from '../../models/venda.model';
 import { Baixa, TipoDaBaixa, ProcessarBaixasEmMassaResultado } from '../../models/baixa.model';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Permission } from '../../models/usuario.model';
 import { BaseListComponent } from '../base-list.component';
 import { VendaModalComponent } from '../venda-modal/venda-modal';
@@ -1288,7 +1288,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     popup.focus();
   }
 
-  exportarSelecionadasParaExcel(): void {
+  async exportarSelecionadasParaExcel(): Promise<void> {
     if (!this.canReadVenda()) {
       return;
     }
@@ -1322,12 +1322,29 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       return linha;
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(planilha);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Vendas');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Vendas');
+    
+    if (planilha.length > 0) {
+      const headers = Object.keys(planilha[0]);
+      worksheet.columns = headers.map(header => ({ header, key: header }));
+      planilha.forEach(row => worksheet.addRow(row));
+    }
 
-    const nomeArquivo = `Relatorio_Vendas_${this.getReportTimestamp().replace(/[:\s]/g, '-')}.xlsx`;
-    XLSX.writeFile(workbook, nomeArquivo);
+    try {
+      const nomeArquivo = `Relatorio_Vendas_${this.getReportTimestamp().replace(/[:\s]/g, '-')}.xlsx`;
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = nomeArquivo;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar para Excel:', error);
+      this.errorModalService.show('Erro ao exportar planilha. Tente novamente.', 'Erro');
+    }
   }
 
   /** Abrir modal de histórico de auditoria */

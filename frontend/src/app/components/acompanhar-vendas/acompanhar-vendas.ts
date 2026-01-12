@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, ViewEncapsulation, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Subject, takeUntil } from 'rxjs';
 import { VendaService } from '../../services/vendas.service';
 import { ErrorModalService } from '../../services/error-modal.service';
@@ -357,7 +357,7 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     popup.focus();
   }
 
-  exportarSelecionadasParaExcel(): void {
+  async exportarSelecionadasParaExcel(): Promise<void> {
     const vendas = this.getSelectedVendaModels();
     if (vendas.length === 0) {
       this.errorModalService.show('Selecione ao menos uma venda para exportar.', 'Aviso');
@@ -384,12 +384,29 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       return linha;
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(planilha);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Acompanhar Vendas');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Acompanhar Vendas');
+    
+    if (planilha.length > 0) {
+      const headers = Object.keys(planilha[0]);
+      worksheet.columns = headers.map(header => ({ header, key: header }));
+      planilha.forEach(row => worksheet.addRow(row));
+    }
 
-    const fileName = `Acompanhar_Vendas_${this.getReportTimestamp().replace(/[:\\s]/g, '-')}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    try {
+      const fileName = `Acompanhar_Vendas_${this.getReportTimestamp().replace(/[:\\s]/g, '-')}.xlsx`;
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erro ao exportar para Excel:', error);
+      this.errorModalService.show('Erro ao exportar planilha. Tente novamente.', 'Erro');
+    }
   }
 
   onSort(field: SortableField): void {

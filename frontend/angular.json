@@ -30,6 +30,9 @@
             "styles": [
               "src/styles/design-system.css",
               "src/styles.css"
+            ],
+            "allowedCommonJsDependencies": [
+              "exceljs"
             ]
           },
           "configurations": {
@@ -37,8 +40,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1300kB",
-                  "maximumError": "2MB"
+                  "maximumWarning": "2500kB",
+                  "maximumError": "3MB"
                 },
                 {
                   "type": "anyComponentStyle",
