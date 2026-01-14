@@ -553,9 +553,12 @@ export class SincronizacaoService {
   ): Promise<boolean> {
     const unidade = this.agenteUnidadeMap[agente] || this.unidadeMap[clienteAgente.cdfil] || Unidade.INHUMAS;
 
-    // Buscar cliente existente por cdcliente
+    // Buscar cliente existente por cdcliente E unidade (mesmo código pode existir em unidades diferentes)
     let cliente = await this.clienteRepository.findOne({
-      where: { cdcliente: clienteAgente.cdcli },
+      where: { 
+        cdcliente: clienteAgente.cdcli,
+        unidade: unidade,
+      },
     });
 
     const foiCriado = !cliente;
@@ -580,7 +583,7 @@ export class SincronizacaoService {
       if (clienteAgente.dtnas) {
         cliente.dataNascimento = this.parseDate(clienteAgente.dtnas);
       }
-      cliente.unidade = unidade;
+      // Unidade não precisa atualizar pois já está correta na busca
     }
 
     await this.clienteRepository.save(cliente);
@@ -594,13 +597,31 @@ export class SincronizacaoService {
   private async processarPrescritor(
     prescritorAgente: AgentePrescritor,
   ): Promise<boolean> {
-    // Padronizar nome para buscar (garante que busca usando o mesmo formato que foi salvo)
+    // Padronizar nome para usar como fallback
     const nomePadronizado = this.padronizarNome(prescritorAgente.nomemed);
+    const ufcrmValido = prescritorAgente.ufcrm ? this.garantirUtf8Valido(prescritorAgente.ufcrm) : undefined;
     
-    // Buscar prescritor existente por nome padronizado
-    let prescritor = await this.prescritorRepository.findOne({
-      where: { nome: nomePadronizado },
-    });
+    // Buscar prescritor existente:
+    // 1. Se tiver numeroCRM e UFCRM, buscar por esses campos (mais confiável)
+    // 2. Caso contrário, buscar por nome padronizado
+    let prescritor: Prescritor | null = null;
+    
+    if (prescritorAgente.nrcrm && ufcrmValido) {
+      // Buscar por CRM (mais confiável)
+      prescritor = await this.prescritorRepository.findOne({
+        where: { 
+          numeroCRM: prescritorAgente.nrcrm,
+          UFCRM: ufcrmValido,
+        },
+      });
+    }
+    
+    // Se não encontrou por CRM, buscar por nome
+    if (!prescritor) {
+      prescritor = await this.prescritorRepository.findOne({
+        where: { nome: nomePadronizado },
+      });
+    }
 
     const foiCriado = !prescritor;
 
@@ -609,12 +630,21 @@ export class SincronizacaoService {
       prescritor = this.prescritorRepository.create({
         nome: nomePadronizado,
         numeroCRM: prescritorAgente.nrcrm || undefined,
-        UFCRM: prescritorAgente.ufcrm ? this.garantirUtf8Valido(prescritorAgente.ufcrm) : undefined,
+        UFCRM: ufcrmValido,
       });
     } else {
       // Atualizar prescritor existente
-      if (prescritorAgente.nrcrm) prescritor.numeroCRM = prescritorAgente.nrcrm;
-      if (prescritorAgente.ufcrm) prescritor.UFCRM = this.garantirUtf8Valido(prescritorAgente.ufcrm);
+      // Se encontrou por nome mas tem CRM no agente, atualizar CRM
+      if (prescritorAgente.nrcrm && !prescritor.numeroCRM) {
+        prescritor.numeroCRM = prescritorAgente.nrcrm;
+      }
+      if (ufcrmValido && !prescritor.UFCRM) {
+        prescritor.UFCRM = ufcrmValido;
+      }
+      // Atualizar nome se mudou (caso tenha sido encontrado por CRM)
+      if (prescritor.nome !== nomePadronizado) {
+        prescritor.nome = nomePadronizado;
+      }
     }
 
     await this.prescritorRepository.save(prescritor);

@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "cd ../frontend && npm install --include=dev && npm run build && cd ../backend && npx nest build",
+    "build": "cd ../frontend && npm install --include=dev && npm run build && cd ../backend && node_modules/.bin/nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
