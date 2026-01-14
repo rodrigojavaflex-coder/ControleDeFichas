@@ -1,24 +1,27 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
 import { MigracaoService, MigracaoResult, MigracaoProgress, MigracaoCadastrosProgress } from '../../services/migracao.service';
+import { SincronizacaoService } from '../../services/sincronizacao.service';
+import { SincronizacaoConfig, SincronizacaoResult } from '../../models/sincronizacao.model';
 import { interval, Subscription } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
 
 @Component({
   selector: 'app-configuracao',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   templateUrl: './configuracao.component.html',
   styleUrls: ['./configuracao.component.css']
 })
 export class ConfiguracaoComponent implements OnInit, OnDestroy {
   private configuracaoService = inject(ConfiguracaoService);
   private migracaoService = inject(MigracaoService);
+  private sincronizacaoService = inject(SincronizacaoService);
   private fb = inject(FormBuilder);
   private progressSubscription?: Subscription;
   private cadastrosProgressSubscription?: Subscription;
@@ -31,7 +34,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   logoPreview: string | null = null;
 
   // Abas
-  activeTab: 'geral' | 'migracao' = 'geral';
+  activeTab: 'geral' | 'migracao' | 'sincronizacao' = 'geral';
 
   // Migração
   migrationLoading = false;
@@ -48,6 +51,24 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   // Remover Campos Texto
   removerCamposTextoLoading = false;
   removerCamposTextoResult: { message: string; success: boolean } | null = null;
+
+  // Sincronização
+  sincronizacaoConfigs: SincronizacaoConfig[] = [];
+  sincronizacaoLoading = false;
+  sincronizacaoExecutando = false;
+  sincronizacaoResultado: SincronizacaoResult[] | null = null;
+  agentesDisponiveis = [
+    { value: 'inhumas', label: 'Inhumas' },
+    { value: 'uberaba', label: 'Uberaba' },
+    { value: 'neropolis', label: 'Nerópolis' },
+  ];
+  editandoAgente: string | null = null;
+  formSincronizacao: Record<string, {
+    ativo: boolean;
+    ultimaDataCliente: string;
+    ultimaDataPrescritor: string;
+    intervaloMinutos: number;
+  }> = {};
 
   constructor() {
     this.form = this.fb.group({
@@ -94,6 +115,161 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+
+    // Carregar configurações de sincronização
+    this.carregarSincronizacaoConfigs();
+  }
+
+  carregarSincronizacaoConfigs() {
+    this.sincronizacaoLoading = true;
+    this.sincronizacaoService.findAll().subscribe({
+      next: (configs) => {
+        // Normalizar as datas ao carregar para evitar problemas de timezone
+        this.sincronizacaoConfigs = configs.map(config => ({
+          ...config,
+          ultimaDataCliente: config.ultimaDataCliente ? this.normalizarData(config.ultimaDataCliente) : undefined,
+          ultimaDataPrescritor: config.ultimaDataPrescritor ? this.normalizarData(config.ultimaDataPrescritor) : undefined,
+        }));
+        this.sincronizacaoLoading = false;
+      },
+      error: (err) => {
+        this.error = 'Erro ao carregar configurações de sincronização: ' + (err?.error?.message || err?.message);
+        this.sincronizacaoLoading = false;
+      }
+    });
+  }
+
+  criarOuAtualizarSincronizacao(config: SincronizacaoConfig | null, formData: any) {
+    // Limpar mensagens anteriores
+    this.error = null;
+    this.success = null;
+
+    if (config) {
+      this.sincronizacaoService.update(config.id, formData).subscribe({
+        next: () => {
+          this.success = 'Configuração de sincronização atualizada com sucesso!';
+          this.carregarSincronizacaoConfigs();
+        },
+        error: (err) => {
+          this.error = 'Erro ao atualizar configuração: ' + (err?.error?.message || err?.message);
+        }
+      });
+    } else {
+      this.sincronizacaoService.create(formData).subscribe({
+        next: () => {
+          this.success = 'Configuração de sincronização criada com sucesso!';
+          this.carregarSincronizacaoConfigs();
+        },
+        error: (err) => {
+          this.error = 'Erro ao criar configuração: ' + (err?.error?.message || err?.message);
+        }
+      });
+    }
+  }
+
+
+  executarSincronizacao() {
+    this.sincronizacaoExecutando = true;
+    this.sincronizacaoResultado = null;
+    this.error = null;
+    this.success = null;
+
+    this.sincronizacaoService.executarSincronizacao().subscribe({
+      next: (resultados) => {
+        this.sincronizacaoExecutando = false;
+        this.sincronizacaoResultado = resultados;
+        const totalClientes = resultados.reduce((sum, r) => sum + r.clientesCriados, 0);
+        const totalPrescritores = resultados.reduce((sum, r) => sum + r.prescritoresCriados, 0);
+        this.success = `Sincronização concluída! ${totalClientes} clientes e ${totalPrescritores} prescritores processados.`;
+        this.carregarSincronizacaoConfigs();
+      },
+      error: (err) => {
+        this.sincronizacaoExecutando = false;
+        this.error = 'Erro ao executar sincronização: ' + (err?.error?.message || err?.message);
+      }
+    });
+  }
+
+  getConfigPorAgente(agente: string): SincronizacaoConfig | null {
+    return this.sincronizacaoConfigs.find(c => c.agente === agente) || null;
+  }
+
+  parseIntervalo(value: string | null | undefined, defaultValue: number): number {
+    if (!value) return defaultValue;
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? defaultValue : parsed;
+  }
+
+  formatarData(data: string | null | undefined): string {
+    if (!data) return '-';
+    try {
+      // Normalizar a data para garantir que pegamos apenas YYYY-MM-DD
+      const dataNormalizada = this.normalizarData(data);
+      const [ano, mes, dia] = dataNormalizada.split('-');
+      if (ano && mes && dia) {
+        return `${dia}/${mes}/${ano}`;
+      }
+      return data;
+    } catch {
+      return data;
+    }
+  }
+
+  /**
+   * Normaliza uma data para o formato YYYY-MM-DD, removendo informações de timezone
+   */
+  normalizarData(data: string | null | undefined): string {
+    if (!data) return '';
+    try {
+      // Se a data já está no formato YYYY-MM-DD, retorna direto
+      if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+        return data;
+      }
+      // Se tem timezone ou hora, extrai apenas a parte da data
+      const dataObj = new Date(data);
+      if (isNaN(dataObj.getTime())) {
+        return data; // Se não conseguir parsear, retorna original
+      }
+      // Usa UTC para evitar problemas de timezone
+      const ano = dataObj.getUTCFullYear();
+      const mes = String(dataObj.getUTCMonth() + 1).padStart(2, '0');
+      const dia = String(dataObj.getUTCDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    } catch {
+      return data;
+    }
+  }
+
+  iniciarEdicao(agente: string, config: SincronizacaoConfig | null) {
+    this.editandoAgente = agente;
+    this.formSincronizacao[agente] = {
+      ativo: config?.ativo ?? false,
+      ultimaDataCliente: this.normalizarData(config?.ultimaDataCliente) || '',
+      ultimaDataPrescritor: this.normalizarData(config?.ultimaDataPrescritor) || '',
+      intervaloMinutos: config?.intervaloMinutos || 60,
+    };
+  }
+
+  cancelarEdicao(agente: string) {
+    this.editandoAgente = null;
+    delete this.formSincronizacao[agente];
+  }
+
+  salvarSincronizacao(agente: string, config: SincronizacaoConfig | null) {
+    const formData = this.formSincronizacao[agente];
+    if (!formData) return;
+
+    const dto = {
+      agente: agente,
+      ativo: formData.ativo,
+      // Normalizar as datas antes de enviar para garantir formato YYYY-MM-DD
+      ultimaDataCliente: this.normalizarData(formData.ultimaDataCliente) || undefined,
+      ultimaDataPrescritor: this.normalizarData(formData.ultimaDataPrescritor) || undefined,
+      intervaloMinutos: formData.intervaloMinutos,
+    };
+
+    this.criarOuAtualizarSincronizacao(config, dto);
+    this.cancelarEdicao(agente);
   }
 
   onLogoChange(event: any) {

@@ -7,8 +7,58 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { Request, Response } from 'express';
+import { AppDataSource } from './data-source';
+
+/**
+ * Executa migrations pendentes antes de iniciar a aplicação
+ * Executa quando DATABASE_SYNCHRONIZE=false ou em produção
+ */
+async function runMigrations() {
+  const logger = new Logger('Migrations');
+  
+  try {
+    logger.log('🔄 Verificando migrations pendentes...');
+    
+    if (!AppDataSource.isInitialized) {
+      await AppDataSource.initialize();
+      logger.log('✅ DataSource inicializado');
+    }
+
+    const executedMigrations = await AppDataSource.runMigrations();
+    
+    if (executedMigrations && executedMigrations.length > 0) {
+      logger.log(`✅ ${executedMigrations.length} migration(s) executada(s) com sucesso:`);
+      executedMigrations.forEach((migration) => {
+        logger.log(`   - ${migration.name}`);
+      });
+    } else {
+      logger.log('✅ Nenhuma migration pendente');
+    }
+  } catch (error) {
+    logger.error('❌ Erro ao executar migrations:', error);
+    if (error instanceof Error) {
+      logger.error(`   Mensagem: ${error.message}`);
+      if (error.stack) {
+        logger.error(`   Stack: ${error.stack}`);
+      }
+    }
+    // Não encerrar a aplicação - pode ser que as migrations já foram executadas
+    // ou que há um problema de conexão temporário
+    logger.warn('⚠️  Continuando inicialização da aplicação mesmo com erro nas migrations');
+  }
+}
 
 async function bootstrap() {
+  // Verificar se deve executar migrations antes de criar a aplicação
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const databaseSynchronize = process.env.DATABASE_SYNCHRONIZE === 'true';
+  
+  // Executar migrations se:
+  // 1. Estiver em produção (NODE_ENV=production)
+  // 2. Ou se DATABASE_SYNCHRONIZE=false (não usar auto-sync)
+  if (nodeEnv === 'production' || !databaseSynchronize) {
+    await runMigrations();
+  }
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // Middleware para HEAD /
   app.use((req: Request, res: Response, next) => {

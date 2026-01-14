@@ -15,6 +15,12 @@
       (click)="activeTab = 'migracao'">
       Migrações
     </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'sincronizacao'"
+      (click)="activeTab = 'sincronizacao'">
+      Sincronização
+    </button>
   </div>
 
   <!-- Tab: Configurações Gerais -->
@@ -146,12 +152,8 @@
           type="button" 
           class="btn-migracao" 
           (click)="importarDados()"
-          [disabled]="importLoading || !migrationResult">
-          @if (importLoading) {
-            Importando...
-          } @else {
-            Importar Dados
-          }
+          [disabled]="true">
+          Importar Dados
         </button>
         
         <!-- Barra de Progresso -->
@@ -217,12 +219,8 @@
           type="button" 
           class="btn-migracao" 
           (click)="importarTodosCadastros()"
-          [disabled]="cadastrosLoading">
-          @if (cadastrosLoading) {
-            Importando Cadastros...
-          } @else {
-            Importar Todos os Cadastros
-          }
+          [disabled]="true">
+          Importar Todos os Cadastros
         </button>
         
         <!-- Barra de Progresso Cadastros -->
@@ -287,12 +285,8 @@
           type="button" 
           class="btn-migracao btn-migracao-danger" 
           (click)="removerCamposTexto()"
-          [disabled]="removerCamposTextoLoading">
-          @if (removerCamposTextoLoading) {
-            Removendo Campos...
-          } @else {
-            ⚠️ Remover Campos Texto
-          }
+          [disabled]="true">
+          ⚠️ Remover Campos Texto
         </button>
         
         @if (removerCamposTextoResult) {
@@ -302,6 +296,161 @@
           </div>
         }
       </div>
+    </div>
+  }
+
+  <!-- Tab: Sincronização -->
+  @if (activeTab === 'sincronizacao') {
+    <div class="sincronizacao-section">
+      <div class="sincronizacao-header">
+        <div>
+          <h3 class="section-title">Sincronização Automática de Cadastros</h3>
+          <p class="section-description">
+            Configure a sincronização automática de clientes e prescritores dos agentes Firebird.
+          </p>
+        </div>
+        <button 
+          type="button" 
+          class="btn-migracao" 
+          (click)="executarSincronizacao()"
+          [disabled]="sincronizacaoExecutando">
+          @if (sincronizacaoExecutando) {
+            <i class="fas fa-spinner fa-spin"></i> Sincronizando...
+          } @else {
+            <i class="fas fa-sync"></i> Executar Sincronização Manual
+          }
+        </button>
+      </div>
+
+      @if (sincronizacaoResultado) {
+        <div class="result-box success" style="margin-bottom: 2rem;">
+          <strong>✓ Resultado da Sincronização:</strong>
+          @for (resultado of sincronizacaoResultado; track resultado.agente) {
+            <div style="margin-top: 1rem;">
+              <strong>Agente: {{ resultado.agente }}</strong>
+              <ul>
+                <li>Clientes processados: {{ resultado.clientesProcessados }} ({{ resultado.clientesCriados }} criados, {{ resultado.clientesAtualizados }} atualizados)</li>
+                <li>Prescritores processados: {{ resultado.prescritoresProcessados }} ({{ resultado.prescritoresCriados }} criados, {{ resultado.prescritoresAtualizados }} atualizados)</li>
+                @if (resultado.erros.length > 0) {
+                  <li class="error">Erros: {{ resultado.erros.length }}</li>
+                  <details>
+                    <summary>Ver erros</summary>
+                    <ul>
+                      @for (erro of resultado.erros; track erro) {
+                        <li>{{ erro }}</li>
+                      }
+                    </ul>
+                  </details>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      }
+
+      @if (sincronizacaoLoading) {
+        <div class="loading-message">Carregando configurações...</div>
+      } @else {
+        <!-- Grid de Configurações -->
+        <div class="sincronizacao-grid-container">
+          <table class="sincronizacao-table">
+            <thead>
+              <tr>
+                <th>Agente</th>
+                <th>Status</th>
+                <th>Última Data Clientes</th>
+                <th>Última Data Prescritores</th>
+                <th>Intervalo (min)</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (agente of agentesDisponiveis; track agente.value) {
+                @let config = getConfigPorAgente(agente.value);
+                @let editando = editandoAgente === agente.value;
+                <tr [class.editing]="editando">
+                  <td class="agente-name">
+                    <strong>{{ agente.label }}</strong>
+                  </td>
+                  <td>
+                    @if (editando) {
+                      <label class="checkbox-label-inline">
+                        <input 
+                          type="checkbox" 
+                          [(ngModel)]="formSincronizacao[agente.value].ativo"
+                          class="checkbox-input" />
+                        <span class="checkbox-text">{{ formSincronizacao[agente.value].ativo ? 'Ativo' : 'Inativo' }}</span>
+                      </label>
+                    } @else {
+                      <span class="status-badge" [class.active]="config?.ativo" [class.inactive]="!config?.ativo">
+                        {{ config?.ativo ? 'Ativo' : 'Inativo' }}
+                      </span>
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
+                      <input 
+                        type="date" 
+                        [(ngModel)]="formSincronizacao[agente.value].ultimaDataCliente"
+                        class="form-input-inline" />
+                    } @else {
+                      {{ formatarData(config?.ultimaDataCliente) }}
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
+                      <input 
+                        type="date" 
+                        [(ngModel)]="formSincronizacao[agente.value].ultimaDataPrescritor"
+                        class="form-input-inline" />
+                    } @else {
+                      {{ formatarData(config?.ultimaDataPrescritor) }}
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
+                      <input 
+                        type="number" 
+                        [(ngModel)]="formSincronizacao[agente.value].intervaloMinutos"
+                        class="form-input-inline"
+                        min="1"
+                        style="width: 80px;" />
+                    } @else {
+                      {{ config?.intervaloMinutos || 60 }}
+                    }
+                  </td>
+                  <td class="actions-cell">
+                    @if (editando) {
+                      <button 
+                        type="button" 
+                        class="btn-icon btn-save"
+                        (click)="salvarSincronizacao(agente.value, config)"
+                        title="Salvar">
+                        <i class="fas fa-check"></i>
+                      </button>
+                      <button 
+                        type="button" 
+                        class="btn-icon btn-cancel"
+                        (click)="cancelarEdicao(agente.value)"
+                        title="Cancelar">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    } @else {
+                      <button 
+                        type="button" 
+                        class="btn-icon btn-edit"
+                        (click)="iniciarEdicao(agente.value, config)"
+                        title="Editar">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
     </div>
   }
 

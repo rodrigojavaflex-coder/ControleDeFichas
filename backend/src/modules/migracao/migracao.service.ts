@@ -308,9 +308,9 @@ export class MigracaoService {
     const novoCliente = this.clienteRepository.create({
       nome: this.padronizarNome(nomeCliente) || nome,
       cdcliente: clienteLegado?.CDCLIENTE ?? undefined,
-      cpf: clienteLegado?.CPF ?? undefined,
+      cpf: clienteLegado?.CPF ? this.garantirUtf8Valido(clienteLegado.CPF) : undefined,
       dataNascimento: this.parseDate(clienteLegado?.DATANASCIMENTO),
-      email: clienteLegado?.EMAIL ?? undefined,
+      email: clienteLegado?.EMAIL ? this.garantirUtf8Valido(clienteLegado.EMAIL) : undefined,
       telefone: undefined, // Não vem do legado
       unidade: unidadeFinal,
     });
@@ -394,7 +394,7 @@ export class MigracaoService {
     const novoPrescritor = this.prescritorRepository.create({
       nome: this.padronizarNome(nomePrescritor) || nome,
       numeroCRM: prescritorLegado?.NRCRM ?? undefined,
-      UFCRM: prescritorLegado?.UFCRM ?? undefined,
+      UFCRM: prescritorLegado?.UFCRM ? this.garantirUtf8Valido(prescritorLegado.UFCRM) : undefined,
     });
 
     return await this.prescritorRepository.save(novoPrescritor);
@@ -673,7 +673,7 @@ export class MigracaoService {
 
   /**
    * Executa a migration do TypeORM via API
-   * Executa apenas as migrations estruturais (até 1735000002000), excluindo a de remoção de campos texto
+   * Executa apenas as migrations estruturais (até 1736000000000), excluindo a de remoção de campos texto
    */
   async executarMigration(): Promise<{ message: string; success: boolean }> {
     try {
@@ -753,7 +753,7 @@ export class MigracaoService {
       
       const executedNames = new Set(executedMigrations.map((m: any) => m.name));
       
-      // Filtrar apenas as migrations estruturais pendentes (timestamp <= 1735000004000)
+      // Filtrar apenas as migrations estruturais pendentes (timestamp <= 1736000000000)
       // Excluir a migration de remoção de campos texto (1735000003000)
       const structuralMigrations = allMigrations.filter((migration: any) => {
         // migration é uma classe de migration
@@ -780,13 +780,14 @@ export class MigracaoService {
         const match = migrationName.match(/(\d+)$/);
         if (match) {
           const timestamp = parseInt(match[1], 10);
-          // Executar apenas migrations estruturais (até 1735000004000)
+          // Executar apenas migrations estruturais (até 1736000000000)
           // Isso inclui: 
           // - 1735000000000 (add-venda-relations)
           // - 1735000001000 (create-cadastros-tables)
           // - 1735000002000 (add-venda-foreign-keys)
           // - 1735000004000 (add-vendedor-to-usuarios)
-          return timestamp <= 1735000004000;
+          // - 1736000000000 (create-sincronizacao-config)
+          return timestamp <= 1736000000000;
         }
         return false;
       });
@@ -1189,9 +1190,9 @@ export class MigracaoService {
             const novoCliente = this.clienteRepository.create({
               nome: this.padronizarNome(clienteLegado.NOME),
               cdcliente: clienteLegado.CDCLIENTE ?? undefined,
-              cpf: clienteLegado.CPF ?? undefined,
+              cpf: clienteLegado.CPF ? this.garantirUtf8Valido(clienteLegado.CPF) : undefined,
               dataNascimento: this.parseDate(clienteLegado.DATANASCIMENTO),
-              email: clienteLegado.EMAIL ?? undefined,
+              email: clienteLegado.EMAIL ? this.garantirUtf8Valido(clienteLegado.EMAIL) : undefined,
               telefone: undefined,
               unidade: unidade,
             });
@@ -1237,7 +1238,7 @@ export class MigracaoService {
             const novoPrescritor = this.prescritorRepository.create({
               nome: this.padronizarNome(prescritorLegado.NOME),
               numeroCRM: prescritorLegado.NRCRM ?? undefined,
-              UFCRM: prescritorLegado.UFCRM ?? undefined,
+              UFCRM: prescritorLegado.UFCRM ? this.garantirUtf8Valido(prescritorLegado.UFCRM) : undefined,
             });
             await this.prescritorRepository.save(novoPrescritor);
             resultado.prescritoresCriados++;
@@ -1286,9 +1287,9 @@ export class MigracaoService {
             const novoCliente = this.clienteRepository.create({
               nome: this.padronizarNome(clienteLegado.NOME),
               cdcliente: clienteLegado.CDCLIENTE ?? undefined,
-              cpf: clienteLegado.CPF ?? undefined,
+              cpf: clienteLegado.CPF ? this.garantirUtf8Valido(clienteLegado.CPF) : undefined,
               dataNascimento: this.parseDate(clienteLegado.DATANASCIMENTO),
-              email: clienteLegado.EMAIL ?? undefined,
+              email: clienteLegado.EMAIL ? this.garantirUtf8Valido(clienteLegado.EMAIL) : undefined,
               telefone: undefined,
               unidade: unidade,
             });
@@ -1334,7 +1335,7 @@ export class MigracaoService {
             const novoPrescritor = this.prescritorRepository.create({
               nome: this.padronizarNome(prescritorLegado.NOME),
               numeroCRM: prescritorLegado.NRCRM ?? undefined,
-              UFCRM: prescritorLegado.UFCRM ?? undefined,
+              UFCRM: prescritorLegado.UFCRM ? this.garantirUtf8Valido(prescritorLegado.UFCRM) : undefined,
             });
             await this.prescritorRepository.save(novoPrescritor);
             resultado.prescritoresCriados++;
@@ -1460,19 +1461,60 @@ export class MigracaoService {
   }
 
   /**
+   * Garante que a string está em UTF-8 válido
+   * Remove ou corrige caracteres inválidos que podem ter sido corrompidos na conversão de encoding
+   */
+  private garantirUtf8Valido(str: string): string {
+    if (!str) return str;
+    
+    try {
+      // Tenta decodificar e re-encodar para garantir UTF-8 válido
+      // Se a string já está em UTF-8 válido, isso não altera nada
+      const buffer = Buffer.from(str, 'utf8');
+      return buffer.toString('utf8');
+    } catch (error) {
+      // Se falhar, tenta remover caracteres inválidos
+      this.logger.warn(`String com encoding inválido detectada, removendo caracteres inválidos: ${str.substring(0, 50)}...`);
+      // Remove caracteres não-UTF-8 válidos
+      return str.replace(/[\uFFFD\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+    }
+  }
+
+  /**
    * Padroniza um nome: maiúsculas e normaliza espaços
    * Ex: "Abnil C. L  Neto" -> "ABNIL C. L NETO"
+   * CORREÇÃO: 
+   * 1. Garante UTF-8 válido antes de processar
+   * 2. Usa toLocaleUpperCase('pt-BR') para preservar caracteres especiais (acentos, cedilha)
+   * 3. Preserva caracteres especiais após a conversão de encoding do FirebirdConnectionService
    */
   private padronizarNome(nome: string): string {
     if (!nome) return nome;
 
-    return nome
-      .toUpperCase()
+    // Primeiro garante que está em UTF-8 válido
+    let normalized = this.garantirUtf8Valido(nome);
+
+    // Normaliza espaços e pontos
+    normalized = normalized
       .trim()
       .replace(/\s+/g, ' ') // Normaliza múltiplos espaços para um único espaço
       .replace(/\s+\./g, '.') // Remove espaços antes de ponto
       .replace(/\.\s+/g, '. ') // Garante espaço após ponto (mas preserva . seguido de espaço)
       .trim();
+
+    // Usa toLocaleUpperCase com locale pt-BR para preservar caracteres especiais corretamente
+    // Isso garante que Ç, Á, É, etc. sejam convertidos corretamente para maiúsculas
+    // O FirebirdConnectionService já converteu de WIN1252/NONE para UTF-8,
+    // então agora podemos usar toLocaleUpperCase com segurança
+    try {
+      normalized = normalized.toLocaleUpperCase('pt-BR');
+    } catch (error) {
+      // Fallback para toUpperCase se toLocaleUpperCase falhar
+      this.logger.warn(`Erro ao usar toLocaleUpperCase, usando toUpperCase: ${error.message}`);
+      normalized = normalized.toUpperCase();
+    }
+
+    return normalized;
   }
 }
 

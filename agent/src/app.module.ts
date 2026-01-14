@@ -6,6 +6,9 @@ import agentConfig from './config/agent.config';
 import { AuthTokenGuard } from './common/guards/auth-token.guard';
 import { HealthModule } from './health/health.module';
 import { VendasModule } from './vendas/vendas.module';
+import { ClientesModule } from './clientes/clientes.module';
+import { PrescritoresModule } from './prescritores/prescritores.module';
+import { SincronizacaoModule } from './sincronizacao/sincronizacao.module';
 
 @Module({
   imports: [
@@ -34,6 +37,9 @@ import { VendasModule } from './vendas/vendas.module';
     }),
     HealthModule,
     VendasModule,
+    ClientesModule,
+    PrescritoresModule,
+    SincronizacaoModule,
   ],
   providers: [
     {

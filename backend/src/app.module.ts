@@ -18,6 +18,7 @@ import { ClientesModule } from './modules/clientes/clientes.module';
 import { VendedoresModule } from './modules/vendedores/vendedores.module';
 import { PrescritoresModule } from './modules/prescritores/prescritores.module';
 import { MigracaoModule } from './modules/migracao/migracao.module';
+import { SincronizacaoModule } from './modules/sincronizacao/sincronizacao.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 import agentesConfig from './config/agentes.config';
@@ -50,6 +51,7 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     VendedoresModule,
     PrescritoresModule,
     MigracaoModule,
+    SincronizacaoModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],
