@@ -292,7 +292,10 @@ export class LancarBaixaModalComponent {
     return labels[status] || status;
   }
 
-  getClienteNome(venda: Venda): string {
+  getClienteNome(venda: Venda | null): string {
+    if (!venda) {
+      return 'Cliente não informado';
+    }
     if (venda.cliente && typeof venda.cliente === 'object') {
       return venda.cliente.nome;
     }
@@ -300,7 +303,10 @@ export class LancarBaixaModalComponent {
     return (venda.cliente as any) || 'Cliente não informado';
   }
 
-  getVendedorNome(venda: Venda): string {
+  getVendedorNome(venda: Venda | null): string {
+    if (!venda) {
+      return 'Não informado';
+    }
     if (venda.vendedor && typeof venda.vendedor === 'object') {
       return venda.vendedor.nome;
     }
@@ -308,7 +314,10 @@ export class LancarBaixaModalComponent {
     return (venda.vendedor as any) || 'Não informado';
   }
 
-  getPrescritorNome(venda: Venda): string | null {
+  getPrescritorNome(venda: Venda | null): string | null {
+    if (!venda) {
+      return null;
+    }
     if (venda.prescritor && typeof venda.prescritor === 'object') {
       return venda.prescritor.nome;
     }

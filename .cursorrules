@@ -16,6 +16,7 @@
 - Defina tipos de retorno explícitos em services/controllers (`Promise<T>`, etc.).
 - Leia variáveis de ambiente somente via `ConfigService`/configs `registerAs`, migrando gradualmente o código que ainda usa `process.env`.
 - Ao criar rotas novas, documente-as com decorators do Swagger.
+- **Logging (Boas Práticas)**: Use `Logger` do NestJS para logs estruturados; prefira `logger.log()`, `logger.warn()`, `logger.error()`, `logger.debug()` conforme a severidade. Em operações de sincronização ou processamento em lote, considere adicionar logs detalhados para rastreabilidade (quantidade processada, erros, tempo de execução) - especialmente útil para debug em produção.
 
 # Banco de Dados (PostgreSQL)
 - Prefira queries otimizadas e garanta índices coerentes com os filtros usados.
@@ -23,6 +24,50 @@
 - Use transações em operações críticas ou múltiplos updates para evitar inconsistências.
 - Defina `NOT NULL`, defaults e constraints (CHECK/UNIQUE) sempre que aplicável.
 - Para cargas grandes, considere `COPY`, bulk inserts ou jobs assíncronos para não degradar o sistema online.
+
+# Migrações de Banco de Dados
+- **Nomenclatura**: Use timestamp + descrição em snake_case (ex: `1736000000000-create-sincronizacao-config.ts`).
+- **Estrutura**: Implemente `up()` e `down()` em todas as migrações para reversibilidade.
+- **Execução Automática**: Migrações devem ser executadas automaticamente no startup da aplicação quando `DATABASE_SYNCHRONIZE=false` ou `NODE_ENV=production` (via `main.ts` usando `AppDataSource.runMigrations()`).
+- **Tratamento de Erros**: Migrações não devem encerrar a aplicação em caso de erro; logar o erro e continuar (pode ser que já tenham sido executadas).
+- **Data Source**: Use `src/data-source.ts` para configuração do TypeORM em migrações; mantenha consistência com `database.config.ts`.
+- **Verificação de Existência**: Antes de criar tabelas/índices, verifique se já existem para evitar erros em re-execuções.
+- **Campos Removidos**: Se um campo foi removido de uma entidade mas ainda não foi para produção, remova-o diretamente da migração de criação (não crie nova migração de remoção).
+
+# Tratamento de Encoding e Strings
+- **Encoding UTF-8**: Sempre valide e normalize strings recebidas de sistemas externos (Firebird, APIs) usando `garantirUtf8Valido()` antes de processar.
+- **Padronização de Nomes**: Use `padronizarNome()` que combina `garantirUtf8Valido()` + `toLocaleUpperCase('pt-BR')` para preservar caracteres especiais (Ç, Á, É, etc.).
+- **Aplicação**: Aplique `garantirUtf8Valido()` em campos de texto que vêm de sistemas legados (nome, cpf, email, UFCRM, etc.).
+- **Normalização de Espaços**: Normalize múltiplos espaços, pontos e espaços antes/depois de pontos em nomes.
+- **Fallback**: Se `toLocaleUpperCase('pt-BR')` falhar, use `toUpperCase()` como fallback com log de aviso.
+
+# Tratamento de Datas
+- **Formato de Armazenamento**: Sempre armazene datas como strings `YYYY-MM-DD` no banco (use TypeORM `transformer` nas entidades).
+- **Conversão**: Use transformers nas entidades para converter `Date` → `YYYY-MM-DD` (to) e `YYYY-MM-DD` → `Date` (from).
+- **Timezone**: Evite conversões de timezone; trabalhe sempre com strings `YYYY-MM-DD` para evitar problemas de "data voltando um dia".
+- **Validação**: Valide formato `YYYY-MM-DD` com regex `^\d{4}-\d{2}-\d{2}$` antes de processar datas de sistemas externos.
+- **Atualização de Datas**: Ao atualizar "última data" em sincronizações, use a maior data dos registros retornados, não a data inicial do filtro.
+
+# Sincronização de Dados
+- **Identificação de Registros**: Use combinações de campos para identificar registros únicos:
+  - Clientes: `cdcliente` + `unidade` (mesmo código pode existir em unidades diferentes).
+  - Prescritores: `nome` + `numeroCRM` + `UFCRM` (nunca buscar apenas por nome; pode ser mesmo nome mas CRM diferente).
+- **Busca e Atualização**: Sempre busque pelo conjunto completo de campos de identificação; se não encontrar, crie novo registro.
+- **Atualização Condicional**: Ao atualizar, preencha campos vazios se o agente fornecer (ex: CRM de prescritor encontrado por nome).
+- **Tratamento de Encoding**: Aplique `padronizarNome()` e `garantirUtf8Valido()` em todos os campos de texto durante sincronização.
+- **Logs**: Registre quantidade de registros processados, criados e atualizados em cada sincronização.
+
+# Agentes (NestJS Separados)
+- **Estrutura**: Mantenha agentes como aplicações NestJS separadas, com sua própria estrutura de módulos.
+- **Endpoints de Sincronização**: Crie endpoints unificados que retornem múltiplos tipos de dados em uma única chamada (ex: `/api/v1/sincronizacao` retornando clientes e prescritores).
+- **Filtros por Unidade**: Sempre inclua filtro por `cdfil` (unidade) nas queries do Firebird para evitar busca de dados de outras unidades.
+- **Conversão de Datas**: Converta datas do Firebird para formato `YYYY-MM-DD` antes de retornar (use `formatDate()` e tratamento de diferentes formatos).
+- **Logs**: Adicione logs detalhados nos agentes mostrando SQL executada, parâmetros e quantidade de registros retornados.
+
+# Build e Deploy (Aplicável em CI/CD e ambientes cloud)
+- **Scripts de Build**: Use `npx` para executar comandos de CLI (ex: `npx ng build`, `npx nest build`) para garantir que encontre executáveis nas `node_modules` locais, especialmente em ambientes de CI/CD onde o PATH pode não incluir node_modules.
+- **DevDependencies em Produção**: Em ambientes de build (Render, Heroku, Vercel, etc.), instale `devDependencies` durante o build usando `npm install --include=dev` ou `NODE_ENV=development npm install` antes de compilar, pois ferramentas como Angular CLI e NestJS CLI estão em devDependencies.
+- **Migrations Automáticas**: Migrações devem ser executadas automaticamente no startup (já coberto na seção de Migrações); não dependa de execução manual em produção.
 
 # UI/UX (Listagens e Telas de Gestão)
 
@@ -34,3 +79,5 @@
   - Estado vazio deve usar a linha `tr.no-data` com `<i class="fas fa-inbox"></i> Nenhuma venda encontrada`.
 - Títulos e descrições de página devem ser setados via `PageContextService` para aparecerem na barra superior (`PageContext`).
 - Qualquer ação extra (ex.: modais, exportação, filtros avançados) deve reaproveitar os mesmos estilos/classes definidos em `vendas-list` sempre que possível, evitando divergências visuais.
+- **Edição Inline**: Use edição inline apenas em grids de configuração simples (ex.: configurações de sincronização). Para listagens principais, mantenha o padrão de modais/formulários separados.
+- **Formatação de Datas**: Use `formatarData()` para exibir datas em `DD/MM/YYYY` no frontend; normalize para `YYYY-MM-DD` antes de enviar ao backend para evitar problemas de timezone.

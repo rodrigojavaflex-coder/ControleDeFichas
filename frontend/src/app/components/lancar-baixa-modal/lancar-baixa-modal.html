@@ -3,7 +3,7 @@
   <div class="modal-conteudo modal-grande" (click)="$event.stopPropagation()">
     <div class="modal-cabecalho">
       <h3 class="modal-titulo">
-        Baixar Protocolo: {{ venda?.protocolo }} ({{ venda?.cliente }})
+        Baixar Protocolo: {{ venda?.protocolo }} ({{ getClienteNome(venda) }})
         <span class="valor-destaque">{{ formatCurrency(venda?.valorCliente || 0) }}</span>
       </h3>
       <button type="button" class="modal-fechar" (click)="onClose()" [attr.disabled]="loading ? 'disabled' : null">
