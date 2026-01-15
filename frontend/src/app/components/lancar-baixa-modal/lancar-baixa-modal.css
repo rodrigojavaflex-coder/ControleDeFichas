@@ -13,9 +13,31 @@
    O tema escuro é gerenciado automaticamente pelo Design System.
    ============================================ */
 
-/* Otimização de altura do modal */
+/* Otimização de altura e largura do modal */
 :host ::ng-deep .modal-conteudo.modal-grande {
   max-height: 90vh;
+  width: 90%;
+  max-width: 1200px;
+}
+
+/* Grid do formulário de baixa - 5 colunas */
+.grid-formulario-baixa {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 2fr 0.75fr;
+  gap: var(--espacamento-md);
+  align-items: end;
+  margin-bottom: var(--espacamento-md);
+}
+
+.campo-botao {
+  display: flex;
+  flex-direction: column;
+}
+
+.botao-lancar-baixa {
+  width: 100%;
+  height: 38px;
+  margin-top: 0;
 }
 
 /* Reduzir altura do cabeçalho pela metade */
@@ -42,6 +64,17 @@
   height: auto;
 }
 
+:host ::ng-deep .modal-rodape .botao-fantasma {
+  background-color: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+:host ::ng-deep .modal-rodape .botao-fantasma:hover:not(:disabled) {
+  background-color: var(--cor-superficie-hover);
+  border-color: var(--cor-borda-escura);
+}
+
 :host ::ng-deep .btn-recibo {
   background-color: #0ea5e9;
   color: #fff;
@@ -56,34 +89,34 @@
   background-color: #0284c7;
 }
 
-/* Reduzir altura da seção de Baixas Realizadas */
-.cartao {
-  margin-top: var(--espacamento-md) !important;
+/* Container de Baixas */
+.baixas-container {
+  margin-top: var(--espacamento-lg);
 }
 
-:host ::ng-deep .cartao-cabecalho {
-  padding: var(--espacamento-xs) var(--espacamento-md) !important;
-  min-height: auto;
+.titulo-baixas {
+  font-size: var(--tamanho-fonte-base);
+  font-weight: var(--peso-fonte-bold);
+  color: var(--cor-texto-primario);
+  margin-bottom: var(--espacamento-sm);
 }
 
-:host ::ng-deep .cartao-titulo {
-  font-size: var(--tamanho-fonte-sm);
-  line-height: 1.2;
-  margin: 0;
-}
-
-:host ::ng-deep .cartao-corpo {
-  padding: var(--espacamento-sm) var(--espacamento-md) !important;
-}
-
-:host ::ng-deep .cartao-rodape {
-  padding: var(--espacamento-xs) var(--espacamento-md) !important;
-  min-height: auto;
-}
-
-/* Otimizar tabela sem header */
+/* Otimizar tabela com header */
 :host ::ng-deep .tabela-responsive .tabela {
   margin: 0;
+}
+
+:host ::ng-deep .tabela-responsive .tabela thead {
+  background: var(--cor-superficie-hover);
+}
+
+:host ::ng-deep .tabela-responsive .tabela thead th {
+  padding: var(--espacamento-xs) var(--espacamento-sm);
+  font-size: var(--tamanho-fonte-xs);
+  font-weight: var(--peso-fonte-bold);
+  text-align: left;
+  color: var(--cor-texto-primario);
+  border-bottom: 2px solid var(--cor-borda);
 }
 
 :host ::ng-deep .tabela-responsive .tabela tbody tr {
@@ -94,11 +127,50 @@
   border-bottom: none;
 }
 
+/* Linha em edição */
+:host ::ng-deep .tabela-responsive .tabela tbody tr.editing-row {
+  background-color: #e3f2fd !important;
+  border-left: 4px solid #2196f3;
+}
+
+:host ::ng-deep .tabela-responsive .tabela tbody tr.editing-row td {
+  border-bottom: 2px solid #2196f3;
+}
+
 :host ::ng-deep .tabela-responsive .tabela td {
   padding: var(--espacamento-xs) var(--espacamento-sm);
   font-size: var(--tamanho-fonte-xs);
   line-height: 1.3;
   vertical-align: middle;
+}
+
+/* Resumo das baixas */
+.resumo-baixas {
+  display: flex;
+  align-items: center;
+  gap: var(--espacamento-lg);
+  padding: var(--espacamento-sm) 0;
+  margin-top: var(--espacamento-md);
+  border-top: 1px solid var(--cor-borda);
+  flex-wrap: wrap;
+}
+
+.resumo-item {
+  font-size: var(--tamanho-fonte-sm);
+  color: var(--cor-texto-primario);
+}
+
+.resumo-item strong {
+  font-weight: var(--peso-fonte-bold);
+  margin-right: var(--espacamento-xs);
+}
+
+.resumo-item .text-warning {
+  color: var(--cor-alerta);
+}
+
+.resumo-item .text-success {
+  color: var(--cor-sucesso);
 }
 
 /* Espaçamento entre botões de ação */

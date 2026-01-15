@@ -70,6 +70,13 @@ export class LancarBaixaModalComponent {
   baixaToDelete: Baixa | null = null;
   deleteModalMessage = '';
 
+  // Modal de confirmação de fechamento
+  showCloseConfirmationModal = false;
+
+  // Modal de confirmação de data futura
+  showDataFuturaModal = false;
+  dataFuturaConfirmada = false;
+
   // Baixas existentes da venda
   baixasExistentes: Baixa[] = [];
 
@@ -94,11 +101,27 @@ export class LancarBaixaModalComponent {
   Permission = Permission;
 
   onClose(): void {
-    if (!this.loading) {
-      this.resetForm();
-      this.close.emit();
-      this.modalClosed.emit();
+    if (this.loading) {
+      return;
     }
+
+    // Sempre pedir confirmação antes de fechar
+    this.showCloseConfirmationModal = true;
+  }
+
+  private closeModal(): void {
+    this.resetForm();
+    this.close.emit();
+    this.modalClosed.emit();
+  }
+
+  onCloseConfirmed(): void {
+    this.showCloseConfirmationModal = false;
+    this.closeModal();
+  }
+
+  onCloseCancelled(): void {
+    this.showCloseConfirmationModal = false;
   }
 
   onSubmit(): void {
@@ -106,6 +129,38 @@ export class LancarBaixaModalComponent {
       return;
     }
 
+    // Verificar se a data é futura antes de submeter
+    if (this.isDataFutura(this.baixaData.dataBaixa) && !this.dataFuturaConfirmada) {
+      this.showDataFuturaModal = true;
+      return;
+    }
+
+    // Se chegou aqui, pode prosseguir (data não é futura ou foi confirmada)
+    this.dataFuturaConfirmada = false; // Resetar flag
+    this.processarBaixa();
+  }
+
+  /**
+   * Verifica se a data informada é maior que a data atual
+   */
+  private isDataFutura(dataBaixa: string): boolean {
+    if (!dataBaixa) {
+      return false;
+    }
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // Zerar horas para comparar apenas a data
+
+    const dataInformada = new Date(dataBaixa);
+    dataInformada.setHours(0, 0, 0, 0);
+
+    return dataInformada > hoje;
+  }
+
+  /**
+   * Processa a baixa (criação ou edição) após validações
+   */
+  private processarBaixa(): void {
     this.loading = true;
 
     if (this.modoEdicao && this.baixaEmEdicao) {
@@ -135,7 +190,7 @@ export class LancarBaixaModalComponent {
     } else {
       // Modo CRIAÇÃO - Criar nova baixa
       const createBaixaDto = {
-        idvenda: this.venda.id,
+        idvenda: this.venda!.id,
         tipoDaBaixa: this.baixaData.tipoDaBaixa,
         valorBaixa: this.baixaData.valorBaixa,
         dataBaixa: this.baixaData.dataBaixa,
@@ -156,6 +211,24 @@ export class LancarBaixaModalComponent {
         }
       });
     }
+  }
+
+  /**
+   * Confirma a operação com data futura
+   */
+  onDataFuturaConfirmed(): void {
+    this.showDataFuturaModal = false;
+    this.dataFuturaConfirmada = true;
+    // Chamar onSubmit novamente, agora com a flag confirmada
+    this.onSubmit();
+  }
+
+  /**
+   * Cancela a operação com data futura
+   */
+  onDataFuturaCancelled(): void {
+    this.showDataFuturaModal = false;
+    this.dataFuturaConfirmada = false;
   }
 
   private isFormValid(): boolean {
@@ -208,6 +281,7 @@ export class LancarBaixaModalComponent {
     this.valorDisplay = '0,00';
     this.modoEdicao = false;
     this.baixaEmEdicao = null;
+    this.dataFuturaConfirmada = false; // Resetar flag ao resetar formulário
   }
 
   cancelarEdicao(): void {
@@ -571,7 +645,7 @@ export class LancarBaixaModalComponent {
     popup.focus();
   }
 
-  private formatDateDisplay(date: string | Date | null | undefined): string {
+  formatDateDisplay(date: string | Date | null | undefined): string {
     if (!date) {
       return '-';
     }

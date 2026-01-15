@@ -41,6 +41,26 @@ export class BaixasService {
         throw new NotFoundException(`Venda com ID ${createBaixaDto.idvenda} não encontrada`);
       }
 
+      // Validar dataFechamento da venda (já existe)
+      if (venda.dataFechamento) {
+        throw new ConflictException(
+          `Não é possível criar baixa em venda com fechamento registrado em ${venda.dataFechamento}.`
+        );
+      }
+
+      // NOVA VALIDAÇÃO: Validar data da baixa por unidade
+      if (venda.unidade) {
+        this.logger.debug(
+          `Validando criação de baixa. Venda: ${createBaixaDto.idvenda}, ` +
+          `Unidade: ${venda.unidade}, Data: ${createBaixaDto.dataBaixa}`
+        );
+        await this.validarDataBaixaPorUnidade(createBaixaDto.dataBaixa, venda.unidade);
+      } else {
+        this.logger.warn(
+          `Venda ${createBaixaDto.idvenda} não possui unidade definida. Validação de data por unidade ignorada.`
+        );
+      }
+
       // Calcular total das baixas existentes para esta venda
       const totalPagoAnterior = await this.getTotalBaixasParaVenda(createBaixaDto.idvenda);
       const valorCliente = venda.valorCliente || 0;
@@ -64,6 +84,11 @@ export class BaixasService {
       const savedBaixa = await this.baixaRepository.save(baixa);
       // Atualizar status da venda baseado no total das baixas
       await this.updateVendaStatus(createBaixaDto.idvenda);
+
+      this.logger.log(
+        `Baixa criada com sucesso. ID: ${savedBaixa.id}, Venda: ${createBaixaDto.idvenda}, ` +
+        `Unidade: ${venda.unidade}, Data: ${createBaixaDto.dataBaixa}`
+      );
 
       return savedBaixa;
     } catch (error) {
@@ -113,6 +138,28 @@ export class BaixasService {
 
   async update(id: string, updateBaixaDto: UpdateBaixaDto): Promise<Baixa> {
     const baixa = await this.findOne(id);
+    const venda = await this.vendasService.findOne(baixa.idvenda);
+
+    // Validar dataFechamento (já existe)
+    if (venda.dataFechamento) {
+      throw new ConflictException(
+        `Não é possível editar baixa de venda com fechamento registrado em ${venda.dataFechamento}.`
+      );
+    }
+
+    // NOVA VALIDAÇÃO: Validar data da baixa por unidade (se estiver alterando a data)
+    if (updateBaixaDto.dataBaixa && venda.unidade) {
+      // Se a data está sendo alterada, validar
+      const dataAtual = typeof baixa.dataBaixa === 'string' 
+        ? baixa.dataBaixa 
+        : (baixa.dataBaixa as Date).toISOString().split('T')[0];
+      
+      // Só validar se a nova data for diferente da atual
+      if (updateBaixaDto.dataBaixa !== dataAtual) {
+        // Passar o ID da baixa sendo editada para excluir da busca
+        await this.validarDataBaixaPorUnidade(updateBaixaDto.dataBaixa, venda.unidade, baixa.id);
+      }
+    }
 
     // Manter data como string YYYY-MM-DD para evitar conversão de timezone
     const updateData = {
@@ -126,6 +173,11 @@ export class BaixasService {
 
     // Atualizar status da venda após atualizar a baixa
     await this.updateVendaStatus(baixa.idvenda);
+
+    this.logger.log(
+      `Baixa atualizada com sucesso. ID: ${id}, Venda: ${baixa.idvenda}, ` +
+      `Unidade: ${venda.unidade}`
+    );
 
     return updatedBaixa;
   }
@@ -141,10 +193,26 @@ export class BaixasService {
       );
     }
 
+    // NOVA VALIDAÇÃO: Validar data da baixa por unidade antes de excluir
+    if (venda.unidade) {
+      // Converter dataBaixa para string YYYY-MM-DD
+      const dataBaixa = typeof baixa.dataBaixa === 'string' 
+        ? baixa.dataBaixa 
+        : (baixa.dataBaixa as Date).toISOString().split('T')[0];
+      
+      // Passar o ID da baixa sendo excluída para excluir da busca
+      await this.validarDataBaixaPorUnidade(dataBaixa, venda.unidade, baixa.id);
+    }
+
     await this.baixaRepository.remove(baixa);
 
     // Atualizar status da venda após remover a baixa
     await this.updateVendaStatus(baixa.idvenda);
+
+    this.logger.log(
+      `Baixa removida com sucesso. ID: ${id}, Venda: ${baixa.idvenda}, ` +
+      `Unidade: ${venda.unidade}`
+    );
   }
 
   private applyFilters(
@@ -184,6 +252,172 @@ export class BaixasService {
       .getRawOne();
 
     return parseFloat(totalBaixas?.total || '0');
+  }
+
+  /**
+   * Busca a data da última baixa registrada para uma unidade
+   * @param unidade - Unidade para buscar
+   * @param excludeBaixaId - ID da baixa a ser excluída da busca (opcional, usado em edição/exclusão)
+   * @returns Data da última baixa no formato YYYY-MM-DD ou null se não houver baixas
+   */
+  private async getUltimaDataBaixaPorUnidade(unidade: string, excludeBaixaId?: string): Promise<string | null> {
+    try {
+      const queryBuilder = this.baixaRepository
+        .createQueryBuilder('baixa')
+        .innerJoin('baixa.venda', 'venda')
+        .where('venda.unidade = :unidade', { unidade });
+
+      // Excluir a baixa específica se fornecida (caso de edição/exclusão)
+      if (excludeBaixaId) {
+        queryBuilder.andWhere('baixa.id != :excludeBaixaId', { excludeBaixaId });
+        this.logger.debug(
+          `Buscando última data de baixa para unidade ${unidade}, excluindo baixa ${excludeBaixaId}`
+        );
+      }
+
+      const resultado = await queryBuilder
+        .orderBy('baixa.dataBaixa', 'DESC')
+        .addOrderBy('baixa.criadoEm', 'DESC')
+        .limit(1)
+        .getOne();
+
+      this.logger.debug(
+        `Buscando última data de baixa para unidade ${unidade}. ` +
+        `Resultado encontrado: ${resultado ? 'SIM' : 'NÃO'}`
+      );
+
+      if (!resultado || !resultado.dataBaixa) {
+        this.logger.debug(`Nenhuma baixa encontrada para unidade ${unidade}`);
+        return null;
+      }
+
+      // Converter dataBaixa para string YYYY-MM-DD
+      let ultimaData: string;
+      const dataBaixaValue: Date | string = resultado.dataBaixa as Date | string;
+      
+      if (dataBaixaValue instanceof Date) {
+        ultimaData = dataBaixaValue.toISOString().split('T')[0];
+      } else if (typeof dataBaixaValue === 'string') {
+        // Se já for string, garantir formato YYYY-MM-DD
+        ultimaData = dataBaixaValue.split('T')[0].substring(0, 10);
+      } else {
+        this.logger.warn(
+          `Formato inesperado de data retornado: ${typeof dataBaixaValue}, valor: ${dataBaixaValue}`
+        );
+        return null;
+      }
+
+      this.logger.debug(`Última data de baixa para unidade ${unidade}: ${ultimaData}`);
+      return ultimaData;
+    } catch (error) {
+      this.logger.error(
+        `Erro ao buscar última data de baixa para unidade ${unidade}:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Valida se a data da baixa é permitida para a unidade
+   * Só permite se a data for >= data da última baixa da unidade
+   * Se não houver baixas na unidade, permite qualquer data
+   * @param dataBaixa - Data da baixa sendo criada/editada/excluída (formato YYYY-MM-DD)
+   * @param unidade - Unidade da venda
+   * @param excludeBaixaId - ID da baixa a ser excluída da busca (opcional, usado em edição/exclusão)
+   * @throws ConflictException se a data for anterior à última baixa
+   */
+  private async validarDataBaixaPorUnidade(
+    dataBaixa: string, 
+    unidade: string, 
+    excludeBaixaId?: string
+  ): Promise<void> {
+    // Garantir que dataBaixa está no formato YYYY-MM-DD
+    const dataBaixaFormatada = dataBaixa.split('T')[0].substring(0, 10);
+    
+    this.logger.debug(
+      `Validando data de baixa. Unidade: ${unidade}, Data informada: ${dataBaixaFormatada}` +
+      (excludeBaixaId ? `, Excluindo baixa: ${excludeBaixaId}` : '')
+    );
+
+    const ultimaData = await this.getUltimaDataBaixaPorUnidade(unidade, excludeBaixaId);
+    
+    // Se não houver baixas na unidade, permitir qualquer data
+    if (!ultimaData) {
+      this.logger.debug(`Unidade ${unidade} não possui baixas registradas. Permitindo operação.`);
+      return;
+    }
+
+    this.logger.debug(
+      `Comparando datas. Data informada: ${dataBaixaFormatada}, Última data: ${ultimaData}`
+    );
+
+    // Comparar datas (formato YYYY-MM-DD permite comparação direta como string)
+    if (dataBaixaFormatada < ultimaData) {
+      // Buscar protocolo da venda da última baixa para incluir na mensagem de erro
+      const protocoloUltimaBaixa = await this.getProtocoloUltimaBaixaPorUnidade(unidade, excludeBaixaId);
+      
+      this.logger.warn(
+        `Tentativa de operação com baixa de data anterior à última baixa da unidade. ` +
+        `Unidade: ${unidade}, Última baixa: ${ultimaData}, Data informada: ${dataBaixaFormatada}`
+      );
+      
+      const mensagemProtocolo = protocoloUltimaBaixa 
+        ? ` (Protocolo: ${protocoloUltimaBaixa})`
+        : '';
+      
+      throw new ConflictException(
+        `Não é possível realizar esta operação com baixa de data anterior à última baixa registrada na unidade ${unidade}. ` +
+        `Última baixa registrada: ${this.formatDateDisplay(ultimaData)}${mensagemProtocolo}. ` +
+        `Data da baixa: ${this.formatDateDisplay(dataBaixaFormatada)}.`
+      );
+    }
+
+    this.logger.debug(`Validação de data aprovada para unidade ${unidade}`);
+  }
+
+  /**
+   * Busca o protocolo da venda da última baixa registrada para uma unidade
+   * @param unidade - Unidade para buscar
+   * @param excludeBaixaId - ID da baixa a ser excluída da busca (opcional)
+   * @returns Protocolo da venda ou null se não houver baixas
+   */
+  private async getProtocoloUltimaBaixaPorUnidade(unidade: string, excludeBaixaId?: string): Promise<string | null> {
+    try {
+      const queryBuilder = this.baixaRepository
+        .createQueryBuilder('baixa')
+        .innerJoin('baixa.venda', 'venda')
+        .where('venda.unidade = :unidade', { unidade })
+        .select('venda.protocolo', 'protocolo');
+
+      // Excluir a baixa específica se fornecida (caso de edição/exclusão)
+      if (excludeBaixaId) {
+        queryBuilder.andWhere('baixa.id != :excludeBaixaId', { excludeBaixaId });
+      }
+
+      const resultado = await queryBuilder
+        .orderBy('baixa.dataBaixa', 'DESC')
+        .addOrderBy('baixa.criadoEm', 'DESC')
+        .limit(1)
+        .getRawOne();
+
+      return resultado?.protocolo || null;
+    } catch (error) {
+      this.logger.error(
+        `Erro ao buscar protocolo da última baixa para unidade ${unidade}:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Formata data para exibição (YYYY-MM-DD -> DD/MM/YYYY)
+   */
+  private formatDateDisplay(date: string): string {
+    if (!date || date.length !== 10) return date;
+    const [year, month, day] = date.split('-');
+    return `${day}/${month}/${year}`;
   }
 
   /**
@@ -257,6 +491,30 @@ export class BaixasService {
             motivo: `Status "${venda.status}" não permite processamento automático.`,
           });
           continue;
+        }
+
+        // Validar dataFechamento
+        if (venda.dataFechamento) {
+          resultado.falhas.push({
+            idvenda: vendaId,
+            protocolo: venda?.protocolo,
+            motivo: `Venda com fechamento registrado em ${venda.dataFechamento}.`,
+          });
+          continue;
+        }
+
+        // NOVA VALIDAÇÃO: Validar data da baixa por unidade
+        if (venda.unidade) {
+          try {
+            await this.validarDataBaixaPorUnidade(processarDto.dataBaixa, venda.unidade);
+          } catch (error: any) {
+            resultado.falhas.push({
+              idvenda: vendaId,
+              protocolo: venda?.protocolo,
+              motivo: error?.message || 'Data da baixa inválida para a unidade.',
+            });
+            continue;
+          }
         }
 
         const totalPago = await this.getTotalBaixasParaVenda(vendaId);
