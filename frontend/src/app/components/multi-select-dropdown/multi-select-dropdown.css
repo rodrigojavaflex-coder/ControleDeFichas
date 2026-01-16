@@ -1,0 +1,343 @@
+/* Componente Multi-Select Dropdown - Seguindo padrão do date-range-filter */
+
+.multi-select-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.multi-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--espacamento-sm, 0.75rem);
+  border: 1px solid var(--cor-borda, #d1d5db);
+  border-radius: var(--raio-campo, 8px) !important;
+  background-color: var(--cor-fundo, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 40px;
+  font-size: 0.875rem;
+  color: var(--cor-texto-primario, #0f172a);
+}
+
+.multi-select-trigger:hover:not(.disabled) {
+  border-color: var(--cor-primaria, #3b82f6);
+}
+
+.multi-select-trigger.has-selection {
+  border-color: var(--cor-primaria, #3b82f6);
+  background-color: var(--cor-fundo-selecionado, #eff6ff);
+}
+
+/* Garantir fundo branco quando não há seleção (não desabilitado) */
+.multi-select-trigger:not(.has-selection):not(.disabled) {
+  background-color: #ffffff !important;
+}
+
+.multi-select-trigger.disabled {
+  background-color: var(--cor-fundo-desabilitado, #f3f4f6);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.multi-select-display {
+  flex: 1;
+  text-align: left;
+  color: var(--cor-texto-primario, #0f172a);
+  font-size: 0.875rem;
+}
+
+.multi-select-trigger:not(.has-selection):not(.disabled) .multi-select-display {
+  color: var(--cor-texto-secundario, #6b7280);
+}
+
+/* Garantir que o tema escuro sobrescreva qualquer estilo base */
+body.theme-dark .multi-select-trigger .multi-select-display {
+  color: #e5e7eb !important;
+}
+
+body.theme-dark .multi-select-trigger.has-selection .multi-select-display {
+  color: #e5e7eb !important;
+}
+
+.multi-select-trigger i {
+  color: var(--cor-texto-secundario, #6b7280);
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+  margin-left: var(--espacamento-xs, 0.5rem);
+}
+
+.multi-select-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--cor-fundo, #ffffff);
+  border: 1px solid var(--cor-borda, #d1d5db);
+  border-radius: var(--raio-campo, 8px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 1001; /* Acima do modal-overlay (1000) e modal-rodape (1) */
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Quando renderizado no body (como select nativo) */
+.multi-select-dropdown-menu.multi-select-dropdown-body {
+  position: fixed !important;
+  z-index: 10001 !important;
+  margin: 0 !important;
+  transform: none !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+/* Estilos de tema escuro para o dropdown menu renderizado no body */
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body {
+  background-color: #1f2937 !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-option {
+  color: #e5e7eb;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-option:hover {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-option.select-all-option {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border-bottom-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-option.select-all-option:hover {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-option label {
+  color: #e5e7eb !important;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-divider {
+  background-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-options-list {
+  scrollbar-color: #6b7280 transparent;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-options-list::-webkit-scrollbar-track {
+  background: #374151 !important;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-options-list::-webkit-scrollbar-thumb {
+  background: #6b7280 !important;
+}
+
+body.theme-dark .multi-select-dropdown-menu.multi-select-dropdown-body .multi-select-options-list::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+}
+
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  padding: var(--espacamento-sm, 0.75rem);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  gap: var(--espacamento-xs, 0.5rem);
+}
+
+.multi-select-option:hover {
+  background-color: var(--cor-fundo-hover, #f9fafb);
+}
+
+.multi-select-option.select-all-option {
+  font-weight: 600;
+  border-bottom: 1px solid var(--cor-borda, #d1d5db);
+  background-color: var(--cor-fundo-destaque, #f3f4f6);
+}
+
+.multi-select-option.select-all-option:hover {
+  background-color: var(--cor-fundo-hover, #e5e7eb);
+}
+
+.multi-select-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--cor-primaria, #3b82f6);
+  flex-shrink: 0;
+}
+
+.multi-select-option label {
+  cursor: pointer;
+  flex: 1;
+  user-select: none;
+  font-size: 0.875rem;
+  color: var(--cor-texto-primario, #0f172a);
+}
+
+.multi-select-divider {
+  height: 1px;
+  background-color: var(--cor-borda, #d1d5db);
+  margin: 0;
+}
+
+.multi-select-options-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Scrollbar styling */
+.multi-select-options-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.multi-select-options-list::-webkit-scrollbar-track {
+  background: var(--cor-fundo, #f1f1f1);
+  border-radius: 3px;
+}
+
+.multi-select-options-list::-webkit-scrollbar-thumb {
+  background: var(--cor-texto-secundario, #888);
+  border-radius: 3px;
+}
+
+.multi-select-options-list::-webkit-scrollbar-thumb:hover {
+  background: var(--cor-texto-primario, #555);
+}
+
+/* Estilos para tema escuro - usando :host-context para componentes Angular */
+:host-context(body.theme-dark) .multi-select-trigger,
+[data-theme="dark"] .multi-select-trigger,
+body.theme-dark .multi-select-trigger {
+  background-color: #1f2937;
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #e5e7eb;
+}
+
+:host-context(body.theme-dark) .multi-select-trigger:hover:not(.disabled),
+[data-theme="dark"] .multi-select-trigger:hover:not(.disabled),
+body.theme-dark .multi-select-trigger:hover:not(.disabled) {
+  border-color: #3b82f6;
+}
+
+:host-context(body.theme-dark) .multi-select-trigger.has-selection,
+[data-theme="dark"] .multi-select-trigger.has-selection,
+body.theme-dark .multi-select-trigger.has-selection {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+:host-context(body.theme-dark) .multi-select-trigger.disabled,
+[data-theme="dark"] .multi-select-trigger.disabled,
+body.theme-dark .multi-select-trigger.disabled {
+  background-color: #374151;
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #9ca3af;
+  opacity: 0.7;
+}
+
+/* Estilos de tema escuro para o display - aplicados com alta especificidade */
+:host-context(body.theme-dark) .multi-select-trigger .multi-select-display,
+:host-context(body.theme-dark) .multi-select-display,
+[data-theme="dark"] .multi-select-trigger .multi-select-display,
+[data-theme="dark"] .multi-select-display,
+body.theme-dark .multi-select-trigger .multi-select-display,
+body.theme-dark .multi-select-display {
+  color: #e5e7eb !important;
+  --cor-texto-primario: #e5e7eb !important;
+  --cor-texto-secundario: #9ca3af !important;
+}
+
+:host-context(body.theme-dark) .multi-select-trigger.has-selection .multi-select-display,
+[data-theme="dark"] .multi-select-trigger.has-selection .multi-select-display,
+body.theme-dark .multi-select-trigger.has-selection .multi-select-display {
+  color: #e5e7eb !important;
+  --cor-texto-primario: #e5e7eb !important;
+}
+
+:host-context(body.theme-dark) .multi-select-trigger:not(.has-selection) .multi-select-display,
+[data-theme="dark"] .multi-select-trigger:not(.has-selection) .multi-select-display,
+body.theme-dark .multi-select-trigger:not(.has-selection) .multi-select-display {
+  color: #9ca3af !important;
+  --cor-texto-secundario: #9ca3af !important;
+}
+
+:host-context(body.theme-dark) .multi-select-trigger i,
+[data-theme="dark"] .multi-select-trigger i,
+body.theme-dark .multi-select-trigger i {
+  color: #9ca3af;
+}
+
+:host-context(body.theme-dark) .multi-select-trigger.disabled i,
+[data-theme="dark"] .multi-select-trigger.disabled i,
+body.theme-dark .multi-select-trigger.disabled i {
+  color: #6b7280;
+}
+
+/* Estilos para dropdown menu no tema escuro - usando múltiplos seletores para garantir aplicação */
+:host-context(body.theme-dark) .multi-select-dropdown-menu,
+[data-theme="dark"] .multi-select-dropdown-menu,
+body.theme-dark .multi-select-dropdown-menu {
+  background-color: #1f2937;
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+:host-context(body.theme-dark) .multi-select-option,
+[data-theme="dark"] .multi-select-option,
+body.theme-dark .multi-select-option {
+  color: #e5e7eb;
+}
+
+:host-context(body.theme-dark) .multi-select-option:hover,
+[data-theme="dark"] .multi-select-option:hover,
+body.theme-dark .multi-select-option:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+}
+
+:host-context(body.theme-dark) .multi-select-option.select-all-option,
+[data-theme="dark"] .multi-select-option.select-all-option,
+body.theme-dark .multi-select-option.select-all-option {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-bottom-color: rgba(148, 163, 184, 0.3);
+}
+
+:host-context(body.theme-dark) .multi-select-option.select-all-option:hover,
+[data-theme="dark"] .multi-select-option.select-all-option:hover,
+body.theme-dark .multi-select-option.select-all-option:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+:host-context(body.theme-dark) .multi-select-option label,
+[data-theme="dark"] .multi-select-option label,
+body.theme-dark .multi-select-option label {
+  color: #e5e7eb;
+}
+
+:host-context(body.theme-dark) .multi-select-divider,
+[data-theme="dark"] .multi-select-divider,
+body.theme-dark .multi-select-divider {
+  background-color: rgba(148, 163, 184, 0.3);
+}
+
+:host-context(body.theme-dark) .multi-select-options-list::-webkit-scrollbar-track,
+[data-theme="dark"] .multi-select-options-list::-webkit-scrollbar-track,
+body.theme-dark .multi-select-options-list::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+:host-context(body.theme-dark) .multi-select-options-list::-webkit-scrollbar-thumb,
+[data-theme="dark"] .multi-select-options-list::-webkit-scrollbar-thumb,
+body.theme-dark .multi-select-options-list::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+:host-context(body.theme-dark) .multi-select-options-list::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .multi-select-options-list::-webkit-scrollbar-thumb:hover,
+body.theme-dark .multi-select-options-list::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

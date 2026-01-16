@@ -17,7 +17,9 @@
             Imprimir
           </button>
         </div>
-        <p class="results-info">{{ items.length }} baixas encontradas nesta página</p>
+        <p class="results-info" *ngIf="totalItems !== undefined">
+          {{ totalItems }} baixa(s) encontrada(s){{ totalItems !== items.length ? ' (mostrando ' + items.length + ' nesta página)' : '' }}
+        </p>
       </div>
 
       <div class="filters-inline">
@@ -25,11 +27,15 @@
           class="filters-panel-top"
           role="button"
           tabindex="0"
-          (click)="toggleFiltersVisibility()"
+          (click)="onContainerClick($event)"
           (keydown)="onFiltersToggleKey($event)">
           <div class="filters-controls">
-            <div class="filters-toggle btn btn-toggle-filtros">
-              <span>{{ filtersPanelOpen ? 'Ocultar filtros' : 'Mostrar filtros' }}</span>
+            <button
+              type="button"
+              class="filters-toggle btn btn-toggle-filtros"
+              (click)="toggleFiltersVisibility(); $event.stopPropagation()"
+              (mousedown)="$event.stopPropagation()">
+              <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
               <span class="filters-count" *ngIf="appliedFilters.length">
                 {{ appliedFilters.length }}
               </span>
@@ -37,126 +43,50 @@
                 class="fas"
                 [class.fa-chevron-up]="filtersPanelOpen"
                 [class.fa-chevron-down]="!filtersPanelOpen"></i>
-            </div>
+            </button>
+            <!-- Área de filtros aplicados melhorada -->
             <div
-              class="applied-filters-inline"
-              *ngIf="appliedFilters.length"
-              (click)="$event.stopPropagation()"
-              (keydown)="$event.stopPropagation()">
-              <div class="applied-filters-list">
-                <span class="filter-chip" *ngFor="let filter of appliedFilters">
-                  <strong>{{ filter.label }}:</strong> {{ filter.value }}
-                  <button
-                    class="chip-remove"
-                    type="button"
-                    (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
-                    aria-label="Remover filtro {{ filter.label }}">
-                    ×
-                  </button>
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="filters" *ngIf="filtersPanelOpen">
-          <div class="filter-group">
-            <label for="protocolo">Protocolo</label>
-            <input
-              id="protocolo"
-              type="text"
-              class="form-control"
-              [(ngModel)]="protocoloFilter"
-             
-              placeholder="Buscar por protocolo">
-          </div>
-
-          <div class="filter-group">
-            <label for="cliente">Cliente</label>
-            <input
-              id="cliente"
-              type="text"
-              class="form-control"
-              [(ngModel)]="clienteFilter"
-             
-              placeholder="Buscar por cliente"
-              (keyup.enter)="onFilterChange()">
-          </div>
-
-          <div class="filter-group date-field date-range-field">
-            <app-date-range-filter
-              label="Data da Baixa"
-              startLabel="Início"
-              endLabel="Fim"
-              [start]="dataInicialFilter"
-              [end]="dataFinalFilter"
-              (rangeChange)="onPeriodoRangeChange($event)">
-            </app-date-range-filter>
-          </div>
-
-          <div class="filter-group">
-            <label for="unidade">Unidade</label>
-            <select
-              id="unidade"
-              class="form-control"
-              [(ngModel)]="unidadeFilter"
-             
-              [disabled]="unidadeDisabled"
-              (change)="onFilterChange()">
-              <option value="">Todas</option>
-              <option *ngFor="let unidade of unidades" [value]="unidade">
-                {{ unidade }}
-              </option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label for="origem">Comprado em</label>
-            <select
-              id="origem"
-              class="form-control"
-              [(ngModel)]="origemFilter"
-              (change)="onFilterChange()">
-              <option value="">Todas</option>
-              <option *ngFor="let origem of origens" [value]="origem">
-                {{ getOrigemLabel(origem) }}
-              </option>
-            </select>
-          </div>
-
-          <div class="filter-group value-range-group">
-            <label>Valor da baixa</label>
-            <div class="range-fields">
-              <input
-                id="valorMin"
-                type="text"
-                class="form-control small-field"
-                [(ngModel)]="valorMinFilter"
-                (blur)="onValorBlur('min')"
-                placeholder="Mínimo"
-                (keyup.enter)="onFilterChange()">
-              <span class="range-separator">até</span>
-              <input
-                id="valorMax"
-                type="text"
-                class="form-control small-field"
-                [(ngModel)]="valorMaxFilter"
-                (blur)="onValorBlur('max')"
-                placeholder="Máximo"
-                (keyup.enter)="onFilterChange()">
-            </div>
-          </div>
-
-          <div class="filter-group filter-actions">
-            <label>&nbsp;</label>
-            <div class="filter-action-buttons">
-              <button class="btn btn-limpar" type="button" (click)="clearFilters()">
-                <i class="fas fa-eraser"></i>
-                Limpar Filtro
-              </button>
-              <button class="btn btn-aplicar" type="button" (click)="applyFilters()">
+              class="applied-filters-container"
+              *ngIf="appliedFilters.length">
+              
+              <!-- Contador de resultados -->
+              <div class="results-count" *ngIf="totalItems !== undefined" (click)="$event.stopPropagation()">
                 <i class="fas fa-filter"></i>
-                Aplicar Filtros
+                <span>{{ totalItems }} resultado(s)</span>
+              </div>
+              
+              <!-- Container com scroll horizontal -->
+              <div class="applied-filters-wrapper">
+                <div class="applied-filters-list">
+                  <!-- Filtros de texto -->
+                  <ng-container *ngFor="let filter of appliedFilters">
+                    <span 
+                      class="filter-chip" 
+                      [class.filter-chip-multiple]="isMultipleFilter(filter.key)"
+                      [title]="filter.value">
+                      <i class="fas" [ngClass]="getFilterIcon(filter.key)"></i>
+                      <strong>{{ filter.label }}:</strong> 
+                      <span class="filter-value">{{ formatFilterValue(filter) }}</span>
+                      <button
+                        class="chip-remove"
+                        type="button"
+                        (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
+                        aria-label="Remover filtro {{ filter.label }}">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </span>
+                  </ng-container>
+                </div>
+              </div>
+              
+              <!-- Botão limpar todos -->
+              <button
+                class="btn-clear-all"
+                type="button"
+                (click)="clearFilters(); $event.stopPropagation()"
+                title="Limpar todos os filtros">
+                <i class="fas fa-eraser"></i>
+                Limpar todos
               </button>
             </div>
           </div>
@@ -229,6 +159,122 @@
       (close)="closeBaixaModal()"
       (modalClosed)="onBaixaModalClosed()">
     </app-lancar-baixa-modal>
+  </div>
+
+  <!-- Modal de Filtros -->
+  <div class="modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
+    <div class="modal-conteudo modal-filtros" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Filtros de Baixas</h3>
+        <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-corpo">
+        <div class="filters-grid">
+          <!-- Primeira linha: Data da Baixa -->
+          <div class="filter-group date-range-field">
+            <app-date-range-filter
+              label="Data da Baixa"
+              startLabel="Início"
+              endLabel="Fim"
+              [start]="dataInicialFilter"
+              [end]="dataFinalFilter"
+              (rangeChange)="onPeriodoRangeChangeModal($event)">
+            </app-date-range-filter>
+          </div>
+
+          <!-- Segunda linha: Protocolo, Cliente -->
+          <div class="filter-group">
+            <label for="protocoloFilterModal" class="label-campo">Protocolo</label>
+            <input
+              id="protocoloFilterModal"
+              type="text"
+              [(ngModel)]="protocoloFilter"
+              placeholder="Buscar por protocolo..."
+              class="campo"
+              (keyup.enter)="applyFilters()">
+          </div>
+
+          <div class="filter-group">
+            <label for="clienteFilterModal" class="label-campo">Cliente</label>
+            <input
+              id="clienteFilterModal"
+              type="text"
+              [(ngModel)]="clienteFilter"
+              placeholder="Buscar por cliente..."
+              class="campo"
+              (keyup.enter)="applyFilters()">
+          </div>
+
+          <!-- Terceira linha: Comprado em, Unidade -->
+          <div class="filter-group">
+            <label class="label-campo">Comprado em</label>
+            <app-multi-select-dropdown
+              [(ngModel)]="origemFilter"
+              [options]="getOrigemOptions()"
+              placeholder="Selecione as origens..."
+              selectAllLabel="Marcar todas"
+              deselectAllLabel="Desmarcar todas">
+            </app-multi-select-dropdown>
+          </div>
+
+          <div class="filter-group">
+            <label class="label-campo">Unidade</label>
+            <app-multi-select-dropdown
+              [(ngModel)]="unidadeFilter"
+              [options]="getUnidadeOptions()"
+              [disabled]="unidadeDisabled"
+              placeholder="Selecione as unidades..."
+              selectAllLabel="Marcar todas"
+              deselectAllLabel="Desmarcar todas">
+            </app-multi-select-dropdown>
+          </div>
+
+          <!-- Quarta linha: Valor da baixa -->
+          <div class="filter-group value-range-group">
+            <label class="label-campo">Valor da baixa</label>
+            <div class="range-fields">
+              <input
+                id="valorMinModal"
+                type="text"
+                class="campo"
+                [(ngModel)]="valorMinFilter"
+                (blur)="onValorBlur('min')"
+                placeholder="Mínimo"
+                (keyup.enter)="applyFilters()">
+              <span class="range-separator">até</span>
+              <input
+                id="valorMaxModal"
+                type="text"
+                class="campo"
+                [(ngModel)]="valorMaxFilter"
+                (blur)="onValorBlur('max')"
+                placeholder="Máximo"
+                (keyup.enter)="applyFilters()">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-rodape">
+        <button
+          type="button"
+          class="botao botao-fantasma"
+          (click)="clearFilters()">
+          <i class="fas fa-eraser"></i>
+          Limpar Filtros
+        </button>
+        <button
+          type="button"
+          class="botao botao-primario"
+          (click)="applyFilters()">
+          <i class="fas fa-filter"></i>
+          Aplicar Filtros
+        </button>
+      </div>
+    </div>
   </div>
 </ng-container>
 

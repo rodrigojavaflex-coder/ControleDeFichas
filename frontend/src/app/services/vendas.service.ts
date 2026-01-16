@@ -128,7 +128,14 @@ export class VendaService {
         return;
       }
 
-      params = params.set(key as string, value);
+      // Tratar arrays (para seleção múltipla)
+      if (Array.isArray(value) && value.length > 0) {
+        value.forEach((item: any) => {
+          params = params.append(key as string, item.toString());
+        });
+      } else if (!Array.isArray(value)) {
+        params = params.set(key as string, value.toString());
+      }
     });
 
     return params;

@@ -15,6 +15,7 @@ import { VendaModalComponent } from '../venda-modal/venda-modal';
 import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-auditoria.component';
 import { LancarBaixaModalComponent } from '../lancar-baixa-modal/lancar-baixa-modal';
 import { DateRangeFilterComponent, DateRangeValue } from '../date-range-filter/date-range-filter';
+import { MultiSelectDropdownComponent, MultiSelectOption } from '../multi-select-dropdown/multi-select-dropdown';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
 import { PageContextService } from '../../services/page-context.service';
@@ -46,14 +47,14 @@ interface VendasFilterSnapshot {
   cliente: string;
   vendedor: string;
   prescritor: string;
-  origem: string;
-  status: string;
+  origem: string | VendaOrigem | VendaOrigem[];
+  status: string | VendaStatus | VendaStatus[];
   ativo: string;
   dataInicial: string;
   dataFinal: string;
   dataInicialFechamento: string;
   dataFinalFechamento: string;
-  unidade: string;
+  unidade: string | Unidade | Unidade[];
 }
 
 @Component({
@@ -65,7 +66,8 @@ interface VendasFilterSnapshot {
     VendaModalComponent,
     HistoricoAuditoriaComponent,
     LancarBaixaModalComponent,
-    DateRangeFilterComponent
+    DateRangeFilterComponent,
+    MultiSelectDropdownComponent
   ],
   templateUrl: './fechamento-vendas-list.html',
   styleUrls: ['./fechamento-vendas-list.css'],
@@ -92,13 +94,13 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
   clienteFilter = '';
   vendedorFilter = '';
   prescritorFilter = '';
-  origemFilter: VendaOrigem | '' = '';
-  statusFilter: VendaStatus | '' = '';
+  origemFilter: VendaOrigem[] = [];
+  statusFilter: VendaStatus[] = [];
   dataInicialFilter = '';
   dataFinalFilter = '';
   dataInicialFechamentoFilter = '';
   dataFinalFechamentoFilter = '';
-  unidadeFilter: Unidade | '' = '';
+  unidadeFilter: Unidade[] = [];
   ativoFilter = '';
   unidadeDisabled = false;
   origemDisabled = false;
@@ -176,15 +178,18 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.currentUser = this.authService.getCurrentUser();
     this.restoreFiltersFromStorage();
     this.initializeDateFilters();
+    this.initializeUnidadeFilter();
     this.configureOrigemFilter();
     this.appliedFiltersSnapshot = this.createFilterSnapshot();
     
     // Observar mudanças no usuário
     this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      const previousOrigem = this.origemFilter;
+      const previousOrigem = [...this.origemFilter];
       this.currentUser = user;
       this.configureOrigemFilter();
-      if (this.origemFilter !== previousOrigem && this.origemFilter) {
+      // Comparar arrays
+      const origemChanged = JSON.stringify(this.origemFilter) !== JSON.stringify(previousOrigem);
+      if (origemChanged && this.origemFilter.length > 0) {
         this.onFilterChange();
       }
     });
@@ -238,13 +243,13 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         this.clienteFilter = filters.clienteFilter || '';
         this.vendedorFilter = filters.vendedorFilter || '';
         this.prescritorFilter = filters.prescritorFilter || '';
-        this.origemFilter = filters.origemFilter || '';
-        this.statusFilter = filters.statusFilter || '';
+        this.origemFilter = Array.isArray(filters.origemFilter) ? filters.origemFilter : (filters.origemFilter ? [filters.origemFilter] : []);
+        this.statusFilter = Array.isArray(filters.statusFilter) ? filters.statusFilter : (filters.statusFilter ? [filters.statusFilter] : []);
         this.dataInicialFilter = filters.dataInicialFilter || '';
         this.dataFinalFilter = filters.dataFinalFilter || '';
         this.dataInicialFechamentoFilter = filters.dataInicialFechamentoFilter || '';
         this.dataFinalFechamentoFilter = filters.dataFinalFechamentoFilter || '';
-        this.unidadeFilter = filters.unidadeFilter || '';
+        this.unidadeFilter = Array.isArray(filters.unidadeFilter) ? filters.unidadeFilter : (filters.unidadeFilter ? [filters.unidadeFilter] : []);
         this.ativoFilter = filters.ativoFilter || '';
         this.currentPage = filters.currentPage || 1;
       }
@@ -283,8 +288,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     }
 
     const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
     
     // Usar data local ao invés de UTC
     const formatDate = (date: Date): string => {
@@ -294,8 +299,20 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       return `${year}-${month}-${day}`;
     };
     
-    this.dataInicialFilter = formatDate(firstDay);
-    this.dataFinalFilter = formatDate(lastDay);
+    this.dataInicialFilter = formatDate(yesterday);
+    this.dataFinalFilter = formatDate(now);
+  }
+
+  private initializeUnidadeFilter(): void {
+    const currentUser = this.authService.getCurrentUser();
+    // Verificar se unidade existe e não é vazia
+    if (currentUser?.unidade && currentUser.unidade.trim() !== '') {
+      this.unidadeFilter = [currentUser.unidade as Unidade];
+      this.unidadeDisabled = true;
+    } else {
+      this.unidadeDisabled = false;
+      this.unidadeFilter = [];
+    }
   }
 
   private configureOrigemFilter(): void {
@@ -305,10 +322,10 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     // Se o usuário possui unidade definida, o filtro deve ficar bloqueado,
     // mesmo que a unidade não tenha mapeamento explícito.
     if (unidadeAtual) {
-      this.origemFilter = origem || '';
+      this.origemFilter = origem ? [origem] : [];
       this.origemDisabled = true;
     } else {
-      this.origemFilter = origem || '';
+      this.origemFilter = origem ? [origem] : [];
       this.origemDisabled = false;
     }
     this.updateAppliedFiltersSnapshot();
@@ -368,12 +385,12 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       filters.prescritor = this.prescritorFilter.trim();
     }
 
-    if (this.origemFilter) {
-      filters.origem = this.origemFilter as VendaOrigem;
+    if (this.origemFilter && this.origemFilter.length > 0) {
+      filters.origem = this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter;
     }
 
-    if (this.statusFilter) {
-      filters.status = this.statusFilter as VendaStatus;
+    if (this.statusFilter && this.statusFilter.length > 0) {
+      filters.status = this.statusFilter.length === 1 ? this.statusFilter[0] : this.statusFilter;
     }
 
     if (this.dataInicialFilter) {
@@ -392,8 +409,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
     }
 
-    if (this.unidadeFilter) {
-      filters.unidade = this.unidadeFilter as Unidade;
+    if (this.unidadeFilter && this.unidadeFilter.length > 0) {
+      filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
     }
 
     if (this.ativoFilter.trim()) {
@@ -446,8 +463,56 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.onFilterChange();
   }
 
+  // Métodos para o modal - apenas atualizam valores sem disparar pesquisa
+  onVendaRangeChangeModal(range: DateRangeValue): void {
+    this.dataInicialFilter = range.start || '';
+    this.dataFinalFilter = range.end || '';
+    // Não chama onFilterChange() - apenas atualiza os valores
+  }
+
+  onFechamentoRangeChangeModal(range: DateRangeValue): void {
+    this.dataInicialFechamentoFilter = range.start || '';
+    this.dataFinalFechamentoFilter = range.end || '';
+    // Não chama onFilterChange() - apenas atualiza os valores
+  }
+
   toggleFiltersVisibility(): void {
     this.filtersPanelOpen = !this.filtersPanelOpen;
+  }
+
+  onContainerClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target) {
+      return;
+    }
+    
+    // Verificar elementos que devem bloquear a abertura do modal
+    const btnToggle = target.closest('.btn-toggle-filtros');
+    const chipRemove = target.closest('.chip-remove');
+    const btnClearAll = target.closest('.btn-clear-all');
+    const resultsCount = target.closest('.results-count');
+    
+    // Não abrir se clicar em:
+    // - Botão de toggle
+    // - Botões dentro dos filtros (X, limpar todos)
+    // - Contador de resultados
+    if (btnToggle || chipRemove || btnClearAll || resultsCount) {
+      return;
+    }
+    
+    // Verificar se o clique foi em um chip (mas não no X)
+    const filterChip = target.closest('.filter-chip');
+    if (filterChip && !chipRemove) {
+      this.toggleFiltersVisibility();
+      return;
+    }
+    
+    // Verificar se o clique foi no container principal ou em áreas vazias
+    const filtersPanelTop = target.closest('.filters-panel-top');
+    if (filtersPanelTop) {
+      this.toggleFiltersVisibility();
+      return;
+    }
   }
 
   editSelectedVenda(): void {
@@ -618,14 +683,14 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       cliente: this.clienteFilter || '',
       vendedor: this.vendedorFilter || '',
       prescritor: this.prescritorFilter || '',
-      origem: this.origemFilter?.toString() || '',
-      status: this.statusFilter?.toString() || '',
+      origem: this.origemFilter.length > 0 ? (this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter) : ('' as any),
+      status: this.statusFilter.length > 0 ? (this.statusFilter.length === 1 ? this.statusFilter[0] : this.statusFilter) : ('' as any),
       ativo: this.ativoFilter || '',
       dataInicial: this.dataInicialFilter || '',
       dataFinal: this.dataFinalFilter || '',
       dataInicialFechamento: this.dataInicialFechamentoFilter || '',
       dataFinalFechamento: this.dataFinalFechamentoFilter || '',
-      unidade: this.unidadeFilter?.toString() || ''
+      unidade: this.unidadeFilter.length > 0 ? (this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter) : ('' as any)
     };
   }
 
@@ -648,11 +713,11 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.clienteFilter = '';
     this.vendedorFilter = '';
     this.prescritorFilter = '';
-    this.origemFilter = '';
-    this.statusFilter = '';
+    this.origemFilter = [];
+    this.statusFilter = [];
     this.ativoFilter = '';
     
-    // Reinicializa filtros de data para o mês atual
+    // Reinicializa filtros de data para ontem e hoje
     this.dataInicialFilter = '';
     this.dataFinalFilter = '';
     this.dataInicialFechamentoFilter = '';
@@ -661,6 +726,11 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     
     // Reinicializa filtro de origem (mapeia unidade do usuário)
     this.configureOrigemFilter();
+    
+    // Reinicializa filtro de unidade apenas se não estiver bloqueado
+    if (!this.unidadeDisabled) {
+      this.unidadeFilter = [];
+    }
     
     this.currentPage = 1;
     this.selectedVendas.clear();
@@ -688,11 +758,15 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (snapshot.ativo.trim()) {
       filters.push({ key: 'ativo', label: 'Ativo', value: snapshot.ativo.trim() });
     }
-    if (snapshot.origem) {
-      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(snapshot.origem as VendaOrigem) });
+    if (snapshot.origem && (Array.isArray(snapshot.origem) ? snapshot.origem.length > 0 : snapshot.origem !== '')) {
+      const origens = Array.isArray(snapshot.origem) ? snapshot.origem : [snapshot.origem];
+      const origemLabels = origens.map(origem => this.getOrigemLabel(origem as VendaOrigem));
+      filters.push({ key: 'origem', label: 'Comprado em', value: origemLabels.join(', ') });
     }
-    if (snapshot.status) {
-      filters.push({ key: 'status', label: 'Status', value: this.getStatusLabel(snapshot.status as VendaStatus) });
+    if (snapshot.status && (Array.isArray(snapshot.status) ? snapshot.status.length > 0 : snapshot.status !== '')) {
+      const statuses = Array.isArray(snapshot.status) ? snapshot.status : [snapshot.status];
+      const statusLabels = statuses.map(status => this.getStatusLabel(status as VendaStatus));
+      filters.push({ key: 'status', label: 'Status', value: statusLabels.join(', ') });
     }
     if (snapshot.dataInicial || snapshot.dataFinal) {
       const from = snapshot.dataInicial ? this.formatDate(snapshot.dataInicial) : '';
@@ -720,10 +794,61 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       }
       filters.push({ key: 'dataFechamento', label: 'Data de Fechamento', value });
     }
-    if (snapshot.unidade) {
-      filters.push({ key: 'unidade', label: 'Unidade', value: snapshot.unidade });
+    if (snapshot.unidade && (Array.isArray(snapshot.unidade) ? snapshot.unidade.length > 0 : snapshot.unidade !== '')) {
+      const unidades = Array.isArray(snapshot.unidade) ? snapshot.unidade : [snapshot.unidade];
+      filters.push({ key: 'unidade', label: 'Unidade', value: unidades.join(', ') });
     }
     return filters.filter(filter => filter.value);
+  }
+
+  isMultipleFilter(key: string): boolean {
+    return ['origem', 'status', 'unidade'].includes(key);
+  }
+  
+  getFilterIcon(key: string): string {
+    const icons: { [key: string]: string } = {
+      protocolo: 'fa-hashtag',
+      cliente: 'fa-user',
+      vendedor: 'fa-user-tie',
+      prescritor: 'fa-user-md',
+      ativo: 'fa-pills',
+      origem: 'fa-map-marker-alt',
+      status: 'fa-info-circle',
+      unidade: 'fa-building',
+      dataVenda: 'fa-calendar-alt',
+      dataFechamento: 'fa-calendar-check'
+    };
+    return icons[key] || 'fa-filter';
+  }
+  
+  formatFilterValue(filter: AppliedFilter): string {
+    // Truncar valores muito longos
+    const maxLength = 30;
+    if (filter.value.length > maxLength) {
+      return filter.value.substring(0, maxLength) + '...';
+    }
+    return filter.value;
+  }
+
+  getOrigemOptions(): MultiSelectOption[] {
+    return this.origens.map(origem => ({
+      value: origem,
+      label: this.getOrigemLabel(origem)
+    }));
+  }
+
+  getStatusOptions(): MultiSelectOption[] {
+    return [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL].map(status => ({
+      value: status,
+      label: this.getStatusLabel(status)
+    }));
+  }
+
+  getUnidadeOptions(): MultiSelectOption[] {
+    return this.unidades.map(unidade => ({
+      value: unidade,
+      label: unidade
+    }));
   }
 
   clearAppliedFilter(key: string): void {
@@ -745,11 +870,11 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         break;
       case 'origem':
         if (!this.origemDisabled) {
-        this.origemFilter = '';
+          this.origemFilter = [];
         }
         break;
       case 'status':
-        this.statusFilter = '';
+        this.statusFilter = [];
         break;
       case 'dataVenda':
         this.dataInicialFilter = '';
@@ -761,7 +886,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         break;
       case 'unidade':
         if (!this.unidadeDisabled) {
-          this.unidadeFilter = '';
+          this.unidadeFilter = [];
         }
         break;
       default:
@@ -778,6 +903,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.filtersPanelOpen = false;
     this.updateAppliedFiltersSnapshot();
     this.onFilterChange();
+    this.cdr.detectChanges();
   }
 
   onSort(field: SortableField): void {
@@ -1463,11 +1589,11 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.prescritorFilter.trim()) {
       filters.prescritor = this.prescritorFilter.trim();
     }
-    if (this.origemFilter) {
-      filters.origem = this.origemFilter as VendaOrigem;
+    if (this.origemFilter && this.origemFilter.length > 0) {
+      filters.origem = this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter;
     }
-    if (this.statusFilter) {
-      filters.status = this.statusFilter as VendaStatus;
+    if (this.statusFilter && this.statusFilter.length > 0) {
+      filters.status = this.statusFilter.length === 1 ? this.statusFilter[0] : this.statusFilter;
     }
     if (this.dataInicialFilter) {
       filters.dataInicial = this.dataInicialFilter;
@@ -1481,8 +1607,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.dataFinalFechamentoFilter) {
       filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
     }
-    if (this.unidadeFilter) {
-      filters.unidade = this.unidadeFilter as Unidade;
+    if (this.unidadeFilter && this.unidadeFilter.length > 0) {
+      filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
     }
     if (this.ativoFilter.trim()) {
       filters.ativo = this.ativoFilter.trim();
@@ -1527,11 +1653,11 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.vendedorFilter.trim()) {
       filters.vendedor = this.vendedorFilter.trim();
     }
-    if (this.origemFilter) {
-      filters.origem = this.origemFilter as VendaOrigem;
+    if (this.origemFilter && this.origemFilter.length > 0) {
+      filters.origem = this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter;
     }
-    if (this.statusFilter) {
-      filters.status = this.statusFilter as VendaStatus;
+    if (this.statusFilter && this.statusFilter.length > 0) {
+      filters.status = this.statusFilter.length === 1 ? this.statusFilter[0] : this.statusFilter;
     }
     if (this.dataInicialFilter) {
       filters.dataInicial = this.dataInicialFilter;
@@ -1545,8 +1671,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.dataFinalFechamentoFilter) {
       filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
     }
-    if (this.unidadeFilter) {
-      filters.unidade = this.unidadeFilter as Unidade;
+    if (this.unidadeFilter && this.unidadeFilter.length > 0) {
+      filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
     }
     if (this.ativoFilter.trim()) {
       filters.ativo = this.ativoFilter.trim();

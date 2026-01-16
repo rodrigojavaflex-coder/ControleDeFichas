@@ -14,6 +14,7 @@ import {
 import { Permission, Unidade, Usuario } from '../../models/usuario.model';
 import { PageContextService } from '../../services/page-context.service';
 import { DateRangeFilterComponent, DateRangeValue } from '../date-range-filter/date-range-filter';
+import { MultiSelectDropdownComponent, MultiSelectOption } from '../multi-select-dropdown/multi-select-dropdown';
 
 type SortDirection = 'asc' | 'desc';
 type SortableField =
@@ -35,8 +36,8 @@ interface AcompanhamentoFilterSnapshot {
   vendedor: string;
   prescritor: string;
   ativo: string;
-  origem: string;
-  unidade: string;
+  origem: string | VendaOrigem | VendaOrigem[];
+  unidade: string | Unidade | Unidade[];
   dataInicial: string;
   dataFinal: string;
   dataInicialEnvio: string;
@@ -46,7 +47,7 @@ interface AcompanhamentoFilterSnapshot {
 @Component({
   selector: 'app-acompanhar-vendas',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateRangeFilterComponent],
+  imports: [CommonModule, FormsModule, DateRangeFilterComponent, MultiSelectDropdownComponent],
   templateUrl: './acompanhar-vendas.html',
   styleUrls: ['../vendas-list/vendas-list.css', './acompanhar-vendas.css'],
   encapsulation: ViewEncapsulation.None,
@@ -74,14 +75,15 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
   vendedorFilter = '';
   prescritorFilter = '';
   ativoFilter = '';
-  origemFilter: VendaOrigem | '' = '';
-  unidadeFilter: Unidade | '' = '';
+  origemFilter: VendaOrigem[] = [];
+  unidadeFilter: Unidade[] = [];
   dataInicialFilter = '';
   dataFinalFilter = '';
   dataInicialEnvioFilter = '';
   dataFinalEnvioFilter = '';
 
   origemDisabled = false;
+  unidadeDisabled = false;
   filtersPanelOpen = false;
   sortField: SortableField | null = null;
   sortDirection: SortDirection = 'asc';
@@ -105,11 +107,13 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     this.setDefaultVendaDateRange();
     this.configureOrigemFilter();
     this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe(user => {
-      const previousOrigem = this.origemFilter;
+      const previousOrigem = JSON.stringify(this.origemFilter);
       this.currentUser = user;
       this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
       this.configureOrigemFilter();
-      if (this.origemFilter !== previousOrigem && this.origemFilter) {
+      // Comparar arrays para verificar mudança
+      const currentOrigem = JSON.stringify(this.origemFilter);
+      if (currentOrigem !== previousOrigem && this.origemFilter.length > 0) {
         this.applyFilters();
       }
     });
@@ -150,7 +154,12 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     this.vendedorFilter = '';
     this.prescritorFilter = '';
     this.ativoFilter = '';
-    this.unidadeFilter = '';
+    if (!this.unidadeDisabled) {
+      this.unidadeFilter = [];
+    }
+    if (!this.origemDisabled) {
+      this.origemFilter = [];
+    }
     this.dataInicialFilter = '';
     this.dataFinalFilter = '';
     this.dataInicialEnvioFilter = '';
@@ -213,6 +222,96 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     this.dataInicialEnvioFilter = range.start || '';
     this.dataFinalEnvioFilter = range.end || '';
     this.applyFilters();
+  }
+
+  // Métodos para o modal - apenas atualizam valores sem disparar pesquisa
+  onVendaRangeChangeModal(range: DateRangeValue): void {
+    this.dataInicialFilter = range.start || '';
+    this.dataFinalFilter = range.end || '';
+    // Não chama applyFilters() - apenas atualiza os valores
+  }
+
+  onEnvioRangeChangeModal(range: DateRangeValue): void {
+    this.dataInicialEnvioFilter = range.start || '';
+    this.dataFinalEnvioFilter = range.end || '';
+    // Não chama applyFilters() - apenas atualiza os valores
+  }
+
+  onContainerClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target) {
+      return;
+    }
+    
+    // Verificar elementos que devem bloquear a abertura do modal
+    const btnToggle = target.closest('.btn-toggle-filtros');
+    const chipRemove = target.closest('.chip-remove');
+    const btnClearAll = target.closest('.btn-clear-all');
+    const resultsCount = target.closest('.results-count');
+    
+    // Não abrir se clicar em:
+    // - Botão de toggle
+    // - Botões dentro dos filtros (X, limpar todos)
+    // - Contador de resultados
+    if (btnToggle || chipRemove || btnClearAll || resultsCount) {
+      return;
+    }
+    
+    // Verificar se o clique foi em um chip (mas não no X)
+    const filterChip = target.closest('.filter-chip');
+    if (filterChip && !chipRemove) {
+      this.toggleFiltersVisibility();
+      return;
+    }
+    
+    // Verificar se o clique foi no container principal ou em áreas vazias
+    const filtersPanelTop = target.closest('.filters-panel-top');
+    if (filtersPanelTop) {
+      this.toggleFiltersVisibility();
+      return;
+    }
+  }
+
+  isMultipleFilter(key: string): boolean {
+    return ['origem', 'unidade'].includes(key);
+  }
+  
+  getFilterIcon(key: string): string {
+    const icons: { [key: string]: string } = {
+      protocolo: 'fa-hashtag',
+      cliente: 'fa-user',
+      vendedor: 'fa-user-tie',
+      prescritor: 'fa-user-md',
+      ativo: 'fa-pills',
+      origem: 'fa-map-marker-alt',
+      unidade: 'fa-building',
+      dataVenda: 'fa-calendar-alt',
+      dataEnvio: 'fa-truck'
+    };
+    return icons[key] || 'fa-filter';
+  }
+  
+  formatFilterValue(filter: { key: string; label: string; value: string }): string {
+    // Truncar valores muito longos
+    const maxLength = 30;
+    if (filter.value.length > maxLength) {
+      return filter.value.substring(0, maxLength) + '...';
+    }
+    return filter.value;
+  }
+
+  getOrigemOptions(): MultiSelectOption[] {
+    return this.origens.map(origem => ({
+      value: origem,
+      label: this.getOrigemLabel(origem)
+    }));
+  }
+
+  getUnidadeOptions(): MultiSelectOption[] {
+    return this.unidades.map(unidade => ({
+      value: unidade,
+      label: unidade
+    }));
   }
 
   onSelectChange(): void {
@@ -443,11 +542,11 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     if (this.ativoFilter.trim()) {
       filters.ativo = this.ativoFilter.trim();
     }
-    if (this.unidadeFilter) {
-      filters.unidade = this.unidadeFilter as Unidade;
+    if (this.unidadeFilter && this.unidadeFilter.length > 0) {
+      filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
     }
-    if (this.origemFilter) {
-      filters.origem = this.origemFilter as VendaOrigem;
+    if (this.origemFilter && this.origemFilter.length > 0) {
+      filters.origem = this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter;
     }
     if (this.dataInicialFilter) {
       filters.dataInicial = this.dataInicialFilter;
@@ -482,14 +581,18 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     const unidadeAtual = this.currentUser?.unidade || null;
     const origem = this.mapUnidadeParaOrigem(unidadeAtual);
 
-    // Se o usuário possui unidade definida, o filtro deve ficar bloqueado,
+    // Se o usuário possui unidade definida, o filtro de origem deve ficar bloqueado,
     // mesmo que a unidade não tenha mapeamento explícito.
+    // O filtro de unidade não é setado nem bloqueado automaticamente.
     if (unidadeAtual) {
-      this.origemFilter = origem || '';
+      this.origemFilter = origem ? [origem] : [];
       this.origemDisabled = true;
+      // Unidade não é setada nem bloqueada automaticamente
+      this.unidadeDisabled = false;
     } else {
-      this.origemFilter = origem || '';
+      this.origemFilter = origem ? [origem] : [];
       this.origemDisabled = false;
+      this.unidadeDisabled = false;
     }
     this.updateAppliedFiltersSnapshot();
   }
@@ -511,8 +614,8 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
       vendedor: this.vendedorFilter || '',
       prescritor: this.prescritorFilter || '',
       ativo: this.ativoFilter || '',
-      origem: this.origemFilter || '',
-      unidade: this.unidadeFilter || '',
+      origem: this.origemFilter.length > 0 ? (this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter) : ('' as any),
+      unidade: this.unidadeFilter.length > 0 ? (this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter) : ('' as any),
       dataInicial: this.dataInicialFilter || '',
       dataFinal: this.dataFinalFilter || '',
       dataInicialEnvio: this.dataInicialEnvioFilter || '',
@@ -543,11 +646,18 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
     if (snapshot.ativo.trim()) {
       filters.push({ key: 'ativo', label: 'Ativo', value: snapshot.ativo });
     }
-    if (snapshot.origem) {
-      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(snapshot.origem as VendaOrigem) });
+    if (snapshot.origem && (Array.isArray(snapshot.origem) ? snapshot.origem.length > 0 : snapshot.origem !== '')) {
+      const origens = Array.isArray(snapshot.origem) ? snapshot.origem : [snapshot.origem];
+      const origemLabels = origens.map(origem => this.getOrigemLabel(origem as VendaOrigem));
+      if (origemLabels.length > 0) {
+        filters.push({ key: 'origem', label: 'Comprado em', value: origemLabels.join(', ') });
+      }
     }
-    if (snapshot.unidade) {
-      filters.push({ key: 'unidade', label: 'Unidade', value: snapshot.unidade });
+    if (snapshot.unidade && (Array.isArray(snapshot.unidade) ? snapshot.unidade.length > 0 : snapshot.unidade !== '')) {
+      const unidades = Array.isArray(snapshot.unidade) ? snapshot.unidade : [snapshot.unidade];
+      if (unidades.length > 0) {
+        filters.push({ key: 'unidade', label: 'Unidade', value: unidades.join(', ') });
+      }
     }
     if (snapshot.dataInicial || snapshot.dataFinal) {
       let value = '';
@@ -594,11 +704,13 @@ export class AcompanharVendasComponent implements OnInit, OnDestroy {
         break;
       case 'origem':
         if (!this.origemDisabled) {
-          this.origemFilter = '';
+          this.origemFilter = [];
         }
         break;
       case 'unidade':
-        this.unidadeFilter = '';
+        if (!this.unidadeDisabled) {
+          this.unidadeFilter = [];
+        }
         break;
       case 'status':
       case 'dataVenda':

@@ -113,3 +113,81 @@
 
 /* Garantir que o filtro de intervalo ocupe a linha toda e não colida com Unidade */
 
+/* Estilos para o modal de filtros - já estão em vendas-list.css, mas adicionamos ajustes específicos se necessário */
+.filters-panel-top {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+  position: relative;
+  min-height: 48px;
+}
+
+/* Camada clicável que cobre toda a área do container */
+.filters-panel-top::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  cursor: pointer;
+}
+
+.filters-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+}
+
+/* Garantir que elementos interativos fiquem acima da camada clicável */
+.filters-controls > * {
+  position: relative;
+  z-index: 2;
+}
+
+.btn-toggle-filtros {
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #312e81;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-filtros:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15);
+}
+
+.btn-toggle-filtros .filters-count {
+  background: #eef2ff;
+  color: #3730a3;
+  border-radius: 999px;
+  padding: 0.1rem 0.75rem;
+  font-size: 0.85rem;
+  margin-left: 0.25rem;
+}
+
+/* Estilos para o modal de filtros (herdados de vendas-list.css, mas adicionamos ajustes) */
+.filters-grid .filter-group.value-range-group {
+  grid-column: span 2;
+}

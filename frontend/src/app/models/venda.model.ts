@@ -80,15 +80,15 @@ export interface FindVendasDto {
   limit?: number;
   protocolo?: string;
   cliente?: string;
-  origem?: VendaOrigem;
+  origem?: VendaOrigem | VendaOrigem[];
   vendedor?: string;
   prescritor?: string;
-  status?: VendaStatus;
+  status?: VendaStatus | VendaStatus[];
   dataInicial?: string;
   dataFinal?: string;
   dataInicialFechamento?: string;
   dataFinalFechamento?: string;
-  unidade?: Unidade;
+  unidade?: Unidade | Unidade[];
   ativo?: string;
   dataEnvio?: string;
   dataInicialEnvio?: string;

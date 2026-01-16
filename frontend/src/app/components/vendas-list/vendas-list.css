@@ -139,6 +139,20 @@
   border-radius: 10px;
   padding: 0.5rem 0.75rem;
   background: #f8fafc;
+  position: relative;
+  min-height: 48px;
+}
+
+/* Camada clicável que cobre toda a área do container */
+.filters-panel-top::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  cursor: pointer;
 }
 
 .filters-controls {
@@ -147,18 +161,36 @@
   gap: 0.75rem;
   flex-wrap: wrap;
   width: 100%;
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+}
+
+/* Garantir que elementos interativos fiquem acima da camada clicável */
+.filters-controls > * {
+  position: relative;
+  z-index: 2;
 }
 
 .btn-toggle-filtros {
-  border: none;
-  background: transparent;
-  color: #1f2937;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #312e81;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
-  padding: 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-filtros:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15);
 }
 
 .btn-toggle-filtros .filters-count {
@@ -169,6 +201,79 @@
   font-size: 0.85rem;
 }
 
+/* Estilos para o modal de filtros */
+.modal-filtros {
+  width: 90%;
+  max-width: 1000px;
+  max-height: 90vh;
+}
+
+.modal-filtros .modal-corpo {
+  max-height: calc(90vh - 140px);
+  overflow-y: auto;
+  overflow-x: visible;
+  padding: var(--espacamento-lg);
+  position: relative;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--espacamento-md);
+}
+
+.filters-grid .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-xs);
+  position: relative;
+  overflow: visible;
+}
+
+.filters-grid .date-range-field {
+  grid-column: span 2;
+  min-width: 0;
+}
+
+/* Melhorar visualização do componente de data no modal */
+.filters-grid .filter-group.date-range-field {
+  padding: 0;
+}
+
+.filters-grid .filter-group.date-range-field .date-range-filter {
+  margin: 0;
+  width: 100%;
+}
+
+/* Estilizar multi-select dropdown */
+.filters-grid .filter-group app-multi-select-dropdown {
+  width: 100%;
+  position: relative;
+}
+
+.modal-filtros .modal-rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espacamento-sm);
+  padding: var(--espacamento-md);
+  border-top: 1px solid var(--cor-borda);
+  position: relative;
+  z-index: 1;
+}
+
+.modal-filtros .botao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacamento-xs);
+}
+
+/* Ajustar o botão toggle para não abrir o modal quando clicar nos filtros aplicados */
+.filters-panel-top {
+  position: relative;
+  z-index: 1;
+}
+
+/* Manter estilos antigos para compatibilidade (caso ainda existam referências) */
 .filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -223,48 +328,206 @@
   width: 100%;
 }
 
-.applied-filters-inline {
-  display: inline-flex;
+/* Melhorias na área de filtros aplicados */
+.applied-filters-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0; /* Permite que o container encolha */
+  position: relative;
+}
+
+.results-count {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #0369a1;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.results-count i {
+  font-size: 0.75rem;
+}
+
+.applied-filters-wrapper {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  /* Esconder scrollbar mas manter funcionalidade */
+  scrollbar-width: thin;
+  scrollbar-color: #c7d2fe transparent;
+}
+
+.applied-filters-wrapper::-webkit-scrollbar {
+  height: 4px;
+}
+
+.applied-filters-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.applied-filters-wrapper::-webkit-scrollbar-thumb {
+  background: #c7d2fe;
+  border-radius: 2px;
 }
 
 .applied-filters-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Não quebrar linha */
   gap: 0.5rem;
+  padding: 0.25rem 0;
 }
 
 .filter-chip {
   background: #eef2ff;
   border: 1px solid #c7d2fe;
   border-radius: 999px;
-  padding: 0.35rem 0.85rem;
+  padding: 0.4rem 0.75rem;
   font-size: 0.85rem;
   color: #312e81;
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.filter-chip:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15);
+}
+
+.filter-chip i.fas:first-child {
+  font-size: 0.75rem;
+  opacity: 0.7;
 }
 
 .filter-chip strong {
-  margin-right: 0.25rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.filter-value {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-chip-multiple {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.filter-chip-multiple:hover {
+  background: #fde68a;
+  border-color: #fbbf24;
 }
 
 .chip-remove {
   background: transparent;
   border: none;
-  color: #312e81;
-  font-weight: 600;
+  color: inherit;
   cursor: pointer;
   padding: 0;
-  font-size: 1.7rem;
+  font-size: 0.75rem;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  opacity: 0.6;
 }
 
 .chip-remove:hover {
-  color: #1d1b5e;
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+  transform: scale(1.1);
+}
+
+.btn-clear-all {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #991b1b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-clear-all:hover {
+  background: #fecaca;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.15);
+}
+
+.btn-clear-all i {
+  font-size: 0.75rem;
+}
+
+.scroll-indicator {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.9));
+  padding: 0.5rem 0.75rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.scroll-indicator i {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .applied-filters-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .results-count {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .btn-clear-all {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .state-card {
@@ -485,7 +748,20 @@
 }
 
 :host-context(body.theme-dark) .btn-toggle-filtros {
-  color: #e2e8f0;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #dbeafe;
+}
+
+:host-context(body.theme-dark) .btn-toggle-filtros:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);
+}
+
+:host-context(body.theme-dark) .btn-toggle-filtros .filters-count {
+  background: rgba(59, 130, 246, 0.3);
+  color: #dbeafe;
 }
 
 :host-context(body.theme-dark) .inline-loading {
@@ -621,7 +897,20 @@ body.theme-dark .vendas-page .filters-panel-top {
 }
 
 body.theme-dark .vendas-page .btn-toggle-filtros {
-  color: #e2e8f0;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #dbeafe;
+}
+
+body.theme-dark .vendas-page .btn-toggle-filtros:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);
+}
+
+body.theme-dark .vendas-page .btn-toggle-filtros .filters-count {
+  background: rgba(59, 130, 246, 0.3);
+  color: #dbeafe;
 }
 
 body.theme-dark .vendas-page .header-actions .btn {
@@ -714,6 +1003,115 @@ body.theme-dark .vendas-page .chip-remove {
 
 body.theme-dark .vendas-page .chip-remove:hover {
   color: #ffffff;
+}
+
+/* Estilos de tema escuro para novos componentes de filtros */
+::host-context(body.theme-dark) .applied-filters-container {
+  color: #e5e7eb;
+}
+
+::host-context(body.theme-dark) .results-count {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+::host-context(body.theme-dark) .results-count i {
+  color: #93c5fd;
+}
+
+::host-context(body.theme-dark) .applied-filters-wrapper {
+  scrollbar-color: #3b82f6 transparent;
+}
+
+::host-context(body.theme-dark) .applied-filters-wrapper::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+}
+
+::host-context(body.theme-dark) .filter-chip-multiple {
+  background: #78350f;
+  border-color: #f59e0b;
+  color: #fcd34d;
+}
+
+::host-context(body.theme-dark) .filter-chip-multiple:hover {
+  background: #92400e;
+  border-color: #fbbf24;
+  color: #fde68a;
+}
+
+::host-context(body.theme-dark) .btn-clear-all {
+  background: #7f1d1d;
+  border-color: #dc2626;
+  color: #fca5a5;
+}
+
+::host-context(body.theme-dark) .btn-clear-all:hover {
+  background: #991b1b;
+  border-color: #ef4444;
+  color: #fee2e2;
+}
+
+::host-context(body.theme-dark) .scroll-indicator {
+  background: linear-gradient(to right, transparent, rgba(31, 41, 55, 0.9));
+}
+
+::host-context(body.theme-dark) .scroll-indicator i {
+  color: #9ca3af;
+}
+
+body.theme-dark .vendas-page .applied-filters-container {
+  color: #e5e7eb;
+}
+
+body.theme-dark .vendas-page .results-count {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+body.theme-dark .vendas-page .results-count i {
+  color: #93c5fd;
+}
+
+body.theme-dark .vendas-page .applied-filters-wrapper {
+  scrollbar-color: #3b82f6 transparent;
+}
+
+body.theme-dark .vendas-page .applied-filters-wrapper::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+}
+
+body.theme-dark .vendas-page .filter-chip-multiple {
+  background: #78350f;
+  border-color: #f59e0b;
+  color: #fcd34d;
+}
+
+body.theme-dark .vendas-page .filter-chip-multiple:hover {
+  background: #92400e;
+  border-color: #fbbf24;
+  color: #fde68a;
+}
+
+body.theme-dark .vendas-page .btn-clear-all {
+  background: #7f1d1d;
+  border-color: #dc2626;
+  color: #fca5a5;
+}
+
+body.theme-dark .vendas-page .btn-clear-all:hover {
+  background: #991b1b;
+  border-color: #ef4444;
+  color: #fee2e2;
+}
+
+body.theme-dark .vendas-page .scroll-indicator {
+  background: linear-gradient(to right, transparent, rgba(31, 41, 55, 0.9));
+}
+
+body.theme-dark .vendas-page .scroll-indicator i {
+  color: #9ca3af;
 }
 
 body.theme-dark .vendas-page .btn.btn-imprimir {

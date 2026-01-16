@@ -10,6 +10,7 @@ import { VendaOrigem } from '../../models/venda.model';
 import { VendaService } from '../../services/vendas.service';
 import { Venda } from '../../models/venda.model';
 import { DateRangeFilterComponent, DateRangeValue } from '../date-range-filter/date-range-filter';
+import { MultiSelectDropdownComponent, MultiSelectOption } from '../multi-select-dropdown/multi-select-dropdown';
 import { firstValueFrom } from 'rxjs';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
@@ -28,8 +29,8 @@ interface BaixasFilterSnapshot {
   cliente: string;
   dataInicial: string;
   dataFinal: string;
-  unidade: string;
-  origem: string;
+  unidade: string | Unidade | Unidade[];
+  origem: string | VendaOrigem | VendaOrigem[];
   valorMin: string;
   valorMax: string;
 }
@@ -37,7 +38,7 @@ interface BaixasFilterSnapshot {
 @Component({
   selector: 'app-baixas-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, LancarBaixaModalComponent, DateRangeFilterComponent],
+  imports: [CommonModule, FormsModule, LancarBaixaModalComponent, DateRangeFilterComponent, MultiSelectDropdownComponent],
   templateUrl: './baixas-list.html',
   styleUrls: ['./baixas-list.css']
 })
@@ -67,13 +68,13 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   // Filtros
   dataInicialFilter = '';
   dataFinalFilter = '';
-  unidadeFilter: Unidade | '' = '';
+  unidadeFilter: Unidade[] = [];
   unidadeDisabled = false;
   protocoloFilter = '';
   clienteFilter = '';
   valorMinFilter = '';
   valorMaxFilter = '';
-  origemFilter: VendaOrigem | '' = '';
+  origemFilter: VendaOrigem[] = [];
   private vendaCache = new Map<string, Venda>();
   configuracao: Configuracao | null = null;
   filtersPanelOpen = false;
@@ -129,9 +130,13 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
   private initializeUnidadeFilter(): void {
     const currentUser = this.authService.getCurrentUser();
-    if (currentUser?.unidade) {
-      this.unidadeFilter = currentUser.unidade;
+    // Verificar se unidade existe e não é vazia
+    if (currentUser?.unidade && currentUser.unidade.trim() !== '') {
+      this.unidadeFilter = [currentUser.unidade as Unidade];
       this.unidadeDisabled = true;
+    } else {
+      this.unidadeDisabled = false;
+      this.unidadeFilter = [];
     }
   }
 
@@ -148,8 +153,8 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       cliente: this.clienteFilter || '',
       dataInicial: this.dataInicialFilter || '',
       dataFinal: this.dataFinalFilter || '',
-      unidade: this.unidadeFilter?.toString() || '',
-      origem: this.origemFilter?.toString() || '',
+      unidade: this.unidadeFilter.length > 0 ? (this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter) : ('' as any),
+      origem: this.origemFilter.length > 0 ? (this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter) : ('' as any),
       valorMin: this.valorMinFilter || '',
       valorMax: this.valorMaxFilter || ''
     };
@@ -190,7 +195,10 @@ export class BaixasListComponent implements OnInit, OnDestroy {
           .then(enriched => {
             const filteredData = this.applyLocalFilters(enriched);
             this.items = filteredData;
+            // Atualizar totalItems com o comprimento do array filtrado
             this.totalItems = filteredData.length;
+            // O totalPages deve ser baseado no total de páginas do backend
+            // mas como aplicamos filtros locais, ajustamos baseado nos itens filtrados
             this.totalPages = response.meta.totalPages || 1;
             this.loading = false;
             // manter seleção se ainda existir
@@ -203,11 +211,13 @@ export class BaixasListComponent implements OnInit, OnDestroy {
           .catch(() => {
             this.error = 'Erro ao carregar dados das vendas associadas.';
             this.loading = false;
+            this.totalItems = 0;
           });
       },
       error: () => {
         this.error = 'Erro ao carregar baixas. Tente novamente.';
         this.loading = false;
+        this.totalItems = 0;
       }
     });
   }
@@ -225,15 +235,22 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     this.onFilterChange();
   }
 
+  // Métodos para o modal - apenas atualizam valores sem disparar pesquisa
+  onPeriodoRangeChangeModal(range: DateRangeValue): void {
+    this.dataInicialFilter = range.start || '';
+    this.dataFinalFilter = range.end || '';
+    // Não chama onFilterChange() - apenas atualiza os valores
+  }
+
   clearFilters(): void {
     this.dataInicialFilter = '';
     this.dataFinalFilter = '';
     if (!this.unidadeDisabled) {
-      this.unidadeFilter = '';
+      this.unidadeFilter = [];
     }
     this.protocoloFilter = '';
     this.clienteFilter = '';
-    this.origemFilter = '';
+    this.origemFilter = [];
     this.valorMinFilter = '';
     this.valorMaxFilter = '';
     this.initializeDateFilters();
@@ -244,6 +261,41 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
   toggleFiltersVisibility(): void {
     this.filtersPanelOpen = !this.filtersPanelOpen;
+  }
+
+  onContainerClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target) {
+      return;
+    }
+    
+    // Verificar elementos que devem bloquear a abertura do modal
+    const btnToggle = target.closest('.btn-toggle-filtros');
+    const chipRemove = target.closest('.chip-remove');
+    const btnClearAll = target.closest('.btn-clear-all');
+    const resultsCount = target.closest('.results-count');
+    
+    // Não abrir se clicar em:
+    // - Botão de toggle
+    // - Botões dentro dos filtros (X, limpar todos)
+    // - Contador de resultados
+    if (btnToggle || chipRemove || btnClearAll || resultsCount) {
+      return;
+    }
+    
+    // Verificar se o clique foi em um chip (mas não no X)
+    const filterChip = target.closest('.filter-chip');
+    if (filterChip && !chipRemove) {
+      this.toggleFiltersVisibility();
+      return;
+    }
+    
+    // Verificar se o clique foi no container principal ou em áreas vazias
+    const filtersPanelTop = target.closest('.filters-panel-top');
+    if (filtersPanelTop) {
+      this.toggleFiltersVisibility();
+      return;
+    }
   }
 
   onFiltersToggleKey(event: KeyboardEvent): void {
@@ -271,11 +323,14 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       else if (fim) value = `Até ${fim}`;
       filters.push({ key: 'periodo', label: 'Período', value });
     }
-    if (snapshot.unidade) {
-      filters.push({ key: 'unidade', label: 'Unidade', value: snapshot.unidade });
+    if (snapshot.unidade && (Array.isArray(snapshot.unidade) ? snapshot.unidade.length > 0 : snapshot.unidade !== '')) {
+      const unidades = Array.isArray(snapshot.unidade) ? snapshot.unidade : [snapshot.unidade];
+      filters.push({ key: 'unidade', label: 'Unidade', value: unidades.join(', ') });
     }
-    if (snapshot.origem) {
-      filters.push({ key: 'origem', label: 'Comprado em', value: this.getOrigemLabel(snapshot.origem as VendaOrigem) });
+    if (snapshot.origem && (Array.isArray(snapshot.origem) ? snapshot.origem.length > 0 : snapshot.origem !== '')) {
+      const origens = Array.isArray(snapshot.origem) ? snapshot.origem : [snapshot.origem];
+      const origemLabels = origens.map(origem => this.getOrigemLabel(origem as VendaOrigem));
+      filters.push({ key: 'origem', label: 'Comprado em', value: origemLabels.join(', ') });
     }
     if (snapshot.valorMin || snapshot.valorMax) {
       let value = '';
@@ -301,11 +356,11 @@ export class BaixasListComponent implements OnInit, OnDestroy {
         break;
       case 'unidade':
         if (!this.unidadeDisabled) {
-          this.unidadeFilter = '';
+          this.unidadeFilter = [];
         }
         break;
       case 'origem':
-        this.origemFilter = '';
+        this.origemFilter = [];
         break;
       case 'valor':
         this.valorMinFilter = '';
@@ -316,6 +371,45 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
     this.updateAppliedFiltersSnapshot();
     this.applyFilters();
+  }
+
+  isMultipleFilter(key: string): boolean {
+    return ['origem', 'unidade'].includes(key);
+  }
+  
+  getFilterIcon(key: string): string {
+    const icons: { [key: string]: string } = {
+      protocolo: 'fa-hashtag',
+      cliente: 'fa-user',
+      periodo: 'fa-calendar-alt',
+      unidade: 'fa-building',
+      origem: 'fa-map-marker-alt',
+      valor: 'fa-dollar-sign'
+    };
+    return icons[key] || 'fa-filter';
+  }
+  
+  formatFilterValue(filter: AppliedFilter): string {
+    // Truncar valores muito longos
+    const maxLength = 30;
+    if (filter.value.length > maxLength) {
+      return filter.value.substring(0, maxLength) + '...';
+    }
+    return filter.value;
+  }
+
+  getOrigemOptions(): MultiSelectOption[] {
+    return this.origens.map(origem => ({
+      value: origem,
+      label: this.getOrigemLabel(origem)
+    }));
+  }
+
+  getUnidadeOptions(): MultiSelectOption[] {
+    return this.unidades.map(unidade => ({
+      value: unidade,
+      label: unidade
+    }));
   }
 
   applyFilters(): void {
@@ -589,7 +683,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
                 Período: ${this.formatReportDate(this.dataInicialFilter)} até ${this.formatReportDate(
                   this.dataFinalFilter
                 )} |
-                Unidade: ${this.unidadeFilter || 'Todas'}
+                Unidade: ${this.unidadeFilter.length > 0 ? this.unidadeFilter.join(', ') : 'Todas'}
               </div>
             </div>
             <div class="header-spacer">&nbsp;</div>
@@ -648,15 +742,20 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   private applyLocalFilters(items: Baixa[]): Baixa[] {
     let filtered = [...items];
 
-    const unidadeFiltroNormalizada = this.normalizeUnidade(this.unidadeFilter);
-    if (unidadeFiltroNormalizada) {
-      filtered = filtered.filter(
-        baixa => this.normalizeUnidade(baixa.venda?.unidade) === unidadeFiltroNormalizada
-      );
+    if (this.unidadeFilter && this.unidadeFilter.length > 0) {
+      const unidadesNormalizadas = this.unidadeFilter.map(u => this.normalizeUnidade(u)).filter(u => u);
+      if (unidadesNormalizadas.length > 0) {
+        filtered = filtered.filter(
+          baixa => {
+            const unidadeBaixa = this.normalizeUnidade(baixa.venda?.unidade);
+            return unidadeBaixa && unidadesNormalizadas.includes(unidadeBaixa);
+          }
+        );
+      }
     }
 
-    if (this.origemFilter) {
-      filtered = filtered.filter(baixa => baixa.venda?.origem === this.origemFilter);
+    if (this.origemFilter && this.origemFilter.length > 0) {
+      filtered = filtered.filter(baixa => baixa.venda?.origem && this.origemFilter.includes(baixa.venda.origem));
     }
 
     if (this.protocoloFilter.trim()) {

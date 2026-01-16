@@ -479,9 +479,15 @@ export class VendasService {
     }
 
     if (filters.origem) {
-      queryBuilder.andWhere('venda.origem = :origem', {
-        origem: filters.origem,
-      });
+      if (Array.isArray(filters.origem) && filters.origem.length > 0) {
+        queryBuilder.andWhere('venda.origem IN (:...origens)', {
+          origens: filters.origem,
+        });
+      } else if (!Array.isArray(filters.origem)) {
+        queryBuilder.andWhere('venda.origem = :origem', {
+          origem: filters.origem,
+        });
+      }
     }
 
     if (filters.vendedor) {
@@ -499,9 +505,15 @@ export class VendasService {
     }
 
     if (filters.status) {
-      queryBuilder.andWhere('venda.status = :status', {
-        status: filters.status,
-      });
+      if (Array.isArray(filters.status) && filters.status.length > 0) {
+        queryBuilder.andWhere('venda.status IN (:...statuses)', {
+          statuses: filters.status,
+        });
+      } else if (!Array.isArray(filters.status)) {
+        queryBuilder.andWhere('venda.status = :status', {
+          status: filters.status,
+        });
+      }
     }
 
     if (filters.dataInicial) {
@@ -541,9 +553,15 @@ export class VendasService {
     }
 
     if (filters.unidade) {
-      queryBuilder.andWhere('venda.unidade = :unidade', {
-        unidade: filters.unidade,
-      });
+      if (Array.isArray(filters.unidade) && filters.unidade.length > 0) {
+        queryBuilder.andWhere('venda.unidade IN (:...unidades)', {
+          unidades: filters.unidade,
+        });
+      } else if (!Array.isArray(filters.unidade)) {
+        queryBuilder.andWhere('venda.unidade = :unidade', {
+          unidade: filters.unidade,
+        });
+      }
     }
 
     if (filters.ativo) {

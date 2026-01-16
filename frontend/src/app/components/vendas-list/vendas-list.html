@@ -76,11 +76,15 @@
         class="filters-panel-top"
         role="button"
         tabindex="0"
-        (click)="toggleFiltersVisibility()"
+        (click)="onContainerClick($event)"
         (keydown)="onFiltersToggleKey($event)">
         <div class="filters-controls">
-          <div class="filters-toggle btn btn-toggle-filtros">
-            <span>{{ filtersPanelOpen ? 'Ocultar filtros' : 'Mostrar filtros' }}</span>
+          <button
+            type="button"
+            class="filters-toggle btn btn-toggle-filtros"
+            (click)="toggleFiltersVisibility(); $event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()">
+            <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
             <span class="filters-count" *ngIf="appliedFilters.length">
               {{ appliedFilters.length }}
             </span>
@@ -88,158 +92,50 @@
               class="fas"
               [class.fa-chevron-up]="filtersPanelOpen"
               [class.fa-chevron-down]="!filtersPanelOpen"></i>
-          </div>
+          </button>
+          <!-- Área de filtros aplicados melhorada -->
           <div
-            class="applied-filters-inline"
-            *ngIf="appliedFilters.length"
-            (click)="$event.stopPropagation()"
-            (keydown)="$event.stopPropagation()">
-            <div class="applied-filters-list">
-              <span class="filter-chip" *ngFor="let filter of appliedFilters">
-                <strong>{{ filter.label }}:</strong> {{ filter.value }}
-                <button
-                  class="chip-remove"
-                  type="button"
-                  (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
-                  aria-label="Remover filtro {{ filter.label }}">
-                  ×
-                </button>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="filters" *ngIf="filtersPanelOpen">
-        <div class="filter-group">
-          <label for="protocoloFilter">Protocolo</label>
-          <input
-            id="protocoloFilter"
-            type="text"
-            [(ngModel)]="protocoloFilter"
-            placeholder="Buscar por protocolo..."
-            class="form-control"
-            (keyup.enter)="onFilterChange()">
-        </div>
-
-        <div class="filter-group">
-          <label for="clienteFilter">Cliente</label>
-          <input
-            id="clienteFilter"
-            type="text"
-            [(ngModel)]="clienteFilter"
-            placeholder="Buscar por cliente..."
-            class="form-control"
-            (keyup.enter)="onFilterChange()">
-        </div>
-
-        <div class="filter-group">
-          <label for="vendedorFilter">Vendedor</label>
-          <input
-            id="vendedorFilter"
-            type="text"
-            [(ngModel)]="vendedorFilter"
-            placeholder="Buscar por vendedor..."
-            class="form-control"
-            (keyup.enter)="onFilterChange()">
-        </div>
-
-        <div class="filter-group">
-          <label for="prescritorFilter">Prescritor</label>
-          <input
-            id="prescritorFilter"
-            type="text"
-            [(ngModel)]="prescritorFilter"
-            placeholder="Buscar por prescritor..."
-            class="form-control"
-            (keyup.enter)="onFilterChange()">
-        </div>
-
-        <div class="filter-group">
-          <label for="ativoFilter">Ativo</label>
-          <input
-            id="ativoFilter"
-            type="text"
-            [(ngModel)]="ativoFilter"
-            placeholder="Buscar por ativo..."
-            class="form-control"
-            (keyup.enter)="onFilterChange()">
-        </div>
-
-        <div class="filter-group">
-          <label for="origemFilter">Comprado em</label>
-          <select
-            id="origemFilter"
-            [(ngModel)]="origemFilter"
-            class="form-control"
-            (change)="onFilterChange()">
-            <option value="">Todas</option>
-            <option *ngFor="let origem of origens" [value]="origem">
-              {{ getOrigemLabel(origem) }}
-            </option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="statusFilter">Status</label>
-          <select
-            id="statusFilter"
-            [(ngModel)]="statusFilter"
-            class="form-control"
-            (change)="onFilterChange()">
-            <option value="">Todos</option>
-            <option *ngFor="let status of [VendaStatus.REGISTRADO, VendaStatus.CANCELADO, VendaStatus.PAGO, VendaStatus.PAGO_PARCIAL]" [value]="status">
-              {{ getStatusLabel(status) }}
-            </option>
-          </select>
-        </div>
-
-        <div class="filter-group date-field date-range-field">
-          <app-date-range-filter
-            label="Data da Venda"
-            startLabel="Início"
-            endLabel="Fim"
-            [start]="dataInicialFilter"
-            [end]="dataFinalFilter"
-            (rangeChange)="onVendaRangeChange($event)">
-          </app-date-range-filter>
-        </div>
-
-        <div class="filter-group date-field date-range-field">
-          <app-date-range-filter
-            label="Data de Fechamento"
-            startLabel="Início"
-            endLabel="Fim"
-            [start]="dataInicialFechamentoFilter"
-            [end]="dataFinalFechamentoFilter"
-            (rangeChange)="onFechamentoRangeChange($event)">
-          </app-date-range-filter>
-        </div>
-
-        <div class="filter-group">
-          <label for="unidadeFilter">Unidade</label>
-          <select
-            id="unidadeFilter"
-            [(ngModel)]="unidadeFilter"
-            [disabled]="unidadeDisabled"
-            class="form-control"
-            (change)="onFilterChange()">
-            <option value="">Todas</option>
-            <option *ngFor="let unidade of unidades" [value]="unidade">
-              {{ unidade }}
-            </option>
-          </select>
-        </div>
-
-        <div class="filter-group filter-actions">
-          <label>&nbsp;</label>
-          <div class="filter-action-buttons">
-            <button class="btn btn-limpar" type="button" (click)="clearFilters()">
-              <i class="fas fa-eraser"></i>
-              Limpar Filtro
-            </button>
-            <button class="btn btn-filtrar" type="button" (click)="applyFilters()">
+            class="applied-filters-container"
+            *ngIf="appliedFilters.length">
+            
+            <!-- Contador de resultados -->
+            <div class="results-count" *ngIf="totalItems !== undefined" (click)="$event.stopPropagation()">
               <i class="fas fa-filter"></i>
-              Aplicar Filtros
+              <span>{{ totalItems }} resultado(s)</span>
+            </div>
+            
+            <!-- Container com scroll horizontal -->
+            <div class="applied-filters-wrapper">
+              <div class="applied-filters-list">
+                <!-- Filtros de texto -->
+                <ng-container *ngFor="let filter of appliedFilters">
+                  <span 
+                    class="filter-chip" 
+                    [class.filter-chip-multiple]="isMultipleFilter(filter.key)"
+                    [title]="filter.value">
+                    <i class="fas" [ngClass]="getFilterIcon(filter.key)"></i>
+                    <strong>{{ filter.label }}:</strong> 
+                    <span class="filter-value">{{ formatFilterValue(filter) }}</span>
+                    <button
+                      class="chip-remove"
+                      type="button"
+                      (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
+                      aria-label="Remover filtro {{ filter.label }}">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </span>
+                </ng-container>
+              </div>
+            </div>
+            
+            <!-- Botão limpar todos -->
+            <button
+              class="btn-clear-all"
+              type="button"
+              (click)="clearFilters(); $event.stopPropagation()"
+              title="Limpar todos os filtros">
+              <i class="fas fa-eraser"></i>
+              Limpar todos
             </button>
           </div>
         </div>
@@ -584,6 +480,153 @@
         [attr.disabled]="showBulkDeleteModal && bulkDeleteLoading ? 'disabled' : null">
         <i class="fas fa-trash"></i>
         {{ showBulkDeleteModal ? (bulkDeleteLoading ? 'Excluindo...' : 'Excluir') : 'Excluir' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Filtros -->
+<div class="modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
+  <div class="modal-conteudo modal-filtros" (click)="$event.stopPropagation()">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Filtros de Vendas</h3>
+      <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="filters-grid">
+        <!-- Primeira linha: Datas -->
+        <div class="filter-group date-range-field">
+          <app-date-range-filter
+            label="Data da Venda"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialFilter"
+            [end]="dataFinalFilter"
+            (rangeChange)="onVendaRangeChangeModal($event)">
+          </app-date-range-filter>
+        </div>
+
+        <div class="filter-group date-range-field">
+          <app-date-range-filter
+            label="Data de Fechamento"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialFechamentoFilter"
+            [end]="dataFinalFechamentoFilter"
+            (rangeChange)="onFechamentoRangeChangeModal($event)">
+          </app-date-range-filter>
+        </div>
+
+        <!-- Segunda linha: Protocolo, Cliente, Vendedor, Prescritor -->
+        <div class="filter-group">
+          <label for="protocoloFilterModal" class="label-campo">Protocolo</label>
+          <input
+            id="protocoloFilterModal"
+            type="text"
+            [(ngModel)]="protocoloFilter"
+            placeholder="Buscar por protocolo..."
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="clienteFilterModal" class="label-campo">Cliente</label>
+          <input
+            id="clienteFilterModal"
+            type="text"
+            [(ngModel)]="clienteFilter"
+            placeholder="Buscar por cliente..."
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="vendedorFilterModal" class="label-campo">Vendedor</label>
+          <input
+            id="vendedorFilterModal"
+            type="text"
+            [(ngModel)]="vendedorFilter"
+            placeholder="Buscar por vendedor..."
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="prescritorFilterModal" class="label-campo">Prescritor</label>
+          <input
+            id="prescritorFilterModal"
+            type="text"
+            [(ngModel)]="prescritorFilter"
+            placeholder="Buscar por prescritor..."
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <!-- Terceira linha: Ativo, Comprado em, Status, Unidade -->
+        <div class="filter-group">
+          <label for="ativoFilterModal" class="label-campo">Ativo</label>
+          <input
+            id="ativoFilterModal"
+            type="text"
+            [(ngModel)]="ativoFilter"
+            placeholder="Buscar por ativo..."
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label class="label-campo">Comprado em</label>
+          <app-multi-select-dropdown
+            [(ngModel)]="origemFilter"
+            [options]="getOrigemOptions()"
+            placeholder="Selecione as origens..."
+            selectAllLabel="Marcar todas"
+            deselectAllLabel="Desmarcar todas">
+          </app-multi-select-dropdown>
+        </div>
+
+        <div class="filter-group">
+          <label class="label-campo">Status</label>
+          <app-multi-select-dropdown
+            [(ngModel)]="statusFilter"
+            [options]="getStatusOptions()"
+            placeholder="Selecione os status..."
+            selectAllLabel="Marcar todos"
+            deselectAllLabel="Desmarcar todos">
+          </app-multi-select-dropdown>
+        </div>
+
+        <div class="filter-group">
+          <label class="label-campo">Unidade</label>
+          <app-multi-select-dropdown
+            [(ngModel)]="unidadeFilter"
+            [options]="getUnidadeOptions()"
+            [disabled]="unidadeDisabled"
+            placeholder="Selecione as unidades..."
+            selectAllLabel="Marcar todas"
+            deselectAllLabel="Desmarcar todas">
+          </app-multi-select-dropdown>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="clearFilters()">
+        <i class="fas fa-eraser"></i>
+        Limpar Filtros
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="applyFilters()">
+        <i class="fas fa-filter"></i>
+        Aplicar Filtros
       </button>
     </div>
   </div>

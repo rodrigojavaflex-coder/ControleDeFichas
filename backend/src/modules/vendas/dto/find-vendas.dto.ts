@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsDateString, IsArray } from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { VendaOrigem, VendaStatus } from '../../../common/enums/venda.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
+import { Type, Transform } from 'class-transformer';
 
 export class FindVendasDto extends PaginationDto {
   @ApiPropertyOptional({
@@ -22,13 +23,23 @@ export class FindVendasDto extends PaginationDto {
   cliente?: string;
 
   @ApiPropertyOptional({
-    description: 'Origem da venda',
+    description: 'Origem da venda (pode ser array para múltiplas seleções)',
     example: VendaOrigem.GOIANIA,
     enum: VendaOrigem,
+    isArray: true,
   })
   @IsOptional()
-  @IsEnum(VendaOrigem, { message: 'Origem deve ser um valor válido' })
-  origem?: VendaOrigem;
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+      return [value];
+    }
+    return value;
+  })
+  @IsEnum(VendaOrigem, { each: true, message: 'Origem deve ser um valor válido' })
+  origem?: VendaOrigem | VendaOrigem[];
 
   @ApiPropertyOptional({
     description: 'Nome do vendedor',
@@ -47,13 +58,23 @@ export class FindVendasDto extends PaginationDto {
   prescritor?: string;
 
   @ApiPropertyOptional({
-    description: 'Status da venda',
+    description: 'Status da venda (pode ser array para múltiplas seleções)',
     example: VendaStatus.REGISTRADO,
     enum: VendaStatus,
+    isArray: true,
   })
   @IsOptional()
-  @IsEnum(VendaStatus, { message: 'Status deve ser um valor válido' })
-  status?: VendaStatus;
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+      return [value];
+    }
+    return value;
+  })
+  @IsEnum(VendaStatus, { each: true, message: 'Status deve ser um valor válido' })
+  status?: VendaStatus | VendaStatus[];
 
   @ApiPropertyOptional({
     description: 'Data inicial da venda',
@@ -88,13 +109,23 @@ export class FindVendasDto extends PaginationDto {
   dataFinalFechamento?: string;
 
   @ApiPropertyOptional({
-    description: 'Unidade da venda',
+    description: 'Unidade da venda (pode ser array para múltiplas seleções)',
     example: 'INHUMAS',
     enum: Unidade,
+    isArray: true,
   })
   @IsOptional()
-  @IsEnum(Unidade, { message: 'Unidade deve ser um valor válido' })
-  unidade?: Unidade;
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+      return [value];
+    }
+    return value;
+  })
+  @IsEnum(Unidade, { each: true, message: 'Unidade deve ser um valor válido' })
+  unidade?: Unidade | Unidade[];
 
   @ApiPropertyOptional({
     description: 'Ativo da venda',
