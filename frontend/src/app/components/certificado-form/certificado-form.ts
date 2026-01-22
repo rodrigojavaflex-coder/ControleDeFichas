@@ -10,6 +10,7 @@ import { Permission } from '../../models/usuario.model';
 import { LaudoService } from '../../services/laudo.service';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { Location } from '@angular/common';
+import { combineLatest } from 'rxjs';
 
 @Component({
   selector: 'app-certificado-form',
@@ -72,35 +73,32 @@ export class CertificadoFormComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Capture original query parameters for restoring state on cancel
-    this.route.queryParams.subscribe(params => {
-      this.originalQueryParams = params;
-    });
-    this.route.params.subscribe(params => {
+    // Capturar query params e route params de forma combinada para evitar race conditions
+    combineLatest([
+      this.route.params,
+      this.route.queryParams
+    ]).subscribe(([params, queryParams]) => {
+      // Capturar query params originais para cancelamento
+      this.originalQueryParams = queryParams;
+      
+      // Processar parâmetros da rota (id do certificado)
       if (params['id']) {
         this.isEditMode = true;
         this.certificadoId = params['id'];
         this.loadCertificado();
       }
-    });
-
-    // Verificar se há fichaTecnicaId nos query params
-    this.route.queryParams.subscribe(queryParams => {
+      
+      // Processar query params (fichaTecnicaId)
       if (queryParams['fichaTecnicaId']) {
         this.fichaTecnicaId = queryParams['fichaTecnicaId'];
-        this.loadFichaTecnica();
-        // Preencher o campo fichaTecnicaId no formulário
-        this.certificadoForm.patchValue({
-          fichaTecnicaId: this.fichaTecnicaId
-        });
-      }
-    });
-
-    // Após carregar certificado, listar laudos
-    this.route.params.subscribe(params => {
-      if (params['id']) {
-        this.certificadoId = params['id'];
-        this.loadLaudos();
+        // Se já estiver em modo de edição, não precisa carregar ficha novamente
+        // pois será carregada pelo loadCertificado
+        if (!this.isEditMode) {
+          this.loadFichaTecnica();
+          this.certificadoForm.patchValue({
+            fichaTecnicaId: this.fichaTecnicaId
+          });
+        }
       }
     });
   }
@@ -202,10 +200,15 @@ export class CertificadoFormComponent implements OnInit {
           dataDeValidade: dataVal ? this.formatDate(dataVal) : '',          
         });
         // Garantir que fichaTecnicaId seja populado no form
-        const fichaId = certificado.fichaTecnica?.id || null;
+        // Prioriza o fichaTecnicaId do certificado, mas usa o dos queryParams se não houver
+        const fichaId = certificado.fichaTecnica?.id || this.fichaTecnicaId || null;
         this.fichaTecnicaId = fichaId;
-        this.certificadoForm.patchValue({ fichaTecnicaId: fichaId });
-        this.loadFichaTecnica();
+        if (fichaId) {
+          this.certificadoForm.patchValue({ fichaTecnicaId: fichaId });
+          this.loadFichaTecnica();
+        }
+        // Carregar laudos após certificado carregado
+        this.loadLaudos();
         this.loading = false;
       },
       error: (error) => {

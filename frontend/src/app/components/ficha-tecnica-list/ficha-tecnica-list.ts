@@ -351,8 +351,6 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
 
   // Controle de dropdowns
   dropdownsAbertos = signal<Set<string>>(new Set());
-  // Controle de dropdowns de certificados
-  certDropdownsAbertos = signal<Set<string>>(new Set());
 
   private configuracaoService = inject(ConfiguracaoService);
   configuracao: Configuracao | null = null;
@@ -972,28 +970,6 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
 
   isDropdownOpen(fichaId: string): boolean {
     return this.dropdownsAbertos().has(fichaId);
-  }
-
-  // Métodos para dropdowns de certificado
-  toggleCertDropdown(certId: string) {
-    this.certDropdownsAbertos.update(set => {
-      const newSet = new Set(set);
-      if (newSet.has(certId)) newSet.delete(certId);
-      else newSet.add(certId);
-      return newSet;
-    });
-  }
-
-  isCertDropdownOpen(certId: string): boolean {
-    return this.certDropdownsAbertos().has(certId);
-  }
-
-  closeCertDropdown(certId: string) {
-    this.certDropdownsAbertos.update(set => {
-      const newSet = new Set(set);
-      newSet.delete(certId);
-      return newSet;
-    });
   }
 
   closeDropdown(fichaId: string) {

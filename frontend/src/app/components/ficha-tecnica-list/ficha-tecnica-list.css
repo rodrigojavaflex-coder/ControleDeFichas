@@ -494,6 +494,34 @@
   align-items: center;
 }
 
+.certificado-buttons-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.certificado-buttons-group .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.certificado-buttons-group .btn i {
+  font-size: 0.875rem;
+}
+
+.certificado-buttons-group .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .certificado-body {
   padding: 1rem;
   font-size: 0.875rem;

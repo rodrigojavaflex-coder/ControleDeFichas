@@ -88,6 +88,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'certificados/edit/:id',
+    component: CertificadoFormComponent,
+    canActivate: [authGuard]
+  },
+  {
     path: 'vendas',
     component: VendasListComponent,
     canActivate: [authGuard]
