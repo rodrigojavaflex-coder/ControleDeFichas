@@ -88,6 +88,7 @@ export interface FindVendasDto {
   dataFinal?: string;
   dataInicialFechamento?: string;
   dataFinalFechamento?: string;
+  semDataFechamento?: boolean;
   unidade?: Unidade | Unidade[];
   ativo?: string;
   dataEnvio?: string;

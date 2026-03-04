@@ -29,6 +29,7 @@ export class DateRangeFilterComponent implements OnChanges {
   @Input() start = '';
   @Input() end = '';
   @Input() description = '';
+  @Input() disabled = false;
 
   @Output() rangeChange = new EventEmitter<DateRangeValue>();
 

@@ -1,8 +1,8 @@
-<div class="date-range-filter">
+<div class="date-range-filter" [class.disabled]="disabled">
   <div class="range-row">
     <div class="field">
       <label>{{ label }}</label>
-      <select class="form-control" [(ngModel)]="preset" (change)="onPresetChange(preset)">
+      <select class="form-control" [(ngModel)]="preset" (change)="onPresetChange(preset)" [attr.disabled]="disabled ? true : null">
         <option *ngFor="let p of presets" [value]="p.value" [title]="p.description">{{ p.label }}</option>
       </select>
     </div>
@@ -12,7 +12,8 @@
         type="date"
         class="form-control"
         [(ngModel)]="start"
-        (change)="onStartChange(start)">
+        (change)="onStartChange(start)"
+        [attr.disabled]="disabled ? true : null">
     </div>
     <div class="field">
       <label>{{ endLabel }}</label>
@@ -20,7 +21,8 @@
         type="date"
         class="form-control"
         [(ngModel)]="end"
-        (change)="onEndChange(end)">
+        (change)="onEndChange(end)"
+        [attr.disabled]="disabled ? true : null">
     </div>
   </div>
   <p class="range-description" *ngIf="description">{{ description }}</p>

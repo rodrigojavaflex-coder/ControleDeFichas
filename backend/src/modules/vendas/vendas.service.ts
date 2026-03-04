@@ -540,16 +540,20 @@ export class VendasService {
       });
     }
 
-    if (filters.dataInicialFechamento) {
-      queryBuilder.andWhere('venda.dataFechamento >= :dataInicialFechamento', {
-        dataInicialFechamento: filters.dataInicialFechamento,
-      });
-    }
+    if (filters.semDataFechamento === true) {
+      queryBuilder.andWhere('venda.dataFechamento IS NULL');
+    } else {
+      if (filters.dataInicialFechamento) {
+        queryBuilder.andWhere('venda.dataFechamento >= :dataInicialFechamento', {
+          dataInicialFechamento: filters.dataInicialFechamento,
+        });
+      }
 
-    if (filters.dataFinalFechamento) {
-      queryBuilder.andWhere('venda.dataFechamento <= :dataFinalFechamento', {
-        dataFinalFechamento: filters.dataFinalFechamento,
-      });
+      if (filters.dataFinalFechamento) {
+        queryBuilder.andWhere('venda.dataFechamento <= :dataFinalFechamento', {
+          dataFinalFechamento: filters.dataFinalFechamento,
+        });
+      }
     }
 
     if (filters.unidade) {

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsDateString, IsArray } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsDateString, IsArray, IsBoolean } from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { VendaOrigem, VendaStatus } from '../../../common/enums/venda.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
@@ -107,6 +107,19 @@ export class FindVendasDto extends PaginationDto {
   @IsOptional()
   @IsDateString({}, { message: 'Data final de fechamento deve ter formato válido (YYYY-MM-DD)' })
   dataFinalFechamento?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filtrar apenas vendas sem data de fechamento (dataFechamento IS NULL)',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
+    return value;
+  })
+  @IsBoolean({ message: 'semDataFechamento deve ser um booleano' })
+  semDataFechamento?: boolean;
 
   @ApiPropertyOptional({
     description: 'Unidade da venda (pode ser array para múltiplas seleções)',

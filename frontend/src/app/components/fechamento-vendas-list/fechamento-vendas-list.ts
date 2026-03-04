@@ -54,6 +54,7 @@ interface VendasFilterSnapshot {
   dataFinal: string;
   dataInicialFechamento: string;
   dataFinalFechamento: string;
+  semDataFechamento: boolean;
   unidade: string | Unidade | Unidade[];
 }
 
@@ -100,6 +101,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
   dataFinalFilter = '';
   dataInicialFechamentoFilter = '';
   dataFinalFechamentoFilter = '';
+  semDataFechamentoFilter = false;
   unidadeFilter: Unidade[] = [];
   ativoFilter = '';
   unidadeDisabled = false;
@@ -249,6 +251,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         this.dataFinalFilter = filters.dataFinalFilter || '';
         this.dataInicialFechamentoFilter = filters.dataInicialFechamentoFilter || '';
         this.dataFinalFechamentoFilter = filters.dataFinalFechamentoFilter || '';
+        this.semDataFechamentoFilter = filters.semDataFechamentoFilter === true;
         this.unidadeFilter = Array.isArray(filters.unidadeFilter) ? filters.unidadeFilter : (filters.unidadeFilter ? [filters.unidadeFilter] : []);
         this.ativoFilter = filters.ativoFilter || '';
         this.currentPage = filters.currentPage || 1;
@@ -271,6 +274,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         dataFinalFilter: this.dataFinalFilter,
         dataInicialFechamentoFilter: this.dataInicialFechamentoFilter,
         dataFinalFechamentoFilter: this.dataFinalFechamentoFilter,
+        semDataFechamentoFilter: this.semDataFechamentoFilter,
         unidadeFilter: this.unidadeFilter,
         ativoFilter: this.ativoFilter,
         currentPage: this.currentPage
@@ -401,12 +405,15 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       filters.dataFinal = this.dataFinalFilter;
     }
 
-    if (this.dataInicialFechamentoFilter) {
-      filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
-    }
-
-    if (this.dataFinalFechamentoFilter) {
-      filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
+    if (this.semDataFechamentoFilter) {
+      filters.semDataFechamento = true;
+    } else {
+      if (this.dataInicialFechamentoFilter) {
+        filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
+      }
+      if (this.dataFinalFechamentoFilter) {
+        filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
+      }
     }
 
     if (this.unidadeFilter && this.unidadeFilter.length > 0) {
@@ -690,8 +697,17 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       dataFinal: this.dataFinalFilter || '',
       dataInicialFechamento: this.dataInicialFechamentoFilter || '',
       dataFinalFechamento: this.dataFinalFechamentoFilter || '',
+      semDataFechamento: this.semDataFechamentoFilter,
       unidade: this.unidadeFilter.length > 0 ? (this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter) : ('' as any)
     };
+  }
+
+  /** Ao marcar "apenas sem data de fechamento", limpa o range de data de fechamento. */
+  onSemDataFechamentoFilterChange(checked: boolean): void {
+    if (checked) {
+      this.dataInicialFechamentoFilter = '';
+      this.dataFinalFechamentoFilter = '';
+    }
   }
 
   private updateAppliedFiltersSnapshot(): void {
@@ -722,6 +738,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.dataFinalFilter = '';
     this.dataInicialFechamentoFilter = '';
     this.dataFinalFechamentoFilter = '';
+    this.semDataFechamentoFilter = false;
     this.initializeDateFilters();
     
     // Reinicializa filtro de origem (mapeia unidade do usuário)
@@ -781,6 +798,9 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       }
       filters.push({ key: 'dataVenda', label: 'Data da Venda', value });
     }
+    if (snapshot.semDataFechamento) {
+      filters.push({ key: 'semDataFechamento', label: 'Sem data de fechamento', value: 'Sim' });
+    }
     if (snapshot.dataInicialFechamento || snapshot.dataFinalFechamento) {
       const from = snapshot.dataInicialFechamento ? this.formatDate(snapshot.dataInicialFechamento) : '';
       const to = snapshot.dataFinalFechamento ? this.formatDate(snapshot.dataFinalFechamento) : '';
@@ -816,7 +836,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       status: 'fa-info-circle',
       unidade: 'fa-building',
       dataVenda: 'fa-calendar-alt',
-      dataFechamento: 'fa-calendar-check'
+      dataFechamento: 'fa-calendar-check',
+      semDataFechamento: 'fa-calendar-times'
     };
     return icons[key] || 'fa-filter';
   }
@@ -879,6 +900,9 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       case 'dataVenda':
         this.dataInicialFilter = '';
         this.dataFinalFilter = '';
+        break;
+      case 'semDataFechamento':
+        this.semDataFechamentoFilter = false;
         break;
       case 'dataFechamento':
         this.dataInicialFechamentoFilter = '';
@@ -1601,11 +1625,15 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.dataFinalFilter) {
       filters.dataFinal = this.dataFinalFilter;
     }
-    if (this.dataInicialFechamentoFilter) {
-      filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
-    }
-    if (this.dataFinalFechamentoFilter) {
-      filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
+    if (this.semDataFechamentoFilter) {
+      filters.semDataFechamento = true;
+    } else {
+      if (this.dataInicialFechamentoFilter) {
+        filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
+      }
+      if (this.dataFinalFechamentoFilter) {
+        filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
+      }
     }
     if (this.unidadeFilter && this.unidadeFilter.length > 0) {
       filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
@@ -1665,11 +1693,15 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.dataFinalFilter) {
       filters.dataFinal = this.dataFinalFilter;
     }
-    if (this.dataInicialFechamentoFilter) {
-      filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
-    }
-    if (this.dataFinalFechamentoFilter) {
-      filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
+    if (this.semDataFechamentoFilter) {
+      filters.semDataFechamento = true;
+    } else {
+      if (this.dataInicialFechamentoFilter) {
+        filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
+      }
+      if (this.dataFinalFechamentoFilter) {
+        filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
+      }
     }
     if (this.unidadeFilter && this.unidadeFilter.length > 0) {
       filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;

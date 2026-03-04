@@ -1118,6 +1118,35 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   min-width: 0;
 }
 
+/* Mesma altura: Data da Venda (esquerda) = container Data de Fechamento (direita) */
+.filters-grid > .filter-group.date-range-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.filters-grid > .filter-group.date-range-field app-date-range-filter,
+.filters-grid > .filter-group.date-range-field .date-range-filter {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Container: checkbox "Vendas sem Fechamento" + Data de Fechamento, ao lado de Data da Venda */
+.filters-grid .fechamento-container {
+  grid-column: span 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-sm);
+}
+
+.filters-grid .fechamento-container .filter-group {
+  min-width: 0;
+}
+
+.filters-grid .fechamento-container .filter-group.date-range-field {
+  padding: 0;
+}
+
 /* Melhorar visualização do componente de data no modal */
 .filters-grid .filter-group.date-range-field {
   padding: 0;

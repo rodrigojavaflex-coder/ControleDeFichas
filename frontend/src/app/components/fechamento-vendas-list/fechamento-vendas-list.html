@@ -319,7 +319,7 @@
 
     <div class="modal-corpo">
       <div class="filters-grid">
-        <!-- Primeira linha: Datas -->
+        <!-- Primeira linha: Data da Venda | Container (checkbox + Data de Fechamento) -->
         <div class="filter-group date-range-field">
           <app-date-range-filter
             label="Data da Venda"
@@ -331,15 +331,28 @@
           </app-date-range-filter>
         </div>
 
-        <div class="filter-group date-range-field">
-          <app-date-range-filter
-            label="Data de Fechamento"
-            startLabel="Início"
-            endLabel="Fim"
-            [start]="dataInicialFechamentoFilter"
-            [end]="dataFinalFechamentoFilter"
-            (rangeChange)="onFechamentoRangeChangeModal($event)">
-          </app-date-range-filter>
+        <div class="filter-group fechamento-container">
+          <div class="filter-group checkbox-field">
+            <label class="label-campo checkbox-label">
+              <input
+                type="checkbox"
+                [(ngModel)]="semDataFechamentoFilter"
+                (ngModelChange)="onSemDataFechamentoFilterChange($event)"
+                name="semDataFechamentoFilter">
+              Vendas sem Fechamento
+            </label>
+          </div>
+          <div class="filter-group date-range-field">
+            <app-date-range-filter
+              label="Data de Fechamento"
+              startLabel="Início"
+              endLabel="Fim"
+              [start]="dataInicialFechamentoFilter"
+              [end]="dataFinalFechamentoFilter"
+              [disabled]="semDataFechamentoFilter"
+              (rangeChange)="onFechamentoRangeChangeModal($event)">
+            </app-date-range-filter>
+          </div>
         </div>
 
         <!-- Segunda linha: Protocolo, Cliente, Vendedor, Prescritor -->
