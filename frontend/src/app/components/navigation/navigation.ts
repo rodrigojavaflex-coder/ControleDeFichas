@@ -151,6 +151,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
           route: '/relatorios/acompanhar-vendas',
           icon: 'feather-file-text',
           requiredPermissions: [Permission.VENDA_ACOMPANHAR]
+        },
+        {
+          label: 'Análise de Valores',
+          route: '/relatorios/analise-valores',
+          icon: 'feather-trending-up',
+          requiredPermissions: [Permission.VENDA_ANALISE_VALORES]
         }
       ]
     }

@@ -39,9 +39,9 @@
           class="btn btn-imprimir"
           (click)="imprimirFechamentoAtual()"
           [attr.disabled]="selectedVendas.size === 0 || loading || atualizarValorCompraLoading ? 'disabled' : null"
-          title="Imprimir vendas selecionadas">
+          title="Relatório de Fechamento">
           <i class="fas fa-print"></i>
-          Imprimir
+          Fechamento
         </button>
         <button
           *ngIf="canReadVenda()"
@@ -332,7 +332,15 @@
         </div>
 
         <div class="filter-group fechamento-container">
-          <div class="filter-group checkbox-field">
+          <div class="filter-group checkbox-field fechamento-checkboxes-row">
+            <label class="label-campo checkbox-label">
+              <input
+                type="checkbox"
+                [(ngModel)]="comDataFechamentoFilter"
+                (ngModelChange)="onComDataFechamentoFilterChange($event)"
+                name="comDataFechamentoFilter">
+              Vendas com fechamento
+            </label>
             <label class="label-campo checkbox-label">
               <input
                 type="checkbox"
@@ -486,7 +494,7 @@
     <i class="fas fa-unlock"></i> Cancelar Fechamento
   </button>
   <button type="button" (click)="imprimirFechamentoAtual()" [disabled]="selectedVendas.size === 0 || loading">
-    <i class="fas fa-print"></i> Imprimir
+    <i class="fas fa-print"></i> Fechamento
   </button>
   <button type="button" (click)="exportarSelecionadasParaExcel()" [disabled]="selectedVendas.size === 0 || loading">
     <i class="fas fa-file-excel"></i> Exportar
@@ -650,6 +658,57 @@
         [attr.disabled]="massBaixaLoading ? 'disabled' : null">
         <i class="fas" [ngClass]="massBaixaLoading ? 'fa-spinner fa-spin' : 'fa-check'"></i>
         {{ massBaixaLoading ? 'Processando...' : 'Processar baixas' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmação de fechamento com seleção de data -->
+<div
+  class="confirmation-modal-overlay"
+  *ngIf="showFechamentoModal"
+  (click)="fechamentoLoading ? null : closeFechamentoModal()">
+  <div class="confirmation-modal fechamento-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Confirmar Fechamento de Vendas</h3>
+      <button
+        type="button"
+        class="close-btn"
+        (click)="closeFechamentoModal()"
+        [attr.disabled]="fechamentoLoading ? 'disabled' : null">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>
+        Confirmar fechamento de <strong>{{ selectedVendas.size }}</strong> venda(s) selecionada(s)?
+      </p>
+      <div class="form-field">
+        <label for="dataFechamentoModal">Data do fechamento</label>
+        <input
+          id="dataFechamentoModal"
+          type="date"
+          class="campo"
+          [(ngModel)]="dataFechamentoModal"
+          [ngModelOptions]="{ standalone: true }"
+          [attr.disabled]="fechamentoLoading ? 'disabled' : null">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button
+        class="btn btn-cancelar"
+        type="button"
+        (click)="closeFechamentoModal()"
+        [attr.disabled]="fechamentoLoading ? 'disabled' : null">
+        Cancelar
+      </button>
+      <button
+        class="btn btn-confirmar-fechamento-modal"
+        type="button"
+        (click)="confirmarFechamentoModal()"
+        [attr.disabled]="fechamentoLoading ? 'disabled' : null">
+        <i class="fas" [ngClass]="fechamentoLoading ? 'fa-spinner fa-spin' : 'fa-lock'"></i>
+        {{ fechamentoLoading ? 'Processando...' : 'Confirmar Fechamento' }}
       </button>
     </div>
   </div>

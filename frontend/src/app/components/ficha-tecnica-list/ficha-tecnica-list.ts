@@ -155,12 +155,8 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
   generateCertificadoPrintContent(certificado: Certificado, ficha: FichaTecnica): string {
     // Preparar logo e informações do usuário para rodapé
     let logoHtml = '';
-    if (this.configuracao?.logoRelatorio) {
-      const backendUrl = environment.apiUrl.replace(/\/api$/, '');
-      const logoUrl = this.configuracao.logoRelatorio.startsWith('/uploads')
-        ? backendUrl + this.configuracao.logoRelatorio
-        : this.configuracao.logoRelatorio;
-      logoHtml = `<img src="${logoUrl}" alt="Logo" style="height:40px;"/>`;
+    if (this.configuracao?.hasLogo) {
+      logoHtml = `<img src="${environment.apiUrl}/configuracao/logo" alt="Logo" style="height:40px;"/>`;
     }
     const userName = this.authService.getCurrentUser()?.nome || 'Usuário';
     const printedAt = new Date().toLocaleString();
@@ -703,12 +699,8 @@ export class FichaTecnicaListComponent implements OnInit, OnDestroy {
    */
   public generatePrintContentWithUser(ficha: FichaTecnica, opts?: { hidePrint?: boolean }): string {
     let logoHtml = '';
-    if (this.configuracao?.logoRelatorio) {
-      const backendUrl = environment.apiUrl.replace(/\/api$/, '');
-      const logoUrl = this.configuracao.logoRelatorio.startsWith('/uploads')
-        ? backendUrl + this.configuracao.logoRelatorio
-        : this.configuracao.logoRelatorio;
-      logoHtml = `<img src="${logoUrl}" alt="Logo" style="max-height: 80px; max-width: 120px; display: block;" />`;
+    if (this.configuracao?.hasLogo) {
+      logoHtml = `<img src="${environment.apiUrl}/configuracao/logo" alt="Logo" style="max-height: 80px; max-width: 120px; display: block;" />`;
     }
     const user = this.authService.getCurrentUser();
     const userName = user?.nome || 'Usuário';

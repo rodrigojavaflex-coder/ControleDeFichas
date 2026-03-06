@@ -431,7 +431,6 @@
 .status-CANCELADO { background: #fee2e2; color: #b91c1c; }
 .status-PAGO { background: #dcfce7; color: #15803d; }
 .status-PAGO_PARCIAL { background: #fef3c7; color: #b45309; }
-.status-FECHADO { background: #e2e8f0; color: #475569; }
 
 .observacao-cell {
   max-width: 200px;
@@ -581,6 +580,10 @@
   background: #2563eb;
 }
 
+:host-context(body.theme-dark) .btn.btn-analise-valores {
+  background: #2563eb;
+}
+
 :host-context(body.theme-dark) .btn.btn-fechar {
   background: #15803d;
 }
@@ -722,6 +725,10 @@ body.theme-dark .vendas-page .chip-remove:hover {
 }
 
 body.theme-dark .vendas-page .btn.btn-imprimir {
+  background: #2563eb;
+}
+
+body.theme-dark .vendas-page .btn.btn-analise-valores {
   background: #2563eb;
 }
 
@@ -911,6 +918,45 @@ body.theme-dark .vendas-page .btn.btn-atualizar-valor-compra {
   margin-top: 1rem;
 }
 
+/* Modal de confirmação de fechamento com data */
+.fechamento-modal .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  max-width: 200px;
+}
+.fechamento-modal .form-field label {
+  font-weight: 600;
+  color: #334155;
+}
+.fechamento-modal .form-field .campo {
+  width: 100%;
+  border: 1px solid #cbd5f5;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+/* Botão Confirmar Fechamento em azul */
+.fechamento-modal .btn-confirmar-fechamento-modal {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fechamento-modal .btn-confirmar-fechamento-modal:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+.fechamento-modal .btn-confirmar-fechamento-modal:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .mass-baixa-modal .form-field {
   display: flex;
   flex-direction: column;
@@ -974,6 +1020,33 @@ body.theme-dark .vendas-page .btn.btn-atualizar-valor-compra {
   color: #cbd5f5;
 }
 
+/* Modal Confirmar Fechamento - modo escuro */
+:host-context(body.theme-dark) .fechamento-modal .modal-body,
+:host-context(body.theme-dark) .fechamento-modal .modal-body p {
+  color: #e2e8f0;
+}
+:host-context(body.theme-dark) .fechamento-modal .modal-body strong {
+  color: #f8fafc;
+}
+:host-context(body.theme-dark) .fechamento-modal .form-field label {
+  color: #e2e8f0;
+}
+:host-context(body.theme-dark) .fechamento-modal .form-field .campo {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #e2e8f0;
+}
+:host-context(body.theme-dark) .fechamento-modal .modal-header h3 {
+  color: #f8fafc;
+}
+:host-context(body.theme-dark) .fechamento-modal .btn-confirmar-fechamento-modal {
+  background: #2563eb;
+  color: #fff;
+}
+:host-context(body.theme-dark) .fechamento-modal .btn-confirmar-fechamento-modal:hover:not(:disabled) {
+  background: #3b82f6;
+}
+
 :host-context(body.theme-dark) .mass-baixa-modal .form-field label {
   color: #e2e8f0;
 }
@@ -1007,6 +1080,86 @@ body.theme-dark .vendas-page .confirmation-modal .warning-text {
 
 body.theme-dark .vendas-page .confirmation-modal .close-btn {
   color: #cbd5f5;
+}
+
+/* Modal Confirmar Fechamento - modo escuro (vendas-page) */
+body.theme-dark .vendas-page .fechamento-modal .modal-body,
+body.theme-dark .vendas-page .fechamento-modal .modal-body p {
+  color: #e2e8f0;
+}
+body.theme-dark .vendas-page .fechamento-modal .modal-body strong {
+  color: #f8fafc;
+}
+body.theme-dark .vendas-page .fechamento-modal .form-field label {
+  color: #e2e8f0;
+}
+body.theme-dark .vendas-page .fechamento-modal .form-field .campo {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #e2e8f0;
+}
+body.theme-dark .vendas-page .fechamento-modal .modal-header h3 {
+  color: #f8fafc;
+}
+body.theme-dark .vendas-page .fechamento-modal .btn-confirmar-fechamento-modal {
+  background: #2563eb;
+  color: #fff;
+}
+body.theme-dark .vendas-page .fechamento-modal .btn-confirmar-fechamento-modal:hover:not(:disabled) {
+  background: #3b82f6;
+}
+
+/* Modal fechamento fora de .vendas-page (sibling) - modo escuro obrigatório */
+body.theme-dark .fechamento-modal,
+body.theme-dark .confirmation-modal.fechamento-modal {
+  background: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #f8fafc;
+}
+body.theme-dark .fechamento-modal .modal-header,
+body.theme-dark .fechamento-modal .modal-footer,
+body.theme-dark .confirmation-modal.fechamento-modal .modal-header,
+body.theme-dark .confirmation-modal.fechamento-modal .modal-footer {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+body.theme-dark .fechamento-modal .modal-body,
+body.theme-dark .fechamento-modal .modal-body p,
+body.theme-dark .confirmation-modal.fechamento-modal .modal-body,
+body.theme-dark .confirmation-modal.fechamento-modal .modal-body p {
+  color: #e2e8f0 !important;
+}
+body.theme-dark .fechamento-modal .modal-body strong,
+body.theme-dark .confirmation-modal.fechamento-modal .modal-body strong {
+  color: #f8fafc;
+}
+body.theme-dark .fechamento-modal .modal-header h3,
+body.theme-dark .confirmation-modal.fechamento-modal .modal-header h3 {
+  color: #f8fafc !important;
+}
+body.theme-dark .fechamento-modal .close-btn,
+body.theme-dark .confirmation-modal.fechamento-modal .close-btn {
+  color: #cbd5f5;
+}
+body.theme-dark .fechamento-modal .form-field label,
+body.theme-dark .confirmation-modal.fechamento-modal .form-field label {
+  color: #e2e8f0;
+}
+body.theme-dark .fechamento-modal .form-field .campo,
+body.theme-dark .confirmation-modal.fechamento-modal .form-field .campo {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #e2e8f0;
+}
+body.theme-dark .fechamento-modal .btn-cancelar,
+body.theme-dark .confirmation-modal.fechamento-modal .btn-cancelar {
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+body.theme-dark .fechamento-modal .btn-confirmar-fechamento-modal,
+body.theme-dark .confirmation-modal.fechamento-modal .btn-confirmar-fechamento-modal {
+  background: #2563eb !important;
+  color: #fff;
 }
 
 body.theme-dark .vendas-page .mass-baixa-modal .form-field label {
@@ -1141,6 +1294,14 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
 
 .filters-grid .fechamento-container .filter-group {
   min-width: 0;
+}
+
+.filters-grid .fechamento-container .fechamento-checkboxes-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: center;
 }
 
 .filters-grid .fechamento-container .filter-group.date-range-field {

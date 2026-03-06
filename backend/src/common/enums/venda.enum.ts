@@ -12,7 +12,6 @@ export enum VendaStatus {
   CANCELADO = 'CANCELADO',
   PAGO = 'PAGO',
   PAGO_PARCIAL = 'PAGO_PARCIAL',
-  FECHADO = 'FECHADO',
 }
 
 export enum TipoAtualizacao {

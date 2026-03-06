@@ -3,6 +3,8 @@ export interface Configuracao {
   id: string;
   nomeCliente?: string;
   logoRelatorio?: string;
+  /** Indica se há logo armazenado no BD (usar GET /configuracao/logo para exibir) */
+  hasLogo?: boolean;
   farmaceuticoResponsavel?: string;
   // Configurações de Auditoria
   auditarConsultas: boolean;

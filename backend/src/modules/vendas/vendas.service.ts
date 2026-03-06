@@ -73,16 +73,6 @@ export class VendasService {
 
   async create(createVendaDto: CreateVendaDto, usuario?: Usuario | null): Promise<Venda> {
     try {
-      if (
-        createVendaDto.valorCompra !== undefined &&
-        createVendaDto.valorCliente !== undefined &&
-        Number(createVendaDto.valorCompra) > Number(createVendaDto.valorCliente)
-      ) {
-        throw new BadRequestException(
-          'O valor da compra não pode ser maior que o valor do cliente.',
-        );
-      }
-
       // Validar que os IDs existem
       const cliente = await this.clienteRepository.findOneBy({ id: createVendaDto.clienteId });
       if (!cliente) {
@@ -175,18 +165,14 @@ export class VendasService {
         continue;
       }
 
-      const totalBaixas = await this.getTotalBaixasForVenda(vendaId);
-      const valorCliente = Number(venda.valorCliente || 0);
-      const totalBaixasFixed = Number(totalBaixas.toFixed(2));
-      const valorClienteFixed = Number(valorCliente.toFixed(2));
-
-      if (totalBaixasFixed !== valorClienteFixed) {
+      // Verificar se valorCompra e valorPago estão preenchidos (não null, não 0)
+      const valorCompra = venda.valorCompra != null ? Number(venda.valorCompra) : null;
+      const valorPago = venda.valorPago != null ? Number(venda.valorPago) : null;
+      if (!valorCompra || valorCompra === 0 || !valorPago || valorPago === 0) {
         falhas.push({
           id: vendaId,
           protocolo: venda.protocolo,
-          motivo: `Venda possui valor baixado (${totalBaixasFixed.toFixed(
-            2,
-          )}) diferente do valor do cliente (${valorClienteFixed.toFixed(2)}).`,
+          motivo: `Valor de compra e/ou Valor do Fechamento não foi informado, efetue o processamento "Atualizar Valor Compra" para a venda ${venda.protocolo}.`,
         });
         continue;
       }
@@ -343,13 +329,6 @@ export class VendasService {
     try {
       const venda = await this.findOne(id);
 
-      // Validação: Venda com fechamento registrado não pode ser editada
-      if (venda.dataFechamento) {
-        throw new ConflictException(
-          `Não é possível editar uma venda com fechamento registrado em ${venda.dataFechamento}.`
-        );
-      }
-
       // Validar e buscar os objetos relacionados (se estiverem sendo atualizados)
       let cliente: Cliente | null | undefined = undefined;
       if (updateVendaDto.clienteId) {
@@ -379,22 +358,7 @@ export class VendasService {
         }
       }
 
-      const valorCompraAtualizado =
-        updateVendaDto.valorCompra !== undefined ? updateVendaDto.valorCompra : venda.valorCompra;
-      const valorClienteAtualizado =
-        updateVendaDto.valorCliente !== undefined ? updateVendaDto.valorCliente : venda.valorCliente;
-
-      if (
-        valorCompraAtualizado !== undefined &&
-        valorClienteAtualizado !== undefined &&
-        Number(valorCompraAtualizado) > Number(valorClienteAtualizado)
-      ) {
-        throw new BadRequestException(
-          'O valor da compra não pode ser maior que o valor do cliente.',
-        );
-      }
-
-      // Validação 2: Se o novo valorCliente for informado, validar contra as baixas já lançadas
+      // Se o novo valorCliente for informado, validar contra as baixas já lançadas (valorCliente não pode ser menor que o total já baixado)
       if (updateVendaDto.valorCliente !== undefined && updateVendaDto.valorCliente !== venda.valorCliente) {
         const novoValorCliente = updateVendaDto.valorCliente;
         
@@ -543,12 +507,14 @@ export class VendasService {
     if (filters.semDataFechamento === true) {
       queryBuilder.andWhere('venda.dataFechamento IS NULL');
     } else {
+      if (filters.comDataFechamento === true) {
+        queryBuilder.andWhere('venda.dataFechamento IS NOT NULL');
+      }
       if (filters.dataInicialFechamento) {
         queryBuilder.andWhere('venda.dataFechamento >= :dataInicialFechamento', {
           dataInicialFechamento: filters.dataInicialFechamento,
         });
       }
-
       if (filters.dataFinalFechamento) {
         queryBuilder.andWhere('venda.dataFechamento <= :dataFinalFechamento', {
           dataFinalFechamento: filters.dataFinalFechamento,
@@ -572,6 +538,22 @@ export class VendasService {
       queryBuilder.andWhere('venda.ativo ILIKE :ativo', {
         ativo: `%${filters.ativo}%`,
       });
+    }
+
+    if (filters.pctLucroMenorQue != null && !Number.isNaN(filters.pctLucroMenorQue)) {
+      queryBuilder.andWhere('venda.valorPago IS NOT NULL AND venda.valorPago > 0');
+      queryBuilder.andWhere(
+        '(CAST(venda.valorCliente AS DECIMAL) - CAST(venda.valorPago AS DECIMAL)) / CAST(venda.valorPago AS DECIMAL) * 100 < :pctLucroMenorQue',
+        { pctLucroMenorQue: filters.pctLucroMenorQue },
+      );
+    }
+
+    if (filters.pctLucroMaiorQue != null && !Number.isNaN(filters.pctLucroMaiorQue)) {
+      queryBuilder.andWhere('venda.valorPago IS NOT NULL AND venda.valorPago > 0');
+      queryBuilder.andWhere(
+        '(CAST(venda.valorCliente AS DECIMAL) - CAST(venda.valorPago AS DECIMAL)) / CAST(venda.valorPago AS DECIMAL) * 100 > :pctLucroMaiorQue',
+        { pctLucroMaiorQue: filters.pctLucroMaiorQue },
+      );
     }
   }
 

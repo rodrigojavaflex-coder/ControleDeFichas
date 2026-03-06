@@ -499,8 +499,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
       [VendaStatus.REGISTRADO]: 'Registrado',
       [VendaStatus.CANCELADO]: 'Cancelado',
       [VendaStatus.PAGO]: 'Pago',
-      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial',
-      [VendaStatus.FECHADO]: 'Fechado'
+      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial'
     };
     return labels[status] || status;
   }

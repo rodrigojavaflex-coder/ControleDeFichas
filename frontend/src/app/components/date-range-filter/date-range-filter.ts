@@ -95,6 +95,18 @@ export class DateRangeFilterComponent implements OnChanges {
     return `${y}-${m}-${d}`;
   }
 
+  /** Retorna YYYY-MM-01 e YYYY-MM-último para o mês atual, sem deslocamento de timezone. */
+  private getMonthRange(): DateRangeValue {
+    const today = new Date();
+    const y = today.getFullYear();
+    const month = today.getMonth();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const start = `${y}-${pad(month + 1)}-01`;
+    const lastDayNum = new Date(y, month + 1, 0).getDate();
+    const end = `${y}-${pad(month + 1)}-${pad(lastDayNum)}`;
+    return { start, end };
+  }
+
   private getRangeForPreset(preset: PresetValue): DateRangeValue {
     const today = new Date();
 
@@ -111,15 +123,13 @@ export class DateRangeFilterComponent implements OnChanges {
     }
 
     if (preset === 'month') {
-      const first = new Date(today.getFullYear(), today.getMonth(), 1);
-      const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      return { start: this.format(first), end: this.format(last) };
+      return this.getMonthRange();
     }
 
     if (preset === 'year') {
-      const first = new Date(today.getFullYear(), 0, 1);
-      const last = new Date(today.getFullYear(), 11, 31);
-      return { start: this.format(first), end: this.format(last) };
+      const y = today.getFullYear();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return { start: `${y}-01-01`, end: `${y}-12-31` };
     }
 
     // Custom

@@ -101,14 +101,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
           auditarExclusao: config.auditarExclusao ?? true,
           auditarSenhaAlterada: config.auditarSenhaAlterada ?? true
         });
-        if (config.logoRelatorio) {
-          const backendUrl = environment.apiUrl.replace(/\/api$/, '');
-          this.logoPreview = config.logoRelatorio.startsWith('http')
-            ? config.logoRelatorio
-            : `${backendUrl}${config.logoRelatorio}`;
-        } else {
-          this.logoPreview = null;
-        }
+        this.logoPreview = config.hasLogo
+          ? `${environment.apiUrl}/configuracao/logo?t=${Date.now()}`
+          : null;
         this.loading = false;
       },
       error: () => {
@@ -312,14 +307,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     };
     const handleSuccess = (config: Configuracao) => {
       this.configuracao = config;
-      if (config.logoRelatorio) {
-        const backendUrl = environment.apiUrl.replace(/\/api$/, '');
-        this.logoPreview = config.logoRelatorio.startsWith('http')
-          ? config.logoRelatorio
-          : `${backendUrl}${config.logoRelatorio}`;
-      } else {
-        this.logoPreview = null;
-      }
+      this.logoPreview = config.hasLogo
+        ? `${environment.apiUrl}/configuracao/logo?t=${Date.now()}`
+        : null;
       this.loading = false;
       this.error = null;
       this.success = 'Configuração salva com sucesso!';

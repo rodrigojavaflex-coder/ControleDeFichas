@@ -69,12 +69,11 @@ async function bootstrap() {
     }
   });
 
-  //configurações pra gerar versão de produção do front-end
-  // Usar process.cwd() para garantir compatibilidade com Render
-  // Corrigir para apontar para a subpasta 'browser', onde está o index.html
-  // Corrigir caminho para subir um nível na estrutura
+  // Caminho do frontend build: relativo ao arquivo compilado (backend/dist) para funcionar
+  // tanto em dev quanto no Render, independente do diretório de trabalho (process.cwd).
   const angularDistPath = join(
-    process.cwd(),
+    __dirname,
+    '..',
     '..',
     'frontend',
     'dist',

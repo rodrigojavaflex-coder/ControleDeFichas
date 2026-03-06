@@ -12,7 +12,6 @@ export enum VendaStatus {
   CANCELADO = 'CANCELADO',
   PAGO = 'PAGO',
   PAGO_PARCIAL = 'PAGO_PARCIAL',
-  FECHADO = 'FECHADO',
 }
 
 export enum Unidade {
@@ -89,11 +88,16 @@ export interface FindVendasDto {
   dataInicialFechamento?: string;
   dataFinalFechamento?: string;
   semDataFechamento?: boolean;
+  comDataFechamento?: boolean;
   unidade?: Unidade | Unidade[];
   ativo?: string;
   dataEnvio?: string;
   dataInicialEnvio?: string;
   dataFinalEnvio?: string;
+  /** Filtrar vendas com % Lucro menor que o valor informado (ex.: 10 para 10%) */
+  pctLucroMenorQue?: number;
+  /** Filtrar vendas com % Lucro maior que o valor informado (ex.: 50 para 50%) */
+  pctLucroMaiorQue?: number;
 }
 
 export interface VendaPaginatedResponse {

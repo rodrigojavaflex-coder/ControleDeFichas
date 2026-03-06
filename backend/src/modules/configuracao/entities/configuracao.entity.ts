@@ -17,7 +17,14 @@ export class Configuracao extends BaseEntity {
   nomeCliente: string;
 
   @Column({ nullable: true })
-  logoRelatorio: string; // Caminho/URL da imagem
+  logoRelatorio: string; // Marcador '/configuracao/logo' quando há logo no BD; legado para compat
+
+  /** Imagem do logo armazenada no BD (não retornada no findOne; usar GET /configuracao/logo) */
+  @Column({ type: 'bytea', nullable: true, select: false })
+  logoImagem: Buffer | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, select: false })
+  logoImagemMime: string | null;
 
   @Column({ nullable: true })
   farmaceuticoResponsavel: string;

@@ -1,0 +1,448 @@
+<div class="analise-valores-page">
+  <section *ngIf="error" class="state-card error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </section>
+
+  <section class="results-card" *ngIf="!error">
+    <div class="results-header">
+      <div class="header-actions">
+        <button
+          class="btn btn-imprimir"
+          (click)="imprimirAnalise()"
+          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          title="Imprimir Análise dos Valores">
+          <i class="fas fa-print"></i>
+          Imprimir
+        </button>
+        <button
+          class="btn btn-imprimir"
+          (click)="imprimirPorFechamento()"
+          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          title="Imprimir relatório agrupado por data de fechamento">
+          <i class="fas fa-print"></i>
+          Por Fechamento
+        </button>
+        <button
+          class="btn btn-imprimir"
+          (click)="imprimirPorVendedor()"
+          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          title="Resumo por vendedor agrupado por unidade">
+          <i class="fas fa-print"></i>
+          Por vendedor
+        </button>
+        <button
+          class="btn btn-exportar"
+          (click)="exportarExcel()"
+          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          title="Exportar para Excel">
+          <i class="fas fa-file-excel"></i>
+          Exportar
+        </button>
+      </div>
+    </div>
+
+    <div class="inline-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Atualizando lista...</span>
+    </div>
+
+    <div class="filters-inline">
+      <div
+        class="filters-panel-top"
+        role="button"
+        tabindex="0"
+        (click)="onContainerClick($event)"
+        (keydown)="onFiltersToggleKey($event)">
+        <div class="filters-controls">
+          <button
+            type="button"
+            class="filters-toggle btn btn-toggle-filtros"
+            (click)="toggleFiltersVisibility(); $event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()">
+            <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
+            <span class="filters-count" *ngIf="appliedFilters.length">{{ appliedFilters.length }}</span>
+            <i
+              class="fas"
+              [class.fa-chevron-up]="filtersPanelOpen"
+              [class.fa-chevron-down]="!filtersPanelOpen"></i>
+          </button>
+          <!-- Área de filtros aplicados -->
+          <div
+            class="applied-filters-container"
+            *ngIf="appliedFilters.length">
+            <!-- Contador de resultados -->
+            <div class="results-count" *ngIf="totalItems !== undefined" (click)="$event.stopPropagation()">
+              <i class="fas fa-filter"></i>
+              <span>{{ totalItems }} resultado(s)</span>
+            </div>
+            <!-- Container com scroll horizontal -->
+            <div class="applied-filters-wrapper">
+              <div class="applied-filters-list">
+                <ng-container *ngFor="let filter of appliedFilters">
+                  <span
+                    class="filter-chip"
+                    [class.filter-chip-multiple]="isMultipleFilter(filter.key)"
+                    [title]="filter.value">
+                    <i class="fas" [ngClass]="getFilterIcon(filter.key)"></i>
+                    <strong>{{ filter.label }}:</strong>
+                    <span class="filter-value">{{ formatFilterValue(filter) }}</span>
+                    <button
+                      *ngIf="!(filter.key === 'unidade' && unidadeDisabled) && filter.key !== 'comDataFechamento'"
+                      class="chip-remove"
+                      type="button"
+                      (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
+                      aria-label="Remover filtro {{ filter.label }}">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </span>
+                </ng-container>
+              </div>
+            </div>
+            <!-- Botão limpar todos -->
+            <button
+              class="btn-clear-all"
+              type="button"
+              (click)="clearFilters(); $event.stopPropagation()"
+              title="Limpar todos os filtros">
+              <i class="fas fa-eraser"></i>
+              Limpar todos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="vendas-table">
+        <thead>
+          <tr>
+            <th class="checkbox-column">
+              <input
+                type="checkbox"
+                [checked]="isAllSelected()"
+                [indeterminate]="isIndeterminate()"
+                (change)="toggleSelectAll($event)"
+                title="Marcar/Desmarcar todas">
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('protocolo')"
+              [class.sorted]="sortField === 'protocolo'"
+              [attr.aria-sort]="sortField === 'protocolo' ? sortDirection : 'none'">
+              Protocolo
+              <i class="fas sort-icon" *ngIf="sortField === 'protocolo'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('dataVenda')"
+              [class.sorted]="sortField === 'dataVenda'"
+              [attr.aria-sort]="sortField === 'dataVenda' ? sortDirection : 'none'">
+              Venda
+              <i class="fas sort-icon" *ngIf="sortField === 'dataVenda'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('dataFechamento')"
+              [class.sorted]="sortField === 'dataFechamento'"
+              [attr.aria-sort]="sortField === 'dataFechamento' ? sortDirection : 'none'">
+              Fechamento
+              <i class="fas sort-icon" *ngIf="sortField === 'dataFechamento'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('unidade')"
+              [class.sorted]="sortField === 'unidade'"
+              [attr.aria-sort]="sortField === 'unidade' ? sortDirection : 'none'">
+              Unidade
+              <i class="fas sort-icon" *ngIf="sortField === 'unidade'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('origem')"
+              [class.sorted]="sortField === 'origem'"
+              [attr.aria-sort]="sortField === 'origem' ? sortDirection : 'none'">
+              Comprado em
+              <i class="fas sort-icon" *ngIf="sortField === 'origem'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('cliente')"
+              [class.sorted]="sortField === 'cliente'"
+              [attr.aria-sort]="sortField === 'cliente' ? sortDirection : 'none'">
+              Cliente
+              <i class="fas sort-icon" *ngIf="sortField === 'cliente'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('vendedor')"
+              [class.sorted]="sortField === 'vendedor'"
+              [attr.aria-sort]="sortField === 'vendedor' ? sortDirection : 'none'">
+              Vendedor
+              <i class="fas sort-icon" *ngIf="sortField === 'vendedor'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              *ngIf="canViewValorCompra()"
+              class="sortable"
+              (click)="onSort('valorPago')"
+              [class.sorted]="sortField === 'valorPago'"
+              [attr.aria-sort]="sortField === 'valorPago' ? sortDirection : 'none'">
+              Valor Custo
+              <i class="fas sort-icon" *ngIf="sortField === 'valorPago'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('valorCliente')"
+              [class.sorted]="sortField === 'valorCliente'"
+              [attr.aria-sort]="sortField === 'valorCliente' ? sortDirection : 'none'">
+              Valor Venda
+              <i class="fas sort-icon" *ngIf="sortField === 'valorCliente'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('valorLucro')"
+              [class.sorted]="sortField === 'valorLucro'"
+              [attr.aria-sort]="sortField === 'valorLucro' ? sortDirection : 'none'">
+              Valor Lucro
+              <i class="fas sort-icon" *ngIf="sortField === 'valorLucro'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('pctLucro')"
+              [class.sorted]="sortField === 'pctLucro'"
+              [attr.aria-sort]="sortField === 'pctLucro' ? sortDirection : 'none'">
+              % Lucro
+              <i class="fas sort-icon" *ngIf="sortField === 'pctLucro'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('tipoAtualizacao')"
+              [class.sorted]="sortField === 'tipoAtualizacao'"
+              [attr.aria-sort]="sortField === 'tipoAtualizacao' ? sortDirection : 'none'">
+              Atualização
+              <i class="fas sort-icon" *ngIf="sortField === 'tipoAtualizacao'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('status')"
+              [class.sorted]="sortField === 'status'"
+              [attr.aria-sort]="sortField === 'status' ? sortDirection : 'none'">
+              Status
+              <i class="fas sort-icon" *ngIf="sortField === 'status'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let venda of items"
+            (click)="onRowClick(venda, $event)"
+            [class.row-selected]="isVendaSelected(venda.id)">
+            <td class="checkbox-column">
+              <input
+                type="checkbox"
+                [checked]="isVendaSelected(venda.id)"
+                (click)="$event.stopPropagation()"
+                (change)="toggleSelectVenda(venda.id, $event)"
+                title="Selecionar">
+            </td>
+            <td>{{ venda.protocolo }}</td>
+            <td>{{ formatDate(venda.dataVenda) }}</td>
+            <td>{{ venda.dataFechamento ? formatDate(venda.dataFechamento) : '-' }}</td>
+            <td>{{ venda.unidade ?? '-' }}</td>
+            <td>{{ getOrigemLabel(venda.origem) }}</td>
+            <td>{{ getClienteNome(venda) }}</td>
+            <td>{{ getVendedorNome(venda) }}</td>
+            <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorPago ?? 0) }}</td>
+            <td>{{ formatCurrency(venda.valorCliente) }}</td>
+            <td>{{ formatCurrency(venda.valorCliente - (venda.valorPago ?? 0)) }}</td>
+            <td>{{
+              (venda.valorPago ?? 0) > 0
+                ? ((venda.valorCliente - (venda.valorPago ?? 0)) / (venda.valorPago ?? 0) * 100).toFixed(1) + '%'
+                : '-'
+            }}</td>
+            <td>{{ getTipoAtualizacaoLabel(venda.tipoAtualizacao) }}</td>
+            <td>
+              <span class="status-badge {{ getStatusClass(venda.status) }}">{{ getStatusLabel(venda.status) }}</span>
+            </td>
+          </tr>
+          <tr *ngIf="items.length === 0 && !loading" class="no-data">
+            <td [attr.colspan]="canViewValorCompra() ? 14 : 13" class="text-center">
+              <i class="fas fa-inbox"></i>
+              Nenhuma venda encontrada
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button
+        class="btn btn-sm btn-cancelar"
+        (click)="onPageChange(currentPage - 1)"
+        [attr.disabled]="currentPage === 1 || loading ? 'disabled' : null">
+        <i class="fas fa-chevron-left"></i> Anterior
+      </button>
+      <span class="page-info">
+        Página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} registros)
+      </span>
+      <button
+        class="btn btn-sm btn-cancelar"
+        (click)="onPageChange(currentPage + 1)"
+        [attr.disabled]="currentPage === totalPages || loading ? 'disabled' : null">
+        Próximo <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- Modal de Filtros -->
+<div class="modal-overlay analise-valores-modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
+  <div class="modal-conteudo modal-filtros analise-valores-modal-conteudo" (click)="$event.stopPropagation()">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Filtros - Análise de Valores</h3>
+      <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="filters-grid">
+        <div class="filter-group date-range-field">
+          <app-date-range-filter
+            label="Data da Venda"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialFilter"
+            [end]="dataFinalFilter"
+            (rangeChange)="onVendaRangeChangeModal($event)">
+          </app-date-range-filter>
+        </div>
+
+        <div class="filter-group fechamento-container">
+          <div class="filter-group checkbox-field fechamento-checkboxes-row">
+            <label class="label-campo checkbox-label">
+              <input
+                type="checkbox"
+                checked
+                disabled
+                name="comDataFechamentoFilter">
+              Vendas com fechamento
+            </label>
+          </div>
+          <div class="filter-group date-range-field">
+            <app-date-range-filter
+              label="Data de Fechamento"
+              startLabel="Início"
+              endLabel="Fim"
+              [start]="dataInicialFechamentoFilter"
+              [end]="dataFinalFechamentoFilter"
+              (rangeChange)="onFechamentoRangeChangeModal($event)">
+            </app-date-range-filter>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label for="protocoloFilterModal" class="label-campo">Protocolo</label>
+          <input
+            id="protocoloFilterModal"
+            type="text"
+            [(ngModel)]="protocoloFilter"
+            placeholder="Buscar por protocolo..."
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="clienteFilterModal" class="label-campo">Cliente</label>
+          <input
+            id="clienteFilterModal"
+            type="text"
+            [(ngModel)]="clienteFilter"
+            placeholder="Buscar por cliente..."
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label class="label-campo">Comprado em</label>
+          <app-multi-select-dropdown
+            [(ngModel)]="origemFilter"
+            [options]="getOrigemOptions()"
+            placeholder="Selecione as origens..."
+            selectAllLabel="Marcar todas"
+            deselectAllLabel="Desmarcar todas">
+          </app-multi-select-dropdown>
+        </div>
+
+        <div class="filter-group">
+          <label class="label-campo">Status</label>
+          <app-multi-select-dropdown
+            [(ngModel)]="statusFilter"
+            [options]="getStatusOptions()"
+            placeholder="Selecione os status..."
+            selectAllLabel="Marcar todos"
+            deselectAllLabel="Desmarcar todos">
+          </app-multi-select-dropdown>
+        </div>
+
+        <div class="filter-group">
+          <label for="vendedorFilterModal" class="label-campo">Vendedor</label>
+          <input
+            id="vendedorFilterModal"
+            type="text"
+            [(ngModel)]="vendedorFilter"
+            placeholder="Buscar por vendedor..."
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label class="label-campo">Unidade</label>
+          <app-multi-select-dropdown
+            [(ngModel)]="unidadeFilter"
+            [options]="getUnidadeOptions()"
+            [disabled]="unidadeDisabled"
+            placeholder="Selecione as unidades..."
+            selectAllLabel="Marcar todas"
+            deselectAllLabel="Desmarcar todas">
+          </app-multi-select-dropdown>
+        </div>
+
+        <div class="filter-group">
+          <label for="pctLucroMenorQueFilter" class="label-campo">% Lucro menor que</label>
+          <input
+            id="pctLucroMenorQueFilter"
+            type="text"
+            inputmode="decimal"
+            [(ngModel)]="pctLucroMenorQueFilter"
+            placeholder="Ex: 25"
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+
+        <div class="filter-group">
+          <label for="pctLucroMaiorQueFilter" class="label-campo">% Lucro maior que</label>
+          <input
+            id="pctLucroMaiorQueFilter"
+            type="text"
+            inputmode="decimal"
+            [(ngModel)]="pctLucroMaiorQueFilter"
+            placeholder="Ex: 50"
+            class="campo"
+            (keyup.enter)="applyFilters()">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-rodape">
+      <button type="button" class="botao botao-fantasma" (click)="clearFilters()">
+        <i class="fas fa-eraser"></i>
+        Limpar Filtros
+      </button>
+      <button type="button" class="botao botao-primario" (click)="applyFilters()">
+        <i class="fas fa-filter"></i>
+        Aplicar Filtros
+      </button>
+    </div>
+  </div>
+</div>

@@ -693,7 +693,6 @@
 .status-CANCELADO { background: #fee2e2; color: #b91c1c; }
 .status-PAGO { background: #dcfce7; color: #15803d; }
 .status-PAGO_PARCIAL { background: #fef3c7; color: #b45309; }
-.status-FECHADO { background: #e2e8f0; color: #475569; }
 
 .observacao-cell {
   max-width: 200px;

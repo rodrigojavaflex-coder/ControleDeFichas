@@ -55,6 +55,7 @@ interface VendasFilterSnapshot {
   dataInicialFechamento: string;
   dataFinalFechamento: string;
   semDataFechamento: boolean;
+  comDataFechamento: boolean;
   unidade: string | Unidade | Unidade[];
 }
 
@@ -102,6 +103,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
   dataInicialFechamentoFilter = '';
   dataFinalFechamentoFilter = '';
   semDataFechamentoFilter = false;
+  comDataFechamentoFilter = false;
   unidadeFilter: Unidade[] = [];
   ativoFilter = '';
   unidadeDisabled = false;
@@ -133,6 +135,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
   fechamentoLoading = false;
   cancelamentoLoading = false;
   atualizarValorCompraLoading = false;
+  showFechamentoModal = false;
+  dataFechamentoModal = '';
   filtersPanelOpen = false;
   sortField: SortableField | null = null;
   sortDirection: SortDirection = 'asc';
@@ -252,6 +256,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         this.dataInicialFechamentoFilter = filters.dataInicialFechamentoFilter || '';
         this.dataFinalFechamentoFilter = filters.dataFinalFechamentoFilter || '';
         this.semDataFechamentoFilter = filters.semDataFechamentoFilter === true;
+        this.comDataFechamentoFilter = filters.comDataFechamentoFilter === true;
         this.unidadeFilter = Array.isArray(filters.unidadeFilter) ? filters.unidadeFilter : (filters.unidadeFilter ? [filters.unidadeFilter] : []);
         this.ativoFilter = filters.ativoFilter || '';
         this.currentPage = filters.currentPage || 1;
@@ -275,6 +280,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         dataInicialFechamentoFilter: this.dataInicialFechamentoFilter,
         dataFinalFechamentoFilter: this.dataFinalFechamentoFilter,
         semDataFechamentoFilter: this.semDataFechamentoFilter,
+        comDataFechamentoFilter: this.comDataFechamentoFilter,
         unidadeFilter: this.unidadeFilter,
         ativoFilter: this.ativoFilter,
         currentPage: this.currentPage
@@ -358,14 +364,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
   }
 
   private getLogoRelatorioUrl(): string | null {
-    if (!this.configuracao?.logoRelatorio) {
-      return null;
-    }
-
-    const backendUrl = environment.apiUrl.replace(/\/api$/, '');
-    return this.configuracao.logoRelatorio.startsWith('/uploads')
-      ? backendUrl + this.configuracao.logoRelatorio
-      : this.configuracao.logoRelatorio;
+    if (!this.configuracao?.hasLogo) return null;
+    return `${environment.apiUrl}/configuracao/logo`;
   }
 
   protected override loadItems(): void {
@@ -408,6 +408,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.semDataFechamentoFilter) {
       filters.semDataFechamento = true;
     } else {
+      if (this.comDataFechamentoFilter) filters.comDataFechamento = true;
       if (this.dataInicialFechamentoFilter) {
         filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
       }
@@ -698,15 +699,24 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       dataInicialFechamento: this.dataInicialFechamentoFilter || '',
       dataFinalFechamento: this.dataFinalFechamentoFilter || '',
       semDataFechamento: this.semDataFechamentoFilter,
+      comDataFechamento: this.comDataFechamentoFilter,
       unidade: this.unidadeFilter.length > 0 ? (this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter) : ('' as any)
     };
   }
 
-  /** Ao marcar "apenas sem data de fechamento", limpa o range de data de fechamento. */
+  /** Ao marcar "Vendas sem Fechamento", desmarca "Vendas com fechamento" e limpa o range de data de fechamento. */
   onSemDataFechamentoFilterChange(checked: boolean): void {
     if (checked) {
+      this.comDataFechamentoFilter = false;
       this.dataInicialFechamentoFilter = '';
       this.dataFinalFechamentoFilter = '';
+    }
+  }
+
+  /** Ao marcar "Vendas com fechamento", desmarca "Vendas sem Fechamento". */
+  onComDataFechamentoFilterChange(checked: boolean): void {
+    if (checked) {
+      this.semDataFechamentoFilter = false;
     }
   }
 
@@ -739,6 +749,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.dataInicialFechamentoFilter = '';
     this.dataFinalFechamentoFilter = '';
     this.semDataFechamentoFilter = false;
+    this.comDataFechamentoFilter = false;
     this.initializeDateFilters();
     
     // Reinicializa filtro de origem (mapeia unidade do usuário)
@@ -801,6 +812,9 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (snapshot.semDataFechamento) {
       filters.push({ key: 'semDataFechamento', label: 'Sem data de fechamento', value: 'Sim' });
     }
+    if (snapshot.comDataFechamento) {
+      filters.push({ key: 'comDataFechamento', label: 'Vendas com fechamento', value: 'Sim' });
+    }
     if (snapshot.dataInicialFechamento || snapshot.dataFinalFechamento) {
       const from = snapshot.dataInicialFechamento ? this.formatDate(snapshot.dataInicialFechamento) : '';
       const to = snapshot.dataFinalFechamento ? this.formatDate(snapshot.dataFinalFechamento) : '';
@@ -837,7 +851,8 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       unidade: 'fa-building',
       dataVenda: 'fa-calendar-alt',
       dataFechamento: 'fa-calendar-check',
-      semDataFechamento: 'fa-calendar-times'
+      semDataFechamento: 'fa-calendar-times',
+      comDataFechamento: 'fa-calendar-check'
     };
     return icons[key] || 'fa-filter';
   }
@@ -903,6 +918,9 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         break;
       case 'semDataFechamento':
         this.semDataFechamentoFilter = false;
+        break;
+      case 'comDataFechamento':
+        this.comDataFechamentoFilter = false;
         break;
       case 'dataFechamento':
         this.dataInicialFechamentoFilter = '';
@@ -1286,7 +1304,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       );
       return;
     }
-    const reportTitle = 'Relatório de Vendas';
+    const reportTitle = 'Relatório de Fechamento';
     const reportTimestamp = this.getReportTimestamp();
     const reportDocumentTitle = `${reportTitle} ${reportTimestamp}`;
 
@@ -1318,18 +1336,32 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       0
     );
 
-    const unidadeMap = new Map<string, Map<string, Venda[]>>();
+    // Unidade -> Comprado em (origem) -> Fechamento (data) -> vendas
+    const unidadeMap = new Map<string, Map<string, Map<string, Venda[]>>>();
+    const getFechamentoKey = (v: Venda): string => {
+      if (!v.dataFechamento) return '__sem_data__';
+      const d = typeof v.dataFechamento === 'string' ? v.dataFechamento : (v.dataFechamento as any);
+      return d.substring(0, 10);
+    };
+    const getFechamentoLabel = (key: string): string =>
+      key === '__sem_data__' ? 'Sem data' : this.formatDate(key);
+
     vendasParaImprimir.forEach(venda => {
       const unidadeLabel = venda.unidade || 'Não informado';
       const origemLabel = this.getOrigemLabel(venda.origem);
+      const fechamentoKey = getFechamentoKey(venda);
       if (!unidadeMap.has(unidadeLabel)) {
         unidadeMap.set(unidadeLabel, new Map());
       }
       const origemMap = unidadeMap.get(unidadeLabel)!;
       if (!origemMap.has(origemLabel)) {
-        origemMap.set(origemLabel, []);
+        origemMap.set(origemLabel, new Map());
       }
-      origemMap.get(origemLabel)!.push(venda);
+      const fechamentoMap = origemMap.get(origemLabel)!;
+      if (!fechamentoMap.has(fechamentoKey)) {
+        fechamentoMap.set(fechamentoKey, []);
+      }
+      fechamentoMap.get(fechamentoKey)!.push(venda);
     });
 
     const unidadesOrdenadas = Array.from(unidadeMap.keys()).sort((a, b) => {
@@ -1337,6 +1369,13 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       if (b === 'Não informado') return -1;
       return a.localeCompare(b);
     });
+
+    const sortFechamentoKeys = (keys: string[]): string[] =>
+      keys.slice().sort((a, b) => {
+        if (a === '__sem_data__') return 1;
+        if (b === '__sem_data__') return -1;
+        return a.localeCompare(b);
+      });
 
     let contador = 0;
     const tabelasPorUnidade = unidadesOrdenadas
@@ -1350,36 +1389,42 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
 
         const origemBlocos = origensOrdenadas
           .map(origem => {
-            const vendas = origemMap.get(origem)!;
-            const origemValorCompra = podeVerValorCompra
-              ? vendas.reduce((total, venda) => total + (venda.valorCompra || 0), 0)
-              : 0;
-            const origemValorPagoCompra = podeVerValorCompra
-              ? vendas.reduce((total, venda) => total + (venda.valorPago || 0), 0)
-              : 0;
-            const origemValorCliente = vendas.reduce((total, venda) => total + (venda.valorCliente || 0), 0);
-            const origemValorBaixas = vendas.reduce(
-              (total, venda) => total + this.getValorBaixadoForVenda(venda.id),
-              0
-            );
+            const fechamentoMap = origemMap.get(origem)!;
+            const fechamentoKeys = sortFechamentoKeys(Array.from(fechamentoMap.keys()));
+            let origemValorCompra = 0;
+            let origemValorPagoCompra = 0;
+            let origemValorCliente = 0;
+            let origemValorBaixas = 0;
 
-            if (podeVerValorCompra) {
-              unidadeValorCompra += origemValorCompra;
-              unidadeValorPagoCompra += origemValorPagoCompra;
-            }
-            unidadeValorCliente += origemValorCliente;
-            unidadeValorBaixas += origemValorBaixas;
+            const fechamentoBlocos = fechamentoKeys
+              .map(fechamentoKey => {
+                const vendas = fechamentoMap.get(fechamentoKey)!;
+                const fechamentoValorCompra = podeVerValorCompra
+                  ? vendas.reduce((total, venda) => total + (venda.valorCompra || 0), 0)
+                  : 0;
+                const fechamentoValorPagoCompra = podeVerValorCompra
+                  ? vendas.reduce((total, venda) => total + (venda.valorPago || 0), 0)
+                  : 0;
+                const fechamentoValorCliente = vendas.reduce((total, venda) => total + (venda.valorCliente || 0), 0);
+                const fechamentoValorBaixas = vendas.reduce(
+                  (total, venda) => total + this.getValorBaixadoForVenda(venda.id),
+                  0
+                );
+                origemValorCompra += fechamentoValorCompra;
+                origemValorPagoCompra += fechamentoValorPagoCompra;
+                origemValorCliente += fechamentoValorCliente;
+                origemValorBaixas += fechamentoValorBaixas;
 
-            const linhasVendas = vendas
-              .map(venda => {
-                contador += 1;
-                const valorCompraColuna = podeVerValorCompra
-                  ? `<td>${this.formatCurrency(venda.valorCompra || 0)}</td>`
-                  : '';
-                const valorPagoCompraColuna = podeVerValorCompra
-                  ? `<td>${this.formatCurrency(venda.valorPago || 0)}</td>`
-                  : '';
-                return `
+                const linhasVendas = vendas
+                  .map(venda => {
+                    contador += 1;
+                    const valorCompraColuna = podeVerValorCompra
+                      ? `<td>${this.formatCurrency(venda.valorCompra || 0)}</td>`
+                      : '';
+                    const valorPagoCompraColuna = podeVerValorCompra
+                      ? `<td>${this.formatCurrency(venda.valorPago || 0)}</td>`
+                      : '';
+                    return `
                   <tr>
                     <td>${contador}</td>
                     <td>${venda.protocolo}</td>
@@ -1391,11 +1436,12 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
                     <td>${this.getTipoAtualizacaoLabel(venda.tipoAtualizacao)}</td>
                     <td>${this.getStatusLabel(venda.status)}</td>
                   </tr>`;
-              })
-              .join('');
-            return `
-              <div class="origem-block">
-                <div class="origem-title">Comprado em: ${origem}</div>
+                  })
+                  .join('');
+
+                return `
+              <div class="fechamento-block">
+                <div class="fechamento-title">Unidade: ${unidade} | Comprado em: ${origem} | Fechamento: ${getFechamentoLabel(fechamentoKey)}</div>
                 <div class="table-wrapper">
                   <table>
                     <thead>
@@ -1413,15 +1459,30 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
                     </thead>
                     <tbody>
                       ${linhasVendas}
-                      <tr class="totals-row origem-total">
-                        <td class="totals-label" colspan="5">Total</td>
-                        ${podeVerValorCompra ? `<td>${this.formatCurrency(origemValorCompra)}</td>` : ''}
-                        ${podeVerValorCompra ? `<td>${this.formatCurrency(origemValorPagoCompra)}</td>` : ''}
+                      <tr class="totals-row fechamento-total">
+                        <td class="totals-label" colspan="5">Total Fechamento</td>
+                        ${podeVerValorCompra ? `<td>${this.formatCurrency(fechamentoValorCompra)}</td>` : ''}
+                        ${podeVerValorCompra ? `<td>${this.formatCurrency(fechamentoValorPagoCompra)}</td>` : ''}
                         ${podeVerValorCompra ? '<td></td><td></td>' : '<td></td><td></td>'}
                       </tr>
                     </tbody>
                   </table>
                 </div>
+              </div>`;
+              })
+              .join('');
+
+            if (podeVerValorCompra) {
+              unidadeValorCompra += origemValorCompra;
+              unidadeValorPagoCompra += origemValorPagoCompra;
+            }
+            unidadeValorCliente += origemValorCliente;
+            unidadeValorBaixas += origemValorBaixas;
+
+            return `
+              <div class="origem-block">
+                <div class="origem-title">Comprado em: ${origem}</div>
+                ${fechamentoBlocos}
               </div>`;
           })
           .join('');
@@ -1462,6 +1523,10 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
             .origem-block { margin-top: 16px; }
             .origem-block:first-of-type { margin-top: 0; }
             .origem-title { font-weight: 600; text-transform: uppercase; font-size: 11px; margin: 12px 0 4px; color: #334155; }
+            .fechamento-block { margin-top: 12px; }
+            .fechamento-block:first-of-type { margin-top: 0; }
+            .fechamento-title { font-weight: 600; font-size: 11px; margin: 10px 0 4px; color: #475569; }
+            .fechamento-total td { border-top: 1px solid #cbd5e0; }
             .table-wrapper { border: 1px solid #cbd5e0; border-radius: 0; overflow: hidden; margin-top: 4px; }
             table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
             th, td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
@@ -1492,6 +1557,277 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
           <div class="totals-summary">
             ${podeVerValorCompra ? `<div><strong>Total Valor Compra:</strong> ${this.formatCurrency(totalValorCompra)}</div>` : ''}
             ${podeVerValorCompra ? `<div><strong>Total Fechamento:</strong> ${this.formatCurrency(totalValorPagoCompra)}</div>` : ''}
+          </div>
+          <footer>
+            ${geradoEmTexto}
+          </footer>
+        </body>
+      </html>
+    `);
+    popup.document.close();
+    popup.document.title = reportDocumentTitle;
+    popup.focus();
+  }
+
+  imprimirAnaliseValores(): void {
+    if (!this.canReadVenda()) {
+      return;
+    }
+    const vendas = this.getSelectedVendaModels();
+    if (vendas.length === 0) {
+      this.errorModalService.show('Selecione ao menos uma venda para gerar a Análise dos Valores.', 'Aviso');
+      return;
+    }
+    const popup = window.open('', '_blank', 'width=1024,height=768');
+    if (!popup) {
+      this.errorModalService.show(
+        'Não foi possível abrir a janela de impressão. Verifique bloqueadores de pop-up.',
+        'Erro'
+      );
+      return;
+    }
+
+    const reportTitle = 'Análise dos Valores';
+    const reportTimestamp = this.getReportTimestamp();
+    const reportDocumentTitle = `Relatório - ${reportTitle} ${reportTimestamp}`;
+
+    const currentUser = this.authService.getCurrentUser();
+    const usuarioLabel = currentUser?.nome || currentUser?.email || 'Usuário não identificado';
+    const dataGeracao = new Date();
+    const dataFormatada = dataGeracao.toLocaleDateString('pt-BR');
+    const horaFormatada = dataGeracao.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    const geradoEmTexto = `Gerado em ${dataFormatada}, ${horaFormatada} por ${usuarioLabel}`;
+
+    const logoUrl = this.getLogoRelatorioUrl();
+    const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo do sistema" />` : '';
+    const podeVerValorCompra = this.canViewValorCompra();
+
+    const unidadeMap = new Map<string, Map<string, Venda[]>>();
+    vendas.forEach(venda => {
+      const unidadeLabel = venda.unidade || 'Não informado';
+      const origemLabel = this.getOrigemLabel(venda.origem);
+      if (!unidadeMap.has(unidadeLabel)) {
+        unidadeMap.set(unidadeLabel, new Map());
+      }
+      const origemMap = unidadeMap.get(unidadeLabel)!;
+      if (!origemMap.has(origemLabel)) {
+        origemMap.set(origemLabel, []);
+      }
+      origemMap.get(origemLabel)!.push(venda);
+    });
+
+    const unidadesOrdenadas = Array.from(unidadeMap.keys()).sort((a, b) => {
+      if (a === 'Não informado') return 1;
+      if (b === 'Não informado') return -1;
+      return a.localeCompare(b);
+    });
+
+    let contador = 0;
+    let totalValorCompra = 0;
+    let totalValorFechamento = 0;
+    let totalValorRecebido = 0;
+    let totalValorLucro = 0;
+
+    const tabelasPorUnidade = unidadesOrdenadas
+      .map(unidade => {
+        const origemMap = unidadeMap.get(unidade)!;
+        const origensOrdenadas = Array.from(origemMap.keys()).sort((a, b) => a.localeCompare(b));
+        let unidadeValorCompra = 0;
+        let unidadeValorFechamento = 0;
+        let unidadeValorRecebido = 0;
+        let unidadeValorLucro = 0;
+
+        const origemBlocos = origensOrdenadas
+          .map(origem => {
+            const vendasOrigem = origemMap.get(origem)!;
+            let origemValorCompra = 0;
+            let origemValorFechamento = 0;
+            let origemValorRecebido = 0;
+            let origemValorLucro = 0;
+
+            const linhasVendas = vendasOrigem
+              .map(venda => {
+                contador += 1;
+                const valorCompra = venda.valorCompra ?? 0;
+                const valorFechamento = venda.valorPago ?? 0;
+                const valorRecebido = venda.valorCliente ?? 0;
+                const valorLucro = valorRecebido - valorFechamento;
+                const pctLucro =
+                  valorFechamento > 0 ? (valorLucro / valorFechamento) * 100 : 0;
+
+                origemValorCompra += valorCompra;
+                origemValorFechamento += valorFechamento;
+                origemValorRecebido += valorRecebido;
+                origemValorLucro += valorLucro;
+
+                const valorCompraCol = podeVerValorCompra
+                  ? `<td>${this.formatCurrency(valorCompra)}</td>`
+                  : '';
+                const valorFechamentoCol = podeVerValorCompra
+                  ? `<td>${this.formatCurrency(valorFechamento)}</td>`
+                  : '';
+                const pctLucroTexto =
+                  valorFechamento > 0 ? `${Number(pctLucro.toFixed(1))}%` : '-';
+
+                return `
+                  <tr>
+                    <td>${contador}</td>
+                    <td>${venda.protocolo}</td>
+                    <td>${this.formatDate(venda.dataVenda)}</td>
+                    <td>${this.getClienteNome(venda)}</td>
+                    ${valorCompraCol}
+                    ${valorFechamentoCol}
+                    <td>${this.formatCurrency(valorRecebido)}</td>
+                    <td>${this.formatCurrency(valorLucro)}</td>
+                    <td>${pctLucroTexto}</td>
+                    <td>${this.getTipoAtualizacaoLabel(venda.tipoAtualizacao)}</td>
+                    <td>${this.getStatusLabel(venda.status)}</td>
+                  </tr>`;
+              })
+              .join('');
+
+            const origemPctLucro =
+              origemValorFechamento > 0
+                ? `${Number((origemValorLucro / origemValorFechamento) * 100).toFixed(1)}%`
+                : '-';
+
+            unidadeValorCompra += origemValorCompra;
+            unidadeValorFechamento += origemValorFechamento;
+            unidadeValorRecebido += origemValorRecebido;
+            unidadeValorLucro += origemValorLucro;
+
+            return `
+              <div class="origem-block">
+                <div class="origem-title">Comprado em: ${origem}</div>
+                <div class="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Protocolo</th>
+                        <th>Venda</th>
+                        <th>Cliente</th>
+                        ${podeVerValorCompra ? '<th>Valor Compra</th>' : ''}
+                        ${podeVerValorCompra ? '<th>Valor Fechamento</th>' : ''}
+                        <th>Valor Recebido</th>
+                        <th>Valor Lucro</th>
+                        <th>% Lucro</th>
+                        <th>Atualização</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${linhasVendas}
+                      <tr class="totals-row origem-total">
+                        <td class="totals-label" colspan="4">Total</td>
+                        ${podeVerValorCompra ? `<td>${this.formatCurrency(origemValorCompra)}</td>` : ''}
+                        ${podeVerValorCompra ? `<td>${this.formatCurrency(origemValorFechamento)}</td>` : ''}
+                        <td>${this.formatCurrency(origemValorRecebido)}</td>
+                        <td>${this.formatCurrency(origemValorLucro)}</td>
+                        <td>${origemPctLucro}</td>
+                        <td></td>
+                        <td></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>`;
+          })
+          .join('');
+
+        totalValorCompra += unidadeValorCompra;
+        totalValorFechamento += unidadeValorFechamento;
+        totalValorRecebido += unidadeValorRecebido;
+        totalValorLucro += unidadeValorLucro;
+
+        const unidadePctLucro =
+          unidadeValorFechamento > 0
+            ? `${Number((unidadeValorLucro / unidadeValorFechamento) * 100).toFixed(1)}%`
+            : '-';
+
+        return `
+          <section class="unit-section">
+            <div class="unit-title">Unidade: ${unidade}</div>
+            ${origemBlocos}
+            <div class="unit-total-row">
+              <span>Total Unidade ${unidade}:</span>
+              ${podeVerValorCompra ? `<span><strong>Valor Compra:</strong> ${this.formatCurrency(unidadeValorCompra)}</span>` : ''}
+              ${podeVerValorCompra ? `<span><strong>Valor Fechamento:</strong> ${this.formatCurrency(unidadeValorFechamento)}</span>` : ''}
+              <span><strong>Valor Recebido:</strong> ${this.formatCurrency(unidadeValorRecebido)}</span>
+              <span><strong>Valor Lucro:</strong> ${this.formatCurrency(unidadeValorLucro)}</span>
+              <span><strong>% Lucro:</strong> ${unidadePctLucro}</span>
+            </div>
+          </section>`;
+      })
+      .join('');
+
+    const totalPctLucro =
+      totalValorFechamento > 0
+        ? `${Number((totalValorLucro / totalValorFechamento) * 100).toFixed(1)}%`
+        : '-';
+
+    const reportStyles = `
+      body { font-family: 'Segoe UI', Arial, sans-serif; margin: 16px; color: #1a202c; font-size: 12px; background: #fff; margin-bottom: 80px; }
+      h1 { margin: 0; font-size: 20px; letter-spacing: 0.5px; }
+      .print-actions { text-align: right; margin-bottom: 12px; }
+      .print-actions button { background: #2b6cb0; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+      .report-header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+      .logo-area, .header-spacer { flex: 0 0 220px; display: flex; align-items: center; justify-content: flex-start; }
+      .header-spacer { visibility: hidden; }
+      .logo-area img { max-height: 60px; width: auto; display: block; }
+      .title-area { flex: 1 1 auto; text-align: center; }
+      .unit-section { margin-top: 24px; page-break-inside: avoid; }
+      .unit-section:first-of-type { margin-top: 0; }
+      .unit-title { font-weight: 600; text-transform: uppercase; font-size: 12px; margin-bottom: 6px; color: #1e293b; }
+      .origem-block { margin-top: 16px; }
+      .origem-block:first-of-type { margin-top: 0; }
+      .origem-title { font-weight: 600; text-transform: uppercase; font-size: 11px; margin: 12px 0 4px; color: #334155; }
+      .table-wrapper { border: 1px solid #cbd5e0; border-radius: 0; overflow: hidden; margin-top: 4px; }
+      table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
+      th, td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+      tr:last-child td { border-bottom: none; }
+      th { background: #edf2f7; font-size: 11px; }
+      .totals-row td { font-weight: 600; background: #fffbea; }
+      .totals-label { text-align: right; padding-right: 12px; }
+      .origem-total td { border-top: 1px solid #cbd5e0; }
+      .unit-total-row { margin-top: 12px; border: 1px solid #cbd5e0; padding: 8px 12px; background: #e2e8f0; font-size: 11px; font-weight: 600; text-transform: uppercase; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      .totals-summary { margin-top: 20px; border: 1px solid #cbd5e0; border-radius: 0; padding: 12px 16px; background: #f7fafc; display: flex; flex-wrap: wrap; gap: 16px; font-size: 11px; width: 100%; box-sizing: border-box; }
+      .totals-summary strong { margin-right: 4px; }
+      footer { position: fixed; bottom: 12px; left: 20px; right: 20px; text-align: right; font-size: 10px; color: #4a5568; }
+      @media print { .print-actions { display: none; } body { margin: 0 20px 80px; } }
+    `;
+
+    popup.document.write(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <title>${reportDocumentTitle}</title>
+          <style>${reportStyles}</style>
+        </head>
+        <body>
+          <div class="print-actions">
+            <button onclick="window.print()">Imprimir PDF</button>
+          </div>
+          <header class="report-header">
+            <div class="logo-area">${logoHtml}</div>
+            <div class="title-area">
+              <h1>${reportTitle}</h1>
+            </div>
+            <div class="header-spacer">&nbsp;</div>
+          </header>
+          ${tabelasPorUnidade}
+          <div class="totals-summary">
+            ${podeVerValorCompra ? `<div><strong>Total Valor Compra:</strong> ${this.formatCurrency(totalValorCompra)}</div>` : ''}
+            ${podeVerValorCompra ? `<div><strong>Total Valor Fechamento:</strong> ${this.formatCurrency(totalValorFechamento)}</div>` : ''}
+            <div><strong>Total Valor Recebido:</strong> ${this.formatCurrency(totalValorRecebido)}</div>
+            <div><strong>Total Valor Lucro:</strong> ${this.formatCurrency(totalValorLucro)}</div>
+            <div><strong>% Lucro:</strong> ${totalPctLucro}</div>
           </div>
           <footer>
             ${geradoEmTexto}
@@ -1628,6 +1964,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.semDataFechamentoFilter) {
       filters.semDataFechamento = true;
     } else {
+      if (this.comDataFechamentoFilter) filters.comDataFechamento = true;
       if (this.dataInicialFechamentoFilter) {
         filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
       }
@@ -1696,6 +2033,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (this.semDataFechamentoFilter) {
       filters.semDataFechamento = true;
     } else {
+      if (this.comDataFechamentoFilter) filters.comDataFechamento = true;
       if (this.dataInicialFechamentoFilter) {
         filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
       }
@@ -1790,8 +2128,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       [VendaStatus.REGISTRADO]: 'Registrado',
       [VendaStatus.CANCELADO]: 'Cancelado',
       [VendaStatus.PAGO]: 'Pago',
-      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial',
-      [VendaStatus.FECHADO]: 'Fechado'
+      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial'
     };
     return labels[status] || status;
   }
@@ -1825,8 +2162,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       [VendaStatus.REGISTRADO]: 'status-registrado',
       [VendaStatus.CANCELADO]: 'status-cancelado',
       [VendaStatus.PAGO]: 'status-pago',
-      [VendaStatus.PAGO_PARCIAL]: 'status-pago-parcial',
-      [VendaStatus.FECHADO]: 'status-fechado'
+      [VendaStatus.PAGO_PARCIAL]: 'status-pago-parcial'
     };
     return classes[status] || '';
   }
@@ -1900,19 +2236,35 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       return;
     }
 
-    const quantidade = this.selectedVendas.size;
-    const confirmar = confirm(`Confirmar fechamento de ${quantidade} venda(s) selecionada(s)?`);
-    if (!confirmar) {
+    this.openFechamentoModal();
+  }
+
+  openFechamentoModal(): void {
+    this.dataFechamentoModal = new Date().toISOString().split('T')[0];
+    this.showFechamentoModal = true;
+  }
+
+  closeFechamentoModal(): void {
+    if (this.fechamentoLoading) {
+      return;
+    }
+    this.showFechamentoModal = false;
+  }
+
+  confirmarFechamentoModal(): void {
+    if (!this.dataFechamentoModal) {
+      this.errorModalService.show('Selecione a data do fechamento.', 'Validação');
       return;
     }
 
     const vendaIds = this.getSelectedVendaModels().map(venda => venda.id);
     this.fechamentoLoading = true;
 
-    this.vendaService.fecharVendasEmMassa(vendaIds).subscribe({
+    this.vendaService.fecharVendasEmMassa(vendaIds, this.dataFechamentoModal).subscribe({
       next: (resultado) => {
         this.fechamentoLoading = false;
         this.cancelamentoLoading = false;
+        this.showFechamentoModal = false;
         this.selectedVendas.clear();
         this.baixasCache.clear();
         this.loadItems();
@@ -1956,6 +2308,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
       error: (error) => {
         this.fechamentoLoading = false;
         this.cancelamentoLoading = false;
+        this.showFechamentoModal = false;
         const message = error.error?.message || 'Erro ao fechar vendas';
         this.errorModalService.show(message, 'Erro');
       }
@@ -2254,19 +2607,20 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
         return;
       }
 
+      // Verificar se valorCompra e valorPago estão preenchidos (não null, não 0)
+      const valorCompra = venda.valorCompra != null ? Number(venda.valorCompra) : null;
+      const valorPago = venda.valorPago != null ? Number(venda.valorPago) : null;
+      if (!valorCompra || valorCompra === 0 || !valorPago || valorPago === 0) {
+        erros.push(
+          `Venda ${venda.protocolo}: Valor de compra e/ou Valor do Fechamento não foi informado, efetue o processamento "Atualizar Valor Compra" para a venda.`
+        );
+        return;
+      }
+
       const baixas = this.baixasCache.get(venda.id);
       if (!baixas) {
         erros.push(`Aguardando carregamento das baixas da venda ${venda.protocolo}.`);
         return;
-      }
-
-      const totalBaixas = baixas.reduce((total, baixa) => total + (baixa.valorBaixa || 0), 0);
-      const valorCliente = venda.valorCliente || 0;
-
-      if (Number(totalBaixas.toFixed(2)) !== Number(valorCliente.toFixed(2))) {
-        erros.push(
-          `Venda ${venda.protocolo} possui diferença entre valor do cliente (${this.formatCurrency(valorCliente)}) e total de baixas (${this.formatCurrency(totalBaixas)}).`
-        );
       }
     });
 

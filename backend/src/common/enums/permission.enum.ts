@@ -55,6 +55,7 @@ export enum Permission {
   VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
   VENDA_ACOMPANHAR = 'venda:acompanhar',
   VENDA_ACESSAR_FECHAMENTO = 'venda:acessar-fechamento',
+  VENDA_ANALISE_VALORES = 'venda:analise-valores',
 
   // Clientes
   CLIENTE_CREATE = 'cliente:create',
@@ -141,6 +142,7 @@ export const PERMISSION_GROUPS = {
     { key: Permission.VENDA_VIEW_VALOR_COMPRA, label: 'Visualizar valor de compra' },
     { key: Permission.VENDA_ACOMPANHAR, label: 'Acompanhar vendas por unidade' },
     { key: Permission.VENDA_ACESSAR_FECHAMENTO, label: 'Acessar tela de fechamento de vendas' },
+    { key: Permission.VENDA_ANALISE_VALORES, label: 'Acessar relatório Análise de Valores' },
   ],
   Clientes: [
     { key: Permission.CLIENTE_CREATE, label: 'Criar clientes' },

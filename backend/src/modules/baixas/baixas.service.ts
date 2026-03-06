@@ -41,13 +41,6 @@ export class BaixasService {
         throw new NotFoundException(`Venda com ID ${createBaixaDto.idvenda} não encontrada`);
       }
 
-      // Validar dataFechamento da venda (já existe)
-      if (venda.dataFechamento) {
-        throw new ConflictException(
-          `Não é possível criar baixa em venda com fechamento registrado em ${venda.dataFechamento}.`
-        );
-      }
-
       // NOVA VALIDAÇÃO: Validar data da baixa por unidade
       if (venda.unidade) {
         this.logger.debug(
@@ -140,25 +133,13 @@ export class BaixasService {
     const baixa = await this.findOne(id);
     const venda = await this.vendasService.findOne(baixa.idvenda);
 
-    // Validar dataFechamento (já existe)
-    if (venda.dataFechamento) {
-      throw new ConflictException(
-        `Não é possível editar baixa de venda com fechamento registrado em ${venda.dataFechamento}.`
-      );
-    }
-
-    // NOVA VALIDAÇÃO: Validar data da baixa por unidade (se estiver alterando a data)
-    if (updateBaixaDto.dataBaixa && venda.unidade) {
-      // Se a data está sendo alterada, validar
-      const dataAtual = typeof baixa.dataBaixa === 'string' 
-        ? baixa.dataBaixa 
+    // Validar data da baixa por unidade: a data (nova ou atual) não pode ser anterior à última baixa da unidade
+    if (venda.unidade) {
+      const dataAtual = typeof baixa.dataBaixa === 'string'
+        ? baixa.dataBaixa
         : (baixa.dataBaixa as Date).toISOString().split('T')[0];
-      
-      // Só validar se a nova data for diferente da atual
-      if (updateBaixaDto.dataBaixa !== dataAtual) {
-        // Passar o ID da baixa sendo editada para excluir da busca
-        await this.validarDataBaixaPorUnidade(updateBaixaDto.dataBaixa, venda.unidade, baixa.id);
-      }
+      const dataEfetiva = updateBaixaDto.dataBaixa || dataAtual;
+      await this.validarDataBaixaPorUnidade(dataEfetiva, venda.unidade, baixa.id);
     }
 
     // Manter data como string YYYY-MM-DD para evitar conversão de timezone
@@ -185,13 +166,7 @@ export class BaixasService {
   async remove(id: string): Promise<void> {
     const baixa = await this.findOne(id);
 
-    // Validar dataFechamento antes de permitir exclusão
     const venda = await this.vendasService.findOne(baixa.idvenda);
-    if (venda.dataFechamento) {
-      throw new ConflictException(
-        `Não é possível remover baixas de uma venda com fechamento registrado em ${venda.dataFechamento}.`
-      );
-    }
 
     // NOVA VALIDAÇÃO: Validar data da baixa por unidade antes de excluir
     if (venda.unidade) {
@@ -354,23 +329,24 @@ export class BaixasService {
 
     // Comparar datas (formato YYYY-MM-DD permite comparação direta como string)
     if (dataBaixaFormatada < ultimaData) {
-      // Buscar protocolo da venda da última baixa para incluir na mensagem de erro
       const protocoloUltimaBaixa = await this.getProtocoloUltimaBaixaPorUnidade(unidade, excludeBaixaId);
-      
+      const ultimaDataFormatada = this.formatDateDisplay(ultimaData);
+
       this.logger.warn(
         `Tentativa de operação com baixa de data anterior à última baixa da unidade. ` +
         `Unidade: ${unidade}, Última baixa: ${ultimaData}, Data informada: ${dataBaixaFormatada}`
       );
-      
-      const mensagemProtocolo = protocoloUltimaBaixa 
-        ? ` (Protocolo: ${protocoloUltimaBaixa})`
-        : '';
-      
-      throw new ConflictException(
-        `Não é possível realizar esta operação com baixa de data anterior à última baixa registrada na unidade ${unidade}. ` +
-        `Última baixa registrada: ${this.formatDateDisplay(ultimaData)}${mensagemProtocolo}. ` +
-        `Data da baixa: ${this.formatDateDisplay(dataBaixaFormatada)}.`
-      );
+
+      const urlBaixas = `/relatorios/baixas?dataInicial=${ultimaData}&dataFinal=${ultimaData}&unidade=${encodeURIComponent(unidade)}`;
+      const textoLink = `Clique aqui e veja as baixas do dia ${ultimaDataFormatada}`;
+
+      const mensagem =
+        '<strong>Não foi possível realizar esta operação!</strong><br><br>' +
+        `Verifique as baixas do dia: <strong>${ultimaDataFormatada}</strong><br><br>` +
+        `O Caixa foi fechado no dia ${ultimaDataFormatada} não é possível fazer alterações antes desta data!<br><br>` +
+        `<a href="${urlBaixas}">${textoLink}</a>`;
+
+      throw new ConflictException(mensagem);
     }
 
     this.logger.debug(`Validação de data aprovada para unidade ${unidade}`);
@@ -467,7 +443,7 @@ export class BaixasService {
       }
     } catch (error) {
       this.logger.error(`Erro ao atualizar status da venda ${idvenda}:`, error);
-      // Não lançar erro para não quebrar a criação/remoção da baixa
+      throw error;
     }
   }
 

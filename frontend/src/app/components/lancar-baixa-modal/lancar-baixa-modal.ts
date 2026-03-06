@@ -360,8 +360,7 @@ export class LancarBaixaModalComponent {
       [VendaStatus.REGISTRADO]: 'Registrado',
       [VendaStatus.CANCELADO]: 'Cancelado',
       [VendaStatus.PAGO]: 'Pago',
-      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial',
-      [VendaStatus.FECHADO]: 'Fechado'
+      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial'
     };
     return labels[status] || status;
   }
@@ -404,8 +403,7 @@ export class LancarBaixaModalComponent {
       [VendaStatus.REGISTRADO]: 'status-registrado',
       [VendaStatus.CANCELADO]: 'status-cancelado',
       [VendaStatus.PAGO]: 'status-pago',
-      [VendaStatus.PAGO_PARCIAL]: 'status-pago-parcial',
-      [VendaStatus.FECHADO]: 'status-fechado'
+      [VendaStatus.PAGO_PARCIAL]: 'status-pago-parcial'
     };
     return classes[status] || '';
   }
@@ -454,15 +452,6 @@ export class LancarBaixaModalComponent {
       return;
     }
 
-    // Validar se venda tem fechamento registrado
-    if (this.venda && this.venda.dataFechamento) {
-      this.errorModalService.show(
-        `Não é possível editar baixas de uma venda com fechamento registrado em ${this.formatDateDisplay(this.venda.dataFechamento)}.`,
-        'Venda Fechada'
-      );
-      return;
-    }
-
     // Ativar modo edição e armazenar a baixa sendo editada
     this.modoEdicao = true;
     this.baixaEmEdicao = baixa;
@@ -486,15 +475,6 @@ export class LancarBaixaModalComponent {
   onRemoverBaixa(baixa: Baixa): void {
     if (!this.hasPermission(Permission.VENDA_REMOVE_BAIXA)) {
       this.errorModalService.show('Você não possui permissão para remover baixas', 'Permissão Negada');
-      return;
-    }
-
-    // Validar se venda tem fechamento registrado
-    if (this.venda && this.venda.dataFechamento) {
-      this.errorModalService.show(
-        `Não é possível remover baixas de uma venda com fechamento registrado em ${this.formatDateDisplay(this.venda.dataFechamento)}.`,
-        'Venda Fechada'
-      );
       return;
     }
 
@@ -659,13 +639,7 @@ export class LancarBaixaModalComponent {
   }
 
   private getLogoUrl(): string | null {
-    if (!this.configuracao?.logoRelatorio) {
-      return null;
-    }
-
-    const backendUrl = environment.apiUrl.replace(/\/api$/, '');
-    return this.configuracao.logoRelatorio.startsWith('/uploads')
-      ? backendUrl + this.configuracao.logoRelatorio
-      : this.configuracao.logoRelatorio;
+    if (!this.configuracao?.hasLogo) return null;
+    return `${environment.apiUrl}/configuracao/logo`;
   }
 }

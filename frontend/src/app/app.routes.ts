@@ -16,6 +16,7 @@ import { VendasListComponent } from './components/vendas-list/vendas-list';
 import { BaixasListComponent } from './components/baixas-list/baixas-list';
 import { AcompanharVendasComponent } from './components/acompanhar-vendas/acompanhar-vendas';
 import { FechamentoVendasListComponent } from './components/fechamento-vendas-list/fechamento-vendas-list';
+import { AnaliseValoresListComponent } from './components/analise-valores-list/analise-valores-list';
 import { ClientesListComponent } from './components/clientes-list/clientes-list';
 import { ClienteFormComponent } from './components/cliente-form/cliente-form';
 import { VendedoresListComponent } from './components/vendedores-list/vendedores-list';
@@ -110,6 +111,11 @@ export const routes: Routes = [
   {
     path: 'relatorios/acompanhar-vendas',
     component: AcompanharVendasComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'relatorios/analise-valores',
+    component: AnaliseValoresListComponent,
     canActivate: [authGuard]
   },
   // Rotas de perfil: paths específicos antes da rota geral para evitar conflitos de prefixo

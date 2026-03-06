@@ -289,14 +289,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   }
 
   private getLogoRelatorioUrl(): string | null {
-    if (!this.configuracao?.logoRelatorio) {
-      return null;
-    }
-
-    const backendUrl = environment.apiUrl.replace(/\/api$/, '');
-    return this.configuracao.logoRelatorio.startsWith('/uploads')
-      ? backendUrl + this.configuracao.logoRelatorio
-      : this.configuracao.logoRelatorio;
+    if (!this.configuracao?.hasLogo) return null;
+    return `${environment.apiUrl}/configuracao/logo`;
   }
 
   protected override loadItems(): void {
@@ -1692,8 +1686,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       [VendaStatus.REGISTRADO]: 'Registrado',
       [VendaStatus.CANCELADO]: 'Cancelado',
       [VendaStatus.PAGO]: 'Pago',
-      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial',
-      [VendaStatus.FECHADO]: 'Fechado'
+      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial'
     };
     return labels[status] || status;
   }
@@ -1703,8 +1696,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       [VendaStatus.REGISTRADO]: 'status-registrado',
       [VendaStatus.CANCELADO]: 'status-cancelado',
       [VendaStatus.PAGO]: 'status-pago',
-      [VendaStatus.PAGO_PARCIAL]: 'status-pago-parcial',
-      [VendaStatus.FECHADO]: 'status-fechado'
+      [VendaStatus.PAGO_PARCIAL]: 'status-pago-parcial'
     };
     return classes[status] || '';
   }

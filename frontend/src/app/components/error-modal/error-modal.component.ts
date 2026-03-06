@@ -70,6 +70,17 @@ import { ThemeService, Theme } from '../../services/theme.service';
       .modal-body {
         padding: 1rem;
       }
+      .modal-body a {
+        color: #0066cc;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      .modal-body a:hover {
+        text-decoration: none;
+      }
+      .dark .modal-body a {
+        color: #6eb3f7;
+      }
       .modal-footer {
         padding: 0.75rem 1rem;
         border-top: 1px solid #ccc;

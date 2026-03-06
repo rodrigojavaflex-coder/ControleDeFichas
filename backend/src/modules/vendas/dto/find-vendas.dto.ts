@@ -1,11 +1,25 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsDateString, IsArray, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsDateString, IsArray, IsBoolean, IsNumber, IsPositive, Min, Max } from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { VendaOrigem, VendaStatus } from '../../../common/enums/venda.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
 import { Type, Transform } from 'class-transformer';
 
 export class FindVendasDto extends PaginationDto {
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 1000,
+    default: 10,
+    description: 'Quantidade de itens por página (máx. 1000 para listagem de vendas)',
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsPositive()
+  @Min(1)
+  @Max(1000)
+  limit?: number = 10;
+
   @ApiPropertyOptional({
     description: 'Protocolo da venda',
     example: 'VND-2025-001',
@@ -122,6 +136,19 @@ export class FindVendasDto extends PaginationDto {
   semDataFechamento?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Filtrar apenas vendas com data de fechamento (dataFechamento IS NOT NULL)',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
+    return value;
+  })
+  @IsBoolean({ message: 'comDataFechamento deve ser um booleano' })
+  comDataFechamento?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Unidade da venda (pode ser array para múltiplas seleções)',
     example: 'INHUMAS',
     enum: Unidade,
@@ -163,4 +190,24 @@ export class FindVendasDto extends PaginationDto {
   @IsOptional()
   @IsDateString({}, { message: 'Data final de envio deve ter formato válido (YYYY-MM-DD)' })
   dataFinalEnvio?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filtrar vendas com % Lucro menor que o valor informado (ex.: 10 para 10%)',
+    example: 25,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: '% Lucro menor que deve ser um número' })
+  @Min(0, { message: '% Lucro menor que deve ser >= 0' })
+  pctLucroMenorQue?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filtrar vendas com % Lucro maior que o valor informado (ex.: 50 para 50%)',
+    example: 50,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: '% Lucro maior que deve ser um número' })
+  @Min(0, { message: '% Lucro maior que deve ser >= 0' })
+  pctLucroMaiorQue?: number;
 }

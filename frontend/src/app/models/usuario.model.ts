@@ -64,6 +64,7 @@ export enum Permission {
   VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
   VENDA_ACOMPANHAR = 'venda:acompanhar',
   VENDA_ACESSAR_FECHAMENTO = 'venda:acessar-fechamento',
+  VENDA_ANALISE_VALORES = 'venda:analise-valores',
 
   // Clientes
   CLIENTE_CREATE = 'cliente:create',

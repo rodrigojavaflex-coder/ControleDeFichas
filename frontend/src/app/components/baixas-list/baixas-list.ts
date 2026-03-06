@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { BaixasService } from '../../services/baixas.service';
 import { AuthService } from '../../services/auth.service';
@@ -49,6 +50,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   private configuracaoService = inject(ConfiguracaoService);
   private pageContextService = inject(PageContextService);
   private errorModalService = inject(ErrorModalService);
+  private route = inject(ActivatedRoute);
 
   Permission = Permission;
   TipoDaBaixa = TipoDaBaixa;
@@ -92,6 +94,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
     this.initializeDateFilters();
     this.initializeUnidadeFilter();
+    this.applyQueryParamsFilters();
     this.appliedFiltersSnapshot = this.createFilterSnapshot();
     this.loadConfiguracao();
     this.pageContextService.setContext({
@@ -137,6 +140,24 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     } else {
       this.unidadeDisabled = false;
       this.unidadeFilter = [];
+    }
+  }
+
+  /**
+   * Aplica filtros vindos da URL (ex.: link da mensagem de erro de data anterior à última baixa).
+   * dataInicial, dataFinal e unidade (se o usuário não tiver unidade fixa).
+   */
+  private applyQueryParamsFilters(): void {
+    const q = this.route.snapshot.queryParams;
+    if (q['dataInicial'] && q['dataFinal']) {
+      this.dataInicialFilter = q['dataInicial'];
+      this.dataFinalFilter = q['dataFinal'];
+    }
+    if (q['unidade'] && !this.unidadeDisabled) {
+      const unidade = q['unidade'] as string;
+      if (this.unidades.includes(unidade as Unidade)) {
+        this.unidadeFilter = [unidade as Unidade];
+      }
     }
   }
 
@@ -482,14 +503,8 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   }
 
   private getLogoRelatorioUrl(): string | null {
-    if (!this.configuracao?.logoRelatorio) {
-      return null;
-    }
-
-    const backendUrl = environment.apiUrl.replace(/\/api$/, '');
-    return this.configuracao.logoRelatorio.startsWith('/uploads')
-      ? backendUrl + this.configuracao.logoRelatorio
-      : this.configuracao.logoRelatorio;
+    if (!this.configuracao?.hasLogo) return null;
+    return `${environment.apiUrl}/configuracao/logo`;
   }
 
   imprimirRelatorio(): void {

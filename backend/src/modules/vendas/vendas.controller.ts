@@ -122,7 +122,7 @@ export class VendasController {
 
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-  @Permissions(Permission.VENDA_READ)
+  @Permissions(Permission.VENDA_READ, Permission.VENDA_ANALISE_VALORES)
   @ApiOperation({ summary: 'Listar vendas com paginação e filtros' })
   @ApiResponse({
     status: HttpStatus.OK,
