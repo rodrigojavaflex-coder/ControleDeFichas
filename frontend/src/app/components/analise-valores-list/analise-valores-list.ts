@@ -93,6 +93,7 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
 
   filtersPanelOpen = false;
   selectedVendas = new Set<string>();
+  reportLoading = false;
 
   sortField: SortableField | null = null;
   sortDirection: SortDirection = 'asc';
@@ -480,6 +481,79 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
     return this.items.filter((v) => this.selectedVendas.has(v.id));
   }
 
+  /** Filtros atuais no formato usado pela API (para relatórios/export: buscar tudo que atende ao filtro). */
+  private buildReportFilters(page: number = 1): FindVendasDto {
+    const filters: FindVendasDto = { page, limit: 1000 };
+    if (this.protocoloFilter.trim()) filters.protocolo = this.protocoloFilter.trim();
+    if (this.clienteFilter.trim()) filters.cliente = this.clienteFilter.trim();
+    if (this.origemFilter.length > 0) {
+      filters.origem = this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter;
+    }
+    if (this.statusFilter.length > 0) {
+      filters.status = this.statusFilter.length === 1 ? this.statusFilter[0] : this.statusFilter;
+    }
+    if (this.dataInicialFilter) filters.dataInicial = this.dataInicialFilter;
+    if (this.dataFinalFilter) filters.dataFinal = this.dataFinalFilter;
+    if (this.semDataFechamentoFilter) {
+      filters.semDataFechamento = true;
+    } else {
+      if (this.comDataFechamentoFilter) filters.comDataFechamento = true;
+      if (this.dataInicialFechamentoFilter) filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
+      if (this.dataFinalFechamentoFilter) filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
+    }
+    if (this.unidadeFilter.length > 0) {
+      filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
+    }
+    if (this.vendedorFilter.trim()) filters.vendedor = this.vendedorFilter.trim();
+    const pctMenor = this.parsePctLucro(this.pctLucroMenorQueFilter);
+    if (pctMenor != null) filters.pctLucroMenorQue = pctMenor;
+    const pctMaior = this.parsePctLucro(this.pctLucroMaiorQueFilter);
+    if (pctMaior != null) filters.pctLucroMaiorQue = pctMaior;
+    return filters;
+  }
+
+  /** Carrega todas as páginas de vendas para relatório (backend limita limit a 1000). */
+  private loadAllVendasForReport(
+    onComplete: (vendas: Venda[]) => void,
+    onError: () => void
+  ): void {
+    this.vendaService.getVendas(this.buildReportFilters(1)).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (first: VendaPaginatedResponse) => {
+        const all: Venda[] = [...first.data];
+        const totalPages = first.meta?.totalPages ?? 1;
+        if (totalPages <= 1) {
+          onComplete(all);
+          return;
+        }
+        let completed = 1;
+        const checkDone = () => {
+          if (completed >= totalPages) onComplete(all);
+        };
+        for (let p = 2; p <= totalPages; p++) {
+          this.vendaService.getVendas(this.buildReportFilters(p)).pipe(takeUntil(this.destroy$)).subscribe({
+            next: (res) => {
+              all.push(...res.data);
+              completed++;
+              checkDone();
+            },
+            error: () => {
+              completed++;
+              onError();
+            },
+          });
+        }
+      },
+      error: onError,
+    });
+  }
+
+  /** Texto dos filtros aplicados para exibir nos relatórios (abaixo do título). */
+  getAppliedFiltersReportHtml(): string {
+    if (!this.appliedFilters.length) return '';
+    const parts = this.appliedFilters.map((f) => `${f.label}: ${f.value}`).join(' | ');
+    return `<div class="report-filters-applied">Filtros aplicados: ${parts}</div>`;
+  }
+
   /** Formata data no padrão dd/mm/yyyy usando apenas a parte da data, sem conversão de timezone (igual fechamento-vendas-list). */
   formatDate(value: string | null | undefined): string {
     if (!value) return '-';
@@ -644,17 +718,32 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
   }
 
   imprimirAnalise(): void {
-    const vendas = this.getSelectedVendaModels();
-    if (vendas.length === 0) {
-      this.errorModalService.show('Selecione ao menos uma venda para imprimir.', 'Aviso');
-      return;
-    }
+    if (!this.canView()) return;
     const popup = window.open('', '_blank', 'width=1024,height=768');
     if (!popup) {
       this.errorModalService.show('Não foi possível abrir a janela de impressão. Verifique bloqueadores de pop-up.', 'Erro');
       return;
     }
+    this.reportLoading = true;
+    this.loadAllVendasForReport(
+      (vendas) => {
+        this.reportLoading = false;
+        if (vendas.length === 0) {
+          popup.close();
+          this.errorModalService.show('Nenhuma venda encontrada com os filtros aplicados.', 'Aviso');
+          return;
+        }
+        this.writeReportImprimirAnalise(popup, vendas);
+      },
+      () => {
+        this.reportLoading = false;
+        popup.close();
+        this.errorModalService.show('Erro ao carregar dados para o relatório.', 'Erro');
+      }
+    );
+  }
 
+  private writeReportImprimirAnalise(popup: Window, vendas: Venda[]): void {
     const reportTitle = 'Análise dos Valores';
     const reportTimestamp = this.getReportTimestamp();
     const reportDocumentTitle = `Relatório - ${reportTitle} ${reportTimestamp}`;
@@ -723,7 +812,7 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
             uLucro += oLucro;
 
             return `<div class="origem-block">
-              <div class="origem-title">Comprado em: ${origem}</div>
+              <div class="origem-title">Unidade: ${unidade} | Comprado em: ${origem}</div>
               <div class="table-wrapper">
                 <table>
                   <thead><tr>
@@ -784,8 +873,11 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
       .unit-total-row{margin-top:12px;border:1px solid #cbd5e0;padding:8px 12px;background:#e2e8f0;font-size:11px;font-weight:600;display:flex;flex-wrap:wrap;gap:12px}
       .totals-summary{margin-top:20px;border:1px solid #cbd5e0;padding:12px 16px;background:#f7fafc;display:flex;flex-wrap:wrap;gap:16px;font-size:11px}
       footer{position:fixed;bottom:12px;left:20px;right:20px;text-align:right;font-size:10px;color:#4a5568}
+      .report-filters-applied{margin-top:8px;font-size:11px;color:#475569}
       @media print{.print-actions{display:none}body{margin:0 20px 80px}}
     `;
+
+    const filtersHtml = this.getAppliedFiltersReportHtml();
 
     popup.document.write(`
       <!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${reportDocumentTitle}</title><style>${styles}</style></head>
@@ -793,7 +885,7 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
         <div class="print-actions"><button onclick="window.print()">Imprimir PDF</button></div>
         <header class="report-header">
           <div class="logo-area">${logoHtml}</div>
-          <div class="title-area"><h1>${reportTitle}</h1></div>
+          <div class="title-area"><h1>${reportTitle}</h1>${filtersHtml}</div>
           <div class="header-spacer">&nbsp;</div>
         </header>
         ${tabelasPorUnidade}
@@ -813,17 +905,32 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
 
   /** Relatório com mesma informação do imprimir, com nível extra de quebra por Data de Fechamento (Unidade -> Comprado em -> Fechamento -> Total). */
   imprimirPorFechamento(): void {
-    const vendas = this.getSelectedVendaModels();
-    if (vendas.length === 0) {
-      this.errorModalService.show('Selecione ao menos uma venda para imprimir.', 'Aviso');
-      return;
-    }
+    if (!this.canView()) return;
     const popup = window.open('', '_blank', 'width=1024,height=768');
     if (!popup) {
       this.errorModalService.show('Não foi possível abrir a janela de impressão. Verifique bloqueadores de pop-up.', 'Erro');
       return;
     }
+    this.reportLoading = true;
+    this.loadAllVendasForReport(
+      (vendas) => {
+        this.reportLoading = false;
+        if (vendas.length === 0) {
+          popup.close();
+          this.errorModalService.show('Nenhuma venda encontrada com os filtros aplicados.', 'Aviso');
+          return;
+        }
+        this.writeReportPorFechamento(popup, vendas);
+      },
+      () => {
+        this.reportLoading = false;
+        popup.close();
+        this.errorModalService.show('Erro ao carregar dados para o relatório.', 'Erro');
+      }
+    );
+  }
 
+  private writeReportPorFechamento(popup: Window, vendas: Venda[]): void {
     const reportTitle = 'Análise dos Valores - Por Fechamento';
     const reportTimestamp = this.getReportTimestamp();
     const reportDocumentTitle = `Relatório - ${reportTitle} ${reportTimestamp}`;
@@ -988,8 +1095,11 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
       .unit-total-row{margin-top:12px;border:1px solid #cbd5e0;padding:8px 12px;background:#e2e8f0;font-size:11px;font-weight:600;display:flex;flex-wrap:wrap;gap:12px}
       .totals-summary{margin-top:20px;border:1px solid #cbd5e0;padding:12px 16px;background:#f7fafc;display:flex;flex-wrap:wrap;gap:16px;font-size:11px}
       footer{position:fixed;bottom:12px;left:20px;right:20px;text-align:right;font-size:10px;color:#4a5568}
+      .report-filters-applied{margin-top:8px;font-size:11px;color:#475569}
       @media print{.print-actions{display:none}body{margin:0 20px 80px}}
     `;
+
+    const filtersHtmlPorFech = this.getAppliedFiltersReportHtml();
 
     popup.document.write(`
       <!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${reportDocumentTitle}</title><style>${styles}</style></head>
@@ -997,7 +1107,7 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
         <div class="print-actions"><button onclick="window.print()">Imprimir PDF</button></div>
         <header class="report-header">
           <div class="logo-area">${logoHtml}</div>
-          <div class="title-area"><h1>${reportTitle}</h1></div>
+          <div class="title-area"><h1>${reportTitle}</h1>${filtersHtmlPorFech}</div>
           <div class="header-spacer">&nbsp;</div>
         </header>
         ${tabelasPorUnidade}
@@ -1017,17 +1127,32 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
 
   /** Resumo por vendedor, quebrado por unidade: Unidade -> (nome vendedor, total custo, total venda, valor lucro, % lucro). */
   imprimirPorVendedor(): void {
-    const vendas = this.getSelectedVendaModels();
-    if (vendas.length === 0) {
-      this.errorModalService.show('Selecione ao menos uma venda para imprimir.', 'Aviso');
-      return;
-    }
+    if (!this.canView()) return;
     const popup = window.open('', '_blank', 'width=1024,height=768');
     if (!popup) {
       this.errorModalService.show('Não foi possível abrir a janela de impressão. Verifique bloqueadores de pop-up.', 'Erro');
       return;
     }
+    this.reportLoading = true;
+    this.loadAllVendasForReport(
+      (vendas) => {
+        this.reportLoading = false;
+        if (vendas.length === 0) {
+          popup.close();
+          this.errorModalService.show('Nenhuma venda encontrada com os filtros aplicados.', 'Aviso');
+          return;
+        }
+        this.writeReportPorVendedor(popup, vendas);
+      },
+      () => {
+        this.reportLoading = false;
+        popup.close();
+        this.errorModalService.show('Erro ao carregar dados para o relatório.', 'Erro');
+      }
+    );
+  }
 
+  private writeReportPorVendedor(popup: Window, vendas: Venda[]): void {
     const reportTitle = 'Análise de Valores - por Vendedor';
     const reportTimestamp = this.getReportTimestamp();
     const reportDocumentTitle = `Relatório - ${reportTitle} ${reportTimestamp}`;
@@ -1038,22 +1163,23 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
     const logoUrl = this.getLogoRelatorioUrl();
     const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo" />` : '';
 
-    type ResumoVendedor = { totalCusto: number; totalVenda: number };
+    type ResumoVendedor = { totalCusto: number; totalVenda: number; vendas: Venda[] };
     const unidadeMap = new Map<string, Map<string, ResumoVendedor>>();
 
     vendas.forEach((v) => {
       const un = v.unidade || 'Não informado';
       const vendedorNome = this.getVendedorNome(v) || '-';
       const custo = v.valorPago ?? 0;
-      const venda = v.valorCliente ?? 0;
+      const vendaVal = v.valorCliente ?? 0;
       if (!unidadeMap.has(un)) unidadeMap.set(un, new Map());
       const vendedorMap = unidadeMap.get(un)!;
       if (!vendedorMap.has(vendedorNome)) {
-        vendedorMap.set(vendedorNome, { totalCusto: 0, totalVenda: 0 });
+        vendedorMap.set(vendedorNome, { totalCusto: 0, totalVenda: 0, vendas: [] });
       }
       const r = vendedorMap.get(vendedorNome)!;
       r.totalCusto += custo;
-      r.totalVenda += venda;
+      r.totalVenda += vendaVal;
+      r.vendas.push(v);
     });
 
     const unidadesOrdenadas = Array.from(unidadeMap.keys()).sort((a, b) => {
@@ -1066,19 +1192,28 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
       const vendedorMap = unidadeMap.get(unidade)!;
       const vendedoresComPct = Array.from(vendedorMap.entries()).map(([nomeVendedor, resumo]) => {
         const lucro = resumo.totalVenda - resumo.totalCusto;
-        const pctNum = resumo.totalCusto > 0 ? (lucro / resumo.totalCusto) * 100 : -1;
-        return { nomeVendedor, resumo, lucro, pctNum };
+        const pctNum: number | null = resumo.totalCusto > 0 ? (lucro / resumo.totalCusto) * 100 : null;
+        const pctsIndividuais = resumo.vendas
+          .filter((v) => (v.valorPago ?? 0) > 0)
+          .map((v) => ((v.valorCliente ?? 0) - (v.valorPago ?? 0)) / (v.valorPago ?? 1) * 100);
+        const minPct: number | null = pctsIndividuais.length ? Math.min(...pctsIndividuais) : null;
+        const maxPct: number | null = pctsIndividuais.length ? Math.max(...pctsIndividuais) : null;
+        return { nomeVendedor, resumo, lucro, pctNum, minPct, maxPct };
       });
-      vendedoresComPct.sort((a, b) => b.pctNum - a.pctNum);
+      vendedoresComPct.sort((a, b) => (b.pctNum ?? -Infinity) - (a.pctNum ?? -Infinity));
       const linhas = vendedoresComPct.map((item, idx) => {
-        const pct = item.pctNum >= 0 ? `${Number(item.pctNum.toFixed(1))}%` : '-';
+        const mediaPct = item.pctNum != null ? `${Number(item.pctNum.toFixed(1))}%` : '-';
+        const menorPct = item.minPct != null ? `${Number(item.minPct.toFixed(1))}%` : '-';
+        const maiorPct = item.maxPct != null ? `${Number(item.maxPct.toFixed(1))}%` : '-';
         return `<tr>
           <td>${idx + 1}</td>
           <td>${item.nomeVendedor}</td>
           <td>${this.formatCurrency(item.resumo.totalCusto)}</td>
           <td>${this.formatCurrency(item.resumo.totalVenda)}</td>
           <td>${this.formatCurrency(item.lucro)}</td>
-          <td>${pct}</td>
+          <td>${mediaPct}</td>
+          <td>${menorPct}</td>
+          <td>${maiorPct}</td>
         </tr>`;
       }).join('');
 
@@ -1087,7 +1222,7 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
         <div class="table-wrapper">
           <table>
             <thead><tr>
-              <th>#</th><th>Vendedor</th><th>Total Custo</th><th>Total Venda</th><th>Valor Lucro</th><th>% Lucro</th>
+              <th>#</th><th>Vendedor</th><th>Total Custo</th><th>Total Venda</th><th>Valor Lucro</th><th>Média % Lucro</th><th>Menor % Lucro</th><th>Maior % Lucro</th>
             </tr></thead>
             <tbody>${linhas}</tbody>
           </table>
@@ -1112,8 +1247,11 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
       th,td{border-bottom:1px solid #e2e8f0;padding:6px 8px;text-align:left}
       th{background:#edf2f7;font-size:11px}
       footer{position:fixed;bottom:12px;left:20px;right:20px;text-align:right;font-size:10px;color:#4a5568}
+      .report-filters-applied{margin-top:8px;font-size:11px;color:#475569}
       @media print{.print-actions{display:none}body{margin:0 20px 80px}}
     `;
+
+    const filtersHtmlVendedor = this.getAppliedFiltersReportHtml();
 
     popup.document.write(`
       <!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><title>${reportDocumentTitle}</title><style>${styles}</style></head>
@@ -1121,7 +1259,7 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
         <div class="print-actions"><button onclick="window.print()">Imprimir PDF</button></div>
         <header class="report-header">
           <div class="logo-area">${logoHtml}</div>
-          <div class="title-area"><h1>${reportTitle}</h1></div>
+          <div class="title-area"><h1>${reportTitle}</h1>${filtersHtmlVendedor}</div>
           <div class="header-spacer">&nbsp;</div>
         </header>
         ${secoes}
@@ -1133,12 +1271,25 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
     popup.focus();
   }
 
-  async exportarExcel(): Promise<void> {
-    const vendas = this.getSelectedVendaModels();
-    if (vendas.length === 0) {
-      this.errorModalService.show('Selecione ao menos uma venda para exportar.', 'Aviso');
-      return;
-    }
+  exportarExcel(): void {
+    this.reportLoading = true;
+    this.loadAllVendasForReport(
+      (vendas) => {
+        this.reportLoading = false;
+        if (vendas.length === 0) {
+          this.errorModalService.show('Nenhuma venda encontrada com os filtros aplicados.', 'Aviso');
+          return;
+        }
+        this.exportarExcelWithVendas(vendas);
+      },
+      () => {
+        this.reportLoading = false;
+        this.errorModalService.show('Erro ao carregar dados para exportar.', 'Erro');
+      }
+    );
+  }
+
+  private async exportarExcelWithVendas(vendas: Venda[]): Promise<void> {
     const rows = vendas.map((v) => {
       const valorFechamento = v.valorPago ?? 0;
       const valorRecebido = v.valorCliente ?? 0;

@@ -10,7 +10,7 @@
         <button
           class="btn btn-imprimir"
           (click)="imprimirAnalise()"
-          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          [attr.disabled]="loading || reportLoading ? 'disabled' : null"
           title="Imprimir Análise dos Valores">
           <i class="fas fa-print"></i>
           Imprimir
@@ -18,7 +18,7 @@
         <button
           class="btn btn-imprimir"
           (click)="imprimirPorFechamento()"
-          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          [attr.disabled]="loading || reportLoading ? 'disabled' : null"
           title="Imprimir relatório agrupado por data de fechamento">
           <i class="fas fa-print"></i>
           Por Fechamento
@@ -26,7 +26,7 @@
         <button
           class="btn btn-imprimir"
           (click)="imprimirPorVendedor()"
-          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          [attr.disabled]="loading || reportLoading ? 'disabled' : null"
           title="Resumo por vendedor agrupado por unidade">
           <i class="fas fa-print"></i>
           Por vendedor
@@ -34,7 +34,7 @@
         <button
           class="btn btn-exportar"
           (click)="exportarExcel()"
-          [attr.disabled]="selectedVendas.size === 0 || loading ? 'disabled' : null"
+          [attr.disabled]="loading || reportLoading ? 'disabled' : null"
           title="Exportar para Excel">
           <i class="fas fa-file-excel"></i>
           Exportar
@@ -117,14 +117,6 @@
       <table class="vendas-table">
         <thead>
           <tr>
-            <th class="checkbox-column">
-              <input
-                type="checkbox"
-                [checked]="isAllSelected()"
-                [indeterminate]="isIndeterminate()"
-                (change)="toggleSelectAll($event)"
-                title="Marcar/Desmarcar todas">
-            </th>
             <th
               class="sortable"
               (click)="onSort('protocolo')"
@@ -233,18 +225,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr
-            *ngFor="let venda of items"
-            (click)="onRowClick(venda, $event)"
-            [class.row-selected]="isVendaSelected(venda.id)">
-            <td class="checkbox-column">
-              <input
-                type="checkbox"
-                [checked]="isVendaSelected(venda.id)"
-                (click)="$event.stopPropagation()"
-                (change)="toggleSelectVenda(venda.id, $event)"
-                title="Selecionar">
-            </td>
+          <tr *ngFor="let venda of items">
             <td>{{ venda.protocolo }}</td>
             <td>{{ formatDate(venda.dataVenda) }}</td>
             <td>{{ venda.dataFechamento ? formatDate(venda.dataFechamento) : '-' }}</td>
@@ -266,7 +247,7 @@
             </td>
           </tr>
           <tr *ngIf="items.length === 0 && !loading" class="no-data">
-            <td [attr.colspan]="canViewValorCompra() ? 14 : 13" class="text-center">
+            <td [attr.colspan]="canViewValorCompra() ? 13 : 12" class="text-center">
               <i class="fas fa-inbox"></i>
               Nenhuma venda encontrada
             </td>
