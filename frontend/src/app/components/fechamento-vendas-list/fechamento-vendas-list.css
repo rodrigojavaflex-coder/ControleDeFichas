@@ -4,21 +4,16 @@
   margin-right: calc(-1 * var(--layout-horizontal-padding, 1.5rem));
   padding: 0;
   background: #f8fafc;
-  /* Ocupa toda altura disponível menos o header (aumentado em 20%) */
   height: calc((100vh - 64px) * 1.23);
-  /* Remove margin-top negativo para colar no header */
   margin-top: 0;
   display: flex;
   flex-direction: column;
   gap: 0.54rem;
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  /* Garante que não tenha scroll na página */
   overflow: hidden;
   position: relative;
 }
 
-/* Quando o menu lateral estiver oculto (layout-content colapsado),
-   expandimos também para a esquerda para ocupar 100% da viewport */
 .layout-content.menu-collapsed .vendas-page {
   width: calc(100% + (2 * var(--layout-horizontal-padding, 1.5rem)));
   margin-left: calc(-1 * var(--layout-horizontal-padding, 1.5rem));
@@ -190,7 +185,6 @@
   min-width: 0;
 }
 
-/* Reservar mais espaço para os blocos de intervalo de data */
 .filters .date-range-field {
   grid-column: span 2;
   min-width: 380px;
@@ -288,7 +282,6 @@
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
   display: flex;
   flex-direction: column;
-  /* Ocupa todo espaço restante */
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
@@ -299,7 +292,6 @@
 }
 
 .results-card > .table-wrapper {
-  /* Ocupa todo espaço restante e permite scroll */
   flex: 1 1 0;
   min-height: 0;
   overflow-x: auto;
@@ -439,7 +431,6 @@
   text-overflow: ellipsis;
 }
 
-/* Tema escuro */
 :host-context(body.theme-dark) .vendas-page {
   background: #0b1120;
 }
@@ -596,154 +587,6 @@
   background: #7c3aed;
 }
 
-/* Fallback selectors when :host-context is not applied */
-body.theme-dark .vendas-page {
-  background: #0b1120;
-}
-
-body.theme-dark .vendas-page .page-header,
-body.theme-dark .vendas-page .filters,
-body.theme-dark .vendas-page .results-card,
-body.theme-dark .vendas-page .state-card,
-body.theme-dark .vendas-page .table-wrapper {
-  background: #0f172a;
-  border-color: rgba(148, 163, 184, 0.3);
-  box-shadow: none;
-}
-
-body.theme-dark .vendas-page .filters {
-  border-color: rgba(148, 163, 184, 0.15);
-}
-
-body.theme-dark .vendas-page .filters-panel-top,
-body.theme-dark .vendas-page .filters-controls,
-body.theme-dark .vendas-page .filters-controls span {
-  color: #e2e8f0;
-}
-
-body.theme-dark .vendas-page .filters-panel-top {
-  border-color: rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.8);
-  padding: 0.35rem 0.5rem;
-  border-radius: 10px;
-}
-
-body.theme-dark .vendas-page .btn-toggle-filtros {
-  color: #e2e8f0;
-}
-
-body.theme-dark .vendas-page .header-actions .btn {
-  color: #e0e7ff !important;
-}
-
-body.theme-dark .vendas-page .header-actions .btn:hover {
-  background: rgba(79, 70, 229, 0.25) !important;
-  border-color: rgba(165, 180, 252, 0.4) !important;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
-}
-
-body.theme-dark .vendas-page .filter-action-buttons .btn {
-  color: #e2e8f0 !important;
-  border-color: transparent !important;
-}
-
-body.theme-dark .vendas-page .filter-action-buttons .btn:hover {
-  background: rgba(79, 70, 229, 0.25) !important;
-  border-color: rgba(165, 180, 252, 0.4) !important;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
-}
-
-body.theme-dark .vendas-page .btn-toggle-filtros .filters-count {
-  background: rgba(99, 102, 241, 0.25);
-  color: #c7d2fe;
-}
-
-body.theme-dark .vendas-page .page-header h2,
-body.theme-dark .vendas-page .page-description,
-body.theme-dark .vendas-page .filter-group label,
-body.theme-dark .vendas-page .vendas-summary .summary-item,
-body.theme-dark .vendas-page .page-info {
-  color: #e2e8f0;
-}
-
-body.theme-dark .vendas-page .vendas-summary {
-  background: rgba(79, 70, 229, 0.2);
-  border-color: rgba(99, 102, 241, 0.3);
-}
-
-body.theme-dark .vendas-page .form-control {
-  background: #1e293b;
-  border-color: rgba(148, 163, 184, 0.4);
-  color: #f8fafc;
-}
-
-body.theme-dark .vendas-page .form-control::placeholder {
-  color: rgba(226, 232, 240, 0.6);
-}
-
-body.theme-dark .vendas-page .vendas-table {
-  color: #e2e8f0;
-}
-
-body.theme-dark .vendas-page .vendas-table thead {
-  background: #1e293b;
-}
-
-body.theme-dark .vendas-page .vendas-table th,
-body.theme-dark .vendas-page .vendas-table td {
-  border-bottom-color: rgba(148, 163, 184, 0.2);
-}
-
-body.theme-dark .vendas-page .vendas-table th.sortable.sorted {
-  color: #93c5fd;
-}
-
-body.theme-dark .vendas-page .vendas-table tbody tr:hover {
-  background-color: rgba(148, 163, 184, 0.1);
-}
-
-body.theme-dark .vendas-page .state-card {
-  color: #f8fafc;
-}
-
-body.theme-dark .vendas-page .vendas-table tbody tr.row-selected {
-  background-color: rgba(59, 130, 246, 0.2);
-}
-
-body.theme-dark .vendas-page .filter-chip {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.4);
-  color: #dbeafe;
-}
-
-body.theme-dark .vendas-page .chip-remove {
-  color: #cbd5f5;
-}
-
-body.theme-dark .vendas-page .chip-remove:hover {
-  color: #ffffff;
-}
-
-body.theme-dark .vendas-page .btn.btn-imprimir {
-  background: #2563eb;
-}
-
-body.theme-dark .vendas-page .btn.btn-analise-valores {
-  background: #2563eb;
-}
-
-body.theme-dark .vendas-page .btn.btn-fechar {
-  background: #15803d;
-}
-
-body.theme-dark .vendas-page .btn.btn-cancelar-fechamento {
-  background: #ea580c;
-}
-
-body.theme-dark .vendas-page .btn.btn-atualizar-valor-compra {
-  background: #7c3aed;
-}
-
 .loading .spinner,
 .state-card .spinner {
   width: 36px;
@@ -822,7 +665,6 @@ body.theme-dark .vendas-page .btn.btn-atualizar-valor-compra {
   cursor: not-allowed;
 }
 
-/* Desabilitar todas as ações quando processamento estiver ativo */
 .vendas-page:has(.processing-overlay) .sortable {
   pointer-events: none;
   opacity: 0.6;
@@ -852,11 +694,6 @@ body.theme-dark .vendas-page .btn.btn-atualizar-valor-compra {
   border-top: 4px solid #2563eb;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 .confirmation-modal-overlay {
@@ -1063,52 +900,6 @@ body.theme-dark .vendas-page .btn.btn-atualizar-valor-compra {
   color: #cbd5f5;
 }
 
-body.theme-dark .vendas-page .confirmation-modal {
-  background: #0f172a;
-  border-color: rgba(148, 163, 184, 0.3);
-  color: #f8fafc;
-}
-
-body.theme-dark .vendas-page .confirmation-modal .modal-header,
-body.theme-dark .vendas-page .confirmation-modal .modal-footer {
-  border-color: rgba(148, 163, 184, 0.2);
-}
-
-body.theme-dark .vendas-page .confirmation-modal .warning-text {
-  color: #fbbf24;
-}
-
-body.theme-dark .vendas-page .confirmation-modal .close-btn {
-  color: #cbd5f5;
-}
-
-/* Modal Confirmar Fechamento - modo escuro (vendas-page) */
-body.theme-dark .vendas-page .fechamento-modal .modal-body,
-body.theme-dark .vendas-page .fechamento-modal .modal-body p {
-  color: #e2e8f0;
-}
-body.theme-dark .vendas-page .fechamento-modal .modal-body strong {
-  color: #f8fafc;
-}
-body.theme-dark .vendas-page .fechamento-modal .form-field label {
-  color: #e2e8f0;
-}
-body.theme-dark .vendas-page .fechamento-modal .form-field .campo {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: rgba(148, 163, 184, 0.4);
-  color: #e2e8f0;
-}
-body.theme-dark .vendas-page .fechamento-modal .modal-header h3 {
-  color: #f8fafc;
-}
-body.theme-dark .vendas-page .fechamento-modal .btn-confirmar-fechamento-modal {
-  background: #2563eb;
-  color: #fff;
-}
-body.theme-dark .vendas-page .fechamento-modal .btn-confirmar-fechamento-modal:hover:not(:disabled) {
-  background: #3b82f6;
-}
-
 /* Modal fechamento fora de .vendas-page (sibling) - modo escuro obrigatório */
 body.theme-dark .fechamento-modal,
 body.theme-dark .confirmation-modal.fechamento-modal {
@@ -1160,22 +951,6 @@ body.theme-dark .fechamento-modal .btn-confirmar-fechamento-modal,
 body.theme-dark .confirmation-modal.fechamento-modal .btn-confirmar-fechamento-modal {
   background: #2563eb !important;
   color: #fff;
-}
-
-body.theme-dark .vendas-page .mass-baixa-modal .form-field label {
-  color: #e2e8f0;
-}
-
-body.theme-dark .vendas-page .mass-baixa-modal .form-field .campo,
-body.theme-dark .vendas-page .mass-baixa-modal .form-field select,
-body.theme-dark .vendas-page .mass-baixa-modal .form-field textarea {
-  background: rgba(15, 23, 42, 0.8);
-  border-color: rgba(148, 163, 184, 0.4);
-  color: #e2e8f0;
-}
-
-body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
-  color: #cbd5f5;
 }
 
 .context-menu-overlay {
@@ -1237,7 +1012,6 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   background: rgba(148, 163, 184, 0.2);
 }
 
-/* Estilos para o modal de filtros */
 .modal-filtros {
   width: 90%;
   max-width: 1000px;
@@ -1271,7 +1045,6 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   min-width: 0;
 }
 
-/* Mesma altura: Data da Venda (esquerda) = container Data de Fechamento (direita) */
 .filters-grid > .filter-group.date-range-field {
   display: flex;
   flex-direction: column;
@@ -1283,7 +1056,6 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   min-height: 0;
 }
 
-/* Container: checkbox "Vendas sem Fechamento" + Data de Fechamento, ao lado de Data da Venda */
 .filters-grid .fechamento-container {
   grid-column: span 2;
   min-width: 0;
@@ -1308,17 +1080,11 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   padding: 0;
 }
 
-/* Melhorar visualização do componente de data no modal */
-.filters-grid .filter-group.date-range-field {
-  padding: 0;
-}
-
 .filters-grid .filter-group.date-range-field .date-range-filter {
   margin: 0;
   width: 100%;
 }
 
-/* Estilizar multi-select dropdown */
 .filters-grid .filter-group app-multi-select-dropdown {
   width: 100%;
   position: relative;
@@ -1340,13 +1106,12 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   gap: var(--espacamento-xs);
 }
 
-/* Melhorias na área de filtros aplicados */
 .applied-filters-container {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex: 1;
-  min-width: 0; /* Permite que o container encolha */
+  min-width: 0;
   position: relative;
 }
 
@@ -1380,7 +1145,6 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   overflow-y: hidden;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  /* Esconder scrollbar mas manter funcionalidade */
   scrollbar-width: thin;
   scrollbar-color: #c7d2fe transparent;
 }
@@ -1400,7 +1164,7 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
 
 .applied-filters-list {
   display: flex;
-  flex-wrap: nowrap; /* Não quebrar linha */
+  flex-wrap: nowrap;
   gap: 0.5rem;
   padding: 0.25rem 0;
 }
@@ -1508,7 +1272,6 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   font-size: 0.75rem;
 }
 
-/* Responsividade */
 @media (max-width: 768px) {
   .applied-filters-container {
     flex-direction: column;
@@ -1526,7 +1289,6 @@ body.theme-dark .vendas-page .mass-baixa-modal .modal-body p {
   }
 }
 
-/* Dark Theme Styles */
 :host-context(body.theme-dark) .filters-panel-top {
   background: #1e293b;
   border-color: #334155;
