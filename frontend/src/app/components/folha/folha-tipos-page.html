@@ -1,0 +1,66 @@
+<div class="folha-lista-container folha-tipos">
+  @if (!pode().r) {
+    <div class="alert alert-error">Você não possui permissão para visualizar tipos (folha-tipo:read).</div>
+  } @else {
+    <section class="filters">
+      @if (pode().c) {
+        <button type="button" class="btn btn-novo" (click)="irNovo()" [disabled]="carregando">Novo tipo</button>
+      }
+    </section>
+
+    @if (carregando) {
+      <div class="loading">Carregando tipos…</div>
+    } @else {
+      <div class="table-container">
+        <table class="folha-data-table">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Ordem</th>
+              <th>Ativo</th>
+              <th>Criado em</th>
+              @if (pode().u || pode().d) {
+                <th>Ações</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of lista; track t.id) {
+              <tr>
+                <td>{{ t.descricao }}</td>
+                <td>{{ t.ordenacao }}</td>
+                <td>
+                  <span class="folha-badge-ativo" [class.sim]="t.ativo" [class.nao]="!t.ativo">{{
+                    t.ativo ? 'Sim' : 'Não'
+                  }}</span>
+                </td>
+                <td>{{ formatData(t.criadoEm) }}</td>
+                @if (pode().u || pode().d) {
+                  <td class="action-buttons">
+                    @if (pode().u) {
+                      <button type="button" class="btn btn-sm btn-editar" (click)="irEditar(t)">Editar</button>
+                      <button
+                        type="button"
+                        [ngClass]="t.ativo ? 'btn btn-sm btn-cancelar' : 'btn btn-sm btn-baixa'"
+                        (click)="alternarAtivo(t)">
+                        {{ t.ativo ? 'Inativar' : 'Ativar' }}
+                      </button>
+                    }
+                    @if (pode().d) {
+                      <button type="button" class="btn btn-sm btn-excluir" (click)="excluir(t)">Excluir</button>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+            @if (lista.length === 0) {
+              <tr class="no-data">
+                <td [attr.colspan]="pode().u || pode().d ? 5 : 4">Nenhum tipo cadastrado.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

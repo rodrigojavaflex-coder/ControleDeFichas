@@ -74,11 +74,19 @@ export class AuditoriaInterceptor implements NestInterceptor {
     // Capturar dados anteriores para UPDATE/DELETE antes da operação
     let previousDataPromise: Promise<any> | null = null;
     const method = request.method;
-    const entityId = request.params?.id;
+    const pathOnly = request.url.split("?")[0];
+    const earlyEntityType = this.extractEntityTypeFromPath(pathOnly);
+    const earlyEntityId = this.extractEntityId(request, null, earlyEntityType);
 
-    if ((method === 'PUT' || method === 'PATCH' || method === 'DELETE') && entityId && userId) {
-      const { action, entityType } = this.determineAuditAction(request, handler, className, null);
-      previousDataPromise = this.capturePreviousData(entityType, entityId);
+    if (
+      (method === "PUT" || method === "PATCH" || method === "DELETE") &&
+      earlyEntityId &&
+      userId
+    ) {
+      previousDataPromise = this.capturePreviousData(
+        earlyEntityType,
+        earlyEntityId,
+      );
     }
 
     return next.handle().pipe(
@@ -95,7 +103,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
           const shouldAuditConfig = await this.shouldAuditAction(action, entityType);
 
           if (shouldAudit && shouldAuditConfig && userId) {
-            const entityId = this.extractEntityId(request, response);
+            const entityId = this.extractEntityId(request, response, entityType);
             
             // Capturar dados anteriores se necessário
             let previousData = null;
@@ -382,6 +390,23 @@ export class AuditoriaInterceptor implements NestInterceptor {
 
     if (segments.length === 0) return "unknown";
 
+    /** Congelar / liberar capa (`cleanPath` é relativo a `/api/`, sem barra inicial — ex.: `folha/capas/…`) */
+    if (/^folha\/capas\/[^/]+\/(congelar|liberar)$/i.test(cleanPath)) {
+      return 'folha_capa';
+    }
+
+    /** Lançamentos de folha: itens da capa usam tabela `folha_item` na auditoria */
+    if (/^folha\/capas\/[^/]+\/itens/i.test(cleanPath)) {
+      return 'folha_item';
+    }
+
+    if (/^folha\/cargos(\/|$)/i.test(cleanPath)) {
+      return 'folha_cargo';
+    }
+    if (/^folha\/setores(\/|$)/i.test(cleanPath)) {
+      return 'folha_setor';
+    }
+
     const pathSegment = segments[0].toLowerCase();
     
     // ✅ ESCALÁVEL: Usa descoberta automática
@@ -413,10 +438,40 @@ export class AuditoriaInterceptor implements NestInterceptor {
   /**
    * Extrai o ID da entidade
    */
-  private extractEntityId(request: Request, response: any): string | undefined {
-    // Primeiro, verificar parâmetros da URL
-    if (request.params?.id) {
-      return request.params.id;
+  private extractEntityId(
+    request: Request,
+    response: any,
+    entityType?: string,
+  ): string | undefined {
+    const method = request.method;
+    const p = request.params as Record<string, string | undefined>;
+
+    /** POST `/folha/capas/:id/itens`: resposta é `FolhaCapaDetalheDto` — ID do novo item pela verba (+ única por capa). */
+    if (
+      entityType === 'folha_item' &&
+      method === 'POST' &&
+      response?.capa?.itens?.length &&
+      request.body?.folhaVerbaId &&
+      typeof request.body.folhaVerbaId === 'string'
+    ) {
+      const vb = request.body.folhaVerbaId as string;
+      const item = response.capa.itens.find(
+        (i: { id?: string; folhaVerba?: { id?: string }; folhaVerbaId?: string }) =>
+          i?.folhaVerba?.id === vb || i?.folhaVerbaId === vb,
+      );
+      if (item?.id) {
+        return String(item.id);
+      }
+    }
+
+    if (p?.itemId) {
+      return p.itemId;
+    }
+    if (p?.id) {
+      return p.id;
+    }
+    if (p?.capaId) {
+      return p.capaId;
     }
 
     // Depois verificar na resposta (para operações CREATE)
@@ -472,10 +527,16 @@ export class AuditoriaInterceptor implements NestInterceptor {
       case AuditAction.CREATE:
         // Para CREATE, primeiro tentar response, depois buscar do banco se tiver ID
         if (response && typeof response === 'object') {
-          // Se response tem ID, buscar objeto completo do banco
-          if (response.id) {
+          const createRecordId =
+            response.id ??
+            response.data?.id ??
+            (entityType === 'folha_item' && entityId ? entityId : undefined);
+          if (createRecordId) {
             try {
-              const completeObject = await this.fetchCompleteObject(entityType, response.id);
+              const completeObject = await this.fetchCompleteObject(
+                entityType,
+                createRecordId,
+              );
               if (completeObject) {
                 return { newData: this.sanitizeData(completeObject) };
               }

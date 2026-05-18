@@ -1,0 +1,654 @@
+<div class="folha-lancamentos">
+  @if (!pode().r) {
+    <div class="alert alert-error">Sem permissão (folha-lancamento:read).</div>
+  } @else {
+    <section
+      class="filters folha-controle-form-line folha-lancamentos-toolbar-card"
+      aria-label="Unidade, competência, tipo de folha e situação do lote"
+    >
+      <div class="folha-lancamentos-toolbar-filters">
+        <div class="filter-group">
+          <label for="lac-un">Unidade</label>
+          <select
+            id="lac-un"
+            class="form-control"
+            [(ngModel)]="unidadeFiltro"
+            (ngModelChange)="quandoMudaCompetencia()"
+            [disabled]="carregando || campoUnidadeDesabilitado"
+          >
+            @if (!campoUnidadeDesabilitado) {
+              <option [ngValue]="''">Todas</option>
+            }
+            @for (uu of unidadesVisiveisParaSelect; track uu) {
+              <option [ngValue]="uu">{{ uu }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group folha-controle-filter-competencia">
+          <label for="lac-nav-comp">Competência</label>
+          <div
+            id="lac-nav-comp"
+            class="folha-controle-competencia-nav"
+            role="group"
+            aria-label="Navegar competência (mês e ano)"
+          >
+            <button
+              type="button"
+              class="folha-controle-nav-btn"
+              (click)="mesAnterior()"
+              [disabled]="carregando"
+              title="Ir para o mês anterior"
+              aria-label="Ir para o mês anterior"
+            >
+              Voltar
+            </button>
+            <span class="folha-controle-competencia-atual" aria-live="polite">{{ referenciaCompetencia }}</span>
+            <button
+              type="button"
+              class="folha-controle-nav-btn"
+              (click)="proximoMes()"
+              [disabled]="carregando"
+              title="Ir para o próximo mês"
+              aria-label="Ir para o próximo mês"
+            >
+              Próximo
+            </button>
+          </div>
+        </div>
+        <div class="filter-group folha-controle-filter-tipo">
+          <label for="lac-tipo">Tipo de folha</label>
+          <select
+            id="lac-tipo"
+            class="form-control"
+            [(ngModel)]="tipoId"
+            (ngModelChange)="quandoMudaCompetencia()"
+            [disabled]="carregando"
+          >
+            @for (t of tipos; track t.id) {
+              <option [ngValue]="t.id">{{ t.descricao }}</option>
+            }
+          </select>
+        </div>
+        <button
+          type="button"
+          class="btn btn-success folha-lancamentos-btn-relatorio-geral"
+          [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
+          (click)="imprimirRelatorioFolhaGeralConsolidado()"
+          title="Relatório de Folha Geral — impressão ou PDF (exige unidade e tipo de folha)"
+        >
+          Folha
+        </button>
+        <button
+          type="button"
+          class="btn btn-success folha-lancamentos-btn-relatorio-evento"
+          [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
+          (click)="imprimirRelatorioFolhaPorEvento()"
+          title="Folha Geral por evento — impressão ou PDF (exige unidade e tipo de folha)"
+        >
+          Folha por Evento
+        </button>
+        <button
+          type="button"
+          class="btn btn-success folha-lancamentos-btn-recibo-geral"
+          [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
+          (click)="imprimirReciboGeralTodasCapas()"
+          title="Recibo geral — um recibo por funcionário, ordenado por nome (exige unidade e tipo de folha)"
+        >
+          Recibo Geral
+        </button>
+        @if (pode().c) {
+          <button
+            type="button"
+            class="btn btn-primary folha-lancamentos-btn-carregar"
+            [disabled]="!podeCarregarTopo()"
+            (click)="carregarCapasNaCompetencia()"
+          >
+            Carregar
+          </button>
+        }
+      </div>
+
+      <div class="folha-lancamentos-toolbar-mensagens" aria-live="polite">
+        @if (precisaEscolherUnidadeParaLancar()) {
+          <div class="alert alert-info folha-lancamentos-alert-inline" role="status">
+            Esta tela só opera por <strong>unidade específica</strong> — inclusive o botão <strong>Carregar</strong>.
+          </div>
+        }
+
+        @if (statusLote) {
+          @if (!statusLote.registrada) {
+            <div class="alert alert-warning folha-lancamentos-alert-inline" role="status">
+              Abertura não registrada nesta competência. Registre em
+              <strong>Folha › Controle das competências</strong> antes de criar ou editar lançamentos (RN-006). O botão
+              <strong>Carregar</strong> fica desabilitado.
+            </div>
+          } @else if (statusLote.fechado) {
+            <div class="alert alert-error folha-lancamentos-alert-inline" role="status">
+              Este lote está fechado. Não é possível alterar lançamentos nesta competência —
+              <strong>Carregar</strong> fica desabilitado.
+            </div>
+          } @else {
+            <div class="alert alert-info folha-lancamentos-alert-inline" role="status">
+              Competência aberta para lançamentos.
+            </div>
+          }
+        }
+      </div>
+    </section>
+
+    <section class="folha-lancamentos-funcionarios-panel" aria-label="Funcionários">
+      @if (capasNaCompetencia.length === 0) {
+        <p class="folha-lancamentos-funcionarios-vazio" role="status">
+          @if (carregando) {
+            Carregando…
+          } @else {
+            Clique em <strong>Carregar</strong> quando a competência estiver aberta para obter ou criar as folhas da competência.
+          }
+        </p>
+      } @else {
+        <div class="folha-lancamentos-funcionarios-table-wrap" role="region" aria-label="Resumo por funcionário">
+          <div class="folha-lancamentos-func-header-row" aria-hidden="true">
+            <span class="folha-lancamentos-func-col-nome">Funcionário</span>
+            <span class="folha-lancamentos-func-col-num">Receitas</span>
+            <span class="folha-lancamentos-func-col-num">Despesas</span>
+            <span class="folha-lancamentos-func-col-num">Líquido</span>
+          </div>
+          @for (row of capasNaCompetencia; track row.capa.id) {
+            <article
+              class="folha-lancamentos-funcionario-card"
+              [class.folha-lancamentos-funcionario-card-expandido]="detalhe?.capa?.id === row.capa.id"
+            >
+              <button
+                type="button"
+                class="folha-lancamentos-funcionario-row"
+                [class.folha-lancamentos-funcionario-row-ativo]="capaEhSelecionadaNaGrade(row)"
+                [attr.aria-expanded]="detalhe?.capa?.id === row.capa.id"
+                [attr.aria-controls]="'lac-func-card-body-' + row.capa.id"
+                [attr.aria-label]="ariaLabelListaCapa(row)"
+                (click)="selecionarCapaParaEdicao(row)"
+              >
+                <span class="folha-lancamentos-func-col-nome">{{ nomeParaCapa(row) }}</span>
+                <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(row.totalReceitas) }}</span>
+                <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(row.totalDespesas) }}</span>
+                <span class="folha-lancamentos-func-col-num folha-lancamentos-func-col-liquido">{{
+                  moedaListaCapa(row.liquido)
+                }}</span>
+              </button>
+
+              @if (detalhe && detalhe.capa.id === row.capa.id) {
+                <div
+                  class="folha-lancamentos-funcionario-card-edit"
+                  [id]="'lac-func-card-body-' + row.capa.id"
+                  role="region"
+                  [attr.aria-label]="'Edição da folha de ' + nomeParaCapa(row)"
+                >
+                  <header class="folha-lancamentos-card-func-meta" aria-label="Identificação do funcionário na competência">
+                    <div class="folha-lancamentos-card-func-meta-linha">
+                      <span class="folha-lancamentos-card-func-meta-nome">{{ nomeParaCapa(row) }}</span>
+                      <span class="folha-lancamentos-card-func-meta-chip" title="Unidade">{{ row.capa.funcionario.unidade }}</span>
+                      <span class="folha-lancamentos-card-func-meta-chip folha-lancamentos-card-func-meta-competencia">{{
+                        referenciaCompetencia
+                      }}</span>
+                      <span class="folha-lancamentos-card-func-meta-chip" title="Cargo">{{
+                        row.capa.funcionario.cargo?.descricao?.trim() || '—'
+                      }}</span>
+                    </div>
+                  </header>
+
+                  <div class="folha-lancamentos-func-grid-totais-wrap">
+                    <div class="folha-lancamentos-func-grid-scroll folha-lancamentos-mov-colunas-duplex">
+                      <div
+                        class="folha-lancamentos-mov-panel folha-lancamentos-mov-panel-receitas"
+                        [class.folha-lancamentos-mov-panel--com-acoes]="mostrarColunaAcoesLinha()"
+                        role="region"
+                        [attr.aria-labelledby]="'lac-rec-heading-' + row.capa.id"
+                      >
+                        <div class="folha-lancamentos-mov-panel-cabeca">
+                          <div class="folha-lancamentos-mov-panel-titulo-grupo">
+                            <h3 class="folha-lancamentos-mov-panel-titulo" [id]="'lac-rec-heading-' + row.capa.id">Receitas</h3>
+                            @if (podeIncluirEventoPorModal()) {
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-novo"
+                                [disabled]="carregando || salvandoModalLancamento"
+                                (click)="abrirModalInclusao(FolhaMovimentoTipo.RECEITA)"
+                              >
+                                Incluir
+                              </button>
+                            }
+                          </div>
+                        </div>
+                        <div class="folha-lancamentos-mov-panel-list">
+                          @for (it of itensCapaPorMovimento(FolhaMovimentoTipo.RECEITA); track it.id) {
+                            <div
+                              class="folha-lancamentos-evento-linha"
+                              role="group"
+                              [attr.aria-label]="'Receita — ' + it.folhaVerba.descricao"
+                            >
+                              <div class="folha-lancamentos-ev-col-ev">{{ it.folhaVerba.descricao }}</div>
+                              <div class="folha-lancamentos-ev-col-ref">{{ quantidadeSomenteLeitura(it) }}</div>
+                              <div class="folha-lancamentos-ev-col-valor">{{ moedaListaCapa(it.valor) }}</div>
+                              @if (mostrarColunaAcoesLinha()) {
+                                <div class="folha-lancamentos-ev-col-acoes">
+                                  <div class="folha-lancamentos-func-acoes-buttons" role="group" aria-label="Ações do lançamento">
+                                    @if (podeBotaoEditarItem()) {
+                                      <button type="button" class="btn btn-sm btn-editar" (click)="abrirModalEdicaoItem(it)">
+                                        Editar
+                                      </button>
+                                    }
+                                    @if (podeAuditarLinhaEvento()) {
+                                      <button
+                                        type="button"
+                                        class="btn btn-sm btn-auditoria"
+                                        (click)="abrirAuditoriaFolhaItem(it.id)"
+                                        title="Histórico de alterações deste lançamento"
+                                      >
+                                        Auditoria
+                                      </button>
+                                    }
+                                    @if (podeRemoverItem()) {
+                                      <button type="button" class="btn btn-sm btn-excluir" (click)="solicitarRemoverItem(it.id)">Remover</button>
+                                    }
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          }
+                          <div class="folha-lancamentos-mov-panel-total-divider" aria-hidden="true"></div>
+                          <div
+                            class="folha-lancamentos-evento-linha folha-lancamentos-evento-linha--total folha-lancamentos-evento-linha--total-receitas"
+                            role="status"
+                            [attr.aria-label]="
+                              'Total de receitas desta folha: ' + moedaListaCapa(detalhe.totalReceitas)
+                            "
+                          >
+                            <div class="folha-lancamentos-ev-col-ev folha-lancamentos-ev-col-ev--linha-total">
+                              <span class="folha-lancamentos-painel-total-rotulo">Receita total</span>
+                            </div>
+                            <div class="folha-lancamentos-ev-col-ref folha-lancamentos-ev-col-ref--linha-total" aria-hidden="true">
+                              —
+                            </div>
+                            <div class="folha-lancamentos-ev-col-valor folha-lancamentos-ev-col-valor--linha-total">{{
+                              moedaListaCapa(detalhe.totalReceitas)
+                            }}</div>
+                            @if (mostrarColunaAcoesLinha()) {
+                              <div class="folha-lancamentos-ev-col-acoes folha-lancamentos-ev-col-acoes--total-empty" aria-hidden="true"></div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        class="folha-lancamentos-mov-panel folha-lancamentos-mov-panel-despesas"
+                        [class.folha-lancamentos-mov-panel--com-acoes]="mostrarColunaAcoesLinha()"
+                        role="region"
+                        [attr.aria-labelledby]="'lac-desp-heading-' + row.capa.id"
+                      >
+                        <div class="folha-lancamentos-mov-panel-cabeca">
+                          <div class="folha-lancamentos-mov-panel-titulo-grupo">
+                            <h3 class="folha-lancamentos-mov-panel-titulo" [id]="'lac-desp-heading-' + row.capa.id">Despesas</h3>
+                            @if (podeIncluirEventoPorModal()) {
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-novo"
+                                [disabled]="carregando || salvandoModalLancamento"
+                                (click)="abrirModalInclusao(FolhaMovimentoTipo.DESPESA)"
+                              >
+                                Incluir
+                              </button>
+                            }
+                          </div>
+                        </div>
+                        <div class="folha-lancamentos-mov-panel-list">
+                          @for (it of itensCapaPorMovimento(FolhaMovimentoTipo.DESPESA); track it.id) {
+                            <div
+                              class="folha-lancamentos-evento-linha"
+                              role="group"
+                              [attr.aria-label]="'Despesa — ' + it.folhaVerba.descricao"
+                            >
+                              <div class="folha-lancamentos-ev-col-ev">{{ it.folhaVerba.descricao }}</div>
+                              <div class="folha-lancamentos-ev-col-ref">{{ quantidadeSomenteLeitura(it) }}</div>
+                              <div class="folha-lancamentos-ev-col-valor">{{ moedaListaCapa(it.valor) }}</div>
+                              @if (mostrarColunaAcoesLinha()) {
+                                <div class="folha-lancamentos-ev-col-acoes">
+                                  <div class="folha-lancamentos-func-acoes-buttons" role="group" aria-label="Ações do lançamento">
+                                    @if (podeBotaoEditarItem()) {
+                                      <button type="button" class="btn btn-sm btn-editar" (click)="abrirModalEdicaoItem(it)">
+                                        Editar
+                                      </button>
+                                    }
+                                    @if (podeAuditarLinhaEvento()) {
+                                      <button
+                                        type="button"
+                                        class="btn btn-sm btn-auditoria"
+                                        (click)="abrirAuditoriaFolhaItem(it.id)"
+                                        title="Histórico de alterações deste lançamento"
+                                      >
+                                        Auditoria
+                                      </button>
+                                    }
+                                    @if (podeRemoverItem()) {
+                                      <button type="button" class="btn btn-sm btn-excluir" (click)="solicitarRemoverItem(it.id)">Remover</button>
+                                    }
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          }
+                          <div class="folha-lancamentos-mov-panel-total-divider" aria-hidden="true"></div>
+                          <div
+                            class="folha-lancamentos-evento-linha folha-lancamentos-evento-linha--total folha-lancamentos-evento-linha--total-despesas"
+                            role="status"
+                            [attr.aria-label]="
+                              'Total de despesas desta folha: ' + moedaListaCapa(detalhe.totalDespesas)
+                            "
+                          >
+                            <div class="folha-lancamentos-ev-col-ev folha-lancamentos-ev-col-ev--linha-total">
+                              <span class="folha-lancamentos-painel-total-rotulo">Despesa total</span>
+                            </div>
+                            <div class="folha-lancamentos-ev-col-ref folha-lancamentos-ev-col-ref--linha-total" aria-hidden="true">
+                              —
+                            </div>
+                            <div class="folha-lancamentos-ev-col-valor folha-lancamentos-ev-col-valor--linha-total">{{
+                              moedaListaCapa(detalhe.totalDespesas)
+                            }}</div>
+                            @if (mostrarColunaAcoesLinha()) {
+                              <div class="folha-lancamentos-ev-col-acoes folha-lancamentos-ev-col-acoes--total-empty" aria-hidden="true"></div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <aside
+                      class="folha-lancamentos-itens-totais folha-lancamentos-itens-totais--lateral"
+                      role="group"
+                      aria-label="Totais e congelamento da folha"
+                    >
+                      @if (detalhe.capa.congelada) {
+                        <div class="alert alert-warning folha-lancamentos-capa-congelada-msg" role="status">
+                          Folha <strong>congelada</strong> — não é possível alterar eventos nem o cadastro do funcionário até
+                          <strong>Liberar</strong>.
+                        </div>
+                      }
+                      <div class="folha-lancamentos-itens-congelar-slot">
+                        @if (podeImprimirRelatorioCapa()) {
+                          <button
+                            type="button"
+                            class="btn btn-success folha-lancamentos-btn-relatorio-capa"
+                            (click)="imprimirRelatorioCapaFolha()"
+                            title="Abrir recibo de pagamento para impressão ou PDF"
+                          >
+                            Recibo
+                          </button>
+                        }
+                        @if (podeCongelarCapa()) {
+                          <button
+                            type="button"
+                            class="btn btn-secondary folha-lancamentos-btn-congelar"
+                            [disabled]="salvandoCongelacaoCapa"
+                            (click)="solicitarCongelarCapa()"
+                            title="Impedir alterações nesta folha e no cadastro do funcionário até liberar"
+                          >
+                            @if (salvandoCongelacaoCapa) {
+                              Salvando…
+                            } @else {
+                              Congelar
+                            }
+                          </button>
+                        } @else if (podeLiberarCapa()) {
+                          <button
+                            type="button"
+                            class="btn btn-outline-primary folha-lancamentos-btn-liberar"
+                            [disabled]="salvandoCongelacaoCapa"
+                            (click)="solicitarLiberarCapa()"
+                            title="Permitir novamente alterar eventos e o cadastro do funcionário"
+                          >
+                            @if (salvandoCongelacaoCapa) {
+                              Salvando…
+                            } @else {
+                              Liberar
+                            }
+                          </button>
+                        }
+                      </div>
+                      <div class="folha-lancamentos-itens-total-linha folha-lancamentos-itens-total-liquido">
+                        <span class="folha-lancamentos-itens-total-rotulo">Líquido</span>
+                        <span class="folha-lancamentos-itens-total-valor">{{
+                          moedaListaCapa(detalhe.liquido)
+                        }}</span>
+                      </div>
+                    </aside>
+                  </div>
+                </div>
+              }
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  @if (modalInclusaoAberto && modalInclusaoTipo !== null) {
+    <div class="folha-lancamentos-item-modal-backdrop" role="presentation">
+      <div
+        class="folha-lancamentos-item-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lac-modal-inc-title"
+      >
+        <header class="folha-lancamentos-item-modal-head">
+          <h2 id="lac-modal-inc-title" class="folha-lancamentos-item-modal-title folha-lancamentos-item-modal-title--com-tipo">
+            <span class="folha-lancamentos-item-modal-title-texto">Incluir lançamento</span>
+            @if (modalInclusaoTipo === FolhaMovimentoTipo.RECEITA) {
+              <span
+                class="folha-lancamentos-item-modal-tipo-pill folha-lancamentos-item-modal-tipo-pill--receita"
+              >
+                Receita
+              </span>
+            } @else {
+              <span
+                class="folha-lancamentos-item-modal-tipo-pill folha-lancamentos-item-modal-tipo-pill--despesa"
+              >
+                Despesa
+              </span>
+            }
+          </h2>
+        </header>
+        <div class="folha-lancamentos-item-modal-body">
+          <div class="folha-lancamentos-item-modal-field filter-group">
+            <label for="lac-modal-inc-verba">Evento</label>
+            <select
+              id="lac-modal-inc-verba"
+              class="form-control folha-lancamentos-func-select-evento"
+              [(ngModel)]="modalInclusaoVerbaId"
+              [disabled]="salvandoModalLancamento"
+            >
+              <option value="">— escolha —</option>
+              @for (vb of verbasListaPorMovimento(modalInclusaoTipo); track vb.id) {
+                <option [ngValue]="vb.id">{{ vb.descricao }}</option>
+              }
+            </select>
+          </div>
+          <div class="folha-lancamentos-item-modal-evento-resumo" aria-live="polite">
+            @if (descricaoVerbaSelecionadaModalInclusao) {
+              <span class="folha-lancamentos-item-modal-evento-nome-destaque">{{ descricaoVerbaSelecionadaModalInclusao }}</span>
+            } @else {
+              <span class="folha-lancamentos-item-modal-evento-placeholder">Escolha o evento acima.</span>
+            }
+          </div>
+          <div class="folha-lancamentos-item-modal-qtd-valor-row">
+            <div class="folha-lancamentos-item-modal-field filter-group">
+              <label for="lac-modal-inc-qtd">Referência</label>
+              <input
+                id="lac-modal-inc-qtd"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                class="form-control folha-lancamentos-func-input-qtd-ref"
+                [(ngModel)]="modalInclusaoQuantidadeTexto"
+                [disabled]="salvandoModalLancamento"
+              />
+            </div>
+            <div class="folha-lancamentos-item-modal-field filter-group">
+              <label for="lac-modal-inc-vl">Valor</label>
+              <input
+                id="lac-modal-inc-vl"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                class="form-control folha-lancamentos-func-input-valor-monetario"
+                [(ngModel)]="modalInclusaoValorTexto"
+                (blur)="formatarCampoValorModalInclusaoBlur()"
+                [disabled]="salvandoModalLancamento"
+              />
+            </div>
+          </div>
+        </div>
+        <footer class="folha-lancamentos-item-modal-actions">
+          <button
+            type="button"
+            class="btn btn-cancelar folha-lancamentos-item-modal-btn-footer"
+            (click)="fecharModalInclusao()"
+            [disabled]="salvandoModalLancamento"
+          >
+            Fechar
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar folha-lancamentos-item-modal-btn-footer"
+            (click)="confirmarModalInclusao()"
+            [disabled]="salvandoModalLancamento || carregando"
+          >
+            {{ salvandoModalLancamento ? 'Salvando…' : 'Incluir' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (modalEdicaoAberto && itemModalEdicaoId) {
+    <div class="folha-lancamentos-item-modal-backdrop" role="presentation">
+      <div
+        class="folha-lancamentos-item-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lac-modal-edit-title"
+      >
+        <header class="folha-lancamentos-item-modal-head">
+          <h2
+            id="lac-modal-edit-title"
+            class="folha-lancamentos-item-modal-title folha-lancamentos-item-modal-title--com-tipo folha-lancamentos-item-modal-title--edit"
+          >
+            <span class="folha-lancamentos-item-modal-title-texto">Editar lançamento</span>
+            @if (modalEdicaoMovimentoTipo === FolhaMovimentoTipo.RECEITA) {
+              <span
+                class="folha-lancamentos-item-modal-tipo-pill folha-lancamentos-item-modal-tipo-pill--receita folha-lancamentos-item-modal-tipo-pill--titulo-maiusculo"
+              >
+                Receita
+              </span>
+            } @else if (modalEdicaoMovimentoTipo === FolhaMovimentoTipo.DESPESA) {
+              <span
+                class="folha-lancamentos-item-modal-tipo-pill folha-lancamentos-item-modal-tipo-pill--despesa folha-lancamentos-item-modal-tipo-pill--titulo-maiusculo"
+              >
+                Despesa
+              </span>
+            }
+          </h2>
+        </header>
+        <div class="folha-lancamentos-item-modal-body">
+          <div class="folha-lancamentos-item-modal-evento-resumo" aria-live="polite">
+            <span class="folha-lancamentos-item-modal-evento-nome-destaque" title="Evento">{{ edicaoTituloEvento }}</span>
+          </div>
+          <div class="folha-lancamentos-item-modal-qtd-valor-row">
+            <div class="folha-lancamentos-item-modal-field filter-group">
+              <label for="lac-modal-ed-qtd">Referência</label>
+              <input
+                id="lac-modal-ed-qtd"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                class="form-control folha-lancamentos-func-input-qtd-ref"
+                [(ngModel)]="edicaoQuantidadeTexto"
+                [disabled]="salvandoModalLancamento"
+              />
+            </div>
+            <div class="folha-lancamentos-item-modal-field filter-group">
+              <label for="lac-modal-ed-vl">Valor</label>
+              <input
+                id="lac-modal-ed-vl"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                class="form-control folha-lancamentos-func-input-valor-monetario"
+                [(ngModel)]="edicaoValorTexto"
+                (blur)="formatarCampoValorModalEdicaoBlur()"
+                [disabled]="salvandoModalLancamento"
+              />
+            </div>
+          </div>
+        </div>
+        <footer class="folha-lancamentos-item-modal-actions">
+          <button
+            type="button"
+            class="btn btn-cancelar folha-lancamentos-item-modal-btn-footer"
+            (click)="fecharModalEdicao()"
+            [disabled]="salvandoModalLancamento"
+          >
+            Fechar
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar folha-lancamentos-item-modal-btn-footer"
+            (click)="salvarModalEdicao()"
+            [disabled]="salvandoModalLancamento || carregando"
+          >
+            {{ salvandoModalLancamento ? 'Salvando…' : 'Salvar' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (folhaItemAuditoriaEntidadeId) {
+    <app-historico-auditoria
+      [entidade]="'folha_item'"
+      [entidadeId]="folhaItemAuditoriaEntidadeId"
+      [fieldLabels]="folhaItemCampoAuditLabels"
+      [showModal]="true"
+      (modalClosed)="fecharAuditoriaFolhaItem()"
+    />
+  }
+
+  <app-confirmation-modal
+    [isVisible]="showRemoverItemModal"
+    title="Remover lançamento"
+    [message]="removerItemModalMensagem"
+    confirmText="Remover"
+    cancelText="Cancelar"
+    confirmVariant="danger"
+    (confirmed)="confirmarRemoverItemModal()"
+    (cancelled)="fecharRemoverItemModal()"
+  ></app-confirmation-modal>
+
+  <app-confirmation-modal
+    [isVisible]="showCongelarCapaModal"
+    title="Congelar esta folha?"
+    message="Não será possível alterar eventos nem o cadastro do funcionário até liberar."
+    confirmText="Congelar"
+    cancelText="Cancelar"
+    confirmVariant="danger"
+    (confirmed)="confirmarCongelarCapaModal()"
+    (cancelled)="fecharCongelarCapaModal()"
+  ></app-confirmation-modal>
+
+  <app-confirmation-modal
+    [isVisible]="showLiberarCapaModal"
+    title="Liberar folha"
+    message="Liberar esta folha para novas alterações?"
+    confirmText="Liberar"
+    cancelText="Cancelar"
+    confirmVariant="primary"
+    (confirmed)="confirmarLiberarCapaModal()"
+    (cancelled)="fecharLiberarCapaModal()"
+  ></app-confirmation-modal>
+</div>

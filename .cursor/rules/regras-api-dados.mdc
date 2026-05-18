@@ -1,0 +1,78 @@
+---
+description: Regras operacionais para API, contratos e persistencia de dados
+globs:
+  # Backend (NestJS) — módulos do NEST_ANGULAR
+  - "backend/src/modules/auditoria/**/*.ts"
+  - "backend/src/modules/auth/**/*.ts"
+  - "backend/src/modules/baixas/**/*.ts"
+  - "backend/src/modules/certificado/**/*.ts"
+  - "backend/src/modules/clientes/**/*.ts"
+  - "backend/src/modules/configuracao/**/*.ts"
+  - "backend/src/modules/ficha-tecnica/**/*.ts"
+  - "backend/src/modules/laudo/**/*.ts"
+  - "backend/src/modules/migracao/**/*.ts"
+  - "backend/src/modules/perfil/**/*.ts"
+  - "backend/src/modules/prescritores/**/*.ts"
+  - "backend/src/modules/sincronizacao/**/*.ts"
+  - "backend/src/modules/usuarios/**/*.ts"
+  - "backend/src/modules/vendas/**/*.ts"
+  - "backend/src/modules/vendedores/**/*.ts"
+  - "backend/src/common/**/*.ts"
+  - "backend/src/config/**/*.ts"
+  - "backend/src/data-source.ts"
+  - "backend/src/main.ts"
+  - "backend/src/app.module.ts"
+
+  # Agente Nest (Firebird/sync) — mesmas regras de contrato e validação
+  - "agent/src/**/*.ts"
+
+  # Banco e migracoes
+  - "backend/src/migrations/**/*.ts"
+
+  # Contratos consumidos no frontend
+  - "frontend/src/app/services/*.ts"
+  - "frontend/src/app/models/*.ts"
+
+  # Regras globais
+  - ".cursorrules"
+alwaysApply: true
+---
+
+# Regra de IA - API e Dados
+
+## Objetivo
+- Garantir consistencia de contratos, validacoes de entrada e integridade de dados.
+
+## Regras obrigatorias de API
+- Endpoints novos/alterados devem ter DTOs com `class-validator`.
+- Manter documentacao Swagger coerente (`@ApiProperty`, `@ApiResponse`) quando aplicavel.
+- Tipos de retorno explicitos em controllers/services.
+- Nao quebrar contrato sem alinhar impacto em consumidores (frontend e, quando aplicavel, `agent/`).
+- Mensagens de erro funcionais claras, sem vazar dados sensiveis.
+
+## Regras obrigatorias de banco
+- Mudanca estrutural exige migration reversivel (`up`/`down`).
+- Seguir convencoes: `snake_case`, constraints e indices coerentes.
+- Operacoes criticas/multiplos updates devem usar transacao quando necessario.
+- Evitar N+1 e revisar impacto de performance em consultas filtradas.
+
+## Consistencia de contratos
+- Mudou payload de API? Ajustar models/services consumidores.
+- Evitar divergencia de nomes de campos entre backend, frontend e endpoints expostos ao `agent/`.
+- Em caso de quebra inevitavel, registrar claramente estrategia de migracao.
+
+## Checklist obrigatorio por mudanca
+- Alterou endpoint? DTO + validacao + contrato revisados.
+- Alterou persistencia? Migration criada e revisada.
+- Alterou resposta da API? Models/services consumidores atualizados.
+- Validou cenarios de erro (4xx/5xx) e mensagens ao usuario.
+
+## Quando pedir confirmacao
+- Alteracao com potencial breaking change de contrato.
+- Alteracao de schema com impacto em dados existentes.
+- Duvida entre regra funcional documentada e implementacao atual.
+
+## Saida esperada nas respostas da IA
+- Informar endpoints/DTOs afetados.
+- Informar migrations criadas/alteradas.
+- Informar impactos de contrato para o frontend e, se aplicavel, para `agent/`.

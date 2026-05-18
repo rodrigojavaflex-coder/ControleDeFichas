@@ -1,0 +1,67 @@
+<div class="folha-entity-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar verba' : 'Nova verba' }}</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  }
+
+  @if (error && !loading) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (!loading) {
+    <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      @if (isEditMode && criadoEm) {
+        <div class="folha-readonly-meta">
+          Criado em: {{ formatMeta(criadoEm) }} — Atualizado em: {{ formatMeta(atualizadoEm) }}
+        </div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="vb-desc">Descrição *</label>
+        <input
+          id="vb-desc"
+          type="text"
+          class="form-control"
+          formControlName="descricao"
+          maxlength="200"
+          [class.error]="descricaoCtrl!.invalid && descricaoCtrl!.touched"
+          placeholder="Ex.: Salário, Vale transporte, INSS funcionário..."
+        />
+        @if (descricaoCtrl!.invalid && descricaoCtrl!.touched) {
+          <div class="error-message">Descrição obrigatória.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="vb-tipo">Tipo de movimento *</label>
+        <select id="vb-tipo" class="form-control" formControlName="tipoMovimento">
+          <option [ngValue]="TiposMov.RECEITA">Receita</option>
+          <option [ngValue]="TiposMov.DESPESA">Despesa</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input id="vb-ativo" type="checkbox" formControlName="ativo" />
+          <label class="form-label" for="vb-ativo" style="margin: 0">Ativo</label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancelar" [disabled]="isSubmitting" (click)="onCancel()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+          @if (!isSubmitting) {
+            {{ isEditMode ? 'Atualizar' : 'Cadastrar' }}
+          } @else {
+            Salvando...
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>

@@ -1,0 +1,75 @@
+<div class="folha-entity-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar tipo de folha' : 'Novo tipo de folha' }}</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  }
+
+  @if (error && !loading) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (!loading) {
+    <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      @if (isEditMode && criadoEm) {
+        <div class="folha-readonly-meta">
+          Criado em: {{ formatMeta(criadoEm) }} — Atualizado em: {{ formatMeta(atualizadoEm) }}
+        </div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="tp-desc">Descrição *</label>
+        <input
+          id="tp-desc"
+          type="text"
+          class="form-control"
+          formControlName="descricao"
+          maxlength="120"
+          [class.error]="descricaoCtrl!.invalid && descricaoCtrl!.touched"
+        />
+        @if (descricaoCtrl!.invalid && descricaoCtrl!.touched) {
+          <div class="error-message">Descrição obrigatória.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="tp-ord">Ordenação *</label>
+        <input id="tp-ord" type="number" min="0" class="form-control" formControlName="ordenacao" />
+        <div class="form-help">Número inteiro ≥ 0 — usado para exibição ordenada na lista.</div>
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input id="tp-ativo" type="checkbox" formControlName="ativo" />
+          <label class="form-label" for="tp-ativo" style="margin: 0">Ativo</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input id="tp-mensal" type="checkbox" formControlName="folhaMensal" />
+          <label class="form-label" for="tp-mensal" style="margin: 0">Folha mensal na competência</label>
+        </div>
+        <div class="form-help">
+          Quando marcado, a tela Lançamentos usa o botão <strong>Carregar</strong> para obter ou criar capas de todos os funcionários elegíveis da unidade (ativos,
+          sem demissão e admitidos até a competência).
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancelar" [disabled]="isSubmitting" (click)="onCancel()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+          @if (!isSubmitting) {
+            {{ isEditMode ? 'Atualizar' : 'Cadastrar' }}
+          } @else {
+            Salvando...
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>

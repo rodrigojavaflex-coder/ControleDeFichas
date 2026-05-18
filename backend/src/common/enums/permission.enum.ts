@@ -77,6 +77,54 @@ export enum Permission {
   PRESCRITOR_UPDATE = 'prescritor:update',
   PRESCRITOR_DELETE = 'prescritor:delete',
   PRESCRITOR_AUDIT = 'prescritor:audit',
+
+  // Folha — Funcionários (cadastro + vínculos por unidade)
+  FOLHA_FUNCIONARIO_CREATE = 'folha-funcionario:create',
+  FOLHA_FUNCIONARIO_READ = 'folha-funcionario:read',
+  FOLHA_FUNCIONARIO_UPDATE = 'folha-funcionario:update',
+  FOLHA_FUNCIONARIO_DELETE = 'folha-funcionario:delete',
+
+  /** Cadastro global — cargos (vínculo no funcionário) */
+  FOLHA_CARGO_CREATE = 'folha-cargo:create',
+  FOLHA_CARGO_READ = 'folha-cargo:read',
+  FOLHA_CARGO_UPDATE = 'folha-cargo:update',
+  FOLHA_CARGO_DELETE = 'folha-cargo:delete',
+  FOLHA_CARGO_AUDIT = 'folha-cargo:audit',
+
+  /** Cadastro global — setores (vínculo no funcionário) */
+  FOLHA_SETOR_CREATE = 'folha-setor:create',
+  FOLHA_SETOR_READ = 'folha-setor:read',
+  FOLHA_SETOR_UPDATE = 'folha-setor:update',
+  FOLHA_SETOR_DELETE = 'folha-setor:delete',
+  FOLHA_SETOR_AUDIT = 'folha-setor:audit',
+
+  // Folha — Verbas (eventos receita/despesa)
+  FOLHA_VERBA_CREATE = 'folha-verba:create',
+  FOLHA_VERBA_READ = 'folha-verba:read',
+  FOLHA_VERBA_UPDATE = 'folha-verba:update',
+  FOLHA_VERBA_DELETE = 'folha-verba:delete',
+
+  // Folha — Tipos de folha (mensal, férias, etc.)
+  FOLHA_TIPO_CREATE = 'folha-tipo:create',
+  FOLHA_TIPO_READ = 'folha-tipo:read',
+  FOLHA_TIPO_UPDATE = 'folha-tipo:update',
+  FOLHA_TIPO_DELETE = 'folha-tipo:delete',
+
+  // Folha — Lançamentos (folha_capa + folha_item)
+  FOLHA_LANCAMENTO_CREATE = 'folha-lancamento:create',
+  FOLHA_LANCAMENTO_READ = 'folha-lancamento:read',
+  FOLHA_LANCAMENTO_UPDATE = 'folha-lancamento:update',
+  FOLHA_LANCAMENTO_DELETE = 'folha-lancamento:delete',
+  /** Trava edição de itens e cadastro do funcionário para esta capa (lote aberto). */
+  FOLHA_LANCAMENTO_CONGELAR_CAPA = 'folha-lancamento:congelar-capa',
+  /** Reverte o congelamento da capa (lote aberto). */
+  FOLHA_LANCAMENTO_LIBERAR_CAPA = 'folha-lancamento:liberar-capa',
+
+  // Folha — Controle (competência / folha_fechamento)
+  FOLHA_FECHAMENTO_READ = 'folha-fechamento:read',
+  FOLHA_FECHAMENTO_REGISTRAR_ABERTURA = 'folha-fechamento:registrar-abertura',
+  FOLHA_FECHAMENTO_FECHAR = 'folha-fechamento:fechar',
+  FOLHA_FECHAMENTO_REABRIR = 'folha-fechamento:reabrir',
 }
 
 export const PERMISSION_GROUPS = {
@@ -164,6 +212,64 @@ export const PERMISSION_GROUPS = {
     { key: Permission.PRESCRITOR_UPDATE, label: 'Editar prescritores' },
     { key: Permission.PRESCRITOR_DELETE, label: 'Excluir prescritores' },
     { key: Permission.PRESCRITOR_AUDIT, label: 'Visualizar auditoria' },
+  ],
+  'Folha — Funcionários': [
+    { key: Permission.FOLHA_FUNCIONARIO_CREATE, label: 'Criar funcionários (folha)' },
+    { key: Permission.FOLHA_FUNCIONARIO_READ, label: 'Visualizar funcionários (folha)' },
+    { key: Permission.FOLHA_FUNCIONARIO_UPDATE, label: 'Editar funcionários (folha)' },
+    { key: Permission.FOLHA_FUNCIONARIO_DELETE, label: 'Excluir funcionários (folha)' },
+  ],
+  'Folha — Cargos': [
+    { key: Permission.FOLHA_CARGO_CREATE, label: 'Criar cargos (folha)' },
+    { key: Permission.FOLHA_CARGO_READ, label: 'Visualizar cargos (folha)' },
+    { key: Permission.FOLHA_CARGO_UPDATE, label: 'Editar cargos (folha)' },
+    { key: Permission.FOLHA_CARGO_DELETE, label: 'Excluir cargos (folha)' },
+    { key: Permission.FOLHA_CARGO_AUDIT, label: 'Visualizar auditoria de cargos (folha)' },
+  ],
+  'Folha — Setores': [
+    { key: Permission.FOLHA_SETOR_CREATE, label: 'Criar setores (folha)' },
+    { key: Permission.FOLHA_SETOR_READ, label: 'Visualizar setores (folha)' },
+    { key: Permission.FOLHA_SETOR_UPDATE, label: 'Editar setores (folha)' },
+    { key: Permission.FOLHA_SETOR_DELETE, label: 'Excluir setores (folha)' },
+    { key: Permission.FOLHA_SETOR_AUDIT, label: 'Visualizar auditoria de setores (folha)' },
+  ],
+  'Folha — Verbas': [
+    { key: Permission.FOLHA_VERBA_CREATE, label: 'Criar verbas (folha)' },
+    { key: Permission.FOLHA_VERBA_READ, label: 'Visualizar verbas (folha)' },
+    { key: Permission.FOLHA_VERBA_UPDATE, label: 'Editar verbas (folha)' },
+    { key: Permission.FOLHA_VERBA_DELETE, label: 'Excluir verbas (folha)' },
+  ],
+  'Folha — Tipos': [
+    { key: Permission.FOLHA_TIPO_CREATE, label: 'Criar tipos de folha' },
+    { key: Permission.FOLHA_TIPO_READ, label: 'Visualizar tipos de folha' },
+    { key: Permission.FOLHA_TIPO_UPDATE, label: 'Editar tipos de folha' },
+    { key: Permission.FOLHA_TIPO_DELETE, label: 'Excluir tipos de folha' },
+  ],
+  'Folha — Lançamentos': [
+    { key: Permission.FOLHA_LANCAMENTO_CREATE, label: 'Criar capa e itens da folha' },
+    { key: Permission.FOLHA_LANCAMENTO_READ, label: 'Visualizar lançamentos da folha' },
+    { key: Permission.FOLHA_LANCAMENTO_UPDATE, label: 'Editar valores de itens da folha' },
+    { key: Permission.FOLHA_LANCAMENTO_DELETE, label: 'Excluir itens da folha' },
+    { key: Permission.FOLHA_LANCAMENTO_CONGELAR_CAPA, label: 'Congelar folha (capa) do funcionário' },
+    { key: Permission.FOLHA_LANCAMENTO_LIBERAR_CAPA, label: 'Liberar folha (capa) para modificação' },
+  ],
+  'Folha — Controle': [
+    {
+      key: Permission.FOLHA_FECHAMENTO_READ,
+      label: 'Visualizar controle de competências da folha',
+    },
+    {
+      key: Permission.FOLHA_FECHAMENTO_REGISTRAR_ABERTURA,
+      label: 'Registrar abertura de competência',
+    },
+    {
+      key: Permission.FOLHA_FECHAMENTO_FECHAR,
+      label: 'Fechar lote da competência',
+    },
+    {
+      key: Permission.FOLHA_FECHAMENTO_REABRIR,
+      label: 'Reabrir competência (lote fechado)',
+    },
   ],
 };
 

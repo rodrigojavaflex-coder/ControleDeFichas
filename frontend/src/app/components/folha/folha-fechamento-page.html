@@ -1,0 +1,163 @@
+<div class="folha-fechar folha-controle">
+  @if (!podeVisualizarPagina()) {
+    <div class="alert alert-error">
+      Sem permissão no grupo Folha — Controle (visualizar, registrar abertura, fechar ou reabrir, conforme o perfil).
+    </div>
+  } @else {
+    <section class="filters folha-controle-form-line" aria-label="Filtros e registrar abertura">
+      <div class="filter-group">
+        <label for="fc-un">Unidade</label>
+        <select
+          id="fc-un"
+          class="form-control"
+          [(ngModel)]="unidadeFiltro"
+          (ngModelChange)="carregarRegistradas()"
+          [disabled]="enviando || campoUnidadeDesabilitado"
+        >
+          @if (!campoUnidadeDesabilitado) {
+            <option [ngValue]="''">Todas</option>
+          }
+          @for (uu of unidadesVisiveisParaSelect; track uu) {
+            <option [ngValue]="uu">{{ uu }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group folha-controle-filter-competencia">
+        <label for="fc-nav-comp">Competência</label>
+        <div id="fc-nav-comp" class="folha-controle-competencia-nav" role="group" aria-label="Navegar competência (mês e ano)">
+          <button
+            type="button"
+            class="folha-controle-nav-btn"
+            (click)="mesAnterior()"
+            [disabled]="enviando || carregandoLista"
+          >
+            Voltar
+          </button>
+          <span class="folha-controle-competencia-atual" aria-live="polite">{{ referenciaCompetencia }}</span>
+          <button
+            type="button"
+            class="folha-controle-nav-btn"
+            (click)="proximoMes()"
+            [disabled]="enviando || carregandoLista"
+          >
+            Próximo
+          </button>
+        </div>
+      </div>
+      <div class="filter-group folha-controle-filter-tipo">
+        <label for="fc-tipo-ab">Tipo de folha</label>
+        <select
+          id="fc-tipo-ab"
+          class="form-control"
+          [(ngModel)]="tipoId"
+          (ngModelChange)="carregarRegistradas()"
+          [disabled]="enviando"
+        >
+          <option [ngValue]="''">Todos</option>
+          @for (t of tipos; track t.id) {
+            <option [ngValue]="t.id">{{ t.descricao }}</option>
+          }
+        </select>
+      </div>
+      @if (podePermRegistrarAbertura()) {
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="enviando || !podeExecutarRegistrarAbertura()"
+          (click)="registrarAbertura()"
+        >
+          Registrar abertura
+        </button>
+      }
+    </section>
+
+    <div class="table-container" [attr.aria-busy]="carregandoLista ? 'true' : null">
+      <table class="folha-data-table folha-grade-competencias">
+        <thead>
+          <tr>
+            <th>Unidade</th>
+            <th>Competência</th>
+            <th>Tipo de folha</th>
+            <th>Abertura</th>
+            <th>Situação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of registradas; track trackRow(row)) {
+            <tr>
+              <td>{{ row.unidade }}</td>
+              <td>{{ nomeMesPt(row.mes) }} / {{ ano }}</td>
+              <td>{{ row.folhaTipoDescricao }}</td>
+              <td>{{ formatarDataHoraAbertura(row.abertaEm) }}</td>
+              <td>
+                <span class="folha-tag-situacao" [ngClass]="situacaoClasse(row)">
+                  {{ situacaoRotulo(row) }}
+                </span>
+              </td>
+              <td class="action-buttons folha-controle-acoes">
+                @if (row.situacao === 'ABERTA' && podePermFecharLote()) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-excluir"
+                    [disabled]="enviando"
+                    (click)="fecharLinha(row)"
+                  >
+                    Fechar lote
+                  </button>
+                }
+                @if (row.situacao === 'FECHADA' && podePermReabrirLote()) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-secondary"
+                    [disabled]="enviando"
+                    (click)="abrirModalReabrir(row)"
+                  >
+                    Reabrir
+                  </button>
+                }
+                @if (
+                  !(row.situacao === 'ABERTA' && podePermFecharLote()) &&
+                  !(row.situacao === 'FECHADA' && podePermReabrirLote())
+                ) {
+                  <span class="form-help">—</span>
+                }
+              </td>
+            </tr>
+          }
+          @if (carregandoLista && !registradas.length) {
+            <tr class="no-data">
+              <td colspan="6"><span class="loading">Carregando…</span></td>
+            </tr>
+          }
+          @if (!carregandoLista && !registradas.length) {
+            <tr class="no-data">
+              <td colspan="6">
+                Nenhuma competência com abertura registrada para os filtros selecionados.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <app-confirmation-modal
+    [isVisible]="showFecharLoteModal"
+    title="Fechar lote"
+    [message]="fecharLoteModalMensagem"
+    confirmText="Fechar lote"
+    cancelText="Cancelar"
+    (confirmed)="onConfirmarFecharLoteModal()"
+    (cancelled)="onCancelarFecharLoteModal()"
+  />
+  <app-confirmation-modal
+    [isVisible]="showReabrirLoteModal"
+    title="Reabrir competência"
+    [message]="reabrirLoteModalMensagem"
+    confirmText="Reabrir"
+    cancelText="Cancelar"
+    (confirmed)="onConfirmarReabrirLoteModal()"
+    (cancelled)="onCancelarReabrirLoteModal()"
+  />
+</div>

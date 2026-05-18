@@ -23,6 +23,18 @@ import { VendedoresListComponent } from './components/vendedores-list/vendedores
 import { VendedorFormComponent } from './components/vendedor-form/vendedor-form';
 import { PrescritoresListComponent } from './components/prescritores-list/prescritores-list';
 import { PrescritorFormComponent } from './components/prescritor-form/prescritor-form';
+import { FolhaFuncionariosPage } from './components/folha/folha-funcionarios-page';
+import { FolhaFuncionarioFormComponent } from './components/folha/folha-funcionario-form';
+import { FolhaVerbasPage } from './components/folha/folha-verbas-page';
+import { FolhaVerbaFormComponent } from './components/folha/folha-verba-form';
+import { FolhaTiposPage } from './components/folha/folha-tipos-page';
+import { FolhaTipoFormComponent } from './components/folha/folha-tipo-form';
+import { FolhaLancamentosPage } from './components/folha/folha-lancamentos-page';
+import { FolhaFechamentoPage } from './components/folha/folha-fechamento-page';
+import { FolhaCargosPage } from './components/folha/folha-cargos-page';
+import { FolhaCargoFormComponent } from './components/folha/folha-cargo-form';
+import { FolhaSetoresPage } from './components/folha/folha-setores-page';
+import { FolhaSetorFormComponent } from './components/folha/folha-setor-form';
 
 export const routes: Routes = [
   // Rota de configuração
@@ -183,7 +195,97 @@ export const routes: Routes = [
     component: PrescritorFormComponent,
     canActivate: [authGuard]
   },
-  
+  {
+    path: 'folha/funcionarios',
+    component: FolhaFuncionariosPage,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/funcionarios/new',
+    component: FolhaFuncionarioFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/funcionarios/edit/:id',
+    component: FolhaFuncionarioFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/cargos',
+    component: FolhaCargosPage,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/cargos/new',
+    component: FolhaCargoFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/cargos/edit/:id',
+    component: FolhaCargoFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/setores',
+    component: FolhaSetoresPage,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/setores/new',
+    component: FolhaSetorFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/setores/edit/:id',
+    component: FolhaSetorFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/verbas',
+    component: FolhaVerbasPage,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/verbas/new',
+    component: FolhaVerbaFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/verbas/edit/:id',
+    component: FolhaVerbaFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/tipos',
+    component: FolhaTiposPage,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/tipos/new',
+    component: FolhaTipoFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/tipos/edit/:id',
+    component: FolhaTipoFormComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/lancamentos',
+    component: FolhaLancamentosPage,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/controle',
+    component: FolhaFechamentoPage,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'folha/fechamento',
+    redirectTo: 'folha/controle',
+    pathMatch: 'full',
+  },
+
   // Home padrão
   {
     path: '',

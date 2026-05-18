@@ -85,7 +85,46 @@ export enum Permission {
   PRESCRITOR_READ = 'prescritor:read',
   PRESCRITOR_UPDATE = 'prescritor:update',
   PRESCRITOR_DELETE = 'prescritor:delete',
-  PRESCRITOR_AUDIT = 'prescritor:audit'
+  PRESCRITOR_AUDIT = 'prescritor:audit',
+
+  FOLHA_FUNCIONARIO_CREATE = 'folha-funcionario:create',
+  FOLHA_FUNCIONARIO_READ = 'folha-funcionario:read',
+  FOLHA_FUNCIONARIO_UPDATE = 'folha-funcionario:update',
+  FOLHA_FUNCIONARIO_DELETE = 'folha-funcionario:delete',
+
+  FOLHA_CARGO_CREATE = 'folha-cargo:create',
+  FOLHA_CARGO_READ = 'folha-cargo:read',
+  FOLHA_CARGO_UPDATE = 'folha-cargo:update',
+  FOLHA_CARGO_DELETE = 'folha-cargo:delete',
+  FOLHA_CARGO_AUDIT = 'folha-cargo:audit',
+
+  FOLHA_SETOR_CREATE = 'folha-setor:create',
+  FOLHA_SETOR_READ = 'folha-setor:read',
+  FOLHA_SETOR_UPDATE = 'folha-setor:update',
+  FOLHA_SETOR_DELETE = 'folha-setor:delete',
+  FOLHA_SETOR_AUDIT = 'folha-setor:audit',
+
+  FOLHA_VERBA_CREATE = 'folha-verba:create',
+  FOLHA_VERBA_READ = 'folha-verba:read',
+  FOLHA_VERBA_UPDATE = 'folha-verba:update',
+  FOLHA_VERBA_DELETE = 'folha-verba:delete',
+
+  FOLHA_TIPO_CREATE = 'folha-tipo:create',
+  FOLHA_TIPO_READ = 'folha-tipo:read',
+  FOLHA_TIPO_UPDATE = 'folha-tipo:update',
+  FOLHA_TIPO_DELETE = 'folha-tipo:delete',
+
+  FOLHA_LANCAMENTO_CREATE = 'folha-lancamento:create',
+  FOLHA_LANCAMENTO_READ = 'folha-lancamento:read',
+  FOLHA_LANCAMENTO_UPDATE = 'folha-lancamento:update',
+  FOLHA_LANCAMENTO_DELETE = 'folha-lancamento:delete',
+  FOLHA_LANCAMENTO_CONGELAR_CAPA = 'folha-lancamento:congelar-capa',
+  FOLHA_LANCAMENTO_LIBERAR_CAPA = 'folha-lancamento:liberar-capa',
+
+  FOLHA_FECHAMENTO_READ = 'folha-fechamento:read',
+  FOLHA_FECHAMENTO_REGISTRAR_ABERTURA = 'folha-fechamento:registrar-abertura',
+  FOLHA_FECHAMENTO_FECHAR = 'folha-fechamento:fechar',
+  FOLHA_FECHAMENTO_REABRIR = 'folha-fechamento:reabrir',
 }
 
 export interface PermissionGroup {
@@ -108,7 +147,7 @@ export interface Usuario {
   ativo: boolean;
   perfil?: Perfil | null;
   tema?: string; // Tema preferido do usuário (Claro ou Escuro)
-  unidade?: Unidade; // Unidade do usuário
+  unidade?: Unidade | null; // Unidade do usuário (null = sem vínculo = escopo conforme RN-007 / admin)
   vendedor?: Vendedor | null; // Vendedor associado ao usuário
   criadoEm: Date;
   atualizadoEm: Date;

@@ -10,3 +10,4 @@ export * from './clientes.service';
 export * from './vendedores.service';
 export * from './prescritores.service';
 export * from './migracao.service';
+export * from './folha.service';

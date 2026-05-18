@@ -14,10 +14,18 @@ import { CommonModule } from '@angular/common';
           <p>{{ message }}</p>
         </div>
         <div class="modal-footer">
-          <button *ngIf="cancelText" class="btn btn-secondary" (click)="onCancel()">
-            {{ cancelText }}
-          </button>
-          <button class="btn {{ cancelText ? 'btn-danger' : 'btn-primary' }}" (click)="onConfirm()">
+          @if (cancelText) {
+            <button type="button" class="btn btn-secondary" (click)="onCancel()">
+              {{ cancelText }}
+            </button>
+          }
+          <button
+            type="button"
+            class="btn"
+            [class.btn-primary]="confirmBtnPrimary()"
+            [class.btn-danger]="confirmBtnDanger()"
+            (click)="onConfirm()"
+          >
             {{ confirmText }}
           </button>
         </div>
@@ -32,7 +40,17 @@ export class ConfirmationModalComponent {
   @Input() message = 'Tem certeza que deseja continuar?';
   @Input() confirmText = 'Sim';
   @Input() cancelText = 'Cancelar';
-  
+  /** Quando há `cancelText`, o botão de confirmação é vermelho por padrão; use `primary` para ações não destrutivas. */
+  @Input() confirmVariant: 'danger' | 'primary' = 'danger';
+
+  confirmBtnPrimary(): boolean {
+    return !this.cancelText || this.confirmVariant === 'primary';
+  }
+
+  confirmBtnDanger(): boolean {
+    return !!this.cancelText && this.confirmVariant !== 'primary';
+  }
+
   @Output() confirmed = new EventEmitter<void>();
   @Output() cancelled = new EventEmitter<void>();
 

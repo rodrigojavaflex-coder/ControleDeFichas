@@ -1,0 +1,57 @@
+---
+description: Regras operacionais para a IA aplicar negocio e validacoes do projeto
+globs:
+  # Fonte oficial de regra funcional
+  - "docs/regras-negocio.md"
+
+  # Frontend (Angular) — bootstrap, guards, componentes, serviços e modelos
+  - "frontend/src/app/*.ts"
+  - "frontend/src/app/guards/**/*.ts"
+  - "frontend/src/app/components/**/*.ts"
+  - "frontend/src/app/services/*.ts"
+  - "frontend/src/app/models/*.ts"
+  - "frontend/src/app/modules/**/*.ts"
+  - "frontend/src/environments/*.ts"
+
+  # Backend (NestJS) — API principal e agente Firebird/sync (app separado)
+  - "backend/src/modules/**/*.ts"
+  - "agent/src/**/*.ts"
+
+  # Regras globais do projeto
+  - ".cursorrules"
+alwaysApply: true
+---
+
+# Regra de IA - Regras de Negocio
+
+## Fonte oficial
+- A fonte funcional oficial e `docs/regras-negocio.md`.
+- Sempre consultar esse documento antes de implementar ou alterar fluxo funcional.
+- Em conflito entre implementacao atual e documento, sinalizar divergencia e propor ajuste.
+
+## Como aplicar durante implementacao
+- Mapear quais regras RN-* do modulo impactam a tarefa.
+- Implementar validacoes de entrada e bloqueios definidos nas RN-*.
+- Garantir mensagens funcionais claras para erros de negocio.
+- Registrar trilha de auditoria quando a regra exigir.
+- Nao criar atalhos que ignorem regra funcional por conveniencia tecnica.
+
+## Checklist obrigatorio por mudanca
+- Regra de negocio alterada? Atualizar `docs/regras-negocio.md`.
+- Mudou fluxo funcional com reflexo em tela? Validar loading, sucesso e erro.
+
+## Criterios de qualidade
+- Evitar logica pesada em template; mover para componente/service.
+- Evitar `any` sem justificativa.
+- Manter tipagem explicita de retorno.
+- Preservar arquitetura existente (Controller -> Service -> Repository).
+
+## Quando pedir confirmacao
+- Requisito ambiguo ou sem regra documentada.
+- Alteracao com impacto em mais de um modulo funcional.
+- Alteracao de comportamento em fluxo critico sem criterio de aceite definido.
+
+## Saida esperada nas respostas da IA
+- Informar quais RN-* foram aplicadas.
+- Informar quais arquivos foram alterados.
+- Informar validacoes executadas e riscos residuais.

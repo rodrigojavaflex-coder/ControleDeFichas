@@ -93,7 +93,9 @@ export function getEntityDisplayName(entityType: string): string {
     'users': 'Usuário',
     'ficha_tecnica': 'Ficha Técnica',
     'configuracao': 'Configuração',
-    'auditoria': 'Auditoria'
+    'auditoria': 'Auditoria',
+    'folha_cargo': 'Cargo (folha)',
+    'folha_setor': 'Setor (folha)',
   };
   return entityNames[entityType] || entityType;
 }

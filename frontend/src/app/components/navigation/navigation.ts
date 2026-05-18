@@ -1,9 +1,14 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService, NavigationService } from '../../services/index';
 import { Usuario, Permission } from '../../models/usuario.model';
+import {
+  getNavigationMenuIconHtml,
+  NAV_LOGOUT_ICON_SVG_HTML,
+} from './navigation-lucide-svgs';
 
 interface MenuItem {
   label: string;
@@ -25,6 +30,10 @@ export class NavigationComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private navigationService = inject(NavigationService);
   private router = inject(Router);
+  private sanitizer = inject(DomSanitizer);
+  readonly logoutIconHtml: SafeHtml = this.sanitizer.bypassSecurityTrustHtml(
+    NAV_LOGOUT_ICON_SVG_HTML,
+  );
   private destroy$ = new Subject<void>();
 
   currentUser: Usuario | null = null;
@@ -130,9 +139,93 @@ export class NavigationComponent implements OnInit, OnDestroy {
               route: '/prescritores',
               icon: 'feather-user-plus',
               requiredPermissions: [Permission.PRESCRITOR_CREATE, Permission.PRESCRITOR_READ, Permission.PRESCRITOR_UPDATE, Permission.PRESCRITOR_DELETE]
-            }
+            },
           ]
-        }
+        },
+        {
+          label: 'Folha',
+          icon: 'feather-briefcase',
+          requiredPermissions: [],
+          children: [
+            {
+              label: 'Funcionários',
+              route: '/folha/funcionarios',
+              icon: 'feather-users',
+              requiredPermissions: [
+                Permission.FOLHA_FUNCIONARIO_CREATE,
+                Permission.FOLHA_FUNCIONARIO_READ,
+                Permission.FOLHA_FUNCIONARIO_UPDATE,
+                Permission.FOLHA_FUNCIONARIO_DELETE,
+              ],
+            },
+            {
+              label: 'Cargos',
+              route: '/folha/cargos',
+              icon: 'feather-briefcase',
+              requiredPermissions: [
+                Permission.FOLHA_CARGO_CREATE,
+                Permission.FOLHA_CARGO_READ,
+                Permission.FOLHA_CARGO_UPDATE,
+                Permission.FOLHA_CARGO_DELETE,
+              ],
+            },
+            {
+              label: 'Setores',
+              route: '/folha/setores',
+              icon: 'feather-aperture',
+              requiredPermissions: [
+                Permission.FOLHA_SETOR_CREATE,
+                Permission.FOLHA_SETOR_READ,
+                Permission.FOLHA_SETOR_UPDATE,
+                Permission.FOLHA_SETOR_DELETE,
+              ],
+            },
+            {
+              label: 'Verbas',
+              route: '/folha/verbas',
+              icon: 'feather-list',
+              requiredPermissions: [
+                Permission.FOLHA_VERBA_CREATE,
+                Permission.FOLHA_VERBA_READ,
+                Permission.FOLHA_VERBA_UPDATE,
+                Permission.FOLHA_VERBA_DELETE,
+              ],
+            },
+            {
+              label: 'Tipos',
+              route: '/folha/tipos',
+              icon: 'feather-layers',
+              requiredPermissions: [
+                Permission.FOLHA_TIPO_CREATE,
+                Permission.FOLHA_TIPO_READ,
+                Permission.FOLHA_TIPO_UPDATE,
+                Permission.FOLHA_TIPO_DELETE,
+              ],
+            },
+            {
+              label: 'Lançamentos',
+              route: '/folha/lancamentos',
+              icon: 'feather-edit-3',
+              requiredPermissions: [
+                Permission.FOLHA_LANCAMENTO_CREATE,
+                Permission.FOLHA_LANCAMENTO_READ,
+                Permission.FOLHA_LANCAMENTO_UPDATE,
+                Permission.FOLHA_LANCAMENTO_DELETE,
+              ],
+            },
+            {
+              label: 'Controle',
+              route: '/folha/controle',
+              icon: 'feather-lock',
+              requiredPermissions: [
+                Permission.FOLHA_FECHAMENTO_READ,
+                Permission.FOLHA_FECHAMENTO_REGISTRAR_ABERTURA,
+                Permission.FOLHA_FECHAMENTO_FECHAR,
+                Permission.FOLHA_FECHAMENTO_REABRIR,
+              ],
+            },
+          ],
+        },
       ]
     },
     {
@@ -277,5 +370,10 @@ export class NavigationComponent implements OnInit, OnDestroy {
     if (item.children) {
       item.isOpen = !item.isOpen;
     }
+  }
+
+  /** SVG Lucide (estilo Feather) para itens do menu — ver `navigation-lucide-svgs.ts`. */
+  menuIcon(key?: string | null): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(getNavigationMenuIconHtml(key));
   }
 }

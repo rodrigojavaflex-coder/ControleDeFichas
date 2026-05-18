@@ -1,3 +1,8 @@
+# Prioridade e processo do agente (complemento)
+- **Precedência:** instruções explícitas do usuário na conversa → este `.cursorrules` → regras em `.cursor/rules/*.mdc`.
+- **Segurança:** não commitar segredos, credenciais ou arquivos `.env`; usar variáveis de ambiente e mecanismos do CI/ambiente.
+- **Respostas:** indicar o que mudou, arquivos impactados, validações realizadas ou recomendadas e riscos residuais.
+
 # Comportamento Geral
 - Responda sempre em Português do Brasil.
 - Seja conciso e direto. Evite explicações teóricas longas; foque no código.

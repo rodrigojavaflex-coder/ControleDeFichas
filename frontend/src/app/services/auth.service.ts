@@ -96,6 +96,7 @@ export class AuthService {
         criadoEm: authUser.vendedor.criadoEm || new Date(),
         atualizadoEm: authUser.vendedor.atualizadoEm || new Date(),
       } : null,
+      unidade: authUser.unidade ?? undefined,
       criadoEm: authUser.criadoEm,
       atualizadoEm: authUser.atualizadoEm,
       perfil: authUser.permissions ? {

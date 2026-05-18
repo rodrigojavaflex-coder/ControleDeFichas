@@ -40,6 +40,8 @@ export class AuthResponseDto {
     tema: string;
     criadoEm: Date;
     atualizadoEm: Date;
+    /** Unidade vinculada ao usuário (`null`/omitido quando sem vínculo = acesso conforme permissões às unidades do sistema). */
+    unidade?: Unidade | null;
     vendedor?: {
       id: string;
       nome: string;

@@ -148,23 +148,23 @@ html, body {
 }
 
 [data-theme="dark"] .nav-link:hover {
-  background-color: var(--cor-superficie-hover);
-  color: var(--cor-texto-primario);
+  background-color: transparent;
+  color: var(--cor-primaria);
 }
 
 [data-theme="dark"] .nav-link.active {
-  background-color: #21262f;
-  color: var(--cor-texto-primario);
+  background-color: transparent;
+  color: var(--cor-primaria);
 }
 
 [data-theme="dark"] .submenu-toggle.active {
-  background-color: #21262f;
-  color: var(--cor-texto-primario);
+  background-color: transparent;
+  color: var(--cor-primaria);
 }
 
 [data-theme="dark"] .submenu-link.active {
-  background-color: #21262f;
-  color: var(--cor-texto-primario);
+  background-color: transparent;
+  color: var(--cor-primaria);
 }
 
 /* ========== Headers e Containers - Tema Escuro ========== */
@@ -390,12 +390,13 @@ body.theme-dark .nav-link {
 }
 
 body.theme-dark .nav-link:hover {
-  background-color: var(--cor-superficie-hover);
+  background-color: transparent;
+  color: var(--cor-primaria);
 }
 
 body.theme-dark .nav-link.active {
-  background-color: var(--cor-primaria);
-  color: var(--cor-texto-inverso);
+  background-color: transparent;
+  color: var(--cor-primaria);
 }
 
 /* Botões Bootstrap para compatibilidade legada */

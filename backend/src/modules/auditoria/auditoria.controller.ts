@@ -103,6 +103,50 @@ export class AuditoriaController {
     return this.auditoriaService.findLogs(findDto);
   }
 
+  /**
+   * Rotas literais antes de `:id`; caso contrário `undoable` e `entity` seriam tratados como UUID em `findOne`.
+   */
+  @Get('undoable')
+  @ApiOperation({
+    summary: 'Listar alterações que podem ser desfeitas',
+    description:
+      'Retorna as últimas alterações do usuário que podem ser desfeitas (últimas 24h)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de alterações que podem ser desfeitas',
+  })
+  async getUndoableChanges(@Req() req: Request & { user: Usuario }): Promise<any> {
+    return this.rollbackService.getUndoableChanges(req.user?.id);
+  }
+
+  @Get('entity/:entidade/:entidadeId')
+  @ApiOperation({
+    summary: 'Buscar histórico de auditoria por entidade',
+    description:
+      'Retorna o histórico completo de alterações de um registro específico',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Histórico retornado com sucesso',
+  })
+  async getHistoryByEntity(
+    @Param('entidade') entidade: string,
+    @Param('entidadeId') entidadeId: string,
+    @Req() req: Request & { user: Usuario },
+  ): Promise<any> {
+    if (await this.shouldAuditAction(AuditAction.READ)) {
+      await this.auditoriaService.createLog({
+        acao: AuditAction.READ,
+        descricao: `Consulta ao histórico de auditoria da entidade ${entidade}`,
+        usuarioId: req.user?.id,
+        entidade: 'audit_logs',
+      });
+    }
+
+    return this.auditoriaService.findByEntity(entidade, entidadeId);
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Buscar log de auditoria por ID',
@@ -127,20 +171,6 @@ export class AuditoriaController {
     return this.auditoriaService.findLogById(id);
   }
 
-  @Get('undoable')
-  @ApiOperation({
-    summary: 'Listar alterações que podem ser desfeitas',
-    description:
-      'Retorna as últimas alterações do usuário que podem ser desfeitas (últimas 24h)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista de alterações que podem ser desfeitas',
-  })
-  async getUndoableChanges(@Req() req: Request & { user: Usuario }): Promise<any> {
-    return this.rollbackService.getUndoableChanges(req.user?.id);
-  }
-
   @Post(':id/undo')
   @ApiOperation({
     summary: 'Desfazer uma alteração',
@@ -161,32 +191,5 @@ export class AuditoriaController {
   })
   async undoChange(@Param('id') logId: string, @Req() req: Request & { user: Usuario }): Promise<any> {
     return this.rollbackService.undoChange(logId, req.user?.id);
-  }
-
-  @Get('entity/:entidade/:entidadeId')
-  @ApiOperation({
-    summary: 'Buscar histórico de auditoria por entidade',
-    description: 'Retorna o histórico completo de alterações de um registro específico'
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Histórico retornado com sucesso',
-  })
-  async getHistoryByEntity(
-    @Param('entidade') entidade: string,
-    @Param('entidadeId') entidadeId: string,
-    @Req() req: Request & { user: Usuario }
-  ): Promise<any> {
-    // Auditar acesso ao histórico
-    if (await this.shouldAuditAction(AuditAction.READ)) {
-      await this.auditoriaService.createLog({
-        acao: AuditAction.READ,
-        descricao: `Consulta ao histórico de auditoria da entidade ${entidade}`,
-        usuarioId: req.user?.id,
-        entidade: 'audit_logs',
-      });
-    }
-
-    return this.auditoriaService.findByEntity(entidade, entidadeId);
   }
 }

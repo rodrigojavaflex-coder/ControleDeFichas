@@ -216,6 +216,7 @@ export class AuthService {
         isActive: user.ativo,
         permissions: user.perfil?.permissoes || [],
         tema: user.tema || 'Claro',
+        unidade: user.unidade ?? null,
         criadoEm: user.criadoEm,
         atualizadoEm: user.atualizadoEm,
         vendedor: user.vendedor ? {

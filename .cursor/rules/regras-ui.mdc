@@ -1,0 +1,52 @@
+---
+description: Regras operacionais para mudancas de interface, experiencia e temas
+globs:
+  # Frontend (Angular) — UI alinhada à árvore src/app/components e módulos
+  - "frontend/src/app/components/**/*.{html,css,scss}"
+  - "frontend/src/app/modules/**/*.{html,css,scss}"
+  - "frontend/src/app/app.html"
+  - "frontend/src/styles/**/*.{css,scss}"
+  - "frontend/src/styles.css"
+  - "frontend/src/index.html"
+
+  # Regras globais
+  - ".cursorrules"
+alwaysApply: true
+---
+
+# Regra de IA - UI/UX e Tema
+
+## Objetivo
+- Garantir consistencia visual, acessibilidade basica e suporte a tema claro/escuro em toda mudanca de UI.
+
+## Regras obrigatorias
+- Toda nova UI deve funcionar em tema claro e escuro.
+- Evitar cores hardcoded; priorizar tokens/variaveis de tema.
+- Preservar padrao visual existente (espacamento, tipografia, bordas, estados).
+- Garantir estados visuais de hover, focus e disabled quando aplicavel.
+
+## Tema claro e escuro
+- Validar contraste de texto e elementos interativos nos dois temas.
+- Garantir legibilidade em cards, modais, tabelas, formularios e alerts.
+- Se nao houver token existente, propor token novo em vez de cor fixa local.
+
+## Acessibilidade minima
+- Inputs e botoes devem manter labels/textos claros.
+- Elementos clicaveis devem ter foco visivel.
+- Evitar depender apenas de cor para comunicar estado.
+
+## Checklist obrigatorio por mudanca visual
+- O layout se manteve consistente em desktop e mobile (quando aplicavel)?
+- O componente funciona em tema claro e escuro?
+- Estados de loading, vazio, erro e sucesso foram considerados?
+- Nao houve regressao em componentes compartilhados?
+
+## Quando pedir confirmacao
+- Mudanca visual altera padrao global de design.
+- Nao existe definicao clara de comportamento para tema escuro.
+- Mudanca envolve trade-off entre consistencia visual e regra funcional.
+
+## Saida esperada nas respostas da IA
+- Informar impacto visual da mudanca.
+- Informar validacao de tema claro/escuro.
+- Informar riscos de regressao visual.

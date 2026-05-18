@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, throwError, firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { Auditoria, AuditLogFilters, PaginatedAuditResponse } from '../models/auditoria.model';
 import { environment } from '../../environments/environment';
@@ -70,6 +70,9 @@ export class AuditoriaService {
   }
 
   getHistoryByEntity(entidade: string, entidadeId: string): Promise<Auditoria[]> {
-    return this.http.get<Auditoria[]>(`${this.apiUrl}/entity/${entidade}/${entidadeId}`).toPromise().then(result => result || []);
+    const e = encodeURIComponent(entidade.trim());
+    const id = encodeURIComponent(entidadeId.trim());
+    const url = `${this.apiUrl}/entity/${e}/${id}`;
+    return firstValueFrom(this.http.get<Auditoria[]>(url)).then((result) => result ?? []);
   }
 }

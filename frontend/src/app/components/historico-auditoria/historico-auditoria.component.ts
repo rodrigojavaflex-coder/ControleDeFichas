@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuditoriaService } from '../../services/auditoria.service';
 import { Auditoria } from '../../models/auditoria.model';
@@ -95,7 +95,7 @@ export interface HistoricoAuditoriaItem extends Auditoria {
   `,
   styleUrls: ['./historico-auditoria.component.css']
 })
-export class HistoricoAuditoriaComponent implements OnInit, OnChanges {
+export class HistoricoAuditoriaComponent implements OnChanges {
   @Input() entidade!: string;
   @Input() entidadeId!: string;
   @Input() fieldLabels: Record<string, string> = {};
@@ -107,15 +107,29 @@ export class HistoricoAuditoriaComponent implements OnInit, OnChanges {
 
   constructor(private auditoriaService: AuditoriaService) {}
 
-  ngOnInit() {
-    if (this.showModal) {
-      this.loadAuditHistory();
-    }
+  ngOnChanges(changes: SimpleChanges): void {
+    this.tryReloadFromInputs(changes);
   }
 
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['showModal'] && changes['showModal'].currentValue && this.entidade && this.entidadeId) {
-      this.loadAuditHistory();
+  /**
+   * Recarrega quando o modal está visível e algum vínculo de entrada mudou (inclui primeiro ciclo).
+   */
+  private tryReloadFromInputs(changes: SimpleChanges): void {
+    if (!this.showModal || !this.entidade?.trim() || !this.entidadeId?.trim()) {
+      if (!this.showModal) {
+        this.auditItems = [];
+        this.loading = false;
+      }
+      return;
+    }
+
+    const keys = ['showModal', 'entidade', 'entidadeId'] as const;
+    const keyTouched =
+      keys.some((k) => !!(changes[k] && !changes[k].firstChange)) ||
+      keys.some((k) => !!(changes[k]?.firstChange === true));
+
+    if (keyTouched) {
+      void this.loadAuditHistory();
     }
   }
 
@@ -363,7 +377,11 @@ export class HistoricoAuditoriaComponent implements OnInit, OnChanges {
       'certificados': 'Certificado',
       'laudos': 'Laudo',
       'configuracao': 'Configuração',
-      'perfil': 'Perfil'
+      'perfil': 'Perfil',
+      'folha_cargo': 'Cargo (folha)',
+      'folha_setor': 'Setor (folha)',
+      'folha_item': 'Lançamento (folha)',
+      'folha_capa': 'Capa de folha',
     };
     return entityNames[this.entidade] || this.entidade.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }

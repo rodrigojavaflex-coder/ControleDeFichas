@@ -1,0 +1,133 @@
+<div class="folha-lista-container folha-funcionarios">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar funcionários (folha-funcionario:read).
+    </div>
+  } @else {
+    <section class="filters" aria-label="Filtros">
+      <div class="filter-group">
+        <label for="fu-unidade">Unidade</label>
+        <select
+          id="fu-unidade"
+          class="form-control"
+          [(ngModel)]="unidadeFiltro"
+          (change)="pagina = 1; carregarLista()"
+          [disabled]="carregando"
+        >
+          @for (u of unidadesDisponiveis; track u) {
+            <option [ngValue]="u">{{ u }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group filter-group-grow">
+        <label for="fu-nome">Nome</label>
+        <input
+          id="fu-nome"
+          type="text"
+          class="form-control"
+          [(ngModel)]="nomeFiltro"
+          (keyup.enter)="pagina = 1; carregarLista()"
+          placeholder="Filtrar por nome"
+        />
+      </div>
+      <button type="button" class="btn btn-primary" (click)="pagina = 1; carregarLista()" [disabled]="carregando">
+        Buscar
+      </button>
+      <button type="button" class="btn btn-limpar" (click)="limparFiltros()" [disabled]="carregando">
+        Limpar filtros
+      </button>
+      @if (podeCriar()) {
+        <button type="button" class="btn btn-novo" (click)="irNovo()">Novo funcionário</button>
+      }
+    </section>
+
+    <p class="legenda-lista-funcionarios">
+      Lista dos funcionários da <strong>unidade do filtro</strong> (a unidade da folha fica cadastrada no próprio funcionário). Use novo cadastro para incluir registros nesta unidade.
+    </p>
+
+    @if (carregando) {
+      <div class="loading">Carregando funcionários…</div>
+    } @else if (dados) {
+      <div class="table-container">
+        <table class="folha-data-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Unidade</th>
+              <th>CPF</th>
+              <th>Cargo</th>
+              <th>Setor</th>
+              <th>Nascimento</th>
+              <th>Admissão</th>
+              <th>Demissão</th>
+              <th>Ativo</th>
+              @if (mostrarColunaAcoes()) {
+                <th>Ações</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of dados.data; track row.id) {
+              <tr>
+                <td>{{ row.nome }}</td>
+                <td>{{ row.unidade }}</td>
+                <td>{{ row.cpf || '—' }}</td>
+                <td>{{ row.cargo?.descricao || '—' }}</td>
+                <td>{{ row.setor?.descricao || '—' }}</td>
+                <td>{{ formatarDataDdMmYyyy(row.dataNascimento ?? null) }}</td>
+                <td>{{ formatarDataDdMmYyyy(row.dataAdmissao ?? null) }}</td>
+                <td>{{ formatarDataDdMmYyyy(row.dataDemissao ?? null) }}</td>
+                <td>{{ row.ativo ? 'Sim' : 'Não' }}</td>
+                @if (mostrarColunaAcoes()) {
+                  <td class="action-buttons">
+                    @if (podeEditar()) {
+                      <button type="button" class="btn btn-sm btn-editar" (click)="irEditar(row)">
+                        Editar
+                      </button>
+                    }
+                    @if (podeExcluir()) {
+                      <button type="button" class="btn btn-sm btn-excluir" (click)="excluir(row)">
+                        Excluir
+                      </button>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+            @if (dados.data.length === 0) {
+              <tr class="no-data">
+                <td [attr.colspan]="mostrarColunaAcoes() ? 11 : 10">
+                  Nenhum funcionário encontrado para os filtros informados.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (dados.meta.totalPages > 1) {
+        <div class="pagination">
+          <button
+            type="button"
+            class="btn btn-sm btn-cancelar"
+            [disabled]="dados.meta.page <= 1"
+            (click)="pagina = dados.meta.page - 1; carregarLista()"
+          >
+            Anterior
+          </button>
+          <span class="page-info">
+            Página {{ dados.meta.page }} de {{ dados.meta.totalPages }}
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm btn-cancelar"
+            [disabled]="!dados.meta.hasNextPage"
+            (click)="pagina = dados.meta.page + 1; carregarLista()"
+          >
+            Próxima
+          </button>
+        </div>
+      }
+    }
+  }
+</div>

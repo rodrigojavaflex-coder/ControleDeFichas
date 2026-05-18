@@ -1,0 +1,416 @@
+<div class="folha-entity-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar funcionário' : 'Novo funcionário' }}</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando cadastro...</div>
+  }
+
+  @if (error && !loading) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (!loading) {
+    <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <section
+        class="folha-form-block folha-form-block--pessoais"
+        aria-labelledby="ff-h-pessoais"
+      >
+        <h3 id="ff-h-pessoais" class="folha-form-block-title">Dados pessoais</h3>
+
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label" for="ff-nome">Nome *</label>
+            <input
+              id="ff-nome"
+              type="text"
+              class="form-control"
+              formControlName="nome"
+              [class.error]="nomeCtrl!.invalid && nomeCtrl!.touched"
+              maxlength="200"
+              placeholder="Nome completo"
+            />
+            @if (nomeCtrl!.invalid && nomeCtrl!.touched) {
+              <div class="error-message">Informe o nome.</div>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-cpf">CPF</label>
+            <input id="ff-cpf" type="text" class="form-control" formControlName="cpf" maxlength="14" />
+          </div>
+        </div>
+
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label" for="ff-nasc">Data de nascimento *</label>
+            <input
+              id="ff-nasc"
+              type="date"
+              class="form-control"
+              formControlName="dataNascimento"
+              [class.error]="dataNascimentoCtrl!.invalid && dataNascimentoCtrl!.touched"
+            />
+            @if (dataNascimentoCtrl!.invalid && dataNascimentoCtrl!.touched) {
+              <div class="error-message">Informe a data de nascimento.</div>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-tel">Telefone</label>
+            <input
+              id="ff-tel"
+              type="text"
+              class="form-control"
+              formControlName="telefone"
+              maxlength="40"
+              placeholder="DDD + número"
+              autocomplete="tel"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ff-end">Endereço</label>
+          <textarea
+            id="ff-end"
+            class="form-control folha-form-textarea"
+            formControlName="endereco"
+            rows="3"
+            maxlength="500"
+            placeholder="Logradouro, número, bairro, cidade…"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ff-email">E-mail</label>
+          <input
+            id="ff-email"
+            type="email"
+            class="form-control"
+            formControlName="email"
+            maxlength="254"
+            [class.error]="emailCtrl!.invalid && emailCtrl!.touched && emailCtrl!.value"
+            autocomplete="email"
+          />
+          @if (emailCtrl!.invalid && emailCtrl!.touched && emailCtrl!.value) {
+            <div class="error-message">Informe um e-mail válido.</div>
+          }
+        </div>
+      </section>
+
+      <section class="folha-form-block folha-form-block--folha" aria-labelledby="ff-h-folha">
+        <h3 id="ff-h-folha" class="folha-form-block-title">Dados da folha</h3>
+
+        <div class="form-row form-row-3">
+          <div class="form-group">
+            <label class="form-label" for="ff-unidade">Unidade *</label>
+            <select
+              id="ff-unidade"
+              class="form-control"
+              formControlName="unidade"
+              [class.error]="unidadeCtrl!.invalid && unidadeCtrl!.touched"
+            >
+              @for (u of unidades; track u) {
+                <option [ngValue]="u">{{ u }}</option>
+              }
+            </select>
+            @if (unidadeCtrl!.invalid && unidadeCtrl!.touched) {
+              <div class="error-message">Selecione a unidade.</div>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-cargo">Cargo</label>
+            <select id="ff-cargo" class="form-control" formControlName="cargoId">
+              <option [ngValue]="null">— Não informado</option>
+              @for (c of cargosCatalogo; track c.id) {
+                <option [ngValue]="c.id">
+                  {{ c.descricao }}{{ !c.ativo ? ' (inativo)' : '' }}
+                </option>
+              }
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-setor">Setor</label>
+            <select id="ff-setor" class="form-control" formControlName="setorId">
+              <option [ngValue]="null">— Não informado</option>
+              @for (s of setoresCatalogo; track s.id) {
+                <option [ngValue]="s.id">
+                  {{ s.descricao }}{{ !s.ativo ? ' (inativo)' : '' }}
+                </option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row form-row-3">
+          <div class="form-group">
+            <label class="form-label" for="ff-adm">Data de admissão *</label>
+            <input
+              id="ff-adm"
+              type="date"
+              class="form-control"
+              formControlName="dataAdmissao"
+              [class.error]="dataAdmissaoCtrl!.invalid && dataAdmissaoCtrl!.touched"
+            />
+            @if (dataAdmissaoCtrl!.invalid && dataAdmissaoCtrl!.touched) {
+              <div class="error-message">Informe a data de admissão.</div>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-dem">Data de demissão</label>
+            <input id="ff-dem" type="date" class="form-control" formControlName="dataDemissao" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-ativo">Ativo</label>
+            <select id="ff-ativo" class="form-control" formControlName="ativo">
+              <option [ngValue]="true">Sim</option>
+              <option [ngValue]="false">Não</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label" for="ff-tipo-pix">Tipo do Pix</label>
+            <select
+              id="ff-tipo-pix"
+              class="form-control"
+              formControlName="tipoPix"
+              [class.error]="
+                (tipoPixCtrl!.invalid && tipoPixCtrl!.touched) ||
+                (form.touched && form.hasError('pixPar'))
+              "
+            >
+              <option [ngValue]="null">— Não informado</option>
+              @for (opt of tipoPixSelect; track opt.value) {
+                <option [ngValue]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+            <div class="form-help">Opcional. Se escolher o tipo, preencha a chave correspondente.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-chave-pix">Chave Pix</label>
+            <input
+              id="ff-chave-pix"
+              type="text"
+              class="form-control"
+              formControlName="chavePix"
+              maxlength="200"
+              autocomplete="off"
+              [class.error]="
+                (chavePixCtrl!.invalid && chavePixCtrl!.touched) ||
+                (form.touched && form.hasError('pixPar'))
+              "
+              [attr.inputmode]="tipoPixCtrl?.value === TipoChavePixFolha.EMAIL ? 'email' : 'text'"
+            />
+            @if (form.touched && form.hasError('pixPar') && mensagemErroPixPar()) {
+              <div class="error-message" role="alert">{{ mensagemErroPixPar() }}</div>
+            } @else if (chavePixCtrl!.invalid && chavePixCtrl!.touched && mensagemErroChavePix()) {
+              <div class="error-message" role="alert">{{ mensagemErroChavePix() }}</div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="folha-form-block folha-form-block--eventos-fixos"
+        aria-labelledby="ff-h-ev-fix"
+      >
+        <h3 id="ff-h-ev-fix" class="folha-form-block-title">Eventos fixos</h3>
+
+        <div class="folha-eventos-fixos-toolbar">
+          <button
+            type="button"
+            class="btn btn-sm btn-novo"
+            (click)="abrirModalNovoEventoFixo()"
+            [disabled]="loading || isSubmitting"
+          >
+            Incluir evento fixo
+          </button>
+        </div>
+
+        @if (!linhasEventoFixo.length) {
+          <p class="form-help folha-funcionario-evt-fixo-lista-vazia">
+            Nenhum evento fixo cadastrado.
+          </p>
+        }
+
+        @if (linhasEventoFixo.length > 0) {
+          <div class="folha-eventos-fixos-table-wrap" role="region" aria-label="Lista de eventos fixos">
+            <div class="folha-eventos-fixos-header" aria-hidden="true">
+              <span class="folha-eventos-fixos-col-ev">Evento</span>
+              <span class="folha-eventos-fixos-col-ref">Referência</span>
+              <span class="folha-eventos-fixos-col-valor">Valor</span>
+              <span class="folha-eventos-fixos-col-acoes"></span>
+            </div>
+            @for (row of linhasEventoFixo; track trackByLinhaEvt($index, row)) {
+              <div class="folha-eventos-fixos-linha folha-eventos-fixos-linha--resumo">
+                <div class="folha-eventos-fixos-col-ev">
+                  <span class="folha-funcionario-evt-fixo-resumo-valor">{{ descricaoVerbaEvtFixoRow(row) }}</span>
+                </div>
+                <div class="folha-eventos-fixos-col-ref">
+                  <span class="folha-funcionario-evt-fixo-resumo-valor">{{ row.quantidadeTexto || '—' }}</span>
+                </div>
+                <div class="folha-eventos-fixos-col-valor">
+                  <span class="folha-funcionario-evt-fixo-resumo-valor">{{ row.valorTexto || '—' }}</span>
+                </div>
+                <div class="folha-eventos-fixos-col-acoes folha-eventos-fixos-acoes-dupla">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-editar"
+                    (click)="abrirModalEditarEventoFixo($index)"
+                    [disabled]="loading || isSubmitting"
+                    title="Editar evento fixo"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-excluir"
+                    (click)="solicitarRemoverLinhaEventoFixo($index)"
+                    [disabled]="loading || isSubmitting"
+                    title="Remover evento fixo"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancelar" (click)="onCancel()" [disabled]="isSubmitting">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+          @if (!isSubmitting) {
+            <span>{{ isEditMode ? 'Atualizar' : 'Cadastrar' }}</span>
+          } @else {
+            <span>Salvando...</span>
+          }
+        </button>
+      </div>
+    </form>
+  }
+
+  @if (modalEvtFixoAberto) {
+    <div
+      class="folha-lancamentos-item-modal-backdrop folha-funcionario-evt-fixo-modal-backdrop"
+      role="presentation"
+      (click)="fecharModalEventoFixo()"
+    >
+      <div
+        class="folha-lancamentos-item-modal folha-funcionario-evt-fixo-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ff-modal-evt-fix-titulo"
+        (click)="$event.stopPropagation()"
+      >
+        <header class="folha-lancamentos-item-modal-head">
+          <h2
+            id="ff-modal-evt-fix-titulo"
+            class="folha-lancamentos-item-modal-title folha-lancamentos-item-modal-title--com-tipo"
+          >
+            <span class="folha-lancamentos-item-modal-title-texto">{{ tituloModalEventoFixo() }}</span>
+            @if (tipoMovimentoModalEvtFixoSelecionado === FolhaMovimentoTipo.RECEITA) {
+              <span
+                class="folha-lancamentos-item-modal-tipo-pill folha-lancamentos-item-modal-tipo-pill--receita"
+              >
+                Receita
+              </span>
+            } @else if (tipoMovimentoModalEvtFixoSelecionado === FolhaMovimentoTipo.DESPESA) {
+              <span
+                class="folha-lancamentos-item-modal-tipo-pill folha-lancamentos-item-modal-tipo-pill--despesa"
+              >
+                Despesa
+              </span>
+            }
+          </h2>
+        </header>
+        <div class="folha-lancamentos-item-modal-body">
+          <div class="folha-lancamentos-item-modal-field filter-group">
+            <label for="ff-modal-ev-fix-verba">Evento</label>
+            <select
+              id="ff-modal-ev-fix-verba"
+              class="form-control folha-lancamentos-func-select-evento"
+              [(ngModel)]="modalEvtFixoDraft.folhaVerbaId"
+              [disabled]="modalEvtFixoSalvarDesabilitado"
+            >
+              <option value="">— escolha —</option>
+              @for (vb of verbasOpcoesModalEventoFixo(); track vb.id) {
+                <option [ngValue]="vb.id">{{ vb.descricao }}{{ !vb.ativo ? ' (inativo)' : '' }}</option>
+              }
+            </select>
+          </div>
+          <div class="folha-lancamentos-item-modal-evento-resumo" aria-live="polite">
+            @if (descricaoVerbaModalEvtFixoSelecionada) {
+              <span class="folha-lancamentos-item-modal-evento-nome-destaque">{{
+                descricaoVerbaModalEvtFixoSelecionada
+              }}</span>
+            } @else {
+              <span class="folha-lancamentos-item-modal-evento-placeholder">Escolha o evento acima.</span>
+            }
+          </div>
+          <div class="folha-lancamentos-item-modal-qtd-valor-row">
+            <div class="folha-lancamentos-item-modal-field filter-group">
+              <label for="ff-modal-ev-fix-qtd">Referência</label>
+              <input
+                id="ff-modal-ev-fix-qtd"
+                type="text"
+                class="form-control folha-lancamentos-func-input-qtd-ref"
+                [(ngModel)]="modalEvtFixoDraft.quantidadeTexto"
+                inputmode="decimal"
+                autocomplete="off"
+                [disabled]="modalEvtFixoSalvarDesabilitado"
+              />
+            </div>
+            <div class="folha-lancamentos-item-modal-field filter-group">
+              <label for="ff-modal-ev-fix-valor">Valor</label>
+              <input
+                id="ff-modal-ev-fix-valor"
+                type="text"
+                class="form-control folha-lancamentos-func-input-valor-monetario"
+                [(ngModel)]="modalEvtFixoDraft.valorTexto"
+                inputmode="decimal"
+                autocomplete="off"
+                [disabled]="modalEvtFixoSalvarDesabilitado"
+                (blur)="onModalEvtFixoValorBlur()"
+              />
+            </div>
+          </div>
+        </div>
+        <footer class="folha-lancamentos-item-modal-actions">
+          <button
+            type="button"
+            class="btn btn-cancelar folha-lancamentos-item-modal-btn-footer"
+            (click)="fecharModalEventoFixo()"
+            [disabled]="modalEvtFixoSalvarDesabilitado"
+          >
+            Fechar
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar folha-lancamentos-item-modal-btn-footer"
+            (click)="confirmarModalEventoFixo()"
+            [disabled]="modalEvtFixoSalvarDesabilitado"
+          >
+            Salvar
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  <app-confirmation-modal
+    [isVisible]="showConfirmRemoverEvtFixo"
+    title="Remover evento fixo"
+    [message]="mensagemConfirmRemoverEvtFixo"
+    confirmText="Remover"
+    cancelText="Cancelar"
+    confirmVariant="danger"
+    (confirmed)="confirmarRemoverEvtFixo()"
+    (cancelled)="fecharConfirmRemoverEvtFixo()"
+  ></app-confirmation-modal>
+</div>

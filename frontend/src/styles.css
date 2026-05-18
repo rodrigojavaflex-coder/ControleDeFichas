@@ -33,7 +33,7 @@ body {
   background-color: var(--bg-secondary, #f8fafc);
 }
 
-/* Fator de zoom exposto para fácil ajuste futuro */
+/* 1 = UI em escala “natural”; menor que 1 reduz texto e componentes globalmente (compensado em layout.css). */
 :root {
   --app-zoom-factor: 0.80;
 }

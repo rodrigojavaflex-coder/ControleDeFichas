@@ -1,0 +1,78 @@
+<div class="folha-lista-container folha-verbas">
+  @if (!pode().r) {
+    <div class="alert alert-error">Você não possui permissão para visualizar cargos (folha-cargo:read).</div>
+  } @else {
+    <section class="filters" aria-label="Lista de cargos">
+      @if (pode().c) {
+        <button type="button" class="btn btn-novo" (click)="irNovo()" [disabled]="carregando">Novo cargo</button>
+      }
+    </section>
+
+    @if (carregando) {
+      <div class="loading">Carregando cargos…</div>
+    } @else {
+      <div class="table-container">
+        <table class="folha-data-table">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Ativo</th>
+              <th>Criado em</th>
+              @if (pode().u || pode().d || pode().a) {
+                <th>Ações</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (v of lista; track v.id) {
+              <tr>
+                <td>{{ v.descricao }}</td>
+                <td>
+                  <span class="folha-badge-ativo" [class.sim]="v.ativo" [class.nao]="!v.ativo">{{
+                    v.ativo ? 'Sim' : 'Não'
+                  }}</span>
+                </td>
+                <td>{{ formatData(v.criadoEm) }}</td>
+                @if (pode().u || pode().d || pode().a) {
+                  <td class="action-buttons">
+                    @if (pode().u) {
+                      <button type="button" class="btn btn-sm btn-editar" (click)="irEditar(v)">Editar</button>
+                      <button
+                        type="button"
+                        [ngClass]="v.ativo ? 'btn btn-sm btn-cancelar' : 'btn btn-sm btn-baixa'"
+                        (click)="alternarAtivo(v)">
+                        {{ v.ativo ? 'Inativar' : 'Ativar' }}
+                      </button>
+                    }
+                    @if (pode().a) {
+                      <button type="button" class="btn btn-sm btn-auditoria" (click)="abrirAuditoria(v)" title="Auditoria">
+                        Auditoria
+                      </button>
+                    }
+                    @if (pode().d) {
+                      <button type="button" class="btn btn-sm btn-excluir" (click)="excluir(v)">Excluir</button>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+            @if (lista.length === 0) {
+              <tr class="no-data">
+                <td [attr.colspan]="pode().u || pode().d || pode().a ? 4 : 3">Nenhum cargo cadastrado.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+<app-historico-auditoria
+  *ngIf="selectedForAudit"
+  entidade="folha_cargo"
+  [entidadeId]="selectedForAudit.id"
+  [fieldLabels]="auditFieldLabels()"
+  [showModal]="showAuditModal"
+  (modalClosed)="closeAuditModal()">
+</app-historico-auditoria>

@@ -1,0 +1,59 @@
+<div class="folha-entity-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar cargo' : 'Novo cargo' }}</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  }
+
+  @if (error && !loading) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (!loading) {
+    <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      @if (isEditMode && criadoEm) {
+        <div class="folha-readonly-meta">
+          Criado em: {{ formatMeta(criadoEm) }} — Atualizado em: {{ formatMeta(atualizadoEm) }}
+        </div>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="fc-desc">Descrição *</label>
+        <input
+          id="fc-desc"
+          type="text"
+          class="form-control"
+          formControlName="descricao"
+          maxlength="120"
+          [class.error]="descricaoCtrl!.invalid && descricaoCtrl!.touched"
+          placeholder="Ex.: Auxiliar administrativo, Gerente…"
+        />
+        @if (descricaoCtrl!.invalid && descricaoCtrl!.touched) {
+          <div class="error-message">Descrição obrigatória.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input id="fc-ativo" type="checkbox" formControlName="ativo" />
+          <label class="form-label" for="fc-ativo" style="margin: 0">Ativo</label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancelar" [disabled]="isSubmitting" (click)="onCancel()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+          @if (!isSubmitting) {
+            {{ isEditMode ? 'Atualizar' : 'Cadastrar' }}
+          } @else {
+            Salvando...
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>
