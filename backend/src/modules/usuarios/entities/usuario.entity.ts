@@ -1,4 +1,12 @@
-import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  Index,
+  ManyToOne,
+  ManyToMany,
+  JoinColumn,
+  JoinTable,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Perfil } from '../../perfil/entities/perfil.entity';
 import { Vendedor } from '../../vendedores/entities/vendedor.entity';
@@ -44,10 +52,14 @@ export class Usuario extends BaseEntity {
   @Column({ default: true })
   ativo: boolean;
 
-  @ApiProperty({ description: 'Perfil do usuário', type: () => Perfil })
-  @ManyToOne(() => Perfil, { eager: true })
-  @JoinColumn({ name: 'perfilId' })
-  perfil: Perfil;
+  @ApiProperty({ description: 'Perfis do usuário', type: () => [Perfil] })
+  @ManyToMany(() => Perfil, (perfil) => perfil.usuarios, { eager: true })
+  @JoinTable({
+    name: 'usuarios_perfis',
+    joinColumn: { name: 'usuario_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'perfil_id', referencedColumnName: 'id' },
+  })
+  perfis: Perfil[];
 
   @ApiProperty({
     description: 'Tema preferido do usuário',
@@ -57,6 +69,15 @@ export class Usuario extends BaseEntity {
   })
   @Column({ default: 'Claro', length: 10 })
   tema: string;
+
+  @ApiProperty({
+    description: 'IDs dos atalhos da tela inicial (ordem do usuário)',
+    example: ['vendas', 'folha-lancamentos'],
+    required: false,
+    type: [String],
+  })
+  @Column({ name: 'atalhos_home', type: 'jsonb', nullable: true })
+  atalhosHome: string[] | null;
 
   @ApiProperty({
     description: 'Unidade do usuário',

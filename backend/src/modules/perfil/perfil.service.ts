@@ -62,10 +62,13 @@ export class PerfilService {
       return { group, permissions: labels };
     }).filter(g => g.permissions.length > 0);
     // Listar usuários vinculados ao perfil
-    const usuarios = await this.usuarioRepository.find({
-      where: { perfil: { id } },
-      select: ['nome'],
-    });
+    const usuarios = await this.usuarioRepository
+      .createQueryBuilder('usuario')
+      .innerJoin('usuario.perfis', 'perfil', 'perfil.id = :perfilId', {
+        perfilId: id,
+      })
+      .select(['usuario.nome'])
+      .getMany();
     const users = usuarios.map(u => u.nome);
 
     return {

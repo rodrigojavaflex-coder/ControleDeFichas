@@ -103,7 +103,7 @@ export class FolhaLancamentosPage implements OnInit {
     valor: 'Valor',
     quantidade: 'Referência (qtd)',
     folhaCapaId: 'Folha (capa)',
-    folhaVerbaId: 'Verba/evento',
+    folhaVerbaId: 'Evento',
   };
 
   get referenciaCompetencia(): string {

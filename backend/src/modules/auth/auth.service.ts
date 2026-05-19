@@ -16,6 +16,7 @@ import { JwtPayload } from './strategies/jwt.strategy';
 import { AuditoriaService } from '../../common/services/auditoria.service';
 import { AuditAction } from '../../common/enums/auditoria.enum';
 import { Configuracao } from '../configuracao/entities/configuracao.entity';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 
 @Injectable()
 export class AuthService {
@@ -77,7 +78,7 @@ export class AuthService {
     // Buscar usuário pelo email com relações
     const user = await this.userRepository.findOne({
       where: { email },
-      relations: ['perfil', 'vendedor'],
+      relations: ['perfis', 'vendedor'],
     });
     if (!user) {
       if (await this.shouldAuditAction(AuditAction.LOGIN_FAILED)) {
@@ -140,7 +141,7 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshToken);
       const user = await this.userRepository.findOne({
         where: { id: payload.sub },
-        relations: ['perfil', 'vendedor'],
+        relations: ['perfis', 'vendedor'],
       });
 
       if (!user || !user.ativo) {
@@ -214,8 +215,10 @@ export class AuthService {
         name: user.nome,
         email: user.email,
         isActive: user.ativo,
-        permissions: user.perfil?.permissoes || [],
+        permissions: getUsuarioPermissoes(user),
+        perfis: user.perfis ?? [],
         tema: user.tema || 'Claro',
+        atalhosHome: user.atalhosHome ?? null,
         unidade: user.unidade ?? null,
         criadoEm: user.criadoEm,
         atualizadoEm: user.atualizadoEm,
@@ -233,7 +236,7 @@ export class AuthService {
   async validateUserById(userId: string): Promise<Usuario | null> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['perfil', 'vendedor'],
+      relations: ['perfis', 'vendedor'],
     });
     if (user && user.ativo) {
       return user;
@@ -244,7 +247,7 @@ export class AuthService {
   async getProfile(userId: string): Promise<Usuario> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['perfil', 'vendedor'],
+      relations: ['perfis', 'vendedor'],
     });
     if (!user) {
       // Auditar tentativa de acesso a perfil inexistente

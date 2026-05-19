@@ -205,4 +205,14 @@ export class HeaderComponent {
     }
     return parts.join(' ');
   }
+
+  formatPerfisUsuario(user: Usuario): string {
+    const nomes = (user.perfis ?? [])
+      .map((p) => p.nomePerfil)
+      .filter(Boolean);
+    if (nomes.length) {
+      return nomes.join(', ');
+    }
+    return user.perfil?.nomePerfil ?? '';
+  }
 }

@@ -27,7 +27,9 @@ export class FolhaFuncionariosPage implements OnInit {
   Unidade = Unidade;
 
   unidadesDisponiveis: Unidade[] = Object.values(Unidade);
-  unidadeFiltro: Unidade = Unidade.INHUMAS;
+  /** Vazio até o usuário escolher (sem vínculo de unidade no cadastro). */
+  unidadeFiltro: Unidade | '' = '';
+  unidadeFiltroDisabled = false;
   nomeFiltro = '';
   dados: FuncionarioPaginated | null = null;
   pagina = 1;
@@ -40,11 +42,19 @@ export class FolhaFuncionariosPage implements OnInit {
       description:
         'Funcionários cadastrados na unidade selecionada. O cadastro já inclui a unidade da folha.',
     });
-    const u = this.auth.getCurrentUser();
-    if (u?.unidade) {
-      this.unidadeFiltro = u.unidade;
-    }
+    this.initializeUnidadeFiltro();
     this.carregarLista();
+  }
+
+  private initializeUnidadeFiltro(): void {
+    const u = this.auth.getCurrentUser();
+    if (u?.unidade && String(u.unidade).trim() !== '') {
+      this.unidadeFiltro = u.unidade as Unidade;
+      this.unidadeFiltroDisabled = true;
+    } else {
+      this.unidadeFiltro = '';
+      this.unidadeFiltroDisabled = false;
+    }
   }
 
   podeLer(): boolean {
@@ -98,19 +108,23 @@ export class FolhaFuncionariosPage implements OnInit {
   limparFiltros(): void {
     this.nomeFiltro = '';
     this.pagina = 1;
-    const u = this.auth.getCurrentUser();
-    if (u?.unidade) {
-      this.unidadeFiltro = u.unidade;
+    if (!this.unidadeFiltroDisabled) {
+      this.unidadeFiltro = '';
     }
     this.carregarLista();
   }
 
   carregarLista(): void {
     if (!this.podeLer()) return;
+    if (!this.unidadeFiltro) {
+      this.dados = null;
+      this.carregando = false;
+      return;
+    }
     this.carregando = true;
     this.folha
       .listarFuncionarios(
-        this.unidadeFiltro,
+        this.unidadeFiltro as Unidade,
         this.pagina,
         this.pageSize,
         this.nomeFiltro || undefined,

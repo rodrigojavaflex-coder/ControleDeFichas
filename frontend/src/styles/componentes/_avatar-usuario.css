@@ -1,0 +1,41 @@
+/* Avatar do usuário (barra superior e telas que reutilizam o mesmo visual) */
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4299e1, #3182ce);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+  border-color: rgba(66, 153, 225, 0.2);
+}
+
+.user-avatar:active {
+  transform: scale(0.98);
+}
+
+/* Exibição sem interação (ex.: boas-vindas na home) */
+.user-avatar--static {
+  cursor: default;
+}
+
+.user-avatar--static:hover,
+.user-avatar--static:active {
+  transform: none;
+  box-shadow: 0 2px 8px rgba(66, 153, 225, 0.3);
+  border-color: transparent;
+}

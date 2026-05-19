@@ -11,3 +11,4 @@ export * from './vendedores.service';
 export * from './prescritores.service';
 export * from './migracao.service';
 export * from './folha.service';
+export * from './home-shortcuts.service';

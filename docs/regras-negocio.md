@@ -106,7 +106,24 @@
 - Na tela **Controle das competências**, o filtro de unidade segue o mesmo critério da lista de **Vendas**: fica **fixo e bloqueado** somente quando **`usuario.unidade`** existe e não é string vazia; perfis sem essa coluna preenchida mantêm o seletor liberado (incluindo opção “Todas”), alinhado ao comportamento da API para o escopo efetivo de quem tem só `vendedor.unidade`.
 - **`GET …/folha/funcionarios` (lista paginada):** continua usando o query param `unidade` no escopo do usuário/`admin:full` (usuario sem vínculo ou admin conforme filtros disponíveis).
 - **`POST …/folha/capas`:** aceita **`funcionarioId`**; a unidade do body deve **coincidir** com `funcionarios.unidade` desse funcionário (e com o escopo do usuário).
-- Permissões do épico (atribuir via perfil): `folha-funcionario:create|read|update|delete`; `folha-cargo:create|read|update|delete|audit`; `folha-setor:create|read|update|delete|audit`; `folha-verba:create|read|update|delete`; `folha-tipo:create|read|update|delete`; `folha-lancamento:create|read|update|delete|congelar-capa|liberar-capa`; `folha-fechamento:read`; `folha-fechamento:registrar-abertura`; `folha-fechamento:fechar`; `folha-fechamento:reabrir`. Leituras auxiliares (ex.: listar tipos/verbas/cargos/setores/lista para lançamento) combinam permissões definidas na API.
+- Permissões do épico (atribuir via perfil): `folha-funcionario:create|read|update|delete`; `folha-cargo:create|read|update|delete|audit`; `folha-setor:create|read|update|delete|audit`; `folha-verba:create|read|update|delete|audit`; `folha-tipo:create|read|update|delete`; `folha-lancamento:create|read|update|delete|congelar-capa|liberar-capa`; `folha-fechamento:read`; `folha-fechamento:registrar-abertura`; `folha-fechamento:fechar`; `folha-fechamento:reabrir`. Leituras auxiliares (ex.: listar tipos/verbas/cargos/setores/lista para lançamento) combinam permissões definidas na API.
+
+### RN-008 — Usuário com múltiplos perfis
+
+- Cada usuário pode ter **um ou mais perfis** (`usuarios_perfis`); cadastro/edição exige **`perfilIds`** com ao menos um UUID válido.
+- **Permissões efetivas** = **união** das permissões de todos os perfis vinculados (OR). Se **qualquer** perfil tiver `admin:full`, o usuário tem escopo administrativo global nas checagens da API.
+- **`usuario.unidade`** e **`vendedor`** continuam no cadastro do usuário (não vêm do perfil).
+- **API:** create/update de usuário usam `perfilIds[]`; login e `/auth/profile` retornam `perfis` e `permissions` (lista unificada).
+- **Mensagem ao usuário:** «Um ou mais perfis informados não foram encontrados»; «perfilIds deve ter ao menos um perfil».
+
+### RN-014 — Atalhos da tela inicial (home)
+
+- Preferência persistida em **`usuarios.atalhos_home`** (JSON array de IDs), até **8** itens, ordem definida pelo usuário.
+- IDs válidos são os do catálogo do sistema (ex.: `vendas`, `folha-lancamentos`); a API descarta IDs desconhecidos ou duplicados.
+- **`null`** no banco = usuário ainda não personalizou → frontend usa atalhos **padrão** filtrados por permissão.
+- **`PATCH /users/:id/atalhos-home`:** apenas o **próprio usuário** pode alterar seus atalhos (JWT).
+- Na exibição, só aparecem atalhos para rotas que o usuário **pode acessar** (união de permissões dos perfis, RN-008).
+- Login/refresh retornam `atalhosHome` no objeto do usuário.
 
 ---
 

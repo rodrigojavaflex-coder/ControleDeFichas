@@ -103,6 +103,7 @@ export enum Permission {
   FOLHA_VERBA_READ = 'folha-verba:read',
   FOLHA_VERBA_UPDATE = 'folha-verba:update',
   FOLHA_VERBA_DELETE = 'folha-verba:delete',
+  FOLHA_VERBA_AUDIT = 'folha-verba:audit',
 
   // Folha — Tipos de folha (mensal, férias, etc.)
   FOLHA_TIPO_CREATE = 'folha-tipo:create',
@@ -238,6 +239,7 @@ export const PERMISSION_GROUPS = {
     { key: Permission.FOLHA_VERBA_READ, label: 'Visualizar verbas (folha)' },
     { key: Permission.FOLHA_VERBA_UPDATE, label: 'Editar verbas (folha)' },
     { key: Permission.FOLHA_VERBA_DELETE, label: 'Excluir verbas (folha)' },
+    { key: Permission.FOLHA_VERBA_AUDIT, label: 'Visualizar auditoria de eventos (folha)' },
   ],
   'Folha — Tipos': [
     { key: Permission.FOLHA_TIPO_CREATE, label: 'Criar tipos de folha' },

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Perfil } from '../perfil/entities/perfil.entity';
 import { Vendedor } from '../vendedores/entities/vendedor.entity';
 import * as bcrypt from 'bcrypt';
@@ -18,6 +18,11 @@ import {
   PaginationMetaDto,
 } from '../../common/dto/paginated-response.dto';
 import { PERMISSION_GROUPS } from '../../common/enums/permission.enum';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
+import {
+  HOME_SHORTCUT_ID_SET,
+  HOME_SHORTCUTS_MAX,
+} from '../../common/constants/home-shortcut-ids';
 
 @Injectable()
 export class UsuariosService {
@@ -51,13 +56,15 @@ export class UsuariosService {
         saltRounds,
       );
 
-      // Buscar perfil pelo ID
-      const perfil = await this.perfilRepository.findOne({
-        where: { id: createUsuarioDto.perfilId },
+      const perfilIds = Array.from(
+        new Set(createUsuarioDto.perfilIds || []),
+      ).filter(Boolean);
+      const perfis = await this.perfilRepository.find({
+        where: { id: In(perfilIds) },
       });
-      if (!perfil) {
+      if (!perfis.length || perfis.length !== perfilIds.length) {
         throw new NotFoundException(
-          `Perfil com ID ${createUsuarioDto.perfilId} não encontrado`,
+          'Um ou mais perfis informados não foram encontrados',
         );
       }
 
@@ -82,7 +89,7 @@ export class UsuariosService {
         ativo: createUsuarioDto.ativo ?? true,
         tema: createUsuarioDto.tema || 'Claro',
         unidade: createUsuarioDto.unidade,
-        perfil,
+        perfis,
         vendedor: vendedor || undefined,
       };
 
@@ -145,7 +152,7 @@ export class UsuariosService {
 
     const queryBuilder = this.usuarioRepository
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.perfil', 'perfil');
+      .leftJoinAndSelect('user.perfis', 'perfis');
 
     if (nome) {
       queryBuilder.andWhere('user.nome ILIKE :nome', { nome: `%${nome}%` });
@@ -169,7 +176,7 @@ export class UsuariosService {
     // Carregar usuário incluindo a relação com Perfil e Vendedor
     const user = await this.usuarioRepository.findOne({
       where: { id },
-      relations: ['perfil', 'vendedor'],
+      relations: ['perfis', 'vendedor'],
     });
 
     if (!user) {
@@ -213,16 +220,19 @@ export class UsuariosService {
       user.email = updateUsuarioDto.email;
     if (updateUsuarioDto.ativo !== undefined)
       user.ativo = updateUsuarioDto.ativo;
-    if (updateUsuarioDto.perfilId !== undefined) {
-      const perfil = await this.perfilRepository.findOne({
-        where: { id: updateUsuarioDto.perfilId },
+    if (updateUsuarioDto.perfilIds !== undefined) {
+      const perfilIds = Array.from(
+        new Set(updateUsuarioDto.perfilIds || []),
+      ).filter(Boolean);
+      const perfis = await this.perfilRepository.find({
+        where: { id: In(perfilIds) },
       });
-      if (!perfil) {
+      if (!perfis.length || perfis.length !== perfilIds.length) {
         throw new NotFoundException(
-          `Perfil com ID ${updateUsuarioDto.perfilId} não encontrado`,
+          'Um ou mais perfis informados não foram encontrados',
         );
       }
-      user.perfil = perfil;
+      user.perfis = perfis;
     }
     if (updateUsuarioDto.tema !== undefined) user.tema = updateUsuarioDto.tema;
     if (updateUsuarioDto.unidade !== undefined) user.unidade = updateUsuarioDto.unidade;
@@ -280,6 +290,37 @@ export class UsuariosService {
     }
   }
 
+  sanitizeAtalhosHomeIds(ids: string[] | null | undefined): string[] {
+    if (!ids?.length) {
+      return [];
+    }
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const id of ids) {
+      if (typeof id !== 'string') continue;
+      const trimmed = id.trim();
+      if (!trimmed || !HOME_SHORTCUT_ID_SET.has(trimmed) || seen.has(trimmed)) {
+        continue;
+      }
+      seen.add(trimmed);
+      result.push(trimmed);
+      if (result.length >= HOME_SHORTCUTS_MAX) break;
+    }
+    return result;
+  }
+
+  async updateAtalhosHome(id: string, atalhosHome: string[]): Promise<Usuario> {
+    const user = await this.findOne(id);
+    user.atalhosHome = this.sanitizeAtalhosHomeIds(atalhosHome);
+
+    try {
+      return await this.usuarioRepository.save(user);
+    } catch (error) {
+      this.logger.error('Erro ao atualizar atalhos da home:', error);
+      throw error;
+    }
+  }
+
   async updateTema(id: string, tema: string): Promise<Usuario> {
     const user = await this.findOne(id);
 
@@ -302,7 +343,7 @@ export class UsuariosService {
     const user = await this.findOne(id);
 
   // Formatar permissões para impressão (perfis)
-  const userPermissions = user.perfil?.permissoes || [];
+  const userPermissions = getUsuarioPermissoes(user);
     const formattedPermissions: Array<{
       group: string;
       permissions: string[];

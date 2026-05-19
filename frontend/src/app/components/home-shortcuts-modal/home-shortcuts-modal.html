@@ -1,0 +1,186 @@
+@if (visible) {
+  <div
+    class="home-shortcuts-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="home-shortcuts-title"
+    (click)="onOverlayClick($event)"
+  >
+    <div class="home-shortcuts-dialog" (click)="$event.stopPropagation()">
+      <header class="home-shortcuts-header">
+        <div>
+          <h2 id="home-shortcuts-title">Personalizar atalhos</h2>
+          <p class="home-shortcuts-subtitle">
+            Escolha e ordene o que aparece na tela inicial. Só são listadas funções que você pode
+            acessar.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="home-shortcuts-close"
+          aria-label="Fechar"
+          (click)="requestClose()"
+        >
+          ×
+        </button>
+      </header>
+
+      <section class="home-shortcuts-preview" aria-label="Pré-visualização da home">
+        <p class="home-shortcuts-preview-label">Pré-visualização</p>
+        <div class="home-shortcuts-preview-grid">
+          @for (s of previewShortcuts; track s.id) {
+            <div class="home-shortcuts-preview-card">
+              <span class="home-shortcuts-preview-icon" [innerHTML]="iconHtml(s.icon)"></span>
+              <span class="home-shortcuts-preview-label-text">{{ s.label }}</span>
+            </div>
+          }
+          @for (ph of previewPlaceholderCount; track ph) {
+            <div
+              class="home-shortcuts-preview-card home-shortcuts-preview-card--empty"
+              aria-hidden="true"
+            >
+              <span class="home-shortcuts-preview-placeholder">—</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <div class="home-shortcuts-columns">
+        <section class="home-shortcuts-panel" aria-label="Atalhos disponíveis">
+          <h3>Disponíveis</h3>
+          <label class="home-shortcuts-search-wrap">
+            <span class="visually-hidden">Buscar atalho</span>
+            <input
+              type="search"
+              class="home-shortcuts-search"
+              [(ngModel)]="searchTerm"
+              placeholder="Buscar por nome ou área…"
+              autocomplete="off"
+            />
+          </label>
+
+          <div class="home-shortcuts-panel-scroll">
+            @if (availableGroups.length === 0) {
+              <p class="home-shortcuts-empty-hint">
+                @if (atMax) {
+                  Limite de {{ maxShortcuts }} atalhos atingido. Remova um item à direita para
+                  adicionar outro.
+                } @else if (searchTerm.trim()) {
+                  Nenhum atalho encontrado para esta busca.
+                } @else {
+                  Todos os atalhos disponíveis já estão na sua home.
+                }
+              </p>
+            }
+            @for (group of availableGroups; track group.category) {
+              <div class="home-shortcuts-group">
+                <h4>{{ group.category }}</h4>
+                <ul class="home-shortcuts-available-list">
+                  @for (item of group.items; track item.id) {
+                    <li>
+                      <label class="home-shortcuts-available-row">
+                        <input
+                          type="checkbox"
+                          [checked]="false"
+                          [disabled]="atMax"
+                          (change)="toggleAvailable(item, $any($event.target).checked)"
+                        />
+                        <span
+                          class="home-shortcuts-row-icon"
+                          [innerHTML]="iconHtml(item.icon)"
+                        ></span>
+                        <span>{{ item.label }}</span>
+                      </label>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        </section>
+
+        <section class="home-shortcuts-panel" aria-label="Atalhos na sua home">
+          <div class="home-shortcuts-panel-title-row">
+            <h3>Na sua home</h3>
+            <span class="home-shortcuts-counter">{{ selectedCount }} de {{ maxShortcuts }}</span>
+          </div>
+          <p class="home-shortcuts-drag-hint">Arraste pela linha ou use ↑ ↓ para reordenar.</p>
+
+          <div class="home-shortcuts-panel-scroll">
+            @if (selectedShortcuts.length === 0) {
+              <p class="home-shortcuts-empty-hint">
+                Nenhum atalho selecionado. Marque itens à esquerda ou use Restaurar padrão.
+              </p>
+            } @else {
+              <ul class="home-shortcuts-selected-list">
+                @for (item of selectedShortcuts; track item.id; let i = $index) {
+                  <li
+                    class="home-shortcuts-selected-row"
+                    [class.is-dragging]="draggingIndex === i"
+                    draggable="true"
+                    (dragstart)="onDragStart(i, $event)"
+                    (dragover)="onDragOver($event)"
+                    (drop)="onDrop(i, $event)"
+                    (dragend)="onDragEnd()"
+                  >
+                    <span class="home-shortcuts-drag-handle" aria-hidden="true">≡</span>
+                    <span class="home-shortcuts-row-icon" [innerHTML]="iconHtml(item.icon)"></span>
+                    <span class="home-shortcuts-selected-label">{{ item.label }}</span>
+                    <div class="home-shortcuts-selected-actions">
+                      <button
+                        type="button"
+                        class="home-shortcuts-move-btn"
+                        [disabled]="i === 0"
+                        [attr.aria-label]="'Mover ' + item.label + ' para cima'"
+                        (click)="moveSelected(i, -1)"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        class="home-shortcuts-move-btn"
+                        [disabled]="i === selectedShortcuts.length - 1"
+                        [attr.aria-label]="'Mover ' + item.label + ' para baixo'"
+                        (click)="moveSelected(i, 1)"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        class="home-shortcuts-remove-btn"
+                        [attr.aria-label]="'Remover ' + item.label"
+                        (click)="removeShortcut(item.id)"
+                      >
+                        −
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+      </div>
+
+      <footer class="home-shortcuts-footer">
+        <button type="button" class="btn btn-link home-shortcuts-restore" (click)="restoreDefaults()">
+          Restaurar padrão
+        </button>
+        <div class="home-shortcuts-footer-actions">
+          <button type="button" class="btn btn-secondary" (click)="requestClose()">Cancelar</button>
+          <button type="button" class="btn btn-primary" (click)="save()">Salvar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+}
+
+<app-confirmation-modal
+  [isVisible]="showDiscardConfirm"
+  title="Descartar alterações?"
+  message="As mudanças nos atalhos não foram salvas. Deseja fechar sem salvar?"
+  confirmText="Descartar"
+  cancelText="Continuar editando"
+  (confirmed)="confirmDiscard()"
+  (cancelled)="cancelDiscard()"
+/>

@@ -1,15 +1,15 @@
 <div class="folha-lista-container folha-verbas">
   @if (!pode().r) {
-    <div class="alert alert-error">Você não possui permissão para visualizar verbas (folha-verba:read).</div>
+    <div class="alert alert-error">Você não possui permissão para visualizar eventos (folha-verba:read).</div>
   } @else {
-    <section class="filters" aria-label="Lista de verbas">
+    <section class="filters" aria-label="Lista de eventos">
       @if (pode().c) {
-        <button type="button" class="btn btn-novo" (click)="irNova()" [disabled]="carregando">Nova verba</button>
+        <button type="button" class="btn btn-novo" (click)="irNova()" [disabled]="carregando">Novo evento</button>
       }
     </section>
 
     @if (carregando) {
-      <div class="loading">Carregando verbas…</div>
+      <div class="loading">Carregando eventos…</div>
     } @else {
       <div class="table-container">
         <table class="folha-data-table">
@@ -19,7 +19,7 @@
               <th>Tipo</th>
               <th>Ativo</th>
               <th>Criado em</th>
-              @if (pode().u || pode().d) {
+              @if (pode().u || pode().d || pode().a) {
                 <th>Ações</th>
               }
             </tr>
@@ -42,7 +42,7 @@
                   }}</span>
                 </td>
                 <td>{{ formatData(v.criadoEm) }}</td>
-                @if (pode().u || pode().d) {
+                @if (pode().u || pode().d || pode().a) {
                   <td class="action-buttons">
                     @if (pode().u) {
                       <button type="button" class="btn btn-sm btn-editar" (click)="irEditar(v)">Editar</button>
@@ -51,6 +51,11 @@
                         [ngClass]="v.ativo ? 'btn btn-sm btn-cancelar' : 'btn btn-sm btn-baixa'"
                         (click)="alternarAtivo(v)">
                         {{ v.ativo ? 'Inativar' : 'Ativar' }}
+                      </button>
+                    }
+                    @if (pode().a) {
+                      <button type="button" class="btn btn-sm btn-auditoria" (click)="abrirAuditoria(v)" title="Auditoria">
+                        Auditoria
                       </button>
                     }
                     @if (pode().d) {
@@ -62,7 +67,7 @@
             }
             @if (lista.length === 0) {
               <tr class="no-data">
-                <td [attr.colspan]="pode().u || pode().d ? 5 : 4">Nenhuma verba cadastrada.</td>
+                <td [attr.colspan]="pode().u || pode().d || pode().a ? 5 : 4">Nenhum evento cadastrado.</td>
               </tr>
             }
           </tbody>
@@ -71,3 +76,12 @@
     }
   }
 </div>
+
+<app-historico-auditoria
+  *ngIf="selectedForAudit"
+  entidade="folha_verba"
+  [entidadeId]="selectedForAudit.id"
+  [fieldLabels]="auditFieldLabels()"
+  [showModal]="showAuditModal"
+  (modalClosed)="closeAuditModal()">
+</app-historico-auditoria>

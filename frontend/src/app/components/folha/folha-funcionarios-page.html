@@ -12,8 +12,11 @@
           class="form-control"
           [(ngModel)]="unidadeFiltro"
           (change)="pagina = 1; carregarLista()"
-          [disabled]="carregando"
+          [disabled]="carregando || unidadeFiltroDisabled"
         >
+          @if (!unidadeFiltroDisabled) {
+            <option [ngValue]="''">Selecione a unidade</option>
+          }
           @for (u of unidadesDisponiveis; track u) {
             <option [ngValue]="u">{{ u }}</option>
           }
@@ -41,9 +44,15 @@
       }
     </section>
 
-    <p class="legenda-lista-funcionarios">
-      Lista dos funcionários da <strong>unidade do filtro</strong> (a unidade da folha fica cadastrada no próprio funcionário). Use novo cadastro para incluir registros nesta unidade.
-    </p>
+    @if (!unidadeFiltro && !carregando) {
+      <p class="legenda-lista-funcionarios">
+        Selecione uma <strong>unidade</strong> no filtro e clique em Buscar para listar os funcionários.
+      </p>
+    } @else {
+      <p class="legenda-lista-funcionarios">
+        Lista dos funcionários da <strong>unidade do filtro</strong> (a unidade da folha fica cadastrada no próprio funcionário).
+      </p>
+    }
 
     @if (carregando) {
       <div class="loading">Carregando funcionários…</div>

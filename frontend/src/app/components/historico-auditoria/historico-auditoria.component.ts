@@ -380,8 +380,12 @@ export class HistoricoAuditoriaComponent implements OnChanges {
       'perfil': 'Perfil',
       'folha_cargo': 'Cargo (folha)',
       'folha_setor': 'Setor (folha)',
+      'folha_verba': 'Evento (folha)',
+      'folha_tipo': 'Tipo de folha',
       'folha_item': 'Lançamento (folha)',
       'folha_capa': 'Capa de folha',
+      'folha_fechamento': 'Fechamento (folha)',
+      funcionarios: 'Funcionário (folha)',
     };
     return entityNames[this.entidade] || this.entidade.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }

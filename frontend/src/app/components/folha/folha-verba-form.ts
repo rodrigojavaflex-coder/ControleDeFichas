@@ -55,21 +55,21 @@ export class FolhaVerbaFormComponent implements OnInit {
       this.isEditMode = true;
       this.verbaId = id;
       if (!this.auth.hasPermission(Permission.FOLHA_VERBA_READ)) {
-        this.erroRedirect('visualizar verbas');
+        this.erroRedirect('visualizar eventos');
         return;
       }
       if (!this.auth.hasPermission(Permission.FOLHA_VERBA_UPDATE)) {
-        this.erroRedirect('editar verbas');
+        this.erroRedirect('editar eventos');
         return;
       }
       this.load(id);
     } else if (!this.auth.hasPermission(Permission.FOLHA_VERBA_CREATE)) {
-      this.erroRedirect('criar verbas');
+      this.erroRedirect('criar eventos');
       return;
     }
 
     this.pageCtx.setContext({
-      title: this.isEditMode ? 'Editar verba' : 'Nova verba',
+      title: this.isEditMode ? 'Editar evento' : 'Novo evento',
       description:
         'Eventos de receita ou despesa usados nos lançamentos.',
     });
@@ -99,7 +99,7 @@ export class FolhaVerbaFormComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        this.error = 'Erro ao carregar verba.';
+        this.error = 'Erro ao carregar evento.';
         this.errors.show(this.error!, 'Erro');
       },
     });

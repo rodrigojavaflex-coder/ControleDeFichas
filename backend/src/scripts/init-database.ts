@@ -50,7 +50,7 @@ async function bootstrap() {
         email: adminEmail,
         senha: adminPassword,
         ativo: true,
-        perfilId: perfilId,
+        perfilIds: [perfilId],
         tema: 'Claro',
       });
       console.log('✅ Usuário admin criado com sucesso');

@@ -9,6 +9,7 @@ import {
   getNavigationMenuIconHtml,
   NAV_LOGOUT_ICON_SVG_HTML,
 } from './navigation-lucide-svgs';
+import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 
 interface MenuItem {
   label: string;
@@ -22,7 +23,7 @@ interface MenuItem {
 @Component({
   selector: 'app-navigation',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ConfirmationModalComponent],
   templateUrl: './navigation.html',
   styleUrls: ['./navigation.css']
 })
@@ -38,6 +39,7 @@ export class NavigationComponent implements OnInit, OnDestroy {
 
   currentUser: Usuario | null = null;
   visibleMenuItems: MenuItem[] = [];
+  showLogoutModal = false;
 
   // Estados do menu através do serviço
   get isMobileOpen() { return this.navigationService.isMobileOpen; }
@@ -123,30 +125,33 @@ export class NavigationComponent implements OnInit, OnDestroy {
           requiredPermissions: [],
           children: [
             {
+              label: 'Cargos',
+              route: '/folha/cargos',
+              icon: 'feather-briefcase',
+              requiredPermissions: [
+                Permission.FOLHA_CARGO_CREATE,
+                Permission.FOLHA_CARGO_READ,
+                Permission.FOLHA_CARGO_UPDATE,
+                Permission.FOLHA_CARGO_DELETE,
+              ],
+            },
+            {
               label: 'Clientes',
               route: '/clientes',
               icon: 'feather-user',
               requiredPermissions: [Permission.CLIENTE_CREATE, Permission.CLIENTE_READ, Permission.CLIENTE_UPDATE, Permission.CLIENTE_DELETE]
             },
             {
-              label: 'Vendedores',
-              route: '/vendedores',
-              icon: 'feather-user-check',
-              requiredPermissions: [Permission.VENDEDOR_CREATE, Permission.VENDEDOR_READ, Permission.VENDEDOR_UPDATE, Permission.VENDEDOR_DELETE]
+              label: 'Eventos',
+              route: '/folha/verbas',
+              icon: 'feather-list',
+              requiredPermissions: [
+                Permission.FOLHA_VERBA_CREATE,
+                Permission.FOLHA_VERBA_READ,
+                Permission.FOLHA_VERBA_UPDATE,
+                Permission.FOLHA_VERBA_DELETE,
+              ],
             },
-            {
-              label: 'Prescritores',
-              route: '/prescritores',
-              icon: 'feather-user-plus',
-              requiredPermissions: [Permission.PRESCRITOR_CREATE, Permission.PRESCRITOR_READ, Permission.PRESCRITOR_UPDATE, Permission.PRESCRITOR_DELETE]
-            },
-          ]
-        },
-        {
-          label: 'Folha',
-          icon: 'feather-briefcase',
-          requiredPermissions: [],
-          children: [
             {
               label: 'Funcionários',
               route: '/folha/funcionarios',
@@ -159,15 +164,10 @@ export class NavigationComponent implements OnInit, OnDestroy {
               ],
             },
             {
-              label: 'Cargos',
-              route: '/folha/cargos',
-              icon: 'feather-briefcase',
-              requiredPermissions: [
-                Permission.FOLHA_CARGO_CREATE,
-                Permission.FOLHA_CARGO_READ,
-                Permission.FOLHA_CARGO_UPDATE,
-                Permission.FOLHA_CARGO_DELETE,
-              ],
+              label: 'Prescritores',
+              route: '/prescritores',
+              icon: 'feather-user-plus',
+              requiredPermissions: [Permission.PRESCRITOR_CREATE, Permission.PRESCRITOR_READ, Permission.PRESCRITOR_UPDATE, Permission.PRESCRITOR_DELETE]
             },
             {
               label: 'Setores',
@@ -181,18 +181,7 @@ export class NavigationComponent implements OnInit, OnDestroy {
               ],
             },
             {
-              label: 'Verbas',
-              route: '/folha/verbas',
-              icon: 'feather-list',
-              requiredPermissions: [
-                Permission.FOLHA_VERBA_CREATE,
-                Permission.FOLHA_VERBA_READ,
-                Permission.FOLHA_VERBA_UPDATE,
-                Permission.FOLHA_VERBA_DELETE,
-              ],
-            },
-            {
-              label: 'Tipos',
+              label: 'Tipo de Folha',
               route: '/folha/tipos',
               icon: 'feather-layers',
               requiredPermissions: [
@@ -202,6 +191,19 @@ export class NavigationComponent implements OnInit, OnDestroy {
                 Permission.FOLHA_TIPO_DELETE,
               ],
             },
+            {
+              label: 'Vendedores',
+              route: '/vendedores',
+              icon: 'feather-user-check',
+              requiredPermissions: [Permission.VENDEDOR_CREATE, Permission.VENDEDOR_READ, Permission.VENDEDOR_UPDATE, Permission.VENDEDOR_DELETE]
+            },
+          ]
+        },
+        {
+          label: 'Folha',
+          icon: 'feather-briefcase',
+          requiredPermissions: [],
+          children: [
             {
               label: 'Lançamentos',
               route: '/folha/lancamentos',
@@ -320,21 +322,19 @@ export class NavigationComponent implements OnInit, OnDestroy {
     return this.authService.hasAnyPermission(menuItem.requiredPermissions) ? menuItem : null;
   }
 
-  /**
-   * Realiza logout do usuário
-   */
-  async logout() {
-    // Fechar o menu antes de fazer logout
+  /** Abre confirmação antes de sair (mesmo fluxo do header). */
+  logout(): void {
+    this.showLogoutModal = true;
+  }
+
+  confirmLogout(): void {
+    this.showLogoutModal = false;
     this.navigationService.closeOnNavigation();
-    
-    try {
-      await this.authService.logout();
-      this.router.navigate(['/login']);
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      // Mesmo com erro, navegar para login
-      this.router.navigate(['/login']);
-    }
+    void this.authService.logout();
+  }
+
+  cancelLogout(): void {
+    this.showLogoutModal = false;
   }
 
   /**
@@ -342,6 +342,11 @@ export class NavigationComponent implements OnInit, OnDestroy {
    */
   isRouteActive(route: string): boolean {
     return this.router.url === route;
+  }
+
+  isHomeActive(): boolean {
+    const url = this.router.url.split('?')[0];
+    return url === '/' || url === '';
   }
 
   /**

@@ -3,281 +3,304 @@ import { LoginComponent } from './components/login/login';
 import { UserListComponent } from './components/user-list/user-list';
 import { UserFormComponent } from './components/user-form/user-form';
 import { AuditoriaComponent } from './components/auditoria/auditoria';
-import { FichaTecnicaListComponent } from './components/ficha-tecnica-list/ficha-tecnica-list';
-import { FichaTecnicaFormComponent } from './components/ficha-tecnica-form/ficha-tecnica-form';
 import { authGuard } from './guards/auth.guard';
 import { ConfiguracaoComponent } from './modules/configuracao/configuracao.component';
 import { HomeComponent } from './components/home/home';
 import { ChangePasswordComponent } from './components/change-password/change-password';
 import { PerfilListComponent } from './components/perfil-list/perfil-list';
 import { PerfilFormComponent } from './components/perfil-form/perfil-form';
-import { CertificadoFormComponent } from './components/certificado-form/certificado-form';
-import { VendasListComponent } from './components/vendas-list/vendas-list';
-import { BaixasListComponent } from './components/baixas-list/baixas-list';
-import { AcompanharVendasComponent } from './components/acompanhar-vendas/acompanhar-vendas';
-import { FechamentoVendasListComponent } from './components/fechamento-vendas-list/fechamento-vendas-list';
-import { AnaliseValoresListComponent } from './components/analise-valores-list/analise-valores-list';
-import { ClientesListComponent } from './components/clientes-list/clientes-list';
-import { ClienteFormComponent } from './components/cliente-form/cliente-form';
-import { VendedoresListComponent } from './components/vendedores-list/vendedores-list';
-import { VendedorFormComponent } from './components/vendedor-form/vendedor-form';
-import { PrescritoresListComponent } from './components/prescritores-list/prescritores-list';
-import { PrescritorFormComponent } from './components/prescritor-form/prescritor-form';
-import { FolhaFuncionariosPage } from './components/folha/folha-funcionarios-page';
-import { FolhaFuncionarioFormComponent } from './components/folha/folha-funcionario-form';
-import { FolhaVerbasPage } from './components/folha/folha-verbas-page';
-import { FolhaVerbaFormComponent } from './components/folha/folha-verba-form';
-import { FolhaTiposPage } from './components/folha/folha-tipos-page';
-import { FolhaTipoFormComponent } from './components/folha/folha-tipo-form';
-import { FolhaLancamentosPage } from './components/folha/folha-lancamentos-page';
-import { FolhaFechamentoPage } from './components/folha/folha-fechamento-page';
-import { FolhaCargosPage } from './components/folha/folha-cargos-page';
-import { FolhaCargoFormComponent } from './components/folha/folha-cargo-form';
-import { FolhaSetoresPage } from './components/folha/folha-setores-page';
-import { FolhaSetorFormComponent } from './components/folha/folha-setor-form';
 
 export const routes: Routes = [
-  // Rota de configuração
   {
     path: 'configuracao',
     component: ConfiguracaoComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
-  // Rota de login (sem guard)
   {
     path: 'login',
-    component: LoginComponent
+    component: LoginComponent,
   },
-  
-  // Rotas protegidas
   {
     path: 'users',
     component: UserListComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'users/new',
     component: UserFormComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'users/edit/:id',
     component: UserFormComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'users/:id/change-password',
     component: ChangePasswordComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'auditoria',
     component: AuditoriaComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'fichas-tecnicas',
-    component: FichaTecnicaListComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/ficha-tecnica-list/ficha-tecnica-list').then(
+        (m) => m.FichaTecnicaListComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'fichas-tecnicas/new',
-    component: FichaTecnicaFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/ficha-tecnica-form/ficha-tecnica-form').then(
+        (m) => m.FichaTecnicaFormComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'fichas-tecnicas/edit/:id',
-    component: FichaTecnicaFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/ficha-tecnica-form/ficha-tecnica-form').then(
+        (m) => m.FichaTecnicaFormComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'fichas-tecnicas/view/:id',
-    component: FichaTecnicaFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/ficha-tecnica-form/ficha-tecnica-form').then(
+        (m) => m.FichaTecnicaFormComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'certificados/new',
-    component: CertificadoFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/certificado-form/certificado-form').then(
+        (m) => m.CertificadoFormComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'certificados/edit/:id',
-    component: CertificadoFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/certificado-form/certificado-form').then(
+        (m) => m.CertificadoFormComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'vendas',
-    component: VendasListComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/vendas-list/vendas-list').then((m) => m.VendasListComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'fechamento-vendas',
-    component: FechamentoVendasListComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/fechamento-vendas-list/fechamento-vendas-list').then(
+        (m) => m.FechamentoVendasListComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'relatorios/baixas',
-    component: BaixasListComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/baixas-list/baixas-list').then((m) => m.BaixasListComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'relatorios/acompanhar-vendas',
-    component: AcompanharVendasComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/acompanhar-vendas/acompanhar-vendas').then(
+        (m) => m.AcompanharVendasComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'relatorios/analise-valores',
-    component: AnaliseValoresListComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/analise-valores-list/analise-valores-list').then(
+        (m) => m.AnaliseValoresListComponent,
+      ),
+    canActivate: [authGuard],
   },
-  // Rotas de perfil: paths específicos antes da rota geral para evitar conflitos de prefixo
   {
     path: 'perfil/new',
     component: PerfilFormComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'perfil/edit/:id',
     component: PerfilFormComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
   {
     path: 'perfil',
     component: PerfilListComponent,
     canActivate: [authGuard],
-    pathMatch: 'full'
+    pathMatch: 'full',
   },
-  // Rotas de Clientes
   {
     path: 'clientes',
-    component: ClientesListComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/clientes-list/clientes-list').then((m) => m.ClientesListComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'clientes/new',
-    component: ClienteFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/cliente-form/cliente-form').then((m) => m.ClienteFormComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'clientes/edit/:id',
-    component: ClienteFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/cliente-form/cliente-form').then((m) => m.ClienteFormComponent),
+    canActivate: [authGuard],
   },
-  // Rotas de Vendedores
   {
     path: 'vendedores',
-    component: VendedoresListComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/vendedores-list/vendedores-list').then((m) => m.VendedoresListComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'vendedores/new',
-    component: VendedorFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/vendedor-form/vendedor-form').then((m) => m.VendedorFormComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'vendedores/edit/:id',
-    component: VendedorFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/vendedor-form/vendedor-form').then((m) => m.VendedorFormComponent),
+    canActivate: [authGuard],
   },
-  // Rotas de Prescritores
   {
     path: 'prescritores',
-    component: PrescritoresListComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/prescritores-list/prescritores-list').then(
+        (m) => m.PrescritoresListComponent,
+      ),
+    canActivate: [authGuard],
   },
   {
     path: 'prescritores/new',
-    component: PrescritorFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/prescritor-form/prescritor-form').then((m) => m.PrescritorFormComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'prescritores/edit/:id',
-    component: PrescritorFormComponent,
-    canActivate: [authGuard]
+    loadComponent: () =>
+      import('./components/prescritor-form/prescritor-form').then((m) => m.PrescritorFormComponent),
+    canActivate: [authGuard],
   },
   {
     path: 'folha/funcionarios',
-    component: FolhaFuncionariosPage,
+    loadComponent: () =>
+      import('./components/folha/folha-funcionarios-page').then((m) => m.FolhaFuncionariosPage),
     canActivate: [authGuard],
   },
   {
     path: 'folha/funcionarios/new',
-    component: FolhaFuncionarioFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-funcionario-form').then((m) => m.FolhaFuncionarioFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/funcionarios/edit/:id',
-    component: FolhaFuncionarioFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-funcionario-form').then((m) => m.FolhaFuncionarioFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/cargos',
-    component: FolhaCargosPage,
+    loadComponent: () =>
+      import('./components/folha/folha-cargos-page').then((m) => m.FolhaCargosPage),
     canActivate: [authGuard],
   },
   {
     path: 'folha/cargos/new',
-    component: FolhaCargoFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-cargo-form').then((m) => m.FolhaCargoFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/cargos/edit/:id',
-    component: FolhaCargoFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-cargo-form').then((m) => m.FolhaCargoFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/setores',
-    component: FolhaSetoresPage,
+    loadComponent: () =>
+      import('./components/folha/folha-setores-page').then((m) => m.FolhaSetoresPage),
     canActivate: [authGuard],
   },
   {
     path: 'folha/setores/new',
-    component: FolhaSetorFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-setor-form').then((m) => m.FolhaSetorFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/setores/edit/:id',
-    component: FolhaSetorFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-setor-form').then((m) => m.FolhaSetorFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/verbas',
-    component: FolhaVerbasPage,
+    loadComponent: () =>
+      import('./components/folha/folha-verbas-page').then((m) => m.FolhaVerbasPage),
     canActivate: [authGuard],
   },
   {
     path: 'folha/verbas/new',
-    component: FolhaVerbaFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-verba-form').then((m) => m.FolhaVerbaFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/verbas/edit/:id',
-    component: FolhaVerbaFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-verba-form').then((m) => m.FolhaVerbaFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/tipos',
-    component: FolhaTiposPage,
+    loadComponent: () =>
+      import('./components/folha/folha-tipos-page').then((m) => m.FolhaTiposPage),
     canActivate: [authGuard],
   },
   {
     path: 'folha/tipos/new',
-    component: FolhaTipoFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-tipo-form').then((m) => m.FolhaTipoFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/tipos/edit/:id',
-    component: FolhaTipoFormComponent,
+    loadComponent: () =>
+      import('./components/folha/folha-tipo-form').then((m) => m.FolhaTipoFormComponent),
     canActivate: [authGuard],
   },
   {
     path: 'folha/lancamentos',
-    component: FolhaLancamentosPage,
+    loadComponent: () =>
+      import('./components/folha/folha-lancamentos-page').then((m) => m.FolhaLancamentosPage),
     canActivate: [authGuard],
   },
   {
     path: 'folha/controle',
-    component: FolhaFechamentoPage,
+    loadComponent: () =>
+      import('./components/folha/folha-fechamento-page').then((m) => m.FolhaFechamentoPage),
     canActivate: [authGuard],
   },
   {
@@ -285,16 +308,13 @@ export const routes: Routes = [
     redirectTo: 'folha/controle',
     pathMatch: 'full',
   },
-
-  // Home padrão
   {
     path: '',
     component: HomeComponent,
-    canActivate: [authGuard]
+    canActivate: [authGuard],
   },
-  // Rota wildcard
   {
     path: '**',
-    redirectTo: ''
-  }
+    redirectTo: '',
+  },
 ];

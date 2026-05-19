@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Unidade } from '../../../common/enums/unidade.enum';
-import { Permission } from '../../../common/enums/permission.enum';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
+import { usuarioTemAdminFull } from '../../../common/utils/usuario-permissoes.util';
 
 export type ListaFechamentoEscopo = Unidade | 'ALL';
 
@@ -26,8 +26,7 @@ export function unidadeEscopoUsuarioFolha(usuario: Usuario): Unidade | undefined
  * usuário **sem** unidade pode operar em qualquer unidade (controle/global).
  */
 export function assertUnidadeFolha(usuario: Usuario, unidade: Unidade): void {
-  const perms = usuario.perfil?.permissoes ?? [];
-  if (perms.includes(Permission.ADMIN_FULL)) {
+  if (usuarioTemAdminFull(usuario)) {
     return;
   }
   const escopo = unidadeEscopoUsuarioFolha(usuario);
@@ -47,8 +46,7 @@ export function resolverEscopoListaFechamentoPorUsuario(
   usuario: Usuario,
   unidadeQuery?: Unidade,
 ): ListaFechamentoEscopo {
-  const perms = usuario.perfil?.permissoes ?? [];
-  if (perms.includes(Permission.ADMIN_FULL)) {
+  if (usuarioTemAdminFull(usuario)) {
     return unidadeQuery ?? 'ALL';
   }
   const v = unidadeEscopoUsuarioFolha(usuario);
@@ -66,8 +64,7 @@ export function usuarioPodeGerenciarUnidade(
   usuario: Usuario,
   unidadeEntidade: Unidade,
 ): boolean {
-  const perms = usuario.perfil?.permissoes ?? [];
-  if (perms.includes(Permission.ADMIN_FULL)) {
+  if (usuarioTemAdminFull(usuario)) {
     return true;
   }
   const escopo = unidadeEscopoUsuarioFolha(usuario);

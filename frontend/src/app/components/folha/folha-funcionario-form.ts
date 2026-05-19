@@ -72,6 +72,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
 
   Unidade = Unidade;
   unidades = Object.values(Unidade);
+  unidadeDisabled = false;
   cargosCatalogo: FolhaCadastroSimples[] = [];
   setoresCatalogo: FolhaCadastroSimples[] = [];
   /** Verbas ativas disponíveis para eventos fixos. */
@@ -119,7 +120,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
         endereco: ['', [Validators.maxLength(500)]],
         email: ['', [Validators.email, Validators.maxLength(254)]],
         dataNascimento: ['', [Validators.required]],
-        unidade: [Unidade.INHUMAS, [Validators.required]],
+        unidade: ['', [Validators.required]],
         cargoId: [null as string | null],
         setorId: [null as string | null],
         dataAdmissao: ['', [Validators.required]],
@@ -147,10 +148,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    const u = this.auth.getCurrentUser();
-    if (u?.unidade) {
-      this.form.patchValue({ unidade: u.unidade as Unidade });
-    }
+    this.applyUnidadeFromUsuario();
 
     this.form.get('tipoPix')?.valueChanges.subscribe(() => {
       this.form.get('chavePix')?.updateValueAndValidity({ emitEvent: false });
@@ -206,6 +204,18 @@ export class FolhaFuncionarioFormComponent implements OnInit {
 
   get unidadeCtrl() {
     return this.form.get('unidade');
+  }
+
+  private applyUnidadeFromUsuario(): void {
+    const u = this.auth.getCurrentUser();
+    if (u?.unidade && String(u.unidade).trim() !== '') {
+      this.unidadeDisabled = true;
+      this.form.patchValue({ unidade: u.unidade as Unidade });
+      this.form.get('unidade')?.disable();
+    } else {
+      this.unidadeDisabled = false;
+      this.form.get('unidade')?.enable();
+    }
   }
 
   get emailCtrl() {
@@ -355,7 +365,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
     const vb = this.verbasCatalogo.find((x) => x.id === vid);
     if (!vb?.ativo) {
       this.errors.show(
-        'Use apenas verbas ativas nos eventos fixos.',
+        'Use apenas eventos ativos nos eventos fixos.',
         'Eventos fixos',
       );
       return;
@@ -517,7 +527,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       if (!vb?.ativo) {
         return {
           ok: false,
-          msg: 'Use apenas verbas ativas nos eventos fixos.',
+          msg: 'Use apenas eventos ativos nos eventos fixos.',
         };
       }
       montado.push({
@@ -673,7 +683,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.errors.show(
-          'Não foi possível carregar listas auxiliares (cargos, setores ou verbas).',
+          'Não foi possível carregar listas auxiliares (cargos, setores ou eventos).',
           'Folha',
         );
         void this.router.navigate(['/folha/funcionarios']);

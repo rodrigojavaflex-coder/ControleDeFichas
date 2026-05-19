@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
-import { Usuario, Permission } from '../models/usuario.model';
+import { Usuario, Permission, Perfil } from '../models/usuario.model';
 import { ThemeService } from './theme.service';
 import { environment } from '../../environments/environment';
 
@@ -89,6 +89,7 @@ export class AuthService {
       email: authUser.email,
       ativo: authUser.isActive !== undefined ? authUser.isActive : authUser.ativo,
       tema: authUser.tema || 'Claro',
+      atalhosHome: authUser.atalhosHome ?? null,
       vendedor: authUser.vendedor ? {
         id: authUser.vendedor.id,
         nome: authUser.vendedor.nome,
@@ -99,12 +100,34 @@ export class AuthService {
       unidade: authUser.unidade ?? undefined,
       criadoEm: authUser.criadoEm,
       atualizadoEm: authUser.atualizadoEm,
-      perfil: authUser.permissions ? {
-        id: '',
-        nomePerfil: '',
-        permissoes: authUser.permissions,
-      } : null,
+      perfis: this.mapAuthPerfis(authUser),
     };
+  }
+
+  private mapAuthPerfis(authUser: {
+    perfis?: Perfil[];
+    permissions?: Permission[];
+  }): Perfil[] {
+    if (authUser.perfis?.length) {
+      return authUser.perfis;
+    }
+    if (authUser.permissions?.length) {
+      return [
+        {
+          id: '',
+          nomePerfil: '',
+          permissoes: authUser.permissions,
+        },
+      ];
+    }
+    return [];
+  }
+
+  private getUsuarioPermissoesEfetivas(user: Usuario): Permission[] {
+    const fromPerfis = (user.perfis ?? [])
+      .flatMap((p) => p.permissoes ?? []);
+    const legacy = user.perfil?.permissoes ?? [];
+    return Array.from(new Set([...fromPerfis, ...legacy]));
   }
 
   /**
@@ -180,8 +203,12 @@ export class AuthService {
    */
   hasPermission(permission: Permission): boolean {
     const user = this.currentUserSubject.value;
-    // Permissões agora vêm do perfil do usuário
-    return user?.perfil?.permissoes?.includes(permission) || false;
+    if (!user) return false;
+    const perms = this.getUsuarioPermissoesEfetivas(user);
+    if (perms.includes(Permission.ADMIN_FULL)) {
+      return true;
+    }
+    return perms.includes(permission);
   }
 
   /**
@@ -302,6 +329,24 @@ export class AuthService {
     if (currentUser) {
       const updatedUser = { ...currentUser, tema };
       this.currentUserSubject.next(updatedUser);
+      this.persistUserInLocalStorage(updatedUser);
+    }
+  }
+
+  updateCurrentUserAtalhosHome(atalhosHome: string[] | null): void {
+    const currentUser = this.currentUserSubject.value;
+    if (currentUser) {
+      const updatedUser = { ...currentUser, atalhosHome };
+      this.currentUserSubject.next(updatedUser);
+      this.persistUserInLocalStorage(updatedUser);
+    }
+  }
+
+  private persistUserInLocalStorage(user: Usuario): void {
+    try {
+      localStorage.setItem('user', JSON.stringify(user));
+    } catch {
+      /* ignore */
     }
   }
 

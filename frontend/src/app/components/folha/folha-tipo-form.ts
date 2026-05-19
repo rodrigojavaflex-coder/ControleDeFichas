@@ -53,16 +53,16 @@ export class FolhaTipoFormComponent implements OnInit {
       this.isEditMode = true;
       this.tipoId = id;
       if (!this.auth.hasPermission(Permission.FOLHA_TIPO_READ)) {
-        this.denied('visualizar tipos');
+        this.denied('visualizar tipos de folha');
         return;
       }
       if (!this.auth.hasPermission(Permission.FOLHA_TIPO_UPDATE)) {
-        this.denied('editar tipos');
+        this.denied('editar tipos de folha');
         return;
       }
       this.load(id);
     } else if (!this.auth.hasPermission(Permission.FOLHA_TIPO_CREATE)) {
-      this.denied('criar tipos');
+      this.denied('criar tipos de folha');
       return;
     }
 

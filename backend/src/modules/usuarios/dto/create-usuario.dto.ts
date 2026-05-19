@@ -8,6 +8,7 @@ import {
   IsOptional,
   MinLength,
   IsArray,
+  ArrayNotEmpty,
   IsEnum,
   IsIn,
   IsUUID,
@@ -56,12 +57,14 @@ export class CreateUsuarioDto {
   ativo?: boolean = true;
 
   @ApiProperty({
-    description: 'ID do perfil do usuário',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'IDs dos perfis do usuário',
+    type: [String],
+    example: ['550e8400-e29b-41d4-a716-446655440000'],
   })
-  @IsNotEmpty({ message: 'perfilId é obrigatório' })
-  @IsString({ message: 'perfilId deve ser uma string UUID' })
-  perfilId: string;
+  @IsArray({ message: 'perfilIds deve ser uma lista de IDs' })
+  @ArrayNotEmpty({ message: 'perfilIds deve ter ao menos um perfil' })
+  @IsUUID('4', { each: true, message: 'Cada perfil deve ser um UUID válido' })
+  perfilIds: string[];
 
   @ApiProperty({
     description: 'Tema preferido do usuário',

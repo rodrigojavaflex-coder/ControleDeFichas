@@ -1,4 +1,52 @@
-<div class="home-container">
-  <h1>Bem-vindo</h1>
-  <p>Selecione uma opção no menu para começar.</p>
+<div class="home-page">
+  <header class="home-header">
+    <div class="home-welcome">
+      @if (userInitial) {
+        <div class="user-avatar user-avatar--static" aria-hidden="true">
+          <span>{{ userInitial }}</span>
+        </div>
+      }
+      <div class="home-header-text">
+        @if (userName) {
+          <h1 class="home-user-name">{{ userName }}</h1>
+          <p class="home-greeting">Bem-vindo!</p>
+        } @else {
+          <h1 class="home-user-name">Bem-vindo!</h1>
+        }
+      </div>
+    </div>
+    <button type="button" class="btn btn-secondary home-personalize-btn" (click)="openPersonalize()">
+      <span class="home-personalize-icon" aria-hidden="true">⚙</span>
+      Personalizar atalhos
+    </button>
+  </header>
+
+  @if (shortcuts.length === 0) {
+    <section class="home-empty" aria-live="polite">
+      <p>Nenhum atalho disponível com suas permissões atuais.</p>
+      <button type="button" class="btn btn-primary" (click)="openPersonalize()">
+        Configurar atalhos
+      </button>
+    </section>
+  } @else {
+    <nav class="home-shortcuts-grid" aria-label="Atalhos rápidos">
+      @for (s of shortcuts; track s.id) {
+        <a
+          class="home-shortcut-card"
+          [routerLink]="s.route"
+          (click)="onShortcutNavigate()"
+        >
+          <span class="home-shortcut-icon" [innerHTML]="iconHtml(s.icon)"></span>
+          <span class="home-shortcut-label">{{ s.label }}</span>
+        </a>
+      }
+    </nav>
+  }
 </div>
+
+<app-home-shortcuts-modal
+  [visible]="showPersonalizeModal"
+  [initialIds]="activeShortcutIds"
+  (closed)="closePersonalize()"
+  (saved)="onShortcutsSaved($event)"
+/>

@@ -36,6 +36,16 @@ export class UserListComponent extends BaseListComponent<Usuario> {
   /** Título do modal de confirmação de exclusão */
   deleteModalTitle = 'Confirmação de Exclusão';
 
+  formatPerfisUsuario(user: Usuario): string {
+    const nomes = (user.perfis ?? [])
+      .map((p) => p.nomePerfil)
+      .filter(Boolean);
+    if (nomes.length) {
+      return nomes.join(', ');
+    }
+    return user.perfil?.nomePerfil ?? '-';
+  }
+
   // Modal de auditoria
   showAuditModal = false;
   selectedUserForAudit: Usuario | null = null;

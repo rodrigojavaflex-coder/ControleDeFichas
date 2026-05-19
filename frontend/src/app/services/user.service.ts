@@ -71,6 +71,12 @@ export class UserService {
     return this.http.patch<Usuario>(`${this.apiUrl}/${id}/tema`, { tema });
   }
 
+  updateAtalhosHome(id: string, atalhosHome: string[]): Observable<Usuario> {
+    return this.http.patch<Usuario>(`${this.apiUrl}/${id}/atalhos-home`, {
+      atalhosHome,
+    });
+  }
+
   /**
    * Remover usuário
    */

@@ -7,11 +7,21 @@ import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil, Unidade } from '..
 import { PageContextService } from '../../services/page-context.service';
 import { AutocompleteComponent } from '../autocomplete/autocomplete';
 import { VendedoresService } from '../../services/vendedores.service';
+import {
+  MultiSelectDropdownComponent,
+  MultiSelectOption,
+} from '../multi-select-dropdown/multi-select-dropdown';
 
 @Component({
   selector: 'app-user-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, AutocompleteComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    AutocompleteComponent,
+    MultiSelectDropdownComponent,
+  ],
   templateUrl: './user-form.html',
   styleUrls: ['./user-form.css']
 })
@@ -32,8 +42,14 @@ export class UserFormComponent implements OnInit {
   error: string | null = null;
   isSubmitting = false;
 
-  // Perfis
   availableProfiles: Perfil[] = [];
+
+  get perfilSelectOptions(): MultiSelectOption[] {
+    return this.availableProfiles.map((p) => ({
+      value: p.id,
+      label: p.nomePerfil,
+    }));
+  }
 
   // Unidades
   Unidade = Unidade;
@@ -54,7 +70,7 @@ export class UserFormComponent implements OnInit {
       email: ['', [Validators.required, Validators.email, Validators.maxLength(255)]],
       password: ['', [Validators.minLength(6)]],
       isActive: [true],
-      perfilId: ['', Validators.required],
+      perfilIds: [[], Validators.required],
       unidade: [''], // Campo opcional para unidade
       vendedorId: [''] // Campo opcional para vendedor
     });
@@ -115,7 +131,9 @@ export class UserFormComponent implements OnInit {
           name: user.nome,
           email: user.email,
           isActive: user.ativo,
-          perfilId: user.perfil?.id,
+          perfilIds:
+            user.perfis?.map((p) => p.id) ??
+            (user.perfil?.id ? [user.perfil.id] : []),
           unidade: user.unidade || '',
           vendedorId: user.vendedor?.id || ''
         });
@@ -181,8 +199,8 @@ export class UserFormComponent implements OnInit {
       email: formValue.email,
       senha: formValue.password,
       ativo: formValue.isActive,
-      perfilId: formValue.perfilId,
-      unidade: formValue.unidade || null
+      perfilIds: formValue.perfilIds ?? [],
+      unidade: formValue.unidade || null,
     };
 
     this.userService.createUser(createUsuarioDto).subscribe({
@@ -204,9 +222,9 @@ export class UserFormComponent implements OnInit {
       nome: formValue.name,
       email: formValue.email,
       ativo: formValue.isActive,
-      perfilId: formValue.perfilId,
+      perfilIds: formValue.perfilIds ?? [],
       unidade: formValue.unidade || null,
-      vendedorId: vendedorId
+      vendedorId: vendedorId,
     };
 
     // Adiciona senha apenas se foi informada

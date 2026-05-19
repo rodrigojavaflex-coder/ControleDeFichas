@@ -400,11 +400,25 @@ export class AuditoriaInterceptor implements NestInterceptor {
       return 'folha_item';
     }
 
-    if (/^folha\/cargos(\/|$)/i.test(cleanPath)) {
-      return 'folha_cargo';
-    }
-    if (/^folha\/setores(\/|$)/i.test(cleanPath)) {
-      return 'folha_setor';
+    /**
+     * Rotas sob `folha/<recurso>`: usar o 2º segmento (não `folha` sozinho — evita
+     * falso positivo com `folha_cargo` no match aproximado do cache de entidades).
+     */
+    if (segments[0]?.toLowerCase() === 'folha' && segments.length >= 2) {
+      const folhaPorRecurso: Record<string, string> = {
+        funcionarios: 'funcionarios',
+        cargos: 'folha_cargo',
+        setores: 'folha_setor',
+        verbas: 'folha_verba',
+        tipos: 'folha_tipo',
+        capas: 'folha_capa',
+        fechamento: 'folha_fechamento',
+      };
+      const recurso = segments[1].toLowerCase();
+      const tabela = folhaPorRecurso[recurso];
+      if (tabela) {
+        return tabela;
+      }
     }
 
     const pathSegment = segments[0].toLowerCase();

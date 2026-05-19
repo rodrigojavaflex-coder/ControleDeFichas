@@ -1,15 +1,15 @@
 <div class="folha-lista-container folha-tipos">
   @if (!pode().r) {
-    <div class="alert alert-error">Você não possui permissão para visualizar tipos (folha-tipo:read).</div>
+    <div class="alert alert-error">Você não possui permissão para visualizar tipos de folha (folha-tipo:read).</div>
   } @else {
     <section class="filters">
       @if (pode().c) {
-        <button type="button" class="btn btn-novo" (click)="irNovo()" [disabled]="carregando">Novo tipo</button>
+        <button type="button" class="btn btn-novo" (click)="irNovo()" [disabled]="carregando">Novo tipo de folha</button>
       }
     </section>
 
     @if (carregando) {
-      <div class="loading">Carregando tipos…</div>
+      <div class="loading">Carregando tipos de folha…</div>
     } @else {
       <div class="table-container">
         <table class="folha-data-table">
@@ -55,7 +55,7 @@
             }
             @if (lista.length === 0) {
               <tr class="no-data">
-                <td [attr.colspan]="pode().u || pode().d ? 5 : 4">Nenhum tipo cadastrado.</td>
+                <td [attr.colspan]="pode().u || pode().d ? 5 : 4">Nenhum tipo de folha cadastrado.</td>
               </tr>
             }
           </tbody>

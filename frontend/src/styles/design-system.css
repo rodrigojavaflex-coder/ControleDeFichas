@@ -22,6 +22,7 @@
 @import './componentes/_modais.css';
 @import './componentes/_cartoes.css';
 @import './componentes/_tabelas.css';
+@import './componentes/_avatar-usuario.css';
 
 /* ========== 4. UTILITÁRIOS ========== */
 @import './utilitarios/_botoes-semanticos.css';

@@ -4,6 +4,20 @@
   <div class="sidebar-content">
     <nav class="main-nav">
       <ul class="nav-list">
+        <li class="nav-item">
+          <a
+            routerLink="/"
+            [class.active]="isHomeActive()"
+            class="nav-link"
+            [attr.title]="!shouldShowExpanded ? 'Início' : null"
+            (click)="onMenuItemClick()"
+          >
+            <span class="nav-icon" [innerHTML]="menuIcon('feather-home')"></span>
+            @if (shouldShowExpanded) {
+              <span class="nav-text">Início</span>
+            }
+          </a>
+        </li>
         @for (item of visibleMenuItems; track item.label) {
         <li class="nav-item">
           @if (item.children) {
@@ -115,4 +129,14 @@
     </button>
   </div>
 </nav>
+
+<app-confirmation-modal
+  [isVisible]="showLogoutModal"
+  title="Confirmar"
+  message="Tem certeza que deseja sair do sistema?"
+  confirmText="Sair"
+  cancelText="Cancelar"
+  (confirmed)="confirmLogout()"
+  (cancelled)="cancelLogout()"
+/>
 }

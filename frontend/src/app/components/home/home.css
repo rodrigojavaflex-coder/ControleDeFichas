@@ -1,8 +1,150 @@
-.home-container {
+.home-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2rem;
+}
+
+.home-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.75rem;
+}
+
+.home-welcome {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.home-welcome .user-avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 1.375rem;
+}
+
+.home-user-name {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  line-height: 1.2;
+}
+
+.home-greeting {
+  margin: 0.2rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.home-personalize-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.home-personalize-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.home-shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.home-shortcut-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 60vh;
+  gap: 0.75rem;
+  min-height: 140px;
+  padding: 1.25rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #1e293b);
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.home-shortcut-card:hover {
+  border-color: var(--primary-color, #0d6efd);
+  background: var(--bg-hover, #f8fafc);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.home-shortcut-card:focus-visible {
+  outline: 2px solid var(--primary-color, #0d6efd);
+  outline-offset: 2px;
+}
+
+.home-shortcut-icon {
+  display: inline-flex;
+  color: var(--primary-color, #0d6efd);
+}
+
+.home-shortcut-icon :deep(svg) {
+  width: 36px;
+  height: 36px;
+}
+
+.home-shortcut-label {
+  font-size: 0.95rem;
+  font-weight: 600;
   text-align: center;
+  line-height: 1.25;
+}
+
+.home-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  border: 1px dashed var(--border-color, #cbd5e1);
+  border-radius: 12px;
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-secondary, #64748b);
+}
+
+.home-empty p {
+  margin: 0 0 1rem;
+}
+
+@media (max-width: 600px) {
+  .home-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .home-welcome {
+    align-items: flex-start;
+  }
+
+  .home-personalize-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .home-shortcuts-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .home-shortcut-card {
+    min-height: 120px;
+    padding: 1rem 0.5rem;
+  }
 }

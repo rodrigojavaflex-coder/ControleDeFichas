@@ -108,6 +108,7 @@ export enum Permission {
   FOLHA_VERBA_READ = 'folha-verba:read',
   FOLHA_VERBA_UPDATE = 'folha-verba:update',
   FOLHA_VERBA_DELETE = 'folha-verba:delete',
+  FOLHA_VERBA_AUDIT = 'folha-verba:audit',
 
   FOLHA_TIPO_CREATE = 'folha-tipo:create',
   FOLHA_TIPO_READ = 'folha-tipo:read',
@@ -145,8 +146,13 @@ export interface Usuario {
   nome: string;
   email: string;
   ativo: boolean;
+  /** Perfis vinculados (permissões efetivas = união). */
+  perfis?: Perfil[];
+  /** @deprecated Use `perfis`. Mantido para sessões antigas no localStorage. */
   perfil?: Perfil | null;
   tema?: string; // Tema preferido do usuário (Claro ou Escuro)
+  /** IDs dos atalhos da tela inicial (`null` = usar padrão do sistema). */
+  atalhosHome?: string[] | null;
   unidade?: Unidade | null; // Unidade do usuário (null = sem vínculo = escopo conforme RN-007 / admin)
   vendedor?: Vendedor | null; // Vendedor associado ao usuário
   criadoEm: Date;
@@ -166,7 +172,7 @@ export interface CreateUsuarioDto {
   ativo?: boolean;
   tema?: string; // Tema preferido (Claro ou Escuro)
   unidade?: Unidade | null; // Unidade do usuário (null para sem unidade)
-  perfilId: string; // ID do perfil do usuário
+  perfilIds: string[];
   vendedorId?: string | null; // ID do vendedor associado ao usuário
 }
 
@@ -177,7 +183,7 @@ export interface UpdateUsuarioDto {
   ativo?: boolean;
   tema?: string; // Permitir atualizar tema do usuário (Claro ou Escuro)
   unidade?: Unidade | null; // Permitir atualizar unidade do usuário (null para limpar)
-  perfilId?: string; // Atualizar perfil do usuário
+  perfilIds?: string[];
   vendedorId?: string | null; // Atualizar vendedor associado ao usuário (null para remover)
 }
 

@@ -51,7 +51,7 @@
         <tr>
           <th>Nome</th>
           <th>Email</th>
-          <th>Perfil</th>
+          <th>Perfis</th>
           <th>Unidade</th>
           <th>Status</th>
           <th>Criado em</th>
@@ -62,7 +62,7 @@
   <tr *ngFor="let user of items">
           <td>{{ user.nome }}</td>
           <td>{{ user.email }}</td>
-          <td>{{ user.perfil?.nomePerfil || '-' }}</td>
+          <td>{{ formatPerfisUsuario(user) }}</td>
           <td>{{ user.unidade || '-' }}</td>
           <td>
             <span [class]="user.ativo ? 'status-active' : 'status-inactive'">

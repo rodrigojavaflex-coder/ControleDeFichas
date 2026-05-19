@@ -13,6 +13,10 @@ import { Repository } from 'typeorm';
 import { Permission } from '../enums/permission.enum';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { Usuario } from '../../modules/usuarios/entities/usuario.entity';
+import {
+  getUsuarioPermissoes,
+  usuarioTemAdminFull,
+} from '../utils/usuario-permissoes.util';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -51,7 +55,7 @@ export class PermissionsGuard implements CanActivate {
       // Carregar usuário com perfil para verificar permissões
       const user = await this.userRepository.findOne({
         where: { id: payload.sub },
-        relations: ['perfil'],
+        relations: ['perfis'],
       });
 
       if (!user) {
@@ -64,9 +68,9 @@ export class PermissionsGuard implements CanActivate {
 
       // Verificar se o usuário tem pelo menos uma das permissões necessárias
       // Verificar se o perfil do usuário possui as permissões necessárias
-      const userPermissions = user.perfil?.permissoes || [];
+      const userPermissions = getUsuarioPermissoes(user);
 
-      if (userPermissions.includes(Permission.ADMIN_FULL)) {
+      if (usuarioTemAdminFull(user)) {
         request.user = user;
         return true;
       }

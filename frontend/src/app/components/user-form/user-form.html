@@ -87,22 +87,18 @@
       </div>
     </div>
 
-    <!-- Perfil -->
+    <!-- Perfis -->
     <div class="form-group">
-      <label for="perfilId" class="form-label">Perfil *</label>
-      <select
-        id="perfilId"
-        class="form-control"
-        formControlName="perfilId"
-        [attr.disabled]="isSubmitting ? '' : null"
-      >
-        <option value="" disabled>Selecione um perfil</option>
-        <option *ngFor="let perfil of availableProfiles" [value]="perfil.id">
-          {{ perfil.nomePerfil }}
-        </option>
-      </select>
-      <div *ngIf="userForm.get('perfilId')?.invalid && userForm.get('perfilId')?.touched" class="error-message">
-        Perfil é obrigatório
+      <label for="perfilIds" class="form-label">Perfis *</label>
+      <app-multi-select-dropdown
+        id="perfilIds"
+        [options]="perfilSelectOptions"
+        formControlName="perfilIds"
+        placeholder="Selecione um ou mais perfis"
+        [disabled]="isSubmitting"
+      ></app-multi-select-dropdown>
+      <div *ngIf="userForm.get('perfilIds')?.invalid && userForm.get('perfilIds')?.touched" class="error-message">
+        Selecione ao menos um perfil
       </div>
     </div>
 

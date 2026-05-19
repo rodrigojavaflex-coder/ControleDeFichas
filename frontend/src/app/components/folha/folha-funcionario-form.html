@@ -110,6 +110,9 @@
               formControlName="unidade"
               [class.error]="unidadeCtrl!.invalid && unidadeCtrl!.touched"
             >
+              @if (!unidadeDisabled) {
+                <option [ngValue]="''">Selecione a unidade</option>
+              }
               @for (u of unidades; track u) {
                 <option [ngValue]="u">{{ u }}</option>
               }

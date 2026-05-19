@@ -11,6 +11,7 @@ import {
   HttpStatus,
   UseGuards,
   ConflictException,
+  ForbiddenException,
   Req,
 } from '@nestjs/common';
 import {
@@ -26,6 +27,7 @@ import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { FindUsuariosDto } from './dto/find-usuarios.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateAtalhosHomeDto } from './dto/update-atalhos-home.dto';
 import { Usuario } from './entities/usuario.entity';
 import type { Request } from 'express';
 import {
@@ -201,6 +203,41 @@ export class UsuariosController {
     (req as any).previousUserData = previousUser;
 
     return this.usuariosService.updateTema(id, tema);
+  }
+
+  @Patch(':id/atalhos-home')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Atualizar atalhos da tela inicial do usuário' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Atalhos atualizados com sucesso',
+    type: Usuario,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Usuário não encontrado',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Só é permitido alterar os próprios atalhos',
+  })
+  async updateAtalhosHome(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateAtalhosHomeDto,
+    @Req() req: Request,
+  ) {
+    const authUser = (req as Request & { user?: Usuario }).user;
+    if (!authUser || authUser.id !== id) {
+      throw new ForbiddenException(
+        'Só é possível alterar os atalhos da sua própria conta.',
+      );
+    }
+
+    const previousUser = await this.usuariosService.findOne(id);
+    (req as Request & { previousUserData?: Usuario }).previousUserData =
+      previousUser;
+
+    return this.usuariosService.updateAtalhosHome(id, body.atalhosHome);
   }
 
   @Delete(':id')

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Permission } from '../../../common/enums/permission.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
+import { Perfil } from '../../perfil/entities/perfil.entity';
 
 export class AuthResponseDto {
   @ApiProperty({
@@ -37,7 +38,9 @@ export class AuthResponseDto {
     email: string;
     isActive: boolean;
     permissions: Permission[];
+    perfis?: Perfil[];
     tema: string;
+    atalhosHome?: string[] | null;
     criadoEm: Date;
     atualizadoEm: Date;
     /** Unidade vinculada ao usuário (`null`/omitido quando sem vínculo = acesso conforme permissões às unidades do sistema). */

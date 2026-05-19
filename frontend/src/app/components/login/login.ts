@@ -42,7 +42,7 @@ export class LoginComponent {
         const password = this.loginForm.value.password!;
         
         await this.authService.login(email, password);
-        await this.router.navigate(['/dashboard']);
+        await this.router.navigate(['/']);
       } catch (error: any) {
         this.errorMessage = error.error?.message || 'Erro ao fazer login. Verifique suas credenciais.';
       } finally {

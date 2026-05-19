@@ -28,7 +28,7 @@ export class FolhaTiposPage implements OnInit {
 
   ngOnInit(): void {
     this.pageCtx.setContext({
-      title: 'Tipos de folha',
+      title: 'Tipo de Folha',
       description: 'Tipos parametrizados. Novo cadastro abre formulário próprio.',
     });
     this.reload();
@@ -61,7 +61,7 @@ export class FolhaTiposPage implements OnInit {
       },
       error: () => {
         this.carregando = false;
-        this.errors.show('Erro ao carregar tipos.', 'Folha');
+        this.errors.show('Erro ao carregar tipos de folha.', 'Folha');
       },
     });
   }
@@ -70,16 +70,16 @@ export class FolhaTiposPage implements OnInit {
     if (!this.pode().u) return;
     this.folha.patchTipo(t.id, { ativo: !t.ativo }).subscribe({
       next: () => this.reload(),
-      error: (e) => this.errors.show(e?.error?.message ?? 'Erro.', 'Tipo'),
+      error: (e) => this.errors.show(e?.error?.message ?? 'Erro.', 'Tipo de Folha'),
     });
   }
 
   excluir(t: FolhaTipo): void {
     if (!this.pode().d) return;
-    if (!confirm(`Excluir tipo "${t.descricao}"?`)) return;
+    if (!confirm(`Excluir tipo de folha "${t.descricao}"?`)) return;
     this.folha.deleteTipo(t.id).subscribe({
       next: () => this.reload(),
-      error: (e) => this.errors.show(e?.error?.message ?? 'Erro.', 'Tipo'),
+      error: (e) => this.errors.show(e?.error?.message ?? 'Erro.', 'Tipo de Folha'),
     });
   }
 

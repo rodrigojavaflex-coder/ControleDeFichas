@@ -96,6 +96,12 @@ export function getEntityDisplayName(entityType: string): string {
     'auditoria': 'Auditoria',
     'folha_cargo': 'Cargo (folha)',
     'folha_setor': 'Setor (folha)',
+    'folha_verba': 'Evento (folha)',
+    'folha_tipo': 'Tipo de folha',
+    'folha_capa': 'Capa de folha',
+    'folha_item': 'Lançamento (folha)',
+    'folha_fechamento': 'Fechamento (folha)',
+    funcionarios: 'Funcionário (folha)',
   };
   return entityNames[entityType] || entityType;
 }
