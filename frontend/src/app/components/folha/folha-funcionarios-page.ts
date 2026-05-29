@@ -43,7 +43,6 @@ export class FolhaFuncionariosPage implements OnInit {
   unidadeFiltro: Unidade | '' = '';
   unidadeFiltroDisabled = false;
   nomeFiltro = '';
-  mostrarEventosFixosImpressao = false;
   dados: FuncionarioPaginated | null = null;
   pagina = 1;
   pageSize = 10;
@@ -193,30 +192,76 @@ export class FolhaFuncionariosPage implements OnInit {
       });
   }
 
-  imprimirLista(): void {
+  imprimirEventos(): void {
+    this.gerarRelatorio('eventos', true);
+  }
+
+  imprimirFuncionarios(): void {
+    this.gerarRelatorio('funcionarios', false);
+  }
+
+  imprimirAniversarios(): void {
+    this.gerarRelatorio('aniversarios', false);
+  }
+
+  private gerarRelatorio(
+    tipo: 'eventos' | 'funcionarios' | 'aniversarios',
+    comEventosFixos: boolean,
+  ): void {
     if (!this.podeLer() || this.imprimindo) return;
     this.imprimindo = true;
     const unidade = this.unidadeFiltro ? (this.unidadeFiltro as Unidade) : undefined;
     this.folha
-      .listarFuncionariosTodos(
-        unidade,
-        this.nomeFiltro || undefined,
-        this.mostrarEventosFixosImpressao,
-      )
+      .listarFuncionariosTodos(unidade, this.nomeFiltro || undefined, comEventosFixos)
       .subscribe({
         next: (rows) => {
           this.imprimindo = false;
-          if (rows.length === 0) {
-            this.errors.show('Nenhum funcionário para imprimir com os filtros atuais.', 'Folha');
-            return;
-          }
-          this.abrirJanelaImpressao(rows);
+          const preparado = this.prepararRelatorio(tipo, rows);
+          if (!preparado) return;
+          this.abrirJanelaImpressao(preparado.titulo, preparado.html);
         },
         error: () => {
           this.imprimindo = false;
           this.errors.show('Erro ao preparar impressão da lista.', 'Folha');
         },
       });
+  }
+
+  private prepararRelatorio(
+    tipo: 'eventos' | 'funcionarios' | 'aniversarios',
+    rows: FuncionarioFolha[],
+  ): { titulo: string; html: string } | null {
+    if (rows.length === 0) {
+      this.errors.show('Nenhum funcionário para imprimir com os filtros atuais.', 'Folha');
+      return null;
+    }
+
+    switch (tipo) {
+      case 'eventos':
+        return {
+          titulo: 'Relatório de Eventos Fixos',
+          html: this.montarHtmlImpressaoEventos(rows),
+        };
+      case 'funcionarios':
+        return {
+          titulo: 'Relatório de Funcionários',
+          html: this.montarHtmlImpressaoFuncionarios(rows),
+        };
+      case 'aniversarios': {
+        const comNascimento = rows.filter((f) => this.extrairMesDiaNascimento(f.dataNascimento));
+        if (comNascimento.length === 0) {
+          this.errors.show(
+            'Nenhum funcionário com data de nascimento cadastrada para os filtros atuais.',
+            'Folha',
+          );
+          return null;
+        }
+        return {
+          titulo: 'Relatório de Aniversários',
+          html: this.montarHtmlImpressaoAniversarios(comNascimento),
+        };
+      }
+    }
   }
 
   formatarDataDdMmYyyy(raw?: string | null): string {
@@ -240,21 +285,53 @@ export class FolhaFuncionariosPage implements OnInit {
     return chave;
   }
 
-  private abrirJanelaImpressao(funcionarios: FuncionarioFolha[]): void {
+  private abrirJanelaImpressao(tituloRelatorio: string, html: string): void {
     const win = globalThis.window.open('', '_blank');
     if (!win) {
       this.errors.show('Permita pop-ups para imprimir a lista.', 'Impressão');
       return;
     }
-    win.document.write(this.montarHtmlImpressao(funcionarios));
+    win.document.write(html);
     win.document.close();
-    win.document.title = `Relatório de Funcionários ${this.getReportTimestamp()}`;
+    win.document.title = `${tituloRelatorio} ${this.getReportTimestamp()}`;
     win.focus();
     globalThis.window.setTimeout(() => win.print(), 200);
   }
 
-  private montarHtmlImpressao(funcionarios: FuncionarioFolha[]): string {
-    const reportTitle = 'Relatório de Funcionários';
+  private montarHtmlImpressaoEventos(funcionarios: FuncionarioFolha[]): string {
+    const subtituloExtra = ['Com eventos fixos'];
+    const agrupado = this.agruparPorUnidade(funcionarios);
+    const blocosUnidade = agrupado
+      .map(([unidade, lista]) => this.blocoUnidadeImpressaoEventos(unidade, lista))
+      .join('\n');
+    return this.montarShellRelatorio('Relatório de Eventos Fixos', subtituloExtra, blocosUnidade);
+  }
+
+  private montarHtmlImpressaoFuncionarios(funcionarios: FuncionarioFolha[]): string {
+    const agrupado = this.agruparPorUnidade(funcionarios);
+    const blocosUnidade = agrupado
+      .map(([unidade, lista], index) =>
+        this.blocoUnidadeImpressaoFuncionarios(unidade, lista, index > 0),
+      )
+      .join('\n');
+    return this.montarShellRelatorio('Relatório de Funcionários', [], blocosUnidade);
+  }
+
+  private montarHtmlImpressaoAniversarios(funcionarios: FuncionarioFolha[]): string {
+    const agrupado = this.agruparAniversariosPorUnidadeEMes(funcionarios);
+    const blocosUnidade = agrupado
+      .map(([unidade, meses], index) =>
+        this.blocoUnidadeImpressaoAniversarios(unidade, meses, index > 0),
+      )
+      .join('\n');
+    return this.montarShellRelatorio('Relatório de Aniversários', [], blocosUnidade);
+  }
+
+  private montarShellRelatorio(
+    reportTitle: string,
+    subtituloExtra: string[],
+    conteudo: string,
+  ): string {
     const reportTimestamp = this.getReportTimestamp();
     const reportDocumentTitle = `${reportTitle} ${reportTimestamp}`;
 
@@ -275,11 +352,7 @@ export class FolhaFuncionariosPage implements OnInit {
       ? `<img src="${logoUrl}" alt="Logo do sistema" />`
       : '';
 
-    const subtituloFiltros = this.subtituloFiltrosImpressao();
-    const agrupado = this.agruparPorUnidade(funcionarios);
-    const blocosUnidade = agrupado
-      .map(([unidade, lista]) => this.blocoUnidadeImpressao(unidade, lista))
-      .join('\n');
+    const subtituloFiltros = this.subtituloFiltrosImpressao(subtituloExtra);
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -299,6 +372,7 @@ export class FolhaFuncionariosPage implements OnInit {
     .title-area { flex: 1 1 auto; text-align: center; }
     .unit-section { margin-top: 24px; break-inside: auto; page-break-inside: auto; }
     .unit-section:first-of-type { margin-top: 0; }
+    .unit-section-nova-pagina { break-before: page; page-break-before: always; margin-top: 0; }
     .unit-title { font-weight: 600; text-transform: uppercase; font-size: 12px; margin-bottom: 6px; color: #1e293b; break-after: avoid-page; page-break-after: avoid; }
     .funcionario-block { margin-top: 16px; break-inside: avoid-page; page-break-inside: avoid; }
     .funcionario-block:first-of-type { margin-top: 0; }
@@ -312,12 +386,41 @@ export class FolhaFuncionariosPage implements OnInit {
     .unit-total { margin-top: 12px; font-size: 11px; font-weight: 700; color: #334155; }
     .tipo-receita { color: #0f766e; font-weight: 600; }
     .tipo-despesa { color: #b91c1c; font-weight: 600; }
+    .lista-funcionarios-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+    .lista-funcionarios-table th, .lista-funcionarios-table td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; }
+    .lista-funcionarios-table th { background: #f8fafc; font-weight: 700; color: #1e293b; }
+    .lista-funcionarios-table tr:last-child td { border-bottom: none; }
+    .mes-section { margin-top: 14px; break-inside: auto; page-break-inside: auto; }
+    .mes-section:first-of-type { margin-top: 0; }
+    .mes-title { font-weight: 600; font-size: 12px; margin: 10px 0 4px; color: #334155; break-after: avoid-page; page-break-after: avoid; }
+    .aniversariante-lista { margin: 0; padding: 0 0 0 18px; font-size: 11px; line-height: 1.6; color: #1e293b; }
+    .aniversariante-lista li { margin: 2px 0; }
     footer { text-align: right; font-size: 10px; color: #4a5568; margin-top: 32px; }
+    @page {
+      size: A4;
+      margin: 12mm 15mm 28mm 15mm;
+    }
     @media print {
       .print-actions { display: none; }
-      body { margin: 0 20px 60px; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+      }
       .report-header { break-after: avoid-page; page-break-after: avoid; }
-      footer { position: fixed; bottom: 12px; left: 20px; right: 20px; margin-top: 0; }
+      .lista-funcionarios-table thead { display: table-header-group; }
+      footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: 0;
+        padding: 0 15mm 10mm;
+        text-align: right;
+        font-size: 10px;
+        color: #4a5568;
+        background: #fff;
+      }
     }
   </style>
 </head>
@@ -333,13 +436,13 @@ export class FolhaFuncionariosPage implements OnInit {
     </div>
     <div class="header-spacer">&nbsp;</div>
   </header>
-  ${blocosUnidade}
+  ${conteudo}
   <footer>${this.escapeHtml(geradoEmTexto)}</footer>
 </body>
 </html>`;
   }
 
-  private subtituloFiltrosImpressao(): string {
+  private subtituloFiltrosImpressao(extras: string[] = []): string {
     const partes: string[] = [];
     partes.push(
       this.unidadeFiltro
@@ -349,14 +452,13 @@ export class FolhaFuncionariosPage implements OnInit {
     if (this.nomeFiltro.trim()) {
       partes.push(`Nome contém: «${this.nomeFiltro.trim()}»`);
     }
-    if (this.mostrarEventosFixosImpressao) {
-      partes.push('Com eventos fixos');
-    }
+    partes.push(...extras);
     return `<div class="report-subtitle">${this.escapeHtml(partes.join(' · '))}</div>`;
   }
 
-  private blocoUnidadeImpressao(unidade: Unidade, lista: FuncionarioFolha[]): string {
-    const blocosFunc = lista.map((f) => this.blocoFuncionarioImpressao(f)).join('\n');
+  private blocoUnidadeImpressaoEventos(unidade: Unidade, lista: FuncionarioFolha[]): string {
+    const ordenada = [...lista].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const blocosFunc = ordenada.map((f) => this.blocoFuncionarioImpressao(f)).join('\n');
     const totalLabel =
       lista.length === 1 ? '1 funcionário' : `${lista.length} funcionários`;
     return `<section class="unit-section">
@@ -364,6 +466,80 @@ export class FolhaFuncionariosPage implements OnInit {
   ${blocosFunc}
   <div class="unit-total">Total: ${this.escapeHtml(totalLabel)}</div>
 </section>`;
+  }
+
+  private blocoUnidadeImpressaoFuncionarios(
+    unidade: Unidade,
+    lista: FuncionarioFolha[],
+    novaPagina = false,
+  ): string {
+    const ordenada = [...lista].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const linhas = ordenada
+      .map(
+        (f) => `<tr>
+          <td>${this.escapeHtml(f.nome)}</td>
+          <td>${this.escapeHtml(this.formatarTelefone(f.telefone))}</td>
+          <td>${this.escapeHtml(f.cargo?.descricao?.trim() || '—')}</td>
+          <td>${this.escapeHtml(f.setor?.descricao?.trim() || '—')}</td>
+          <td>${this.escapeHtml(this.formatarDataDdMmYyyy(f.dataNascimento ?? null))}</td>
+          <td>${this.escapeHtml(this.formatarDataDdMmYyyy(f.dataAdmissao ?? null))}</td>
+        </tr>`,
+      )
+      .join('\n');
+    const totalLabel =
+      lista.length === 1 ? '1 funcionário' : `${lista.length} funcionários`;
+    const classePagina = novaPagina ? ' unit-section-nova-pagina' : '';
+    return `<section class="unit-section${classePagina}">
+  <div class="unit-title">Unidade: ${this.escapeHtml(unidade)}</div>
+  <table class="lista-funcionarios-table">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Telefone</th>
+        <th>Cargo</th>
+        <th>Setor</th>
+        <th>Nascimento</th>
+        <th>Admissão</th>
+      </tr>
+    </thead>
+    <tbody>${linhas}</tbody>
+  </table>
+  <div class="unit-total">Total: ${this.escapeHtml(totalLabel)}</div>
+</section>`;
+  }
+
+  private blocoUnidadeImpressaoAniversarios(
+    unidade: Unidade,
+    meses: Array<[number, FuncionarioFolha[]]>,
+    novaPagina = false,
+  ): string {
+    const blocosMes = meses
+      .map(([mes, lista]) => this.blocoMesImpressaoAniversarios(mes, lista))
+      .join('\n');
+    const total = meses.reduce((acc, [, lista]) => acc + lista.length, 0);
+    const totalLabel = total === 1 ? '1 aniversariante' : `${total} aniversariantes`;
+    const classePagina = novaPagina ? ' unit-section-nova-pagina' : '';
+    return `<section class="unit-section${classePagina}">
+  <div class="unit-title">Unidade: ${this.escapeHtml(unidade)}</div>
+  ${blocosMes}
+  <div class="unit-total">Total: ${this.escapeHtml(totalLabel)}</div>
+</section>`;
+  }
+
+  private blocoMesImpressaoAniversarios(mes: number, lista: FuncionarioFolha[]): string {
+    const itens = lista
+      .map((f) => {
+        const partes = this.extrairMesDiaNascimento(f.dataNascimento);
+        const dataLabel = partes
+          ? `${String(partes.dia).padStart(2, '0')}/${String(partes.mes).padStart(2, '0')}`
+          : '—';
+        return `<li>${this.escapeHtml(f.nome)} — ${this.escapeHtml(dataLabel)}</li>`;
+      })
+      .join('\n');
+    return `<div class="mes-section">
+  <div class="mes-title">${this.escapeHtml(this.nomeMesPt(mes))}</div>
+  <ul class="aniversariante-lista">${itens}</ul>
+</div>`;
   }
 
   private blocoFuncionarioImpressao(f: FuncionarioFolha): string {
@@ -391,7 +567,7 @@ export class FolhaFuncionariosPage implements OnInit {
   </div>`;
 
     const eventos =
-      this.mostrarEventosFixosImpressao && (f.eventosFixos?.length ?? 0) > 0
+      (f.eventosFixos?.length ?? 0) > 0
         ? this.tabelaEventosFixosImpressao(f.eventosFixos ?? [])
         : '';
 
@@ -467,6 +643,73 @@ export class FolhaFuncionariosPage implements OnInit {
       map.set(u, atual);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  private agruparAniversariosPorUnidadeEMes(
+    funcionarios: FuncionarioFolha[],
+  ): Array<[Unidade, Array<[number, FuncionarioFolha[]]>]> {
+    const porUnidade = new Map<Unidade, Map<number, FuncionarioFolha[]>>();
+
+    for (const f of funcionarios) {
+      const partes = this.extrairMesDiaNascimento(f.dataNascimento);
+      if (!partes) continue;
+
+      const mesesUnidade = porUnidade.get(f.unidade) ?? new Map<number, FuncionarioFolha[]>();
+      const listaMes = mesesUnidade.get(partes.mes) ?? [];
+      listaMes.push(f);
+      mesesUnidade.set(partes.mes, listaMes);
+      porUnidade.set(f.unidade, mesesUnidade);
+    }
+
+    return Array.from(porUnidade.entries())
+      .sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
+      .map(([unidade, mesesMap]) => {
+        const meses = Array.from(mesesMap.entries())
+          .sort(([a], [b]) => a - b)
+          .map(([mes, lista]) => {
+            const ordenada = [...lista].sort((a, b) => {
+              const pa = this.extrairMesDiaNascimento(a.dataNascimento);
+              const pb = this.extrairMesDiaNascimento(b.dataNascimento);
+              const diaDiff = (pa?.dia ?? 0) - (pb?.dia ?? 0);
+              if (diaDiff !== 0) return diaDiff;
+              return a.nome.localeCompare(b.nome, 'pt-BR');
+            });
+            return [mes, ordenada] as [number, FuncionarioFolha[]];
+          });
+        return [unidade, meses] as [Unidade, Array<[number, FuncionarioFolha[]]>];
+      });
+  }
+
+  private extrairMesDiaNascimento(
+    raw?: string | null,
+  ): { mes: number; dia: number } | null {
+    if (raw == null || `${raw}` === '') return null;
+    const s = `${raw}`;
+    const ymd = s.includes('T') ? s.split('T')[0] : s.trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+    if (!m) return null;
+    const mes = Number(m[2]);
+    const dia = Number(m[3]);
+    if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+    return { mes, dia };
+  }
+
+  private nomeMesPt(mes: number): string {
+    const nomes = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro',
+    ];
+    return nomes[mes - 1] ?? String(mes);
   }
 
   private formatarMoeda(valor: unknown): string {

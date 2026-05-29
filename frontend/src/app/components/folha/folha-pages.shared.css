@@ -5,26 +5,13 @@
   font-size: 0.875rem;
 }
 
-.folha-funcionarios-check-impressao {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary, #64748b);
-  margin: 0;
-  cursor: pointer;
-  user-select: none;
-}
-
-.folha-funcionarios-check-impressao input[type='checkbox'] {
-  width: 1rem;
-  height: 1rem;
-  accent-color: var(--focus-ring-color, #3b82f6);
-  cursor: pointer;
-}
-
 .folha-funcionarios-btn-imprimir {
   white-space: nowrap;
+}
+
+.folha-funcionarios-relatorio-status {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #64748b);
 }
 
 .folha-funcionarios-filters {

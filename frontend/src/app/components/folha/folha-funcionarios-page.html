@@ -47,28 +47,36 @@
 
       <div class="folha-funcionarios-filters-relatorio" aria-label="Relatório">
         <span class="folha-funcionarios-filters-relatorio-titulo">Relatório</span>
-        <label class="folha-funcionarios-check-impressao" for="fu-eventos-fixos">
-          <input
-            id="fu-eventos-fixos"
-            type="checkbox"
-            [(ngModel)]="mostrarEventosFixosImpressao"
-            [disabled]="carregando || imprimindo"
-          />
-          Mostrar eventos fixos
-        </label>
         <button
           type="button"
           class="btn btn-success folha-funcionarios-btn-imprimir"
-          (click)="imprimirLista()"
+          (click)="imprimirFuncionarios()"
           [disabled]="carregando || imprimindo"
-          title="Imprimir lista com Nome, Telefone, Admissão, Cargo, Setor e Chave Pix"
+          title="Lista de funcionários agrupada por unidade"
         >
-          @if (imprimindo) {
-            Preparando…
-          } @else {
-            Imprimir lista
-          }
+          Funcionários
         </button>
+        <button
+          type="button"
+          class="btn btn-success folha-funcionarios-btn-imprimir"
+          (click)="imprimirEventos()"
+          [disabled]="carregando || imprimindo"
+          title="Funcionários com eventos fixos, agrupados por unidade"
+        >
+          Imprimir Eventos
+        </button>
+        <button
+          type="button"
+          class="btn btn-success folha-funcionarios-btn-imprimir"
+          (click)="imprimirAniversarios()"
+          [disabled]="carregando || imprimindo"
+          title="Aniversariantes agrupados por unidade e mês"
+        >
+          Aniversários
+        </button>
+        @if (imprimindo) {
+          <span class="folha-funcionarios-relatorio-status" aria-live="polite">Preparando…</span>
+        }
       </div>
     </section>
 
