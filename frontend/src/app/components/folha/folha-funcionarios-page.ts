@@ -297,10 +297,10 @@ export class FolhaFuncionariosPage implements OnInit {
     .header-spacer { visibility: hidden; }
     .logo-area img { max-height: 60px; width: auto; display: block; }
     .title-area { flex: 1 1 auto; text-align: center; }
-    .unit-section { margin-top: 24px; page-break-inside: avoid; }
+    .unit-section { margin-top: 24px; break-inside: auto; page-break-inside: auto; }
     .unit-section:first-of-type { margin-top: 0; }
-    .unit-title { font-weight: 600; text-transform: uppercase; font-size: 12px; margin-bottom: 6px; color: #1e293b; }
-    .funcionario-block { margin-top: 16px; page-break-inside: avoid; }
+    .unit-title { font-weight: 600; text-transform: uppercase; font-size: 12px; margin-bottom: 6px; color: #1e293b; break-after: avoid-page; page-break-after: avoid; }
+    .funcionario-block { margin-top: 16px; break-inside: avoid-page; page-break-inside: avoid; }
     .funcionario-block:first-of-type { margin-top: 0; }
     .funcionario-nome { font-size: 15px; font-weight: 700; margin: 14px 0 6px; color: #1e293b; line-height: 1.3; }
     .dados-livres { margin-top: 2px; margin-left: 12px; }
@@ -312,8 +312,13 @@ export class FolhaFuncionariosPage implements OnInit {
     .unit-total { margin-top: 12px; font-size: 11px; font-weight: 700; color: #334155; }
     .tipo-receita { color: #0f766e; font-weight: 600; }
     .tipo-despesa { color: #b91c1c; font-weight: 600; }
-    footer { position: fixed; bottom: 12px; left: 20px; right: 20px; text-align: right; font-size: 10px; color: #4a5568; }
-    @media print { .print-actions { display: none; } body { margin: 0 20px 80px; } }
+    footer { text-align: right; font-size: 10px; color: #4a5568; margin-top: 32px; }
+    @media print {
+      .print-actions { display: none; }
+      body { margin: 0 20px 60px; }
+      .report-header { break-after: avoid-page; page-break-after: avoid; }
+      footer { position: fixed; bottom: 12px; left: 20px; right: 20px; margin-top: 0; }
+    }
   </style>
 </head>
 <body>
