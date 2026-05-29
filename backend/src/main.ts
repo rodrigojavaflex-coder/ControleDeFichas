@@ -59,7 +59,9 @@ async function bootstrap() {
   if (nodeEnv === 'production' || !databaseSynchronize) {
     await runMigrations();
   }
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
   // Middleware para HEAD /
   app.use((req: Request, res: Response, next) => {
     if (req.method === 'HEAD' && req.path === '/') {

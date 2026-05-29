@@ -116,9 +116,20 @@
                     Reabrir
                   </button>
                 }
+                @if (row.situacao === 'FECHADA' && podePermEnviarRecibosWhatsappMassa()) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary"
+                    [disabled]="enviando"
+                    (click)="abrirModalEnviarRecibosWhatsapp(row)"
+                  >
+                    Enviar recibos
+                  </button>
+                }
                 @if (
                   !(row.situacao === 'ABERTA' && podePermFecharLote()) &&
-                  !(row.situacao === 'FECHADA' && podePermReabrirLote())
+                  !(row.situacao === 'FECHADA' && podePermReabrirLote()) &&
+                  !(row.situacao === 'FECHADA' && podePermEnviarRecibosWhatsappMassa())
                 ) {
                   <span class="form-help">—</span>
                 }
@@ -159,5 +170,15 @@
     cancelText="Cancelar"
     (confirmed)="onConfirmarReabrirLoteModal()"
     (cancelled)="onCancelarReabrirLoteModal()"
+  />
+  <app-confirmation-modal
+    [isVisible]="showEnviarRecibosWhatsappModal"
+    title="Enviar recibos por WhatsApp"
+    [message]="enviarRecibosWhatsappModalMensagem"
+    confirmText="Enviar"
+    cancelText="Cancelar"
+    confirmVariant="primary"
+    (confirmed)="onConfirmarEnviarRecibosWhatsappModal()"
+    (cancelled)="onCancelarEnviarRecibosWhatsappModal()"
   />
 </div>

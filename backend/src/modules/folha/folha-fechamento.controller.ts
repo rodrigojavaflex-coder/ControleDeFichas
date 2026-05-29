@@ -29,6 +29,8 @@ import {
 } from './utils/folha-unidade-scope.util';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { FolhaCompetenciaGridRowDto } from './dto/folha-competencia-grid-row.dto';
+import { EnviarRecibosWhatsappDto } from './dto/enviar-recibos-whatsapp.dto';
+import { FolhaReciboWhatsappService } from '../whatsapp/folha-recibo-whatsapp.service';
 
 function parseUnidadeQueryOpcional(raw?: string): Unidade | undefined {
   if (raw == null || raw === '') return undefined;
@@ -54,6 +56,7 @@ export class FolhaFechamentoController {
   constructor(
     private readonly service: FolhaFechamentoService,
     private readonly tipos: FolhaTiposService,
+    private readonly reciboWhatsappService: FolhaReciboWhatsappService,
   ) {}
 
   @Get('status')
@@ -162,5 +165,19 @@ export class FolhaFechamentoController {
       .then((tipo) =>
         this.service.reabrir(dto.unidade, dto.ano, dto.mes, dto.folhaTipoId, tipo),
       );
+  }
+
+  @Post('enviar-recibos-whatsapp')
+  @Permissions(Permission.FOLHA_FECHAMENTO_ENVIAR_RECIBOS_WHATSAPP)
+  @ApiOperation({
+    summary:
+      'Enviar recibos por WhatsApp em massa para a competência fechada (unidade + ano + mês + tipo)',
+  })
+  enviarRecibosWhatsapp(
+    @Body() dto: EnviarRecibosWhatsappDto,
+    @Req() req: { user: Usuario },
+  ) {
+    assertUnidadeFolha(req.user, dto.unidade);
+    return this.reciboWhatsappService.enviarRecibosMassa(req.user, dto);
   }
 }

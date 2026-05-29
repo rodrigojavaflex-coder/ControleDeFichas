@@ -226,6 +226,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
                 Permission.FOLHA_FECHAMENTO_REABRIR,
               ],
             },
+            {
+              label: 'Atendimento WhatsApp',
+              route: '/folha/atendimento-whatsapp',
+              icon: 'brand-whatsapp',
+              requiredPermissions: [Permission.FOLHA_WHATSAPP_READ],
+            },
           ],
         },
       ]

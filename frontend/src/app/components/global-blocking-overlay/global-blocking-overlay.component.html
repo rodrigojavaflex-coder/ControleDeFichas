@@ -1,0 +1,51 @@
+@if (blocking.state$ | async; as state) {
+  @if (state.active) {
+    <div
+      class="global-blocking-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      [attr.aria-label]="state.title"
+      aria-busy="true"
+    >
+      <div class="global-blocking-modal">
+        <div class="global-blocking-content">
+          <div class="global-blocking-spinner" aria-hidden="true"></div>
+          <h2 class="global-blocking-title">{{ state.title }}</h2>
+          @if (state.message) {
+            <p class="global-blocking-message">{{ state.message }}</p>
+          }
+          @if (state.progressTotal > 0) {
+            <div class="global-blocking-progress-wrap">
+              <div class="global-blocking-progress-header">
+                <span class="global-blocking-progress-text">
+                  {{ progressText(state) }}
+                </span>
+                <span class="global-blocking-progress-pct">
+                  {{ progressPercent(state) }}%
+                </span>
+              </div>
+              <div
+                class="global-blocking-progress-bar"
+                role="progressbar"
+                [attr.aria-valuenow]="state.progressCurrent"
+                [attr.aria-valuemin]="0"
+                [attr.aria-valuemax]="state.progressTotal"
+              >
+                <div
+                  class="global-blocking-progress-fill"
+                  [style.width.%]="progressPercent(state)"
+                ></div>
+              </div>
+              @if (state.progressLabel) {
+                <p class="global-blocking-progress-label">{{ state.progressLabel }}</p>
+              }
+            </div>
+          }
+          @if (state.note) {
+            <p class="global-blocking-note">{{ state.note }}</p>
+          }
+        </div>
+      </div>
+    </div>
+  }
+}

@@ -1,0 +1,443 @@
+<div class="folha-whatsapp-atendimento">
+  @if (!podeVerPagina()) {
+    <div class="alert alert-error">
+      Sem permissão para atendimento WhatsApp (<code>folha-whatsapp:read</code>).
+    </div>
+  } @else {
+    <div class="folha-wa-layout">
+      <aside class="folha-wa-inbox" aria-label="Conversas">
+        <div class="folha-wa-inbox-head">
+          <h2 class="folha-wa-inbox-title">Conversas</h2>
+          <span class="folha-wa-sync-status" role="status" aria-live="polite">
+            @if (sincronizando) {
+              <span class="folha-wa-sync-dot" aria-hidden="true"></span>
+              Sincronizando…
+            } @else if (ultimaSyncEm) {
+              {{ rotuloUltimaSync() }}
+            }
+          </span>
+        </div>
+
+        @if (carregandoLista && !conversas.length) {
+          <p class="folha-wa-vazio" role="status">Carregando…</p>
+        } @else if (!conversas.length) {
+          <p class="folha-wa-vazio" role="status">
+            Nenhuma conversa ainda. Respostas ao recibo aparecem aqui após configurar o webhook na Meta.
+          </p>
+        } @else {
+          <ul class="folha-wa-lista">
+            @for (c of conversas; track c.id) {
+              <li>
+                <button
+                  type="button"
+                  class="folha-wa-item"
+                  [class.folha-wa-item-ativo]="conversaSelecionadaId === c.id"
+                  [class.folha-wa-item-nao-lida]="c.naoLida"
+                  (click)="selecionarConversa(c)"
+                >
+                  <span
+                    class="folha-wa-item-avatar user-avatar user-avatar--static"
+                    [class.folha-wa-item-avatar-anonimo]="!c.identificado"
+                    aria-hidden="true"
+                  >
+                    {{ iniciaisConversa(c) }}
+                  </span>
+                  <span class="folha-wa-item-body">
+                    <span class="folha-wa-item-top">
+                      <span class="folha-wa-item-nome">{{ c.nomeExibicao }}</span>
+                      @if (c.naoLida) {
+                        <span class="folha-wa-badge-nao-lida" aria-label="Conversa não lida">Não lida</span>
+                      }
+                    </span>
+                    <span class="folha-wa-item-meta">
+                      <span class="folha-wa-item-meta-linha">
+                        <span class="folha-wa-item-telefone">{{
+                          c.telefoneExibicao || c.telefoneMascarado
+                        }}</span>
+                        @if (c.unidade) {
+                          <span class="folha-wa-item-meta-sep" aria-hidden="true">·</span>
+                          <span class="folha-wa-unidade">{{ c.unidade }}</span>
+                        }
+                        @if (!c.identificado) {
+                          <span class="folha-wa-item-meta-sep" aria-hidden="true">·</span>
+                          <span class="folha-wa-nao-identificado">Não identificado</span>
+                        }
+                      </span>
+                    </span>
+                    @if (c.ultimaMensagemPreview) {
+                      <span class="folha-wa-item-preview">{{ c.ultimaMensagemPreview }}</span>
+                    }
+                    <span class="folha-wa-item-data">{{ formatarDataHora(c.ultimaMensagemEm) }}</span>
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </aside>
+
+      <section class="folha-wa-thread" aria-label="Mensagens">
+        @if (!conversaSelecionadaId) {
+          <p class="folha-wa-vazio folha-wa-thread-vazio">Selecione uma conversa.</p>
+        } @else if (carregandoDetalhe) {
+          <p class="folha-wa-vazio" role="status">Carregando mensagens…</p>
+        } @else if (detalhe) {
+          <header class="folha-wa-thread-head">
+            <div>
+              <h2 class="folha-wa-thread-nome">{{ detalhe.conversa.nomeExibicao }}</h2>
+              <p class="folha-wa-thread-meta">
+                {{ detalhe.conversa.telefoneExibicao || detalhe.conversa.telefoneMascarado }}
+                @if (detalhe.conversa.unidade) {
+                  · {{ detalhe.conversa.unidade }}
+                }
+              </p>
+            </div>
+          </header>
+
+          <div #mensagensEl class="folha-wa-mensagens" role="log" aria-live="polite">
+            @for (m of detalhe.mensagens; track m.id) {
+              <article
+                class="folha-wa-msg"
+                [class.folha-wa-msg-inbound]="m.direcao === 'inbound'"
+                [class.folha-wa-msg-outbound]="m.direcao === 'outbound'"
+              >
+                @if (m.tipo === 'template') {
+                  <p class="folha-wa-msg-texto"><em>Recibo enviado (template)</em></p>
+                } @else if (m.tipo === 'image') {
+                  <div class="folha-wa-msg-midia">
+                    @if (urlMidia(m)) {
+                      <button
+                        type="button"
+                        class="folha-wa-msg-imagem-btn"
+                        (click)="abrirImagemAmpliada(m)"
+                        [attr.aria-label]="'Ampliar ' + (m.legenda || 'imagem')"
+                        title="Ampliar imagem"
+                      >
+                        <img
+                          class="folha-wa-msg-imagem"
+                          [src]="urlMidia(m)"
+                          [alt]="m.legenda || 'Imagem'"
+                          loading="lazy"
+                          (load)="onMidiaRenderizada()"
+                        />
+                      </button>
+                    } @else if (m.arquivoDisponivel || midiaCarregando(m)) {
+                      <p class="folha-wa-msg-midia-pendente" role="status">Carregando imagem…</p>
+                    } @else {
+                      <p class="folha-wa-msg-midia-pendente">[Imagem]</p>
+                    }
+                    @if (m.legenda) {
+                      <p class="folha-wa-msg-texto">{{ m.legenda }}</p>
+                    }
+                  </div>
+                } @else if (m.tipo === 'audio') {
+                  <div class="folha-wa-msg-midia">
+                    @if (urlMidia(m)) {
+                      <audio class="folha-wa-msg-audio" [src]="urlMidia(m)" controls preload="metadata"></audio>
+                    } @else if (m.arquivoDisponivel || midiaCarregando(m)) {
+                      <p class="folha-wa-msg-midia-pendente" role="status">Carregando áudio…</p>
+                    } @else {
+                      <p class="folha-wa-msg-midia-pendente">[Áudio]</p>
+                    }
+                  </div>
+                } @else if (m.tipo === 'document') {
+                  <div class="folha-wa-msg-midia">
+                    <button
+                      type="button"
+                      class="folha-wa-msg-documento"
+                      (click)="baixarDocumento(m)"
+                      [disabled]="!m.arquivoDisponivel"
+                    >
+                      {{ m.nomeArquivo || 'Documento' }}
+                    </button>
+                    @if (m.legenda) {
+                      <p class="folha-wa-msg-texto">{{ m.legenda }}</p>
+                    }
+                  </div>
+                } @else {
+                  <p class="folha-wa-msg-texto">{{ m.conteudoTexto }}</p>
+                }
+                <footer class="folha-wa-msg-rodape">
+                  <time>{{ formatarDataHora(m.metaTimestamp) }}</time>
+                  @if (m.direcao === 'outbound' && m.status) {
+                    <span> · {{ statusLabel(m.status) }}</span>
+                  }
+                  @if (m.usuarioRespostaNome) {
+                    <span> · {{ m.usuarioRespostaNome }}</span>
+                  }
+                </footer>
+              </article>
+            }
+          </div>
+
+          @if (podeResponder()) {
+            @if (detalhe.conversa.janela24hAberta) {
+              <div class="folha-wa-resposta-area">
+                <input
+                  #inputImagem
+                  type="file"
+                  class="sr-only"
+                  accept="image/jpeg,image/png"
+                  (change)="onSelecionarArquivo($event, 'image')"
+                />
+                <input
+                  #inputDocumento
+                  type="file"
+                  class="sr-only"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  (change)="onSelecionarArquivo($event, 'document')"
+                />
+
+                @if (exibirBarraGravacao) {
+                  <div class="folha-wa-gravador" role="region" aria-label="Gravação de áudio">
+                    <div class="folha-wa-gravador-top">
+                      <span class="folha-wa-gravador-tempo" aria-live="polite">{{
+                        formatarTempoGravacao()
+                      }}</span>
+                      <div class="folha-wa-gravador-waveform" aria-hidden="true">
+                        @for (bar of waveformBars; track $index) {
+                          <span class="folha-wa-gravador-bar" [style.height.%]="bar"></span>
+                        }
+                      </div>
+                    </div>
+                    <div class="folha-wa-gravador-controles">
+                      <button
+                        type="button"
+                        class="folha-wa-gravador-btn folha-wa-gravador-descartar"
+                        (click)="cancelarAudioGravado()"
+                        [disabled]="enviandoMidia"
+                        aria-label="Descartar gravação"
+                        title="Descartar"
+                      >
+                        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                          <path
+                            fill="currentColor"
+                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                          />
+                        </svg>
+                      </button>
+                      @if (pausaGravacaoSuportada) {
+                        <button
+                          type="button"
+                          class="folha-wa-gravador-btn folha-wa-gravador-pausa"
+                          (click)="togglePausaGravacao()"
+                          [disabled]="enviandoMidia"
+                          [attr.aria-label]="gravacaoPausada ? 'Continuar gravação' : 'Pausar gravação'"
+                          [title]="gravacaoPausada ? 'Continuar' : 'Pausar'"
+                        >
+                          @if (gravacaoPausada) {
+                            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                              <path fill="currentColor" d="M8 5v14l11-7L8 5z" />
+                            </svg>
+                          } @else {
+                            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                              <path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                            </svg>
+                          }
+                        </button>
+                      }
+                      <button
+                        type="button"
+                        class="folha-wa-gravador-enviar"
+                        (click)="enviarAudioGravado()"
+                        [disabled]="enviandoMidia"
+                        aria-label="Enviar áudio"
+                        title="Enviar"
+                      >
+                        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                          <path
+                            fill="currentColor"
+                            d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  @if (!audioGravacaoDisponivel && motivoAudioGravacaoIndisponivel) {
+                    <p class="folha-wa-audio-indisponivel" role="status">
+                      {{ motivoAudioGravacaoIndisponivel }}
+                    </p>
+                  }
+
+                  @if (enviandoMidia) {
+                    <p class="folha-wa-enviando-midia" role="status">Enviando arquivo…</p>
+                  }
+
+                  <form class="folha-wa-composer" (ngSubmit)="enviarResposta()">
+                    <div class="folha-wa-composer-campo">
+                      <div class="folha-wa-composer-emoji-wrap">
+                        <button
+                          type="button"
+                          class="folha-wa-composer-icone folha-wa-composer-emoji-btn"
+                          (click)="toggleEmojiPicker($event)"
+                          [disabled]="enviandoResposta || enviandoMidia"
+                          [attr.aria-expanded]="emojiPickerAberto"
+                          aria-label="Inserir emoji"
+                          title="Emoji"
+                        >
+                          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+                            <path
+                              fill="currentColor"
+                              d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"
+                            />
+                          </svg>
+                        </button>
+                        @if (emojiPickerAberto) {
+                          <div
+                            class="folha-wa-emoji-picker"
+                            role="listbox"
+                            aria-label="Emojis"
+                            (click)="$event.stopPropagation()"
+                          >
+                            @for (e of emojisRapidos; track e) {
+                              <button
+                                type="button"
+                                class="folha-wa-emoji-item"
+                                role="option"
+                                [attr.aria-label]="'Emoji ' + e"
+                                (click)="inserirEmoji(e, $event)"
+                              >
+                                {{ e }}
+                              </button>
+                            }
+                          </div>
+                        }
+                      </div>
+                      <label class="sr-only" for="folha-wa-resposta-texto">Mensagem</label>
+                      <textarea
+                        #composerInput
+                        id="folha-wa-resposta-texto"
+                        class="folha-wa-composer-input"
+                        rows="1"
+                        maxlength="4096"
+                        [(ngModel)]="textoResposta"
+                        name="textoResposta"
+                        placeholder="Mensagem"
+                        [disabled]="enviandoResposta || enviandoMidia"
+                        (keydown)="onRespostaKeydown($event)"
+                        (input)="ajustarAlturaComposer($event)"
+                      ></textarea>
+                      <div class="folha-wa-composer-anexos">
+                        <button
+                          type="button"
+                          class="folha-wa-composer-icone"
+                          (click)="inputDocumento.click()"
+                          [disabled]="enviandoResposta || enviandoMidia"
+                          title="Enviar documento (PDF, DOCX, XLSX, máx. 16 MB)"
+                          aria-label="Anexar documento"
+                        >
+                          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                            <path
+                              fill="currentColor"
+                              d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          class="folha-wa-composer-icone"
+                          (click)="inputImagem.click()"
+                          [disabled]="enviandoResposta || enviandoMidia"
+                          title="Enviar imagem (JPEG ou PNG, máx. 16 MB)"
+                          aria-label="Enviar imagem"
+                        >
+                          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                            <path
+                              fill="currentColor"
+                              d="M12 12.5c1.38 0 2.5-1.12 2.5-2.5S13.38 7.5 12 7.5 9.5 8.62 9.5 10s1.12 2.5 2.5 2.5zM20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h4.05l1.83-2h4.24l1.83 2H20v12zm-8-7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    @if (podeEnviarTexto) {
+                      <button
+                        type="submit"
+                        class="folha-wa-composer-acao folha-wa-composer-enviar"
+                        [disabled]="enviandoResposta || enviandoMidia"
+                        aria-label="Enviar mensagem"
+                        title="Enviar"
+                      >
+                        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                          <path
+                            fill="currentColor"
+                            d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z"
+                          />
+                        </svg>
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="folha-wa-composer-acao folha-wa-composer-mic"
+                        (click)="iniciarGravacao()"
+                        [disabled]="enviandoResposta || enviandoMidia || !audioGravacaoDisponivel"
+                        [title]="motivoAudioGravacaoIndisponivel || 'Gravar áudio'"
+                        aria-label="Gravar áudio"
+                      >
+                        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                          <path
+                            fill="currentColor"
+                            d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
+                          />
+                        </svg>
+                      </button>
+                    }
+                  </form>
+
+                  <label class="folha-wa-enviar-enter">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="enviarComEnter"
+                      name="enviarComEnter"
+                      [disabled]="enviandoResposta || enviandoMidia"
+                    />
+                    Enviar com Enter
+                  </label>
+                }
+
+                @if (exibirBarraGravacao && enviandoMidia) {
+                  <p class="folha-wa-enviando-midia" role="status">Enviando áudio…</p>
+                }
+              </div>
+            } @else {
+              <div class="alert alert-warning folha-wa-janela-fechada" role="status">
+                Janela de 24 horas encerrada. Aguarde nova mensagem do funcionário para responder.
+              </div>
+            }
+          } @else {
+            <div class="alert alert-info" role="status">
+              Sem permissão para enviar respostas (<code>folha-whatsapp:reply</code>).
+            </div>
+          }
+        }
+      </section>
+    </div>
+  }
+
+  @if (imagemAmpliadaUrl) {
+    <div
+      class="folha-wa-lightbox"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="imagemAmpliadaLegenda || 'Visualização de imagem'"
+      (click)="fecharImagemAmpliada()"
+    >
+      <button
+        type="button"
+        class="folha-wa-lightbox-fechar"
+        (click)="fecharImagemAmpliada()"
+        aria-label="Fechar"
+        title="Fechar"
+      >
+        ×
+      </button>
+      <img
+        class="folha-wa-lightbox-imagem"
+        [src]="imagemAmpliadaUrl"
+        [alt]="imagemAmpliadaLegenda || 'Imagem'"
+        (click)="$event.stopPropagation()"
+      />
+    </div>
+  }
+</div>

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Funcionario } from './entities/funcionario.entity';
 import { FolhaCapa } from './entities/folha-capa.entity';
 import { FolhaCargo } from './entities/folha-cargo.entity';
@@ -19,6 +19,7 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import {
   assertUnidadeFolha,
   usuarioPodeGerenciarUnidade,
+  unidadeEscopoUsuarioFolha,
 } from './utils/folha-unidade-scope.util';
 import { CreateFuncionarioFolhaDto } from './dto/create-funcionario-folha.dto';
 import { FindFuncionarioFolhaDto } from './dto/find-funcionario-folha.dto';
@@ -162,30 +163,72 @@ export class FolhaFuncionariosService {
   async findPaginated(
     usuario: Usuario,
     dto: FindFuncionarioFolhaDto,
-  ): Promise<PaginatedResponseDto<Funcionario>> {
-    assertUnidadeFolha(usuario, dto.unidade);
-    const page = dto.page ?? 1;
-    const limit = dto.limit ?? 10;
-
-    const qb = this.funcionarioRepo
-      .createQueryBuilder('f')
-      .leftJoinAndSelect('f.cargo', 'cargo')
-      .leftJoinAndSelect('f.setor', 'setor')
-      .where('f.unidade = :unidade', { unidade: dto.unidade });
-
-    if (dto.nome?.trim()) {
-      qb.andWhere('f.nome ILIKE :nome', { nome: `%${dto.nome.trim()}%` });
+  ): Promise<PaginatedResponseDto<Funcionario> | Funcionario[]> {
+    if (dto.todos) {
+      return this.findAllLista(usuario, dto);
     }
 
-    qb.orderBy('f.nome', 'ASC');
+    const page = dto.page ?? 1;
+    const limit = dto.limit ?? 10;
+    const qb = this.criarQueryListaFuncionarios(usuario, dto);
+    qb.orderBy('f.unidade', 'ASC').addOrderBy('f.nome', 'ASC');
 
     const total = await qb.getCount();
-
     qb.skip((page - 1) * limit).take(limit);
     const data = await qb.getMany();
 
     const meta = new PaginationMetaDto(page, limit, total);
     return new PaginatedResponseDto(data, meta);
+  }
+
+  /** Lista completa para impressão (filtros iguais à paginação). */
+  async findAllLista(
+    usuario: Usuario,
+    dto: FindFuncionarioFolhaDto,
+  ): Promise<Funcionario[]> {
+    const qb = this.criarQueryListaFuncionarios(usuario, dto);
+    qb.orderBy('f.unidade', 'ASC').addOrderBy('f.nome', 'ASC');
+    return qb.getMany();
+  }
+
+  private criarQueryListaFuncionarios(
+    usuario: Usuario,
+    dto: FindFuncionarioFolhaDto,
+  ) {
+    const qb = this.funcionarioRepo
+      .createQueryBuilder('f')
+      .leftJoinAndSelect('f.cargo', 'cargo')
+      .leftJoinAndSelect('f.setor', 'setor');
+
+    this.aplicarFiltroUnidadeListaFuncionarios(usuario, qb, dto.unidade);
+
+    if (dto.nome?.trim()) {
+      qb.andWhere('f.nome ILIKE :nome', { nome: `%${dto.nome.trim()}%` });
+    }
+
+    if (dto.comEventosFixos) {
+      qb.leftJoinAndSelect('f.eventosFixos', 'eventoFixo')
+        .leftJoinAndSelect('eventoFixo.folhaVerba', 'eventoFixoVerba');
+    }
+
+    return qb;
+  }
+
+  /** Escopo RN-007: unidade explícita, vínculo único ou todas (admin/sem vínculo). */
+  private aplicarFiltroUnidadeListaFuncionarios(
+    usuario: Usuario,
+    qb: SelectQueryBuilder<Funcionario>,
+    unidade?: Unidade,
+  ): void {
+    if (unidade) {
+      assertUnidadeFolha(usuario, unidade);
+      qb.andWhere('f.unidade = :unidade', { unidade });
+      return;
+    }
+    const escopo = unidadeEscopoUsuarioFolha(usuario);
+    if (escopo) {
+      qb.andWhere('f.unidade = :unidade', { unidade: escopo });
+    }
   }
 
   async findOne(usuario: Usuario, id: string): Promise<Funcionario> {

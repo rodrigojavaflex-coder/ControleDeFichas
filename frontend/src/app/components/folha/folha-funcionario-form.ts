@@ -23,6 +23,7 @@ import {
   TipoChavePixFolha,
 } from '../../models/folha.model';
 import { Permission, Unidade } from '../../models/usuario.model';
+import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 
 interface FolhaFuncFormValue {
   nome: string;
@@ -39,7 +40,7 @@ interface FolhaFuncFormValue {
   ativo: boolean;
   tipoPix: TipoChavePixFolha | null;
   chavePix: string;
-}import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+}
 
 @Component({
   selector: 'app-folha-funcionario-form',
@@ -73,6 +74,8 @@ export class FolhaFuncionarioFormComponent implements OnInit {
   Unidade = Unidade;
   unidades = Object.values(Unidade);
   unidadeDisabled = false;
+  /** Unidade selecionada na lista ao abrir novo/editar (query `unidade`). */
+  private filtroUnidadeRetorno: Unidade | '' = '';
   cargosCatalogo: FolhaCadastroSimples[] = [];
   setoresCatalogo: FolhaCadastroSimples[] = [];
   /** Verbas ativas disponíveis para eventos fixos. */
@@ -147,6 +150,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.aplicarFiltroUnidadeRetornoDaQuery();
     const id = this.route.snapshot.paramMap.get('id');
     this.applyUnidadeFromUsuario();
 
@@ -166,7 +170,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           'Você não possui permissão para visualizar o cadastro.',
           'Acesso negado',
         );
-        void this.router.navigate(['/folha/funcionarios']);
+        void this.voltarParaLista();
         return;
       }
       if (!this.auth.hasPermission(Permission.FOLHA_FUNCIONARIO_UPDATE)) {
@@ -174,7 +178,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           'Você não possui permissão para editar funcionários.',
           'Acesso negado',
         );
-        void this.router.navigate(['/folha/funcionarios']);
+        void this.voltarParaLista();
         return;
       }
       this.carregarOpcoesCatalogo(() => this.loadFuncionario(id));
@@ -184,7 +188,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           'Você não possui permissão para criar funcionários.',
           'Acesso negado',
         );
-        void this.router.navigate(['/folha/funcionarios']);
+        void this.voltarParaLista();
         return;
       }
       this.carregarOpcoesCatalogo();
@@ -196,6 +200,20 @@ export class FolhaFuncionarioFormComponent implements OnInit {
         ? 'Dados pessoais e dados da folha no mesmo cadastro.'
         : 'Informe primeiro os dados pessoais e os dados utilizados na folha.',
     });
+  }
+
+  private aplicarFiltroUnidadeRetornoDaQuery(): void {
+    const q = this.route.snapshot.queryParamMap.get('unidade')?.trim();
+    if (q && this.unidades.includes(q as Unidade)) {
+      this.filtroUnidadeRetorno = q as Unidade;
+    }
+  }
+
+  private voltarParaLista(): void {
+    const queryParams = this.filtroUnidadeRetorno
+      ? { unidade: this.filtroUnidadeRetorno }
+      : {};
+    void this.router.navigate(['/folha/funcionarios'], { queryParams });
   }
 
   get nomeCtrl() {
@@ -686,7 +704,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           'Não foi possível carregar listas auxiliares (cargos, setores ou eventos).',
           'Folha',
         );
-        void this.router.navigate(['/folha/funcionarios']);
+        void this.voltarParaLista();
       },
     });
   }
@@ -789,14 +807,14 @@ export class FolhaFuncionarioFormComponent implements OnInit {
     if (this.isEditMode && this.funcionarioId) {
       this.folha.patchFuncionario(this.funcionarioId, body).subscribe({
         next: () => {
-          void this.router.navigate(['/folha/funcionarios']);
+          void this.voltarParaLista();
         },
         error: (e: { error?: { message?: string } }) => this.handleSaveErr(e),
       });
       return;
     }
     this.folha.criarFuncionario(body as { unidade: Unidade }).subscribe({
-      next: () => void this.router.navigate(['/folha/funcionarios']),
+      next: () => void this.voltarParaLista(),
       error: (e: { error?: { message?: string } }) => this.handleSaveErr(e),
     });
   }
@@ -809,6 +827,6 @@ export class FolhaFuncionarioFormComponent implements OnInit {
   }
 
   onCancel(): void {
-    void this.router.navigate(['/folha/funcionarios']);
+    void this.voltarParaLista();
   }
 }

@@ -31,13 +31,17 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { Usuario } from '../usuarios/entities/usuario.entity';
+import { FolhaReciboWhatsappService } from '../whatsapp/folha-recibo-whatsapp.service';
 
 @ApiTags('Folha — Capa e itens')
 @Controller('folha/capas')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 export class FolhaCapasController {
-  constructor(private readonly service: FolhaCapasService) {}
+  constructor(
+    private readonly service: FolhaCapasService,
+    private readonly reciboWhatsappService: FolhaReciboWhatsappService,
+  ) {}
 
   @Post()
   @Permissions(Permission.FOLHA_LANCAMENTO_CREATE)
@@ -128,6 +132,24 @@ export class FolhaCapasController {
     @Req() req: { user: Usuario },
   ) {
     return this.service.liberarCapa(req.user, id, unidade);
+  }
+
+  @Post(':id/enviar-recibo-whatsapp')
+  @Permissions(
+    Permission.FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP,
+    Permission.FOLHA_FECHAMENTO_ENVIAR_RECIBOS_WHATSAPP,
+  )
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Enviar recibo da capa por WhatsApp (template + imagem PNG)',
+  })
+  @ApiQuery({ name: 'unidade', enum: Unidade, required: true })
+  enviarReciboWhatsapp(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('unidade') unidade: Unidade,
+    @Req() req: { user: Usuario },
+  ) {
+    return this.reciboWhatsappService.enviarReciboIndividual(req.user, id, unidade);
   }
 
   @Post(':id/itens')

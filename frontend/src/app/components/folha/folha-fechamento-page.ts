@@ -1,10 +1,12 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { FolhaService } from '../../services/folha.service';
 import { AuthService } from '../../services/auth.service';
 import { PageContextService } from '../../services/page-context.service';
 import { ErrorModalService } from '../../services/error-modal.service';
+import { GlobalBlockingOverlayService } from '../../services/global-blocking-overlay.service';
 import {
   FolhaCompetenciaGridRow,
   FolhaTipo,
@@ -20,11 +22,12 @@ import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-m
   templateUrl: './folha-fechamento-page.html',
   styleUrls: ['./folha-pages.shared.css'],
 })
-export class FolhaFechamentoPage implements OnInit {
+export class FolhaFechamentoPage implements OnInit, OnDestroy {
   private folha = inject(FolhaService);
   private auth = inject(AuthService);
   private pageCtx = inject(PageContextService);
   private errors = inject(ErrorModalService);
+  private globalBlocking = inject(GlobalBlockingOverlayService);
 
   Permission = Permission;
   Unidade = Unidade;
@@ -60,6 +63,7 @@ export class FolhaFechamentoPage implements OnInit {
   registradas: FolhaCompetenciaGridRow[] = [];
   carregandoLista = false;
   enviando = false;
+  enviandoRecibosWhatsappMassa = false;
 
   showFecharLoteModal = false;
   fecharLoteModalMensagem = '';
@@ -68,6 +72,16 @@ export class FolhaFechamentoPage implements OnInit {
   showReabrirLoteModal = false;
   reabrirLoteModalMensagem = '';
   private pendenteReabrirLoteRow: FolhaCompetenciaGridRow | null = null;
+
+  showEnviarRecibosWhatsappModal = false;
+  enviarRecibosWhatsappModalMensagem = '';
+  private pendenteEnviarRecibosWhatsappRow: FolhaCompetenciaGridRow | null = null;
+
+  ngOnDestroy(): void {
+    if (this.enviandoRecibosWhatsappMassa) {
+      this.globalBlocking.hide();
+    }
+  }
 
   ngOnInit(): void {
     this.pageCtx.setContext({
@@ -134,6 +148,13 @@ export class FolhaFechamentoPage implements OnInit {
   podePermReabrirLote(): boolean {
     if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
     return this.auth.hasPermission(Permission.FOLHA_FECHAMENTO_REABRIR);
+  }
+
+  podePermEnviarRecibosWhatsappMassa(): boolean {
+    if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
+    return this.auth.hasPermission(
+      Permission.FOLHA_FECHAMENTO_ENVIAR_RECIBOS_WHATSAPP,
+    );
   }
 
   /** Campos válidos para o POST de abertura (além de `podePermRegistrarAbertura`). */
@@ -311,6 +332,134 @@ export class FolhaFechamentoPage implements OnInit {
           this.errors.show(e?.error?.message ?? 'Erro ao reabrir lote.', 'Controle');
         },
       });
+  }
+
+  abrirModalEnviarRecibosWhatsapp(row: FolhaCompetenciaGridRow): void {
+    if (!this.podePermEnviarRecibosWhatsappMassa()) return;
+    if (row.situacao !== 'FECHADA') return;
+    this.pendenteEnviarRecibosWhatsappRow = row;
+    this.enviarRecibosWhatsappModalMensagem =
+      `Enviar recibos WhatsApp para ${nomeMesPt(row.mes)}/${this.ano} — ` +
+      `${row.folhaTipoDescricao} (${row.unidade})?`;
+    this.showEnviarRecibosWhatsappModal = true;
+  }
+
+  onCancelarEnviarRecibosWhatsappModal(): void {
+    this.showEnviarRecibosWhatsappModal = false;
+    this.pendenteEnviarRecibosWhatsappRow = null;
+  }
+
+  onConfirmarEnviarRecibosWhatsappModal(): void {
+    const row = this.pendenteEnviarRecibosWhatsappRow;
+    this.showEnviarRecibosWhatsappModal = false;
+    this.pendenteEnviarRecibosWhatsappRow = null;
+    if (!row) return;
+    void this.executarEnvioRecibosWhatsappMassa(row);
+  }
+
+  private async executarEnvioRecibosWhatsappMassa(
+    row: FolhaCompetenciaGridRow,
+  ): Promise<void> {
+    this.enviando = true;
+    this.enviandoRecibosWhatsappMassa = true;
+
+    const competenciaLabel =
+      `${nomeMesPt(row.mes)}/${this.ano} — ${row.folhaTipoDescricao} (${row.unidade})`;
+
+    try {
+      const capas = await firstValueFrom(
+        this.folha.listarCapas({
+          unidade: row.unidade,
+          ano: Number(this.ano),
+          mes: row.mes,
+          folhaTipoId: row.folhaTipoId,
+        }),
+      );
+
+      const total = capas.length;
+      if (total === 0) {
+        this.errors.show('Nenhuma capa encontrada para envio.', 'WhatsApp');
+        return;
+      }
+
+      this.globalBlocking.show({
+        title: 'Enviando recibos por WhatsApp',
+        message: competenciaLabel,
+        note:
+          'Aguarde a conclusão. O acesso ao sistema permanece bloqueado durante o envio.',
+        progressCurrent: 0,
+        progressTotal: total,
+        progressLabel: 'Preparando envio…',
+      });
+
+      let enviados = 0;
+      let ignorados = 0;
+      const falhas: Array<{ funcionarioId: string; nome: string; motivo: string }> =
+        [];
+
+      for (let i = 0; i < capas.length; i++) {
+        const capa = capas[i];
+        const nome = (capa.funcionario?.nome ?? 'Funcionário').trim() || 'Funcionário';
+
+        this.globalBlocking.updateProgress(
+          i,
+          total,
+          `Enviando para ${nome}…`,
+        );
+
+        try {
+          await firstValueFrom(
+            this.folha.enviarReciboWhatsapp(capa.id, row.unidade),
+          );
+          enviados += 1;
+        } catch (error: unknown) {
+          ignorados += 1;
+          const motivo =
+            (error as { error?: { message?: string } })?.error?.message ??
+            'Erro ao enviar recibo por WhatsApp.';
+          falhas.push({
+            funcionarioId: capa.funcionario?.id ?? '',
+            nome,
+            motivo,
+          });
+        }
+
+        this.globalBlocking.updateProgress(
+          i + 1,
+          total,
+          i + 1 < total ? `Concluído: ${nome}` : `Finalizando…`,
+        );
+
+        if (i < capas.length - 1) {
+          await this.delayMs(900);
+        }
+      }
+
+      const resumo =
+        `Enviados: ${enviados}. Ignorados: ${ignorados}.` +
+        (falhas.length
+          ? ` Falhas: ${falhas
+              .slice(0, 5)
+              .map((f) => `${f.nome} (${f.motivo})`)
+              .join('; ')}${falhas.length > 5 ? ' ...' : ''}`
+          : '');
+      this.errors.show(resumo, 'WhatsApp');
+      this.carregarRegistradas();
+    } catch (error: unknown) {
+      this.errors.show(
+        (error as { error?: { message?: string } })?.error?.message ??
+          'Erro ao preparar envio de recibos por WhatsApp.',
+        'WhatsApp',
+      );
+    } finally {
+      this.globalBlocking.hide();
+      this.enviando = false;
+      this.enviandoRecibosWhatsappMassa = false;
+    }
+  }
+
+  private delayMs(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   situacaoRotulo(row: FolhaCompetenciaGridRow): string {

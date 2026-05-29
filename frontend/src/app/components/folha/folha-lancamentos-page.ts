@@ -89,9 +89,11 @@ export class FolhaLancamentosPage implements OnInit {
 
   salvandoModalLancamento = false;
   salvandoCongelacaoCapa = false;
+  enviandoReciboWhatsapp = false;
 
   showCongelarCapaModal = false;
   showLiberarCapaModal = false;
+  showEnviarReciboWhatsappModal = false;
 
   showRemoverItemModal = false;
   itemIdParaRemover: string | null = null;
@@ -184,15 +186,25 @@ export class FolhaLancamentosPage implements OnInit {
     return !this.campoUnidadeDesabilitado && this.unidadeFiltro === '';
   }
 
+  /** Competência com abertura registrada e lote fechado (RN-015: envio/visualização de recibo). */
+  loteFechadoParaCompetencia(): boolean {
+    const s = this.statusLote;
+    return !!(s?.registrada && s.fechado);
+  }
+
   /**
-   * Carregar habilitado com permissão, filtros mínimos e lote aberto (RN-006), após status carregado.
+   * Carregar habilitado com filtros mínimos e abertura registrada.
+   * Lote aberto: exige permissão de criação (RN-006, pode criar capas).
+   * Lote fechado: exige leitura (lista capas existentes para recibo/WhatsApp).
    */
   podeCarregarTopo(): boolean {
-    if (!this.pode().c || this.carregando) return false;
+    if (this.carregando) return false;
     if (this.precisaEscolherUnidadeParaLancar()) return false;
     if (!this.tipoId?.trim()) return false;
     const s = this.statusLote;
-    return !!(s?.registrada && !s.fechado);
+    if (!s?.registrada) return false;
+    if (s.fechado) return this.pode().r;
+    return this.pode().c;
   }
 
   /** Unidade específica e tipo de folha escolhidos (competência sempre definida pelo mês/ano da tela). */
@@ -269,7 +281,40 @@ export class FolhaLancamentosPage implements OnInit {
 
   /** Abre o recibo da capa selecionada para impressão ou PDF. */
   podeImprimirRelatorioCapa(): boolean {
-    return this.pode().r && !!this.detalhe && !this.carregando;
+    return (
+      this.pode().r &&
+      !!this.detalhe &&
+      !this.carregando &&
+      (this.podeEditarLoteNaCompetencia() || this.loteFechadoParaCompetencia())
+    );
+  }
+
+  podeEnviarReciboWhatsapp(): boolean {
+    return (
+      this.temPermissaoEnviarReciboWhatsapp() &&
+      !!this.detalhe &&
+      !!this.statusLote?.fechado &&
+      !!this.telefoneFuncionarioAtualValido() &&
+      !this.carregando &&
+      !this.enviandoReciboWhatsapp
+    );
+  }
+
+  motivoDesabilitadoEnviarReciboWhatsapp(): string {
+    if (this.podeEnviarReciboWhatsapp()) return 'Enviar recibo por WhatsApp';
+    if (!this.temPermissaoEnviarReciboWhatsapp()) {
+      return 'Sem permissão para enviar recibo por WhatsApp no lançamento.';
+    }
+    if (!this.statusLote?.fechado) {
+      return 'Disponível após fechar o lote em Controle das competências.';
+    }
+    if (!this.telefoneFuncionarioAtualValido()) {
+      return 'Cadastre o telefone do funcionário.';
+    }
+    if (this.enviandoReciboWhatsapp) {
+      return 'Enviando recibo por WhatsApp...';
+    }
+    return 'Selecione uma capa para enviar o recibo.';
   }
 
   imprimirRelatorioCapaFolha(): void {
@@ -1005,6 +1050,9 @@ export class FolhaLancamentosPage implements OnInit {
    * Coluna de ações por linha: Editar / Auditoria / Remover (sem “Incluir” — esse fluxo está no modal em cada quadro).
    */
   mostrarColunaAcoesLinha(): boolean {
+    if (this.loteFechadoParaCompetencia()) {
+      return this.podeAuditarLinhaEvento();
+    }
     return (
       this.podeAuditarLinhaEvento() || this.podeBotaoEditarItem() || this.podeRemoverItem()
     );
@@ -1234,7 +1282,7 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   carregarCapasNaCompetencia(): void {
-    if (!this.pode().c) return;
+    if (!this.podeCarregarTopo()) return;
     const un = this.unidadeApi();
     if (!un) {
       this.errors.show('Escolha uma unidade específica para lançar (não use "Todas").', 'Validação');
@@ -1258,15 +1306,23 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   /**
-   * Se a competência estiver aberta (RN-006) e filtros válidos, carrega lista de capas sem novo passo pelo botão
-   * (mesmas condições de `podeCarregarTopo`, sem modal quando lote não está pronto para lançar — só ignora).
+   * Com filtros válidos, carrega lista de capas automaticamente após consultar o status:
+   * lote aberto → POST carregar-competencia; lote fechado → GET com detalhe (somente leitura).
    */
   private tentativaCarregarCapasAoMudarFiltroOuCompetencia(un: Unidade, s: FolhaFechamentoStatus): void {
-    if (!this.pode().c || this.carregando) return;
+    if (this.carregando) return;
     if (this.precisaEscolherUnidadeParaLancar()) return;
     if (!this.tipoId?.trim()) return;
-    if (!s.registrada || s.fechado) return;
+    if (!s.registrada) return;
 
+    if (s.fechado) {
+      if (!this.pode().r) return;
+      this.carregando = true;
+      this.executarListarCapasCompetenciaFechada(un);
+      return;
+    }
+
+    if (!this.pode().c) return;
     this.carregando = true;
     this.executarPostCarregarCompetencia(un);
   }
@@ -1281,22 +1337,54 @@ export class FolhaLancamentosPage implements OnInit {
       })
       .subscribe({
         next: (rows) => {
-          this.capasNaCompetencia = rows;
-          this.fecharTodosModaisItem();
-          this.detalhe = null;
-          this.carregando = false;
-          if (rows.length === 0) {
-            this.errors.show(
+          this.finalizarCargaCapas(rows, {
+            vazioAberta:
               'Nenhum funcionário elegível nesta competência (ativo; admissão até o mês/ano vigente; se demitido, competência antes do mês da demissão — RN-011).',
-              'Folha',
-            );
-          }
+          });
         },
         error: (e) => {
           this.carregando = false;
           this.errors.show(e?.error?.message ?? 'Erro ao carregar folhas.', 'Folha');
         },
       });
+  }
+
+  /** Lote fechado: apenas lista capas já existentes (sem criar novas). */
+  private executarListarCapasCompetenciaFechada(un: Unidade): void {
+    this.folha
+      .listarCapasComDetalhe({
+        unidade: un,
+        ano: this.ano,
+        mes: this.mes,
+        folhaTipoId: this.tipoId,
+      })
+      .subscribe({
+        next: (rows) => {
+          this.finalizarCargaCapas(rows, {
+            vazioFechada: 'Nenhuma folha (capa) encontrada nesta competência fechada.',
+          });
+        },
+        error: (e) => {
+          this.carregando = false;
+          this.errors.show(e?.error?.message ?? 'Erro ao carregar folhas.', 'Folha');
+        },
+      });
+  }
+
+  private finalizarCargaCapas(
+    rows: FolhaCapaDetalheResponse[],
+    msgs: { vazioAberta?: string; vazioFechada?: string },
+  ): void {
+    this.capasNaCompetencia = rows;
+    this.fecharTodosModaisItem();
+    this.detalhe = null;
+    this.carregando = false;
+    if (rows.length === 0) {
+      const msg = this.loteFechadoParaCompetencia()
+        ? msgs.vazioFechada
+        : msgs.vazioAberta;
+      if (msg) this.errors.show(msg, 'Folha');
+    }
   }
 
   /** Roda depois que `statusLote` foi atualizado no fluxo manual (botão Carregar). */
@@ -1314,8 +1402,7 @@ export class FolhaLancamentosPage implements OnInit {
       return;
     }
     if (this.statusLote.fechado) {
-      this.carregando = false;
-      this.errors.show('Lote fechado — só visualização.', 'Controle');
+      this.executarListarCapasCompetenciaFechada(un);
       return;
     }
     this.executarPostCarregarCompetencia(un);
@@ -1476,6 +1563,11 @@ export class FolhaLancamentosPage implements OnInit {
     this.showLiberarCapaModal = true;
   }
 
+  solicitarEnviarReciboWhatsapp(): void {
+    if (!this.podeEnviarReciboWhatsapp() || !this.detalhe) return;
+    this.showEnviarReciboWhatsappModal = true;
+  }
+
   fecharLiberarCapaModal(): void {
     this.showLiberarCapaModal = false;
   }
@@ -1495,5 +1587,43 @@ export class FolhaLancamentosPage implements OnInit {
         this.errors.show(e?.error?.message ?? 'Erro ao liberar a folha.', 'Folha');
       },
     });
+  }
+
+  fecharEnviarReciboWhatsappModal(): void {
+    this.showEnviarReciboWhatsappModal = false;
+  }
+
+  confirmarEnviarReciboWhatsappModal(): void {
+    this.fecharEnviarReciboWhatsappModal();
+    const un = this.unidadeApi();
+    if (!this.detalhe || !un || !this.podeEnviarReciboWhatsapp()) return;
+    this.enviandoReciboWhatsapp = true;
+    this.folha.enviarReciboWhatsapp(this.detalhe.capa.id, un).subscribe({
+      next: () => {
+        this.enviandoReciboWhatsapp = false;
+        this.errors.show('Recibo enviado por WhatsApp com sucesso.', 'Folha');
+      },
+      error: (e) => {
+        this.enviandoReciboWhatsapp = false;
+        this.errors.show(
+          e?.error?.message ?? 'Erro ao enviar recibo por WhatsApp.',
+          'WhatsApp',
+        );
+      },
+    });
+  }
+
+  temPermissaoEnviarReciboWhatsappIndividual(): boolean {
+    if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
+    return this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP);
+  }
+
+  private temPermissaoEnviarReciboWhatsapp(): boolean {
+    return this.temPermissaoEnviarReciboWhatsappIndividual();
+  }
+
+  private telefoneFuncionarioAtualValido(): boolean {
+    const telefone = this.detalhe?.capa?.funcionario?.telefone?.trim();
+    return !!telefone;
   }
 }

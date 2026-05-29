@@ -228,6 +228,14 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     ],
   },
   {
+    id: 'folha-atendimento-whatsapp',
+    label: 'Atendimento WhatsApp',
+    route: '/folha/atendimento-whatsapp',
+    icon: 'brand-whatsapp',
+    category: 'Folha',
+    requiredPermissions: [Permission.FOLHA_WHATSAPP_READ],
+  },
+  {
     id: 'relatorios-baixas',
     label: 'Baixas',
     route: '/relatorios/baixas',

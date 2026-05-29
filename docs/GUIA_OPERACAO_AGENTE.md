@@ -143,6 +143,17 @@ Criterios de aceite:
 
 ---
 
+## Segredos e variaveis de ambiente
+
+- **Nao** pedir ao agente para ler `backend/.env`, `frontend/.env` ou `agent/.env`.
+- Referencia de **nomes** das variaveis: `backend/.env.example` e `agent/env.example`.
+- Regra permanente do projeto: `.cursor/rules/regras-segredos.mdc`.
+- Arquivos `.env` estao em `.cursorignore` (agente nao deve indexar/abrir).
+- Ao testar integracoes (WhatsApp, Meta, DB): informe *"variaveis ja configuradas no .env local"* em vez de colar tokens ou senhas no chat.
+- Fora de escopo do agente: commitar, copiar ou expor valores reais de secrets.
+
+---
+
 ## Checklist antes de enviar tarefa ao agente
 - O objetivo esta claro e testavel?
 - O escopo esta delimitado?
@@ -150,6 +161,25 @@ Criterios de aceite:
 - Precisa migration?
 - Precisa validar tema claro/escuro?
 - Existe regra RN-* que deve ser citada?
+- Tarefa envolve credenciais? Usar `.env.example` + confirmacao, sem colar secrets.
+- **Novo menu ou tela** que deve aparecer nos **atalhos da home**? Ver secao abaixo.
+
+---
+
+## Checklist — novo menu / atalho na tela inicial
+
+Ao criar ou expor uma **nova rota no menu lateral** que o usuario possa fixar como atalho na home, atualizar **todos** estes pontos (mesmo `id` em frontend e backend):
+
+| # | Arquivo | O que fazer |
+|---|---------|-------------|
+| 1 | `frontend/src/app/app.routes.ts` | Rota lazy/standalone |
+| 2 | `frontend/src/app/components/navigation/navigation.ts` | Item no menu + permissões |
+| 3 | `frontend/src/app/config/home-shortcuts.registry.ts` | Entrada em `HOME_SHORTCUTS_CATALOG` |
+| 4 | `backend/src/common/constants/home-shortcut-ids.ts` | Mesmo `id` em `HOME_SHORTCUT_IDS` |
+
+**Importante:** se faltar o passo **4**, o usuario seleciona o atalho na home, salva, e o backend **remove silenciosamente** o ID na sanitizacao de `PATCH /users/:id/atalhos-home`. O atalho nao persiste apos recarregar.
+
+Opcional: citar RN-* de atalhos em `docs/regras-negocio.md` (secao atalhos da home).
 
 ---
 
@@ -163,6 +193,19 @@ Fora de escopo: <explicito>.
 Criterios: (1) ..., (2) ..., (3) ...
 Validacao: lint e teste manual do fluxo.
 ```
+
+---
+
+## Documentacao de referencia
+
+| Documento | Uso |
+|-----------|-----|
+| `docs/regras-negocio.md` | RN-* oficiais |
+| `docs/WHATSAPP_RECIBO_FOLHA.md` | Envio de recibo de folha por WhatsApp (especificacao + checklist pre-dev) |
+| `docs/WHATSAPP_WEBHOOK.md` | Webhook, inbox, chat e **passo a passo painel Meta** |
+| `docs/PROMPT_MODULO_FOLHA.md` | Contexto do modulo folha |
+| `backend/.env.example` | Nomes das variaveis de ambiente (sem valores secretos) |
+| `.cursor/rules/regras-segredos.mdc` | Regra: agente nao le `.env` |
 
 ---
 

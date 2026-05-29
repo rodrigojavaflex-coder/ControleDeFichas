@@ -120,12 +120,21 @@ export enum Permission {
   FOLHA_LANCAMENTO_CONGELAR_CAPA = 'folha-lancamento:congelar-capa',
   /** Reverte o congelamento da capa (lote aberto). */
   FOLHA_LANCAMENTO_LIBERAR_CAPA = 'folha-lancamento:liberar-capa',
+  /** Envia recibo da folha por WhatsApp na tela de Lançamento (individual). */
+  FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP = 'folha-lancamento:enviar-recibo-whatsapp',
 
   // Folha — Controle (competência / folha_fechamento)
   FOLHA_FECHAMENTO_READ = 'folha-fechamento:read',
   FOLHA_FECHAMENTO_REGISTRAR_ABERTURA = 'folha-fechamento:registrar-abertura',
   FOLHA_FECHAMENTO_FECHAR = 'folha-fechamento:fechar',
   FOLHA_FECHAMENTO_REABRIR = 'folha-fechamento:reabrir',
+  /** Envia recibos por WhatsApp em massa na tela de Controle das competências. */
+  FOLHA_FECHAMENTO_ENVIAR_RECIBOS_WHATSAPP = 'folha-fechamento:enviar-recibos-whatsapp',
+
+  /** Atendimento WhatsApp — visualizar inbox e threads. */
+  FOLHA_WHATSAPP_READ = 'folha-whatsapp:read',
+  /** Atendimento WhatsApp — responder manualmente (janela 24h). */
+  FOLHA_WHATSAPP_REPLY = 'folha-whatsapp:reply',
 }
 
 export const PERMISSION_GROUPS = {
@@ -254,6 +263,10 @@ export const PERMISSION_GROUPS = {
     { key: Permission.FOLHA_LANCAMENTO_DELETE, label: 'Excluir itens da folha' },
     { key: Permission.FOLHA_LANCAMENTO_CONGELAR_CAPA, label: 'Congelar folha (capa) do funcionário' },
     { key: Permission.FOLHA_LANCAMENTO_LIBERAR_CAPA, label: 'Liberar folha (capa) para modificação' },
+    {
+      key: Permission.FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP,
+      label: 'Enviar recibo por WhatsApp (lançamento — individual)',
+    },
   ],
   'Folha — Controle': [
     {
@@ -271,6 +284,20 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.FOLHA_FECHAMENTO_REABRIR,
       label: 'Reabrir competência (lote fechado)',
+    },
+    {
+      key: Permission.FOLHA_FECHAMENTO_ENVIAR_RECIBOS_WHATSAPP,
+      label: 'Enviar recibos por WhatsApp (controle — em massa)',
+    },
+  ],
+  'Folha — Atendimento WhatsApp': [
+    {
+      key: Permission.FOLHA_WHATSAPP_READ,
+      label: 'Visualizar inbox e conversas WhatsApp (folha)',
+    },
+    {
+      key: Permission.FOLHA_WHATSAPP_REPLY,
+      label: 'Responder conversas WhatsApp na janela de 24h',
     },
   ],
 };

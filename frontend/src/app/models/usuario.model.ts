@@ -121,11 +121,16 @@ export enum Permission {
   FOLHA_LANCAMENTO_DELETE = 'folha-lancamento:delete',
   FOLHA_LANCAMENTO_CONGELAR_CAPA = 'folha-lancamento:congelar-capa',
   FOLHA_LANCAMENTO_LIBERAR_CAPA = 'folha-lancamento:liberar-capa',
+  FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP = 'folha-lancamento:enviar-recibo-whatsapp',
 
   FOLHA_FECHAMENTO_READ = 'folha-fechamento:read',
   FOLHA_FECHAMENTO_REGISTRAR_ABERTURA = 'folha-fechamento:registrar-abertura',
   FOLHA_FECHAMENTO_FECHAR = 'folha-fechamento:fechar',
   FOLHA_FECHAMENTO_REABRIR = 'folha-fechamento:reabrir',
+  FOLHA_FECHAMENTO_ENVIAR_RECIBOS_WHATSAPP = 'folha-fechamento:enviar-recibos-whatsapp',
+
+  FOLHA_WHATSAPP_READ = 'folha-whatsapp:read',
+  FOLHA_WHATSAPP_REPLY = 'folha-whatsapp:reply',
 }
 
 export interface PermissionGroup {

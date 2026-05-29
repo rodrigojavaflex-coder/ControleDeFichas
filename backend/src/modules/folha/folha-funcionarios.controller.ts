@@ -47,7 +47,8 @@ export class FolhaFuncionariosController {
   @Get()
   @Permissions(Permission.FOLHA_FUNCIONARIO_READ)
   @ApiOperation({
-    summary: 'Listar funcionários da unidade (paginado, filtro opcional por nome)',
+    summary:
+      'Listar funcionários (paginado). Omitir unidade para todas do escopo; todos=true retorna lista completa.',
   })
   findAll(@Query() q: FindFuncionarioFolhaDto, @Req() req: { user: Usuario }) {
     return this.service.findPaginated(req.user, q);

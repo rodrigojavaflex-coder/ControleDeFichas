@@ -14,6 +14,12 @@ import {
   FolhaVerba,
   FolhaMovimentoTipo,
   FolhaCadastroSimples,
+  EnviarReciboWhatsappResponse,
+  EnviarRecibosWhatsappMassaResponse,
+  WhatsappConversaDetalhe,
+  WhatsappConversaLista,
+  WhatsappMensagemItem,
+  WhatsappAudioGravacaoStatus,
 } from '../models/folha.model';
 
 const base = `${environment.apiUrl}/folha`;
@@ -23,17 +29,30 @@ export class FolhaService {
   private http = inject(HttpClient);
 
   listarFuncionarios(
-    unidade: Unidade,
+    unidade?: Unidade,
     page = 1,
     limit = 10,
     nome?: string,
   ): Observable<FuncionarioPaginated> {
     let params = new HttpParams()
-      .set('unidade', unidade)
       .set('page', String(page))
       .set('limit', String(limit));
+    if (unidade) params = params.set('unidade', unidade);
     if (nome?.trim()) params = params.set('nome', nome.trim());
     return this.http.get<FuncionarioPaginated>(`${base}/funcionarios`, { params });
+  }
+
+  /** Lista completa (impressão), com opção de eventos fixos. */
+  listarFuncionariosTodos(
+    unidade?: Unidade,
+    nome?: string,
+    comEventosFixos = false,
+  ): Observable<FuncionarioFolha[]> {
+    let params = new HttpParams().set('todos', 'true');
+    if (unidade) params = params.set('unidade', unidade);
+    if (nome?.trim()) params = params.set('nome', nome.trim());
+    if (comEventosFixos) params = params.set('comEventosFixos', 'true');
+    return this.http.get<FuncionarioFolha[]>(`${base}/funcionarios`, { params });
   }
 
   criarFuncionario(body: Partial<FuncionarioFolha> & { unidade: Unidade }): Observable<FuncionarioFolha> {
@@ -394,5 +413,79 @@ export class FolhaService {
     folhaTipoId: string;
   }): Observable<unknown> {
     return this.http.post(`${base}/fechamento/reabrir`, body);
+  }
+
+  enviarReciboWhatsapp(
+    capaId: string,
+    unidade: Unidade,
+  ): Observable<EnviarReciboWhatsappResponse> {
+    const params = new HttpParams().set('unidade', unidade);
+    return this.http.post<EnviarReciboWhatsappResponse>(
+      `${base}/capas/${capaId}/enviar-recibo-whatsapp`,
+      {},
+      { params },
+    );
+  }
+
+  enviarRecibosWhatsappMassa(body: {
+    unidade: Unidade;
+    ano: number;
+    mes: number;
+    folhaTipoId: string;
+  }): Observable<EnviarRecibosWhatsappMassaResponse> {
+    return this.http.post<EnviarRecibosWhatsappMassaResponse>(
+      `${base}/fechamento/enviar-recibos-whatsapp`,
+      body,
+    );
+  }
+
+  listarWhatsappConversas(): Observable<WhatsappConversaLista[]> {
+    return this.http.get<WhatsappConversaLista[]>(`${base}/whatsapp/conversas`);
+  }
+
+  obterWhatsappAudioGravacaoDisponivel(): Observable<WhatsappAudioGravacaoStatus> {
+    return this.http.get<WhatsappAudioGravacaoStatus>(
+      `${base}/whatsapp/audio-gravacao/disponivel`,
+    );
+  }
+
+  obterWhatsappConversa(id: string): Observable<WhatsappConversaDetalhe> {
+    return this.http.get<WhatsappConversaDetalhe>(`${base}/whatsapp/conversas/${id}`);
+  }
+
+  marcarWhatsappConversaLida(id: string): Observable<void> {
+    return this.http.patch<void>(`${base}/whatsapp/conversas/${id}/lida`, {});
+  }
+
+  responderWhatsappConversa(
+    id: string,
+    texto: string,
+  ): Observable<WhatsappMensagemItem> {
+    return this.http.post<WhatsappMensagemItem>(
+      `${base}/whatsapp/conversas/${id}/responder`,
+      { texto },
+    );
+  }
+
+  enviarWhatsappAnexo(
+    conversaId: string,
+    file: File,
+    legenda?: string,
+  ): Observable<WhatsappMensagemItem> {
+    const form = new FormData();
+    form.append('file', file);
+    if (legenda?.trim()) {
+      form.append('legenda', legenda.trim());
+    }
+    return this.http.post<WhatsappMensagemItem>(
+      `${base}/whatsapp/conversas/${conversaId}/anexo`,
+      form,
+    );
+  }
+
+  baixarWhatsappMensagemArquivo(mensagemId: string): Observable<Blob> {
+    return this.http.get(`${base}/whatsapp/mensagens/${mensagemId}/arquivo`, {
+      responseType: 'blob',
+    });
   }
 }

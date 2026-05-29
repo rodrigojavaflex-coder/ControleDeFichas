@@ -1,0 +1,30 @@
+---
+description: Proibido ler .env; usar .env.example e placeholders para secrets
+alwaysApply: true
+---
+
+# Segredos e variáveis de ambiente
+
+## Proibido
+
+- Ler, abrir, grep, citar ou reproduzir conteúdo de: `.env`, `.env.local`, `.env.production` e equivalentes em `backend/`, `frontend/` e `agent/`.
+- Colar tokens, senhas, App Secret, JWT secret ou valores reais de credenciais no chat, commits ou documentação.
+- Executar comandos que imprimam `.env` (ex.: `cat backend/.env`, `type .env`, `Get-Content .env`).
+
+## Permitido
+
+- Consultar **`backend/.env.example`** (e `agent/env.example`) apenas para **nomes** e descrição das variáveis.
+- Assumir que variáveis existem em **runtime** (`ConfigService` / `process.env`) quando a aplicação roda localmente ou no Render.
+- Pedir ao usuário para **confirmar** se uma variável está configurada, **sem** pedir o valor.
+- Usar placeholders nas respostas: `WHATSAPP_PHONE_NUMBER_ID`, `SEU_ACCESS_TOKEN`, etc.
+- Montar curl/scripts referenciando variáveis de ambiente já carregadas no shell do usuário, sem inlined secrets.
+
+## WhatsApp / Meta
+
+- Nunca repetir IDs de conta, Phone Number ID, tokens ou App Secret do ambiente do usuário.
+- Guias de configuração Meta: passos com placeholders, não valores do `.env`.
+
+## Testes que exigem credenciais
+
+- Preferir: usuário informa "variáveis já estão no `.env` local" e executa o teste, ou agente usa `$env:VAR` no PowerShell **sem** ler o arquivo.
+- Se impossível testar sem secret: descrever o comando e pedir execução manual.

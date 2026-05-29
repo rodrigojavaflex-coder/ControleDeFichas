@@ -1,0 +1,13 @@
+﻿# Segredos e ambientes locais — não indexar para o agente Cursor
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+agent/.env
+agent/.env.*
+!agent/env.example
+.env
+.env.*
+!.env.example

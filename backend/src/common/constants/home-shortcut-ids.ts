@@ -17,6 +17,7 @@ export const HOME_SHORTCUT_IDS = [
   'vendedores',
   'folha-lancamentos',
   'folha-controle',
+  'folha-atendimento-whatsapp',
   'relatorios-baixas',
   'relatorios-acompanhar-vendas',
   'relatorios-analise-valores',

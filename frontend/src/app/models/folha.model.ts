@@ -132,4 +132,58 @@ export interface FolhaCompetenciaGridRow {
   abertaEm: string | null;
 }
 
+export interface EnviarReciboWhatsappResponse {
+  ok: true;
+  templateMessageId: string;
+  imageMessageId: string;
+}
+
+export interface EnviarRecibosWhatsappMassaResponse {
+  enviados: number;
+  ignorados: number;
+  falhas: Array<{
+    funcionarioId: string;
+    nome: string;
+    motivo: string;
+  }>;
+}
+
 export type FuncionarioPaginated = PaginatedResponse<FuncionarioFolha>;
+
+export interface WhatsappConversaLista {
+  id: string;
+  telefoneMascarado: string;
+  telefoneExibicao: string;
+  nomeExibicao: string;
+  identificado: boolean;
+  unidade: Unidade | null;
+  naoLida: boolean;
+  ultimaMensagemEm: string | null;
+  ultimaMensagemPreview: string | null;
+  janela24hAberta: boolean;
+}
+
+export interface WhatsappMensagemItem {
+  id: string;
+  direcao: 'inbound' | 'outbound';
+  tipo: string;
+  conteudoTexto: string | null;
+  nomeArquivo: string | null;
+  mimeType: string | null;
+  legenda: string | null;
+  arquivoDisponivel: boolean;
+  status: string | null;
+  metaTimestamp: string;
+  folhaCapaId: string | null;
+  usuarioRespostaNome: string | null;
+}
+
+export interface WhatsappConversaDetalhe {
+  conversa: WhatsappConversaLista;
+  mensagens: WhatsappMensagemItem[];
+}
+
+export interface WhatsappAudioGravacaoStatus {
+  disponivel: boolean;
+  motivo: string | null;
+}

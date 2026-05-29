@@ -42,9 +42,10 @@
 ### RN-011 — Lançamento: Carregar lista de capas na competência
 
 - Na **tela Lançamento de folha**, o fluxo principal **não usa combo de funcionário**. Mantém-se o **primeiro bloco de filtros**: **unidade** (bloqueada e pré-preenchida quando o usuário tem **`usuario.unidade`** no perfil, alinhado à tela Controle/Vendas), **competência** (navegação mês/ano), **tipo de folha** e o botão **Carregar**.
-- **Habilitação do Carregar**: exige **unidade** válida para operação (não usar **«Todas»** onde a API exija unidade), **tipo** escolhido e competência com **abertura registrada** em **`folha_fechamento`** e lote **não fechado** (RN-006). A UI desabilita o botão até que o status reflita esse estado.
-- **Lista automática com competência aberta:** ao mudar **unidade**, **tipo de folha** ou **competência** (voltar/próximo no mês/ano), após consultar o status (**`GET …/folha/fechamento/status`**), se as mesmas condições de habilitação do Carregar estiverem atendidas (e o usuário tiver permissão de lançamento), a UI pode chamar **`POST …/folha/capas/carregar-competencia`** no mesmo momento, sem exigir clique extra; se o lote não estiver aberto/registrado, **não** se exibe o modal de erro de “Carregar manual” — o usuário continua usando o botão quando quiser forçar a tentativa ou ver mensagem de bloqueio.
-- **Ao clicar em Carregar**, a API deve retornar a lista das **`folha_capa`** da tripleta **unidade + competência + tipo**: para cada **funcionário elegível** que **ainda não** tenha capa, **criar** a capa; capas já existentes são **obtidas** e retornadas (unicidade RN-001). Endpoint canônico: **`POST …/folha/capas/carregar-competencia`**. O caminho **`POST …/folha/capas/carregar-mensal`** permanece como **alias** com o mesmo corpo (legado).
+- **Habilitação do Carregar**: exige **unidade** válida para operação (não usar **«Todas»** onde a API exija unidade), **tipo** escolhido e competência com **abertura registrada** em **`folha_fechamento`** (RN-006). Com lote **aberto**, exige permissão **`folha-lancamento:create`**; com lote **fechado**, exige **`folha-lancamento:read`** (somente visualização e recibo — RN-015).
+- **Lista automática:** ao mudar **unidade**, **tipo de folha** ou **competência** (voltar/próximo no mês/ano), após consultar o status (**`GET …/folha/fechamento/status`**), se filtros válidos e abertura registrada, a UI carrega as capas automaticamente: lote **aberto** → **`POST …/folha/capas/carregar-competencia`** (perm. create); lote **fechado** → **`GET …/folha/capas?comDetalhe=true`** (perm. read). Se o lote não estiver registrado, **não** há carga automática.
+- **Ao clicar em Carregar** com lote **aberto**, a API retorna a lista das **`folha_capa`** da tripleta **unidade + competência + tipo**: para cada **funcionário elegível** que **ainda não** tenha capa, **criar** a capa; capas já existentes são **obtidas** e retornadas (unicidade RN-001). Endpoint canônico: **`POST …/folha/capas/carregar-competencia`**. O caminho **`POST …/folha/capas/carregar-mensal`** permanece como **alias** com o mesmo corpo (legado).
+- **Ao clicar em Carregar** com lote **fechado**, a UI chama **`GET …/folha/capas?comDetalhe=true`** (somente leitura; **não** cria capas). Botões de **incluir**, **editar**, **congelar**, **liberar** e **remover** ficam **ocultos**; **Recibo** e **Enviar recibo** permanecem disponíveis após expandir uma capa (RN-015).
 - Na **primeira criação** de cada `folha_capa`, a API inclui automaticamente os **`folha_item`** previstos nos **eventos fixos** do cadastro do funcionário (**RN-013**), respeitando a unicidade de verba por capa (**RN-002**) e ignorando verbas **inativas**.
 - **Elegibilidade para incluir um funcionário nesse processamento** (índice de competência = **ano×12+mês** da competência alvo, idem para datas de admissão/demissão a partir do ISO **YYYY-MM-DD**):
   - funcionário **ativo**;
@@ -53,7 +54,7 @@
 - **`GET …/folha/funcionarios/lancamento`** com **`ano`** e **`mes`** devolve apenas funcionários que atendem **estes mesmos critérios** (útil para integrações e consistência com o carregamento em lote).
 - O campo **`folhaMensal`** em **`folha_tipo`** pode permanecer no cadastro como **metadado**; **não** restringe mais o uso de **`carregar-competencia`** na API.
 - **`POST …/folha/capas`** com um **`funcionarioId`** segue disponível para **obter ou criar** a capa de **um** funcionário, sujeito às mesmas validações de elegibilidade e de lote (RN-005, RN-006).
-- **UI:** após Carregar, exibe-se uma **lista** de capas (funcionário + totais resumidos); **clique** no item abre a **edição dos eventos (itens)** daquela capa (refinos de layout podem evoluir em tarefa apartada).
+- **UI:** após Carregar, exibe-se uma **lista** de capas (funcionário + totais resumidos); **clique** no item abre os **eventos (itens)** daquela capa — **edição** somente com lote aberto; com lote fechado, **somente leitura** e ações de **recibo** (RN-015).
 
 ### RN-003 — Exclusão de verba no cadastro
 
@@ -104,7 +105,7 @@
 
 - Acesso aos dados da folha considera **`admin:full`** (qualquer unidade), **usuário com vínculo a uma única unidade** — **`usuario.unidade`** quando preenchido; se estiver **vazio**/nulo mas houver **`vendedor` vinculado**, usa-se **`usuario.vendedor.unidade`** como escopo único — (apenas registros dessa unidade) ou **usuário sem esses vínculos**, que também pode informar/atuar em **qualquer** unidade mediante as permissões de folha (**não** exige vínculo na entidade usuário neste caso).
 - Na tela **Controle das competências**, o filtro de unidade segue o mesmo critério da lista de **Vendas**: fica **fixo e bloqueado** somente quando **`usuario.unidade`** existe e não é string vazia; perfis sem essa coluna preenchida mantêm o seletor liberado (incluindo opção “Todas”), alinhado ao comportamento da API para o escopo efetivo de quem tem só `vendedor.unidade`.
-- **`GET …/folha/funcionarios` (lista paginada):** continua usando o query param `unidade` no escopo do usuário/`admin:full` (usuario sem vínculo ou admin conforme filtros disponíveis).
+- **`GET …/folha/funcionarios` (lista paginada):** query **`unidade`** opcional — omitir lista **todas** as unidades do escopo (RN-007); com **`todos=true`** retorna lista completa (impressão); **`comEventosFixos=true`** inclui eventos fixos.
 - **`POST …/folha/capas`:** aceita **`funcionarioId`**; a unidade do body deve **coincidir** com `funcionarios.unidade` desse funcionário (e com o escopo do usuário).
 - Permissões do épico (atribuir via perfil): `folha-funcionario:create|read|update|delete`; `folha-cargo:create|read|update|delete|audit`; `folha-setor:create|read|update|delete|audit`; `folha-verba:create|read|update|delete|audit`; `folha-tipo:create|read|update|delete`; `folha-lancamento:create|read|update|delete|congelar-capa|liberar-capa`; `folha-fechamento:read`; `folha-fechamento:registrar-abertura`; `folha-fechamento:fechar`; `folha-fechamento:reabrir`. Leituras auxiliares (ex.: listar tipos/verbas/cargos/setores/lista para lançamento) combinam permissões definidas na API.
 
@@ -120,10 +121,38 @@
 
 - Preferência persistida em **`usuarios.atalhos_home`** (JSON array de IDs), até **8** itens, ordem definida pelo usuário.
 - IDs válidos são os do catálogo do sistema (ex.: `vendas`, `folha-lancamentos`); a API descarta IDs desconhecidos ou duplicados.
+- **Novos menus:** ao adicionar atalho no frontend (`home-shortcuts.registry.ts`), incluir o **mesmo id** em `backend/src/common/constants/home-shortcut-ids.ts` — ver checklist em `docs/GUIA_OPERACAO_AGENTE.md`.
 - **`null`** no banco = usuário ainda não personalizou → frontend usa atalhos **padrão** filtrados por permissão.
 - **`PATCH /users/:id/atalhos-home`:** apenas o **próprio usuário** pode alterar seus atalhos (JWT).
 - Na exibição, só aparecem atalhos para rotas que o usuário **pode acessar** (união de permissões dos perfis, RN-008).
 - Login/refresh retornam `atalhosHome` no objeto do usuário.
+
+### RN-015 — Envio de recibo de pagamento por WhatsApp (folha)
+
+> Especificação completa: **`docs/WHATSAPP_RECIBO_FOLHA.md`**.
+
+- Envio permitido **somente** com **lote fechado** para a competência (unidade + ano + mês + tipo de folha) — alinhado à **RN-006**.
+- **Individual:** uma `folha_capa` (tela Lançamento de folha); **em massa:** todas as capas da linha em Controle (unidade + competência + tipo), lote **FECHADA**.
+- Mensagem: **um template utilitário** com cabeçalho **Imagem** (PNG do recibo) e corpo com nome, saudação e contato de dúvidas (4 variáveis).
+- Exige `funcionario.telefone` normalizado (E.164). **Recomendado:** opt-in `aceitaReciboWhatsApp` no cadastro (LGPD).
+- Permissões: **`folha-lancamento:enviar-recibo-whatsapp`** (botão **Enviar recibo** no Lançamento, individual); **`folha-fechamento:enviar-recibos-whatsapp`** (botão **Enviar recibos** no Controle, em massa).
+- Cada tentativa gera **auditoria** (usuário, capa, sucesso/erro, telefone mascarado, **wamid** quando enviado).
+- Registro correlacionado em **`whatsapp_mensagem`** (outbound template) para thread de atendimento.
+
+### RN-016 — Atendimento WhatsApp (webhook + inbox)
+
+> Especificação completa: **`docs/WHATSAPP_WEBHOOK.md`**.
+
+- **Canal:** respostas ao **número da API** (Cloud API); webhook Meta (`GET`/`POST` `/api/whatsapp/webhook`).
+- **Autenticação webhook:** verify token (GET) + assinatura HMAC `X-Hub-Signature-256` (POST); sem JWT.
+- **Persistência:** conversas (`whatsapp_conversa`) e mensagens (`whatsapp_mensagem`); idempotência por **wamid** único.
+- **Identificação:** match `from` ↔ `funcionario.telefone` (E.164); sem match ⇒ **não identificado**.
+- **Escopo inbox (RN-007):** usuário com unidade vê conversas **identificadas** da unidade + **todas não identificadas** (fila global); sem unidade ou `admin:full` vê todas.
+- **Permissões:** `folha-whatsapp:read` (inbox/thread/marcar lida/baixar mídia); `folha-whatsapp:reply` (enviar texto e anexos); `reply` exige `read`.
+- **Resposta manual:** somente na **janela 24h** após última mensagem **inbound** do funcionário; backend e UI bloqueiam fora da janela.
+- **Mídia (janela 24h):** envio e recebimento de **imagem** (JPEG/PNG), **áudio** (gravação no navegador, conversão automática no servidor) e **documento** (PDF, DOCX, XLSX); limite **16 MB** por arquivo; binário em **`whatsapp_mensagem.arquivoConteudo`** (bytea) com retenção configurável (`WHATSAPP_MEDIA_RETENCAO_DIAS`, padrão 30 dias) e purge diário; metadados da mensagem permanecem após expiração.
+- **MVP:** sem auto-resposta, sem template lembrete, sem IA.
+- **Envio recibo (RN-015):** grava **wamid** na auditoria e mensagem outbound para correlacionar status (`delivered`/`read`/`failed`).
 
 ---
 

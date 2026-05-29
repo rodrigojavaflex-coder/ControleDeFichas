@@ -304,6 +304,14 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'folha/atendimento-whatsapp',
+    loadComponent: () =>
+      import('./components/folha/folha-whatsapp-atendimento-page').then(
+        (m) => m.FolhaWhatsappAtendimentoPage,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'folha/fechamento',
     redirectTo: 'folha/controle',
     pathMatch: 'full',

@@ -6,11 +6,19 @@ import { NavigationComponent } from '../navigation/navigation';
 import { HeaderComponent } from '../header/header'; // Importar HeaderComponent
 
 import { ErrorModalComponent } from '../error-modal/error-modal.component';
+import { GlobalBlockingOverlayComponent } from '../global-blocking-overlay/global-blocking-overlay.component';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavigationComponent, HeaderComponent, ErrorModalComponent], // Adicionar HeaderComponent e ErrorModalComponent
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    NavigationComponent,
+    HeaderComponent,
+    ErrorModalComponent,
+    GlobalBlockingOverlayComponent,
+  ],
   templateUrl: './layout.html',
   styleUrls: ['./layout.css']
 })

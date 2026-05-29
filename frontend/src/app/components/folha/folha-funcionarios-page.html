@@ -4,55 +4,83 @@
       Você não possui permissão para visualizar funcionários (folha-funcionario:read).
     </div>
   } @else {
-    <section class="filters" aria-label="Filtros">
-      <div class="filter-group">
-        <label for="fu-unidade">Unidade</label>
-        <select
-          id="fu-unidade"
-          class="form-control"
-          [(ngModel)]="unidadeFiltro"
-          (change)="pagina = 1; carregarLista()"
-          [disabled]="carregando || unidadeFiltroDisabled"
+    <section class="filters folha-funcionarios-filters" aria-label="Filtros">
+      <div class="folha-funcionarios-filters-principal">
+        <div class="filter-group">
+          <label for="fu-unidade">Unidade</label>
+          <select
+            id="fu-unidade"
+            class="form-control"
+            [(ngModel)]="unidadeFiltro"
+            (change)="onMudarUnidadeFiltro()"
+            [disabled]="carregando || unidadeFiltroDisabled"
+          >
+            @if (!unidadeFiltroDisabled) {
+              <option [ngValue]="''">Todas</option>
+            }
+            @for (u of unidadesDisponiveis; track u) {
+              <option [ngValue]="u">{{ u }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group filter-group-grow">
+          <label for="fu-nome">Nome</label>
+          <input
+            id="fu-nome"
+            type="text"
+            class="form-control"
+            [(ngModel)]="nomeFiltro"
+            (keyup.enter)="pagina = 1; carregarLista()"
+            placeholder="Filtrar por nome"
+          />
+        </div>
+        <button type="button" class="btn btn-primary" (click)="pagina = 1; carregarLista()" [disabled]="carregando">
+          Buscar
+        </button>
+        <button type="button" class="btn btn-limpar" (click)="limparFiltros()" [disabled]="carregando">
+          Limpar filtros
+        </button>
+        @if (podeCriar()) {
+          <button type="button" class="btn btn-novo" (click)="irNovo()">Novo funcionário</button>
+        }
+      </div>
+
+      <div class="folha-funcionarios-filters-relatorio" aria-label="Relatório">
+        <span class="folha-funcionarios-filters-relatorio-titulo">Relatório</span>
+        <label class="folha-funcionarios-check-impressao" for="fu-eventos-fixos">
+          <input
+            id="fu-eventos-fixos"
+            type="checkbox"
+            [(ngModel)]="mostrarEventosFixosImpressao"
+            [disabled]="carregando || imprimindo"
+          />
+          Mostrar eventos fixos
+        </label>
+        <button
+          type="button"
+          class="btn btn-success folha-funcionarios-btn-imprimir"
+          (click)="imprimirLista()"
+          [disabled]="carregando || imprimindo"
+          title="Imprimir lista com Nome, Telefone, Admissão, Cargo, Setor e Chave Pix"
         >
-          @if (!unidadeFiltroDisabled) {
-            <option [ngValue]="''">Selecione a unidade</option>
+          @if (imprimindo) {
+            Preparando…
+          } @else {
+            Imprimir lista
           }
-          @for (u of unidadesDisponiveis; track u) {
-            <option [ngValue]="u">{{ u }}</option>
-          }
-        </select>
+        </button>
       </div>
-      <div class="filter-group filter-group-grow">
-        <label for="fu-nome">Nome</label>
-        <input
-          id="fu-nome"
-          type="text"
-          class="form-control"
-          [(ngModel)]="nomeFiltro"
-          (keyup.enter)="pagina = 1; carregarLista()"
-          placeholder="Filtrar por nome"
-        />
-      </div>
-      <button type="button" class="btn btn-primary" (click)="pagina = 1; carregarLista()" [disabled]="carregando">
-        Buscar
-      </button>
-      <button type="button" class="btn btn-limpar" (click)="limparFiltros()" [disabled]="carregando">
-        Limpar filtros
-      </button>
-      @if (podeCriar()) {
-        <button type="button" class="btn btn-novo" (click)="irNovo()">Novo funcionário</button>
-      }
     </section>
 
-    @if (!unidadeFiltro && !carregando) {
-      <p class="legenda-lista-funcionarios">
-        Selecione uma <strong>unidade</strong> no filtro e clique em Buscar para listar os funcionários.
-      </p>
-    } @else {
-      <p class="legenda-lista-funcionarios">
-        Lista dos funcionários da <strong>unidade do filtro</strong> (a unidade da folha fica cadastrada no próprio funcionário).
-      </p>
-    }
+    <p class="legenda-lista-funcionarios">
+      @if (unidadeFiltro) {
+        Funcionários da unidade <strong>{{ unidadeFiltro }}</strong>.
+      } @else if (unidadeFiltroDisabled) {
+        Funcionários da sua unidade.
+      } @else {
+        Funcionários de <strong>todas as unidades</strong> do seu escopo.
+      }
+    </p>
 
     @if (carregando) {
       <div class="loading">Carregando funcionários…</div>
@@ -63,6 +91,7 @@
             <tr>
               <th>Nome</th>
               <th>Unidade</th>
+              <th>Telefone</th>
               <th>CPF</th>
               <th>Cargo</th>
               <th>Setor</th>
@@ -80,6 +109,7 @@
               <tr>
                 <td>{{ row.nome }}</td>
                 <td>{{ row.unidade }}</td>
+                <td>{{ formatarTelefone(row.telefone) }}</td>
                 <td>{{ row.cpf || '—' }}</td>
                 <td>{{ row.cargo?.descricao || '—' }}</td>
                 <td>{{ row.setor?.descricao || '—' }}</td>
@@ -105,7 +135,7 @@
             }
             @if (dados.data.length === 0) {
               <tr class="no-data">
-                <td [attr.colspan]="mostrarColunaAcoes() ? 11 : 10">
+                <td [attr.colspan]="mostrarColunaAcoes() ? 12 : 11">
                   Nenhum funcionário encontrado para os filtros informados.
                 </td>
               </tr>

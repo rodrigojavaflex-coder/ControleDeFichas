@@ -1441,7 +1441,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
 
                 return `
               <div class="fechamento-block">
-                <div class="fechamento-title">Unidade: ${unidade} | Comprado em: ${origem} | Fechamento: ${getFechamentoLabel(fechamentoKey)}</div>
+                <div class="fechamento-title">Unidade: ${unidade} | ${this.formatCompradoEmComPeriodoRelatorio(origem)} | Fechamento: ${getFechamentoLabel(fechamentoKey)}</div>
                 <div class="table-wrapper">
                   <table>
                     <thead>
@@ -1481,7 +1481,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
 
             return `
               <div class="origem-block">
-                <div class="origem-title">Comprado em: ${origem}</div>
+                <div class="origem-title">${this.formatCompradoEmComPeriodoRelatorio(origem)}</div>
                 ${fechamentoBlocos}
               </div>`;
           })
@@ -2643,6 +2643,30 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     });
 
     return erros;
+  }
+
+  private formatCompradoEmComPeriodoRelatorio(origem: string): string {
+    const periodo = this.getPeriodoDataVendaRelatorioTexto();
+    if (periodo) {
+      return `Comprado em: ${origem} - ${periodo}`;
+    }
+    return `Comprado em: ${origem}`;
+  }
+
+  private getPeriodoDataVendaRelatorioTexto(): string {
+    const snapshot = this.appliedFiltersSnapshot;
+    const from = snapshot.dataInicial ? this.formatDate(snapshot.dataInicial) : '';
+    const to = snapshot.dataFinal ? this.formatDate(snapshot.dataFinal) : '';
+    if (from && to) {
+      return `Período da Venda: ${from} a ${to}`;
+    }
+    if (from) {
+      return `Período da Venda: a partir de ${from}`;
+    }
+    if (to) {
+      return `Período da Venda: até ${to}`;
+    }
+    return '';
   }
 
   private getReportTimestamp(): string {

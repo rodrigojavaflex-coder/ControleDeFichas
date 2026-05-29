@@ -6,6 +6,7 @@ export * from './ficha-tecnica.service';
 export * from './theme.service';
 export * from './perfil.service';
 export * from './error-modal.service';
+export * from './global-blocking-overlay.service';
 export * from './clientes.service';
 export * from './vendedores.service';
 export * from './prescritores.service';

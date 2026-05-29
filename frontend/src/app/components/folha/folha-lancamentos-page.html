@@ -96,7 +96,7 @@
         >
           Recibo Geral
         </button>
-        @if (pode().c) {
+        @if (pode().c || pode().r) {
           <button
             type="button"
             class="btn btn-primary folha-lancamentos-btn-carregar"
@@ -124,8 +124,7 @@
             </div>
           } @else if (statusLote.fechado) {
             <div class="alert alert-error folha-lancamentos-alert-inline" role="status">
-              Este lote está fechado. Não é possível alterar lançamentos nesta competência —
-              <strong>Carregar</strong> fica desabilitado.
+              Este lote está fechado — lançamentos não podem ser alterados.
             </div>
           } @else {
             <div class="alert alert-info folha-lancamentos-alert-inline" role="status">
@@ -364,7 +363,7 @@
                       role="group"
                       aria-label="Totais e congelamento da folha"
                     >
-                      @if (detalhe.capa.congelada) {
+                      @if (detalhe.capa.congelada && !loteFechadoParaCompetencia()) {
                         <div class="alert alert-warning folha-lancamentos-capa-congelada-msg" role="status">
                           Folha <strong>congelada</strong> — não é possível alterar eventos nem o cadastro do funcionário até
                           <strong>Liberar</strong>.
@@ -407,6 +406,21 @@
                               Salvando…
                             } @else {
                               Liberar
+                            }
+                          </button>
+                        }
+                        @if (temPermissaoEnviarReciboWhatsappIndividual() && loteFechadoParaCompetencia()) {
+                          <button
+                            type="button"
+                            class="btn btn-primary folha-lancamentos-btn-enviar-recibo-whatsapp"
+                            [disabled]="!podeEnviarReciboWhatsapp()"
+                            [title]="motivoDesabilitadoEnviarReciboWhatsapp()"
+                            (click)="solicitarEnviarReciboWhatsapp()"
+                          >
+                            @if (enviandoReciboWhatsapp) {
+                              Enviando...
+                            } @else {
+                              Enviar recibo
                             }
                           </button>
                         }
@@ -650,5 +664,25 @@
     confirmVariant="primary"
     (confirmed)="confirmarLiberarCapaModal()"
     (cancelled)="fecharLiberarCapaModal()"
+  ></app-confirmation-modal>
+
+  <app-confirmation-modal
+    [isVisible]="showEnviarReciboWhatsappModal"
+    title="Enviar recibo por WhatsApp?"
+    [message]="
+      'Funcionário: ' +
+      (detalhe?.capa?.funcionario?.nome || '—') +
+      '. Telefone: ' +
+      (detalhe?.capa?.funcionario?.telefone || '—') +
+      '. Competência: ' +
+      referenciaCompetencia +
+      '. Líquido: ' +
+      moedaListaCapa(detalhe?.liquido)
+    "
+    confirmText="Enviar"
+    cancelText="Cancelar"
+    confirmVariant="primary"
+    (confirmed)="confirmarEnviarReciboWhatsappModal()"
+    (cancelled)="fecharEnviarReciboWhatsappModal()"
   ></app-confirmation-modal>
 </div>
