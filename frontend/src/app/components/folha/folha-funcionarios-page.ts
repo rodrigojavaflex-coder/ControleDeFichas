@@ -16,6 +16,7 @@ import {
 } from '../../models/folha.model';
 import { Permission, Unidade } from '../../models/usuario.model';
 import { Configuracao } from '../../models/configuracao.model';
+import { formatarTelefoneBrExibicao } from './folha-telefone.util';
 
 @Component({
   selector: 'app-folha-funcionarios-page',
@@ -282,8 +283,7 @@ export class FolhaFuncionariosPage implements OnInit {
   }
 
   formatarTelefone(raw?: string | null): string {
-    const t = raw?.trim();
-    return t || '—';
+    return formatarTelefoneBrExibicao(raw);
   }
 
   formatarChavePix(f: FuncionarioFolha): string {
@@ -390,6 +390,12 @@ export class FolhaFuncionariosPage implements OnInit {
     .dados-livres th, .dados-livres td { border: none; padding: 3px 10px 3px 0; text-align: left; vertical-align: top; background: transparent; }
     .dados-livres th { font-weight: 700; color: #1e293b; white-space: nowrap; }
     .dados-livres tbody td { color: #1e293b; }
+    .col-telefone {
+      white-space: nowrap;
+      width: 1%;
+      min-width: max-content;
+      padding-right: 10px;
+    }
     .eventos-livres { margin-top: 6px; margin-left: 24px; }
     .unit-total { margin-top: 12px; font-size: 11px; font-weight: 700; color: #334155; }
     .tipo-receita { color: #0f766e; font-weight: 600; }
@@ -486,7 +492,7 @@ export class FolhaFuncionariosPage implements OnInit {
       .map(
         (f) => `<tr>
           <td>${this.escapeHtml(f.nome)}</td>
-          <td>${this.escapeHtml(this.formatarTelefone(f.telefone))}</td>
+          <td class="col-telefone">${this.escapeHtml(this.formatarTelefone(f.telefone))}</td>
           <td>${this.escapeHtml(f.cargo?.descricao?.trim() || '—')}</td>
           <td>${this.escapeHtml(f.setor?.descricao?.trim() || '—')}</td>
           <td>${this.escapeHtml(this.formatarDataDdMmYyyy(f.dataNascimento ?? null))}</td>
@@ -503,7 +509,7 @@ export class FolhaFuncionariosPage implements OnInit {
     <thead>
       <tr>
         <th>Nome</th>
-        <th>Telefone</th>
+        <th class="col-telefone">Telefone</th>
         <th>Cargo</th>
         <th>Setor</th>
         <th>Nascimento</th>
@@ -555,7 +561,7 @@ export class FolhaFuncionariosPage implements OnInit {
     <table>
       <thead>
         <tr>
-          <th>Telefone</th>
+          <th class="col-telefone">Telefone</th>
           <th>Admissão</th>
           <th>Cargo</th>
           <th>Setor</th>
@@ -564,7 +570,7 @@ export class FolhaFuncionariosPage implements OnInit {
       </thead>
       <tbody>
         <tr>
-          <td>${this.escapeHtml(this.formatarTelefone(f.telefone))}</td>
+          <td class="col-telefone">${this.escapeHtml(this.formatarTelefone(f.telefone))}</td>
           <td>${this.escapeHtml(this.formatarDataDdMmYyyy(f.dataAdmissao ?? null))}</td>
           <td>${this.escapeHtml(f.cargo?.descricao?.trim() || '—')}</td>
           <td>${this.escapeHtml(f.setor?.descricao?.trim() || '—')}</td>
