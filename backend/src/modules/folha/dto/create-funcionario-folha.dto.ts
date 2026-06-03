@@ -100,6 +100,16 @@ export class CreateFuncionarioFolhaDto {
   @Type(() => Boolean)
   ativo?: boolean;
 
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'Quando true, o funcionário não recebe recibo de folha por WhatsApp (RN-015).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  naoReceberReciboWhatsapp?: boolean;
+
   @ApiPropertyOptional({ enum: TipoChavePixFolha, nullable: true })
   @IsOptional()
   @IsEnum(TipoChavePixFolha)

@@ -77,6 +77,14 @@ export class Funcionario extends BaseEntity {
   @Column({ default: true })
   ativo: boolean;
 
+  @ApiProperty({
+    default: false,
+    description:
+      'Quando true, bloqueia envio de recibo de folha por WhatsApp (individual e em massa, RN-015).',
+  })
+  @Column({ default: false })
+  naoReceberReciboWhatsapp: boolean;
+
   @OneToMany(() => FolhaFuncionarioEventoFixo, (e) => e.funcionario)
   eventosFixos?: FolhaFuncionarioEventoFixo[];
 }

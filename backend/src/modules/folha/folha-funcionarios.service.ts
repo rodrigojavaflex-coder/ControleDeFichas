@@ -75,6 +75,7 @@ export class FolhaFuncionariosService {
       cargo: dto.cargoId ? ({ id: dto.cargoId } as FolhaCargo) : null,
       setor: dto.setorId ? ({ id: dto.setorId } as FolhaSetor) : null,
       ativo: dto.ativo ?? true,
+      naoReceberReciboWhatsapp: dto.naoReceberReciboWhatsapp ?? false,
       tipoPix: dto.tipoPix ?? null,
       chavePix: dto.chavePix?.trim() ? dto.chavePix.trim() : null,
     };

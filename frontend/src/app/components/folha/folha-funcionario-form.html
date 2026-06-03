@@ -70,6 +70,22 @@
         </div>
 
         <div class="form-group">
+          <div class="checkbox-row">
+            <input
+              id="ff-nao-recibo-wa"
+              type="checkbox"
+              formControlName="naoReceberReciboWhatsapp"
+            />
+            <label class="form-label" for="ff-nao-recibo-wa" style="margin: 0">
+              Não enviar recibo de pagamento por WhatsApp
+            </label>
+          </div>
+          <div class="form-help">
+            Quando marcado, o envio individual e em massa ignora este funcionário (RN-015).
+          </div>
+        </div>
+
+        <div class="form-group">
           <label class="form-label" for="ff-end">Endereço</label>
           <textarea
             id="ff-end"

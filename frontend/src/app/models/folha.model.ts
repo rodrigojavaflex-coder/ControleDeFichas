@@ -38,6 +38,8 @@ export interface FuncionarioFolha {
   cargo?: FolhaCadastroSimples | null;
   setor?: FolhaCadastroSimples | null;
   ativo: boolean;
+  /** Opt-out de recibo de folha por WhatsApp (RN-015). */
+  naoReceberReciboWhatsapp?: boolean;
   tipoPix?: TipoChavePixFolha | null;
   chavePix?: string | null;
   criadoEm: string;
