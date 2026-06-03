@@ -152,6 +152,21 @@ export class FolhaCapasController {
     return this.reciboWhatsappService.enviarReciboIndividual(req.user, id, unidade);
   }
 
+  @Delete(':id')
+  @Permissions(Permission.FOLHA_LANCAMENTO_DELETE_CAPA)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Excluir folha_capa e todos os folha_item (lote aberto — RN-006)',
+  })
+  @ApiQuery({ name: 'unidade', enum: Unidade, required: true })
+  removerCapa(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('unidade') unidade: Unidade,
+    @Req() req: { user: Usuario },
+  ) {
+    return this.service.removerCapa(req.user, id, unidade);
+  }
+
   @Post(':id/itens')
   @Permissions(Permission.FOLHA_LANCAMENTO_CREATE)
   addItem(

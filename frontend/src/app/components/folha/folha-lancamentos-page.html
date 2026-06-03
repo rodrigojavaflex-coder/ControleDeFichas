@@ -370,6 +370,21 @@
                         </div>
                       }
                       <div class="folha-lancamentos-itens-congelar-slot">
+                        @if (podeExcluirCapa()) {
+                          <button
+                            type="button"
+                            class="btn btn-excluir folha-lancamentos-btn-excluir-capa"
+                            [disabled]="excluindoCapa"
+                            (click)="solicitarExcluirCapa()"
+                            title="Excluir esta folha e todos os eventos lançados (lote aberto)"
+                          >
+                            @if (excluindoCapa) {
+                              Excluindo…
+                            } @else {
+                              Excluir
+                            }
+                          </button>
+                        }
                         @if (podeImprimirRelatorioCapa()) {
                           <button
                             type="button"
@@ -642,6 +657,17 @@
     confirmVariant="danger"
     (confirmed)="confirmarRemoverItemModal()"
     (cancelled)="fecharRemoverItemModal()"
+  ></app-confirmation-modal>
+
+  <app-confirmation-modal
+    [isVisible]="showExcluirCapaModal"
+    title="Excluir esta folha?"
+    [message]="excluirCapaModalMensagem"
+    confirmText="Excluir"
+    cancelText="Cancelar"
+    confirmVariant="danger"
+    (confirmed)="confirmarExcluirCapaModal()"
+    (cancelled)="fecharExcluirCapaModal()"
   ></app-confirmation-modal>
 
   <app-confirmation-modal

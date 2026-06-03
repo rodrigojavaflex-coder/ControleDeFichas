@@ -119,6 +119,7 @@ export enum Permission {
   FOLHA_LANCAMENTO_READ = 'folha-lancamento:read',
   FOLHA_LANCAMENTO_UPDATE = 'folha-lancamento:update',
   FOLHA_LANCAMENTO_DELETE = 'folha-lancamento:delete',
+  FOLHA_LANCAMENTO_DELETE_CAPA = 'folha-lancamento:delete-capa',
   FOLHA_LANCAMENTO_CONGELAR_CAPA = 'folha-lancamento:congelar-capa',
   FOLHA_LANCAMENTO_LIBERAR_CAPA = 'folha-lancamento:liberar-capa',
   FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP = 'folha-lancamento:enviar-recibo-whatsapp',

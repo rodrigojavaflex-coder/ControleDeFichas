@@ -496,6 +496,35 @@ export class FolhaCapasService {
     return this.calcularDetalhe(full);
   }
 
+  /** Remove capa e itens (cascade em `folha_item`); exige lote aberto (RN-006). */
+  async removerCapa(
+    usuario: Usuario,
+    capaId: string,
+    unidadeReq: Parameters<typeof assertUnidadeFolha>[1],
+  ): Promise<void> {
+    assertUnidadeFolha(usuario, unidadeReq);
+
+    const capa = await this.capaRepo.findOne({
+      where: { id: capaId },
+      relations: ['folhaTipo', 'funcionario'],
+    });
+    if (!capa?.funcionario || capa.funcionario.unidade !== unidadeReq) {
+      throw new NotFoundException('Capa não encontrada.');
+    }
+
+    await this.fechamentoSvc.assertLoteAberto(
+      unidadeReq,
+      capa.ano,
+      capa.mes,
+      capa.folhaTipo.id,
+    );
+
+    this.assertCapaItensEditaveis(capa);
+
+    await this.itemRepo.delete({ folhaCapa: { id: capaId } });
+    await this.capaRepo.remove(capa);
+  }
+
   private async recarregaCapa(id: string): Promise<FolhaCapa> {
     const capa = await this.capaRepo.findOne({
       where: { id },

@@ -45,7 +45,7 @@
 - **Habilitação do Carregar**: exige **unidade** válida para operação (não usar **«Todas»** onde a API exija unidade), **tipo** escolhido e competência com **abertura registrada** em **`folha_fechamento`** (RN-006). Com lote **aberto**, exige permissão **`folha-lancamento:create`**; com lote **fechado**, exige **`folha-lancamento:read`** (somente visualização e recibo — RN-015).
 - **Lista automática:** ao mudar **unidade**, **tipo de folha** ou **competência** (voltar/próximo no mês/ano), após consultar o status (**`GET …/folha/fechamento/status`**), se filtros válidos e abertura registrada, a UI carrega as capas automaticamente: lote **aberto** → **`POST …/folha/capas/carregar-competencia`** (perm. create); lote **fechado** → **`GET …/folha/capas?comDetalhe=true`** (perm. read). Se o lote não estiver registrado, **não** há carga automática.
 - **Ao clicar em Carregar** com lote **aberto**, a API retorna a lista das **`folha_capa`** da tripleta **unidade + competência + tipo**: para cada **funcionário elegível** que **ainda não** tenha capa, **criar** a capa; capas já existentes são **obtidas** e retornadas (unicidade RN-001). Endpoint canônico: **`POST …/folha/capas/carregar-competencia`**. O caminho **`POST …/folha/capas/carregar-mensal`** permanece como **alias** com o mesmo corpo (legado).
-- **Ao clicar em Carregar** com lote **fechado**, a UI chama **`GET …/folha/capas?comDetalhe=true`** (somente leitura; **não** cria capas). Botões de **incluir**, **editar**, **congelar**, **liberar** e **remover** ficam **ocultos**; **Recibo** e **Enviar recibo** permanecem disponíveis após expandir uma capa (RN-015).
+- **Ao clicar em Carregar** com lote **fechado**, a UI chama **`GET …/folha/capas?comDetalhe=true`** (somente leitura; **não** cria capas). Botões de **incluir**, **editar**, **congelar**, **liberar**, **remover** (item) e **Excluir** (capa) ficam **ocultos**; **Recibo** e **Enviar recibo** permanecem disponíveis após expandir uma capa (RN-015).
 - Na **primeira criação** de cada `folha_capa`, a API inclui automaticamente os **`folha_item`** previstos nos **eventos fixos** do cadastro do funcionário (**RN-013**), respeitando a unicidade de verba por capa (**RN-002**) e ignorando verbas **inativas**.
 - **Elegibilidade para incluir um funcionário nesse processamento** (índice de competência = **ano×12+mês** da competência alvo, idem para datas de admissão/demissão a partir do ISO **YYYY-MM-DD**):
   - funcionário **ativo**;
@@ -65,6 +65,12 @@
 ### RN-004 — Exclusão de item na folha do funcionário
 
 - É permitido **excluir** `folha_item` (remover o evento da capa), desde que o **lote** da competência esteja **aberto** (RN-006) e a **capa não esteja congelada** (RN-012).
+
+### RN-016 — Exclusão da folha capa (funcionário na competência)
+
+- É permitido **excluir** a **`folha_capa`** inteira (e todos os **`folha_item`** vinculados) somente com o **lote aberto** (RN-006) e a capa **não congelada** (RN-012).
+- Endpoint canônico: **`DELETE …/folha/capas/:id`** (query **`unidade`** obrigatória). Permissão: **`folha-lancamento:delete-capa`**. Capa congelada retorna erro orientando a **Liberar** antes.
+- **UI (Lançamento de folha):** botão **Excluir** (vermelho), **acima** de **Recibo**, visível com capa expandida, lote **aberto**, capa **não congelada** e permissão; confirmação em modal antes de chamar a API.
 
 ### RN-005 — Demissão e novas competências
 
@@ -90,7 +96,7 @@
 - Enquanto a capa estiver **congelada** e desde que o lote permaneça **aberto** na API (RN-006), **não** é permitido: incluir, alterar ou excluir **`folha_item`** dessa capa; nem **`PATCH …/folha/funcionarios/:id`** para o funcionário vinculado (enquanto existir **qualquer** capa **congelada** para esse funcionário).
 - **Congelar** exige permissão **`folha-lancamento:congelar-capa`**; **liberar** exige **`folha-lancamento:liberar-capa`**. Endpoints canônicos: **`POST …/folha/capas/:id/congelar`** e **`POST …/folha/capas/:id/liberar`** (query **`unidade`** obrigatória, alinhada às demais rotas de capa).
 - Com lote **fechado**, permanece vedada qualquer alteração de lançamentos (RN-006); **congelar/liberar** também exige lote **aberto** na API.
-- **UI (Lançamento de folha):** exibe o estado congelado, botão **Congelar** ou **Liberar** conforme permissões e desabilita inclusão/edição/exclusão de eventos na capa congelada.
+- **UI (Lançamento de folha):** exibe o estado congelado, botão **Congelar** ou **Liberar** conforme permissões e desabilita inclusão/edição/exclusão de eventos e o botão **Excluir** (capa) na capa congelada.
 
 ### RN-013 — Eventos fixos do funcionário
 
@@ -107,7 +113,7 @@
 - Na tela **Controle das competências**, o filtro de unidade segue o mesmo critério da lista de **Vendas**: fica **fixo e bloqueado** somente quando **`usuario.unidade`** existe e não é string vazia; perfis sem essa coluna preenchida mantêm o seletor liberado (incluindo opção “Todas”), alinhado ao comportamento da API para o escopo efetivo de quem tem só `vendedor.unidade`.
 - **`GET …/folha/funcionarios` (lista paginada):** query **`unidade`** opcional — omitir lista **todas** as unidades do escopo (RN-007); com **`todos=true`** retorna lista completa (impressão); **`comEventosFixos=true`** inclui eventos fixos.
 - **`POST …/folha/capas`:** aceita **`funcionarioId`**; a unidade do body deve **coincidir** com `funcionarios.unidade` desse funcionário (e com o escopo do usuário).
-- Permissões do épico (atribuir via perfil): `folha-funcionario:create|read|update|delete`; `folha-cargo:create|read|update|delete|audit`; `folha-setor:create|read|update|delete|audit`; `folha-verba:create|read|update|delete|audit`; `folha-tipo:create|read|update|delete`; `folha-lancamento:create|read|update|delete|congelar-capa|liberar-capa`; `folha-fechamento:read`; `folha-fechamento:registrar-abertura`; `folha-fechamento:fechar`; `folha-fechamento:reabrir`. Leituras auxiliares (ex.: listar tipos/verbas/cargos/setores/lista para lançamento) combinam permissões definidas na API.
+- Permissões do épico (atribuir via perfil): `folha-funcionario:create|read|update|delete`; `folha-cargo:create|read|update|delete|audit`; `folha-setor:create|read|update|delete|audit`; `folha-verba:create|read|update|delete|audit`; `folha-tipo:create|read|update|delete`; `folha-lancamento:create|read|update|delete|delete-capa|congelar-capa|liberar-capa`; `folha-fechamento:read`; `folha-fechamento:registrar-abertura`; `folha-fechamento:fechar`; `folha-fechamento:reabrir`. Leituras auxiliares (ex.: listar tipos/verbas/cargos/setores/lista para lançamento) combinam permissões definidas na API.
 
 ### RN-008 — Usuário com múltiplos perfis
 

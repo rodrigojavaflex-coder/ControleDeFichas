@@ -325,6 +325,11 @@ export class FolhaService {
     );
   }
 
+  deleteCapa(capaId: string, unidade: Unidade): Observable<void> {
+    const params = new HttpParams().set('unidade', unidade);
+    return this.http.delete<void>(`${base}/capas/${capaId}`, { params });
+  }
+
   postCongelarCapa(capaId: string, unidade: Unidade): Observable<FolhaCapaDetalheResponse> {
     const params = new HttpParams().set('unidade', unidade);
     return this.http.post<FolhaCapaDetalheResponse>(

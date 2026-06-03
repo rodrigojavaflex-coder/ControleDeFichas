@@ -116,6 +116,8 @@ export enum Permission {
   FOLHA_LANCAMENTO_READ = 'folha-lancamento:read',
   FOLHA_LANCAMENTO_UPDATE = 'folha-lancamento:update',
   FOLHA_LANCAMENTO_DELETE = 'folha-lancamento:delete',
+  /** Exclui a folha_capa e todos os folha_item (lote aberto — RN-006). */
+  FOLHA_LANCAMENTO_DELETE_CAPA = 'folha-lancamento:delete-capa',
   /** Trava edição de itens e cadastro do funcionário para esta capa (lote aberto). */
   FOLHA_LANCAMENTO_CONGELAR_CAPA = 'folha-lancamento:congelar-capa',
   /** Reverte o congelamento da capa (lote aberto). */
@@ -261,6 +263,7 @@ export const PERMISSION_GROUPS = {
     { key: Permission.FOLHA_LANCAMENTO_READ, label: 'Visualizar lançamentos da folha' },
     { key: Permission.FOLHA_LANCAMENTO_UPDATE, label: 'Editar valores de itens da folha' },
     { key: Permission.FOLHA_LANCAMENTO_DELETE, label: 'Excluir itens da folha' },
+    { key: Permission.FOLHA_LANCAMENTO_DELETE_CAPA, label: 'Excluir folha (capa) do funcionário' },
     { key: Permission.FOLHA_LANCAMENTO_CONGELAR_CAPA, label: 'Congelar folha (capa) do funcionário' },
     { key: Permission.FOLHA_LANCAMENTO_LIBERAR_CAPA, label: 'Liberar folha (capa) para modificação' },
     {

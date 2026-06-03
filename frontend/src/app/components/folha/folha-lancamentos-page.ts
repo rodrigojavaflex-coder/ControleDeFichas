@@ -89,7 +89,11 @@ export class FolhaLancamentosPage implements OnInit {
 
   salvandoModalLancamento = false;
   salvandoCongelacaoCapa = false;
+  excluindoCapa = false;
   enviandoReciboWhatsapp = false;
+
+  showExcluirCapaModal = false;
+  excluirCapaModalMensagem = '';
 
   showCongelarCapaModal = false;
   showLiberarCapaModal = false;
@@ -249,6 +253,20 @@ export class FolhaLancamentosPage implements OnInit {
     if (!this.detalhe?.capa) return false;
     if (this.detalhe.capa.congelada) return false;
     return this.podeEditarLoteNaCompetencia();
+  }
+
+  podeExcluirCapa(): boolean {
+    const podePerm =
+      this.auth.hasPermission(Permission.ADMIN_FULL) ||
+      this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_DELETE_CAPA);
+    return (
+      podePerm &&
+      this.podeEditarLoteNaCompetencia() &&
+      !!this.detalhe &&
+      !this.detalhe.capa.congelada &&
+      !this.carregando &&
+      !this.excluindoCapa
+    );
   }
 
   podeCongelarCapa(): boolean {
@@ -1494,6 +1512,46 @@ export class FolhaLancamentosPage implements OnInit {
   sincronizaDetalheCompletoAPosAlteracao(d: FolhaCapaDetalheResponse): void {
     this.detalhe = d;
     this.atualizarOuInserirCapaNaLista(d);
+  }
+
+  private removerCapaDaLista(capaId: string): void {
+    this.capasNaCompetencia = this.capasNaCompetencia.filter(
+      (c) => c.capa.id !== capaId,
+    );
+    if (this.detalhe?.capa.id === capaId) {
+      this.detalhe = null;
+    }
+  }
+
+  solicitarExcluirCapa(): void {
+    if (!this.podeExcluirCapa() || !this.detalhe) return;
+    const nome = this.nomeFuncionario(this.detalhe.capa.funcionario);
+    this.excluirCapaModalMensagem =
+      `Excluir a folha de ${nome} nesta competência? Todos os eventos lançados serão removidos. Esta ação não pode ser desfeita.`;
+    this.showExcluirCapaModal = true;
+  }
+
+  fecharExcluirCapaModal(): void {
+    this.showExcluirCapaModal = false;
+  }
+
+  confirmarExcluirCapaModal(): void {
+    this.fecharExcluirCapaModal();
+    const un = this.unidadeApi();
+    const capaId = this.detalhe?.capa.id;
+    if (!capaId || !un || !this.podeExcluirCapa()) return;
+    this.excluindoCapa = true;
+    this.folha.deleteCapa(capaId, un).subscribe({
+      next: () => {
+        this.removerCapaDaLista(capaId);
+        this.excluindoCapa = false;
+        this.errors.show('Folha excluída com sucesso.', 'Folha');
+      },
+      error: (e) => {
+        this.excluindoCapa = false;
+        this.errors.show(e?.error?.message ?? 'Erro ao excluir a folha.', 'Folha');
+      },
+    });
   }
 
   solicitarRemoverItem(itemId: string): void {
