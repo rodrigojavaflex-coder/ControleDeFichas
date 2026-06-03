@@ -82,6 +82,18 @@ export class FolhaReciboWhatsappService {
     const falhas: FalhaEnvioRecibo[] = [];
 
     for (const detalhe of detalhes) {
+      if (detalhe.capa.funcionario?.naoReceberReciboWhatsapp) {
+        ignorados += 1;
+        falhas.push({
+          funcionarioId: detalhe.capa.funcionario?.id ?? '',
+          nome: detalhe.capa.funcionario?.nome ?? 'Funcionário',
+          motivo:
+            'Funcionário marcado para não receber recibo pelo WhatsApp (envio em massa).',
+        });
+        await this.delay(0);
+        continue;
+      }
+
       const envio = await this.processarEnvio(usuario, detalhe);
       if (envio.enviado) {
         enviados += 1;

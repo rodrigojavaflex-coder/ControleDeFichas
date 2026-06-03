@@ -156,11 +156,13 @@
             <article
               class="folha-lancamentos-funcionario-card"
               [class.folha-lancamentos-funcionario-card-expandido]="detalhe?.capa?.id === row.capa.id"
+              [class.folha-lancamentos-funcionario-card-congelada]="row.capa.congelada"
             >
               <button
                 type="button"
                 class="folha-lancamentos-funcionario-row"
                 [class.folha-lancamentos-funcionario-row-ativo]="capaEhSelecionadaNaGrade(row)"
+                [class.folha-lancamentos-funcionario-row-congelada]="row.capa.congelada"
                 [attr.aria-expanded]="detalhe?.capa?.id === row.capa.id"
                 [attr.aria-controls]="'lac-func-card-body-' + row.capa.id"
                 [attr.aria-label]="ariaLabelListaCapa(row)"

@@ -717,6 +717,79 @@ body.theme-dark .folha-lancamentos-funcionario-card-expandido {
   background: rgba(96, 165, 250, 0.08);
 }
 
+/* Capa congelada na grade — destaque visual (tema claro/escuro) */
+.folha-lancamentos-funcionario-card-congelada {
+  background: color-mix(
+    in srgb,
+    var(--cor-alerta-clara, #fff3cd) 55%,
+    var(--bg-secondary, #f8fafc)
+  );
+}
+
+[data-theme='dark'] .folha-lancamentos-funcionario-card-congelada,
+body.theme-dark .folha-lancamentos-funcionario-card-congelada {
+  background: color-mix(
+    in srgb,
+    var(--cor-alerta-hover, #e0a800) 14%,
+    var(--bg-secondary, #1e293b)
+  );
+}
+
+.folha-lancamentos-funcionario-card-congelada.folha-lancamentos-funcionario-card-expandido {
+  background: color-mix(
+    in srgb,
+    var(--cor-alerta-clara, #fff3cd) 45%,
+    color-mix(in srgb, var(--focus-ring-color, #3b82f6) 6%, transparent)
+  );
+}
+
+[data-theme='dark'] .folha-lancamentos-funcionario-card-congelada.folha-lancamentos-funcionario-card-expandido,
+body.theme-dark
+  .folha-lancamentos-funcionario-card-congelada.folha-lancamentos-funcionario-card-expandido {
+  background: color-mix(
+    in srgb,
+    rgba(224, 168, 0, 0.22) 70%,
+    rgba(96, 165, 250, 0.08)
+  );
+}
+
+.folha-lancamentos-funcionario-row-congelada:not(.folha-lancamentos-funcionario-row-ativo) {
+  background: transparent;
+}
+
+.folha-lancamentos-funcionario-card-congelada
+  .folha-lancamentos-funcionario-row:hover:not(:disabled):not(
+    .folha-lancamentos-funcionario-row-ativo
+  ) {
+  background: color-mix(in srgb, var(--cor-alerta-clara, #fff3cd) 75%, transparent);
+}
+
+[data-theme='dark']
+  .folha-lancamentos-funcionario-card-congelada
+  .folha-lancamentos-funcionario-row:hover:not(:disabled):not(
+    .folha-lancamentos-funcionario-row-ativo
+  ),
+body.theme-dark
+  .folha-lancamentos-funcionario-card-congelada
+  .folha-lancamentos-funcionario-row:hover:not(:disabled):not(
+    .folha-lancamentos-funcionario-row-ativo
+  ) {
+  background: rgba(224, 168, 0, 0.2);
+}
+
+.folha-lancamentos-funcionario-card-congelada .folha-lancamentos-funcionario-row-ativo {
+  background: color-mix(
+    in srgb,
+    var(--cor-alerta-clara, #fff3cd) 40%,
+    color-mix(in srgb, var(--focus-ring-color, #3b82f6) 14%, transparent)
+  );
+}
+
+[data-theme='dark'] .folha-lancamentos-funcionario-card-congelada .folha-lancamentos-funcionario-row-ativo,
+body.theme-dark .folha-lancamentos-funcionario-card-congelada .folha-lancamentos-funcionario-row-ativo {
+  background: color-mix(in srgb, rgba(224, 168, 0, 0.28) 55%, rgba(96, 165, 250, 0.18));
+}
+
 .folha-lancamentos-funcionario-row {
   flex: 0 0 auto;
   display: grid;
