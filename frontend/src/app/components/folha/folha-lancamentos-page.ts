@@ -99,6 +99,11 @@ export class FolhaLancamentosPage implements OnInit {
   showLiberarCapaModal = false;
   showEnviarReciboWhatsappModal = false;
 
+  /** Modal de filtros do relatório Folha por Evento. */
+  showFiltroRelatorioEventoModal = false;
+  /** verbaId → incluir no relatório (padrão: todos true ao abrir o modal). */
+  relatorioEventoVerbaSelecionada: Record<string, boolean> = {};
+
   showRemoverItemModal = false;
   itemIdParaRemover: string | null = null;
   removerItemModalMensagem = '';
@@ -372,15 +377,108 @@ export class FolhaLancamentosPage implements OnInit {
     });
   }
 
-  imprimirRelatorioFolhaPorEvento(): void {
+  abrirModalFiltroRelatorioPorEvento(): void {
     if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
+    if (this.gerandoRelatorioFolhaGeral) return;
+    if (!this.verbasAtivas.length) {
+      this.errors.show(
+        'Não há eventos cadastrados ativos para filtrar o relatório.',
+        'Relatório',
+      );
+      return;
+    }
+    this.inicializarSelecoesRelatorioEvento();
+    this.showFiltroRelatorioEventoModal = true;
+  }
+
+  fecharModalFiltroRelatorioPorEvento(): void {
+    this.showFiltroRelatorioEventoModal = false;
+  }
+
+  private inicializarSelecoesRelatorioEvento(): void {
+    const sel: Record<string, boolean> = {};
+    for (const v of this.verbasOrdenadasParaRelatorioEvento()) {
+      sel[v.id] = true;
+    }
+    this.relatorioEventoVerbaSelecionada = sel;
+  }
+
+  verbasOrdenadasParaRelatorioEvento(): FolhaVerba[] {
+    return [...this.verbasAtivas].sort((a, b) => {
+      const ordemTipo = (t: FolhaMovimentoTipo) =>
+        t === FolhaMovimentoTipo.RECEITA ? 0 : 1;
+      const diff = ordemTipo(a.tipoMovimento) - ordemTipo(b.tipoMovimento);
+      if (diff !== 0) return diff;
+      return a.descricao.localeCompare(b.descricao, 'pt-BR');
+    });
+  }
+
+  verbasRelatorioEventoPorTipo(tipo: FolhaMovimentoTipo): FolhaVerba[] {
+    return this.verbasOrdenadasParaRelatorioEvento().filter(
+      (v) => v.tipoMovimento === tipo,
+    );
+  }
+
+  marcarTodosEventosRelatorio(selecionar: boolean): void {
+    this.marcarEventosRelatorioPorTipo(FolhaMovimentoTipo.RECEITA, selecionar);
+    this.marcarEventosRelatorioPorTipo(FolhaMovimentoTipo.DESPESA, selecionar);
+  }
+
+  marcarEventosRelatorioPorTipo(
+    tipo: FolhaMovimentoTipo,
+    selecionar: boolean,
+  ): void {
+    const next = { ...this.relatorioEventoVerbaSelecionada };
+    for (const v of this.verbasRelatorioEventoPorTipo(tipo)) {
+      next[v.id] = selecionar;
+    }
+    this.relatorioEventoVerbaSelecionada = next;
+  }
+
+  secaoRelatorioEventoTotalmenteSelecionada(tipo: FolhaMovimentoTipo): boolean {
+    const lista = this.verbasRelatorioEventoPorTipo(tipo);
+    return lista.length > 0 && lista.every((v) => this.relatorioEventoVerbaSelecionada[v.id]);
+  }
+
+  secaoRelatorioEventoParcialmenteSelecionada(tipo: FolhaMovimentoTipo): boolean {
+    const lista = this.verbasRelatorioEventoPorTipo(tipo);
+    if (!lista.length) return false;
+    const n = lista.filter((v) => this.relatorioEventoVerbaSelecionada[v.id]).length;
+    return n > 0 && n < lista.length;
+  }
+
+  onSecaoRelatorioEventoChange(tipo: FolhaMovimentoTipo, checked: boolean): void {
+    this.marcarEventosRelatorioPorTipo(tipo, checked);
+  }
+
+  contagemEventosSelecionadosRelatorio(): number {
+    return this.verbasOrdenadasParaRelatorioEvento().filter(
+      (v) => this.relatorioEventoVerbaSelecionada[v.id],
+    ).length;
+  }
+
+  private obterVerbaIdsSelecionadasRelatorio(): Set<string> {
+    return new Set(
+      this.verbasOrdenadasParaRelatorioEvento()
+        .filter((v) => this.relatorioEventoVerbaSelecionada[v.id])
+        .map((v) => v.id),
+    );
+  }
+
+  aplicarFiltroEGerarRelatorioPorEvento(): void {
+    const ids = this.obterVerbaIdsSelecionadasRelatorio();
+    if (ids.size === 0) {
+      this.errors.show('Selecione ao menos um evento para o relatório.', 'Relatório');
+      return;
+    }
     if (this.gerandoRelatorioFolhaGeral) return;
     const un = this.unidadeApi();
     if (!un) return;
+    this.fecharModalFiltroRelatorioPorEvento();
     this.gerandoRelatorioFolhaGeral = true;
     this.configuracaoService.getConfiguracao().subscribe({
-      next: (cfg) => this.executarRelatorioFolhaPorEvento(un, cfg ?? null),
-      error: () => this.executarRelatorioFolhaPorEvento(un, null),
+      next: (cfg) => this.executarRelatorioFolhaPorEvento(un, cfg ?? null, ids),
+      error: () => this.executarRelatorioFolhaPorEvento(un, null, ids),
     });
   }
 
@@ -446,7 +544,11 @@ export class FolhaLancamentosPage implements OnInit {
       });
   }
 
-  private executarRelatorioFolhaPorEvento(un: Unidade, cfg: Configuracao | null): void {
+  private executarRelatorioFolhaPorEvento(
+    un: Unidade,
+    cfg: Configuracao | null,
+    verbaIdsIncluir: ReadonlySet<string>,
+  ): void {
     this.folha
       .listarCapasComDetalhe({
         unidade: un,
@@ -458,7 +560,13 @@ export class FolhaLancamentosPage implements OnInit {
         next: (rows) => {
           const tipoDesc =
             this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
-          const html = this.montarHtmlRelatorioFolhaPorEventoDocumento(rows, cfg, un, tipoDesc);
+          const html = this.montarHtmlRelatorioFolhaPorEventoDocumento(
+            rows,
+            cfg,
+            un,
+            tipoDesc,
+            verbaIdsIncluir,
+          );
           this.abrirPopupRelatorioHtml(html, 'folha-por-evento');
           this.gerandoRelatorioFolhaGeral = false;
         },
@@ -539,11 +647,16 @@ export class FolhaLancamentosPage implements OnInit {
     });
   }
 
+  private rotuloTipoMovimentoRelatorioEvento(tipo: FolhaMovimentoTipo): string {
+    return tipo === FolhaMovimentoTipo.RECEITA ? 'Receita' : 'Despesa';
+  }
+
   private montarHtmlRelatorioFolhaPorEventoDocumento(
     rows: FolhaCapaDetalheResponse[],
     config: Configuracao | null,
     unidade: Unidade,
     tipoFolhaDescricao: string,
+    verbaIdsIncluir: ReadonlySet<string>,
   ): string {
     type LinhaFunc = {
       funcionarioNome: string;
@@ -563,7 +676,7 @@ export class FolhaLancamentosPage implements OnInit {
         ((d.capa.funcionario?.nome ?? '') as string).trim() || '—';
       for (const it of d.capa.itens ?? []) {
         const vid = it.folhaVerba?.id;
-        if (!vid) continue;
+        if (!vid || !verbaIdsIncluir.has(vid)) continue;
         let bloco = map.get(vid);
         if (!bloco) {
           bloco = {
@@ -612,8 +725,9 @@ export class FolhaLancamentosPage implements OnInit {
         .join('');
       const qtdOcorrencias = linOrd.length;
       const qTotalFmt = String(qtdOcorrencias);
+      const rotuloTipo = this.rotuloTipoMovimentoRelatorioEvento(b.tipo);
       return `<div class="evento-det-block">
-        <div class="evento-det-titulo">${this.escapeHtml(b.descricao)}</div>
+        <div class="evento-det-titulo">${this.escapeHtml(b.descricao)} (${this.escapeHtml(rotuloTipo)})</div>
         <table class="tbl-rep tbl-rep-evento-det" aria-label="${this.escapeHtml(b.descricao)}">
           <thead><tr>
             <th>Funcionário</th>
@@ -634,12 +748,9 @@ export class FolhaLancamentosPage implements OnInit {
       tituloMacro: string,
       blocos: BlocoPorVerba[],
     ): string => {
-      if (!blocos.length) {
-        return `<div class="section"><div class="section-title">${tituloMacro}</div>
-          <p class="vazio-secao">Nenhum lançamento nesta competência.</p></div>`;
-      }
+      if (!blocos.length) return '';
       return `<div class="section">
-          <div class="section-title">${tituloMacro}</div>
+          <div class="secao-macro-titulo">${this.escapeHtml(tituloMacro)}</div>
           ${blocos.map((b) => htmlBlocoVerba(b)).join('')}
         </div>`;
     };
@@ -647,8 +758,14 @@ export class FolhaLancamentosPage implements OnInit {
     const comp = `${this.nomeMesPt(this.mes)} / ${this.ano}`;
     const linCabEvt: string[] = [String(unidade), comp, tipoFolhaDescricao];
 
-    const corpo = `${montarSecaoTipo('RECEITAS', receitas)}
-      ${montarSecaoTipo('DESPESAS', despesas)}`;
+    const partesCorpo = [
+      montarSecaoTipo('RECEITAS', receitas),
+      montarSecaoTipo('DESPESAS', despesas),
+    ].filter((p) => p.length > 0);
+    const corpo =
+      partesCorpo.length > 0
+        ? partesCorpo.join('')
+        : '<p class="vazio-relatorio-evento">Nenhum lançamento para os eventos e filtros selecionados.</p>';
 
     return this.montarHtmlDocumentoPadraoFicha({
       documentTitle: 'folha-geral-por-evento',
@@ -694,7 +811,8 @@ export class FolhaLancamentosPage implements OnInit {
     .header-row div { font-weight: bold; }
     .section { margin-bottom: 18px; }
     .section-title { background: #f0f0f0; padding: 6px; font-weight: bold; border-left: 4px solid #007bff; margin-bottom: 8px; font-size: 12px; }
-    .vazio-secao { color: #666; margin: 0; }
+    .secao-macro-titulo { font-weight: 700; font-size: 12px; margin: 14px 0 8px; text-transform: uppercase; letter-spacing: 0.04em; color: #1e293b; }
+    .vazio-secao, .vazio-relatorio-evento { color: #666; margin: 0; }
     .tbl-rep { width: 100%; border-collapse: collapse; font-size: 11px; }
     .tbl-rep th, .tbl-rep td { border: 1px solid #ccc; padding: 6px 8px; vertical-align: top; }
     .tbl-rep th { background: #f5f5f5; font-weight: bold; text-align: left; }

@@ -28,6 +28,7 @@ import { FindFuncionariosLancamentoFolhaDto } from './dto/find-funcionarios-lanc
 import { FuncionarioEventoFixoLinhaDto } from './dto/funcionario-evento-fixo-linha.dto';
 import {
   competenciaParaIndice,
+  nomeMesPt,
   periodoApartirDaDataIso,
   funcionarioElegivelNovaCapaNaCompetencia,
   normalizarDataCadastroParaIso,
@@ -245,14 +246,48 @@ export class FolhaFuncionariosService {
     return entity;
   }
 
-  async remove(usuario: Usuario, id: string): Promise<void> {
-    await this.findOne(usuario, id);
-    const comCapa = await this.capaRepo.count({
-      where: { funcionario: { id } },
+  /** Lista competências (tipo + mês/ano + unidade) com `folha_capa` do funcionário. */
+  private async listarCompetenciasComCapaDoFuncionario(
+    funcionarioId: string,
+  ): Promise<FolhaCapa[]> {
+    return this.capaRepo.find({
+      where: { funcionario: { id: funcionarioId } },
+      relations: ['folhaTipo', 'funcionario'],
+      order: { ano: 'DESC', mes: 'DESC' },
     });
-    if (comCapa > 0) {
+  }
+
+  private mensagemBloqueioExclusaoFuncionarioPorCapas(
+    funcionario: Funcionario,
+    capas: FolhaCapa[],
+  ): string {
+    const unidade = funcionario.unidade ?? '—';
+    const linhas = capas.map((c) => {
+      const tipo = c.folhaTipo?.descricao?.trim() || 'Tipo de folha';
+      const ref = `${nomeMesPt(c.mes)}/${c.ano}`;
+      return `• ${unidade} — ${tipo}: ${ref}`;
+    });
+    const maxLinhas = 25;
+    const exibidas = linhas.slice(0, maxLinhas);
+    const restantes = linhas.length - exibidas.length;
+    const sufixo =
+      restantes > 0
+        ? `\n… e mais ${restantes} competência(s) com lançamento.`
+        : '';
+    return (
+      'Existem lançamentos de folha (capa) para este funcionário. Antes de excluir o cadastro, ' +
+      'remova cada capa na tela Lançamento de folha (botão Excluir, com lote aberto e capa não congelada):\n\n' +
+      exibidas.join('\n') +
+      sufixo
+    );
+  }
+
+  async remove(usuario: Usuario, id: string): Promise<void> {
+    const funcionario = await this.findOne(usuario, id);
+    const capas = await this.listarCompetenciasComCapaDoFuncionario(id);
+    if (capas.length > 0) {
       throw new BadRequestException(
-        'Existem lançamentos de folha para este funcionário. Não é possível excluir o cadastro.',
+        this.mensagemBloqueioExclusaoFuncionarioPorCapas(funcionario, capas),
       );
     }
     await this.funcionarioRepo.delete(id);

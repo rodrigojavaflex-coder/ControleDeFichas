@@ -95,44 +95,50 @@
                   {{ situacaoRotulo(row) }}
                 </span>
               </td>
-              <td class="action-buttons folha-controle-acoes">
-                @if (row.situacao === 'ABERTA' && podePermFecharLote()) {
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-excluir"
-                    [disabled]="enviando"
-                    (click)="fecharLinha(row)"
-                  >
-                    Fechar lote
-                  </button>
-                }
-                @if (row.situacao === 'FECHADA' && podePermReabrirLote()) {
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-secondary"
-                    [disabled]="enviando"
-                    (click)="abrirModalReabrir(row)"
-                  >
-                    Reabrir
-                  </button>
-                }
-                @if (row.situacao === 'FECHADA' && podePermEnviarRecibosWhatsappMassa()) {
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-primary"
-                    [disabled]="enviando"
-                    (click)="abrirModalEnviarRecibosWhatsapp(row)"
-                  >
-                    Enviar recibos
-                  </button>
-                }
-                @if (
-                  !(row.situacao === 'ABERTA' && podePermFecharLote()) &&
-                  !(row.situacao === 'FECHADA' && podePermReabrirLote()) &&
-                  !(row.situacao === 'FECHADA' && podePermEnviarRecibosWhatsappMassa())
-                ) {
-                  <span class="form-help">—</span>
-                }
+              <td class="folha-controle-acoes-cell">
+                <div
+                  class="folha-controle-acoes-group"
+                  role="group"
+                  [attr.aria-label]="'Ações — ' + row.unidade + ' ' + nomeMesPt(row.mes) + '/' + ano"
+                >
+                  @if (row.situacao === 'ABERTA' && podePermFecharLote()) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-excluir folha-controle-acao-btn"
+                      [disabled]="enviando"
+                      (click)="fecharLinha(row)"
+                    >
+                      Fechar lote
+                    </button>
+                  }
+                  @if (row.situacao === 'FECHADA' && podePermReabrirLote()) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-cancelar folha-controle-acao-btn"
+                      [disabled]="enviando"
+                      (click)="abrirModalReabrir(row)"
+                    >
+                      Reabrir
+                    </button>
+                  }
+                  @if (row.situacao === 'FECHADA' && podePermEnviarRecibosWhatsappMassa()) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-salvar folha-controle-acao-btn"
+                      [disabled]="enviando"
+                      (click)="abrirModalEnviarRecibosWhatsapp(row)"
+                    >
+                      Enviar recibos
+                    </button>
+                  }
+                  @if (
+                    !(row.situacao === 'ABERTA' && podePermFecharLote()) &&
+                    !(row.situacao === 'FECHADA' && podePermReabrirLote()) &&
+                    !(row.situacao === 'FECHADA' && podePermEnviarRecibosWhatsappMassa())
+                  ) {
+                    <span class="form-help folha-controle-acoes-vazio">—</span>
+                  }
+                </div>
               </td>
             </tr>
           }

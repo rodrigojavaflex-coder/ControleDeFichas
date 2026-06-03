@@ -8,7 +8,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
   imports: [CommonModule],
   template: `
     <div class="error-backdrop" *ngIf="visible">
-      <div class="error-modal" [ngClass]="{'modal-wide': title === 'Aviso'}" [class.light]="currentTheme === 'light'" [class.dark]="currentTheme === 'dark'">
+      <div class="error-modal" [ngClass]="{'modal-wide': modalLargo()}" [class.light]="currentTheme === 'light'" [class.dark]="currentTheme === 'dark'">
         <div class="modal-header">
           <h3 class="modal-title">{{ title || 'Erro' }}</h3>
           <button type="button" class="close-icon" (click)="close()">×</button>
@@ -112,6 +112,13 @@ export class ErrorModalComponent implements OnInit {
   close() {
     this.visible = false;
     this.closed.emit();
+  }
+
+  /** Mensagens longas (ex.: lista de competências com lançamento na folha). */
+  modalLargo(): boolean {
+    if (this.title === 'Aviso') return true;
+    const br = (this.message?.match(/<br\s*\/?>/gi) ?? []).length;
+    return br >= 2;
   }
 
   // Tema atual (light | dark)

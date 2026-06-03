@@ -18,6 +18,7 @@
 - Migrações a partir do modelo anterior: se existisse mais de um vínculo funcionário-unidade histórico, a unidade oficial do cadastro torna-se **`MIN(unidade)` em ordem lexicográfica** (determinístico).
 - Cadastros sem vínculo herdaram **`INHUMAS`** na migração (revisar dados se necessário).
 - **Endpoints de vínculo** (`POST/PATCH …/vinculos`) foram **removidos**; atualização apenas via **`PATCH …/folha/funcionarios/:id`**.
+- **`DELETE …/folha/funcionarios/:id`:** só é permitido quando **não** existir **`folha_capa`** para o funcionário. Caso contrário, a API responde `400` listando cada competência com lançamento (**unidade**, **tipo de folha**, **mês/ano**) para orientar a exclusão das capas em **Lançamento de folha** (RN-016) antes de excluir o cadastro.
 - **`GET …/folha/funcionarios/lancamento`:** funcionários **`f.unidade = :unidade`**; com **`ano`** e **`mes`**, apenas quem pode **nova capa** nessa competência (mesmos critérios da RN-011). O flag legado **`filtroCompetenciaMensal`** não altera o resultado quando ano/mês estão informados.
 
 ### RN-009 — Contato no cadastro do funcionário

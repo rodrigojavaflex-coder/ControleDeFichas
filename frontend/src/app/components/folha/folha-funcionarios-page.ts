@@ -134,6 +134,14 @@ export class FolhaFuncionariosPage implements OnInit {
     });
   }
 
+  private mensagemErroExclusaoFuncionario(e: {
+    error?: { message?: string | string[] };
+  }): string {
+    const raw = e?.error?.message;
+    if (Array.isArray(raw)) return raw.join('\n');
+    return raw ?? 'Não foi possível excluir o funcionário.';
+  }
+
   excluir(f: FuncionarioFolha): void {
     if (!this.podeExcluir()) return;
     if (
@@ -145,9 +153,9 @@ export class FolhaFuncionariosPage implements OnInit {
     }
     this.folha.excluirFuncionario(f.id).subscribe({
       next: () => this.carregarLista(),
-      error: (e: { error?: { message?: string } }) =>
+      error: (e: { error?: { message?: string | string[] } }) =>
         this.errors.show(
-          e?.error?.message ?? 'Não foi possível excluir o funcionário.',
+          this.mensagemErroExclusaoFuncionario(e),
           'Folha',
         ),
     });

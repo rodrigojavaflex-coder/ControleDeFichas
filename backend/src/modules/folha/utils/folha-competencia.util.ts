@@ -1,3 +1,25 @@
+const MESES_PT = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+] as const;
+
+export function nomeMesPt(mes: number): string {
+  if (mes >= 1 && mes <= 12) {
+    return MESES_PT[mes - 1];
+  }
+  return String(mes);
+}
+
 /** Converte ano/mês (competência) em inteiro comparable (ordem cronológica). */
 export function competenciaParaIndice(ano: number, mes: number): number {
   return ano * 12 + mes;

@@ -82,8 +82,8 @@
           type="button"
           class="btn btn-success folha-lancamentos-btn-relatorio-evento"
           [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
-          (click)="imprimirRelatorioFolhaPorEvento()"
-          title="Folha Geral por evento — impressão ou PDF (exige unidade e tipo de folha)"
+          (click)="abrirModalFiltroRelatorioPorEvento()"
+          title="Folha Geral por evento — escolha os eventos e gere impressão ou PDF"
         >
           Folha por Evento
         </button>
@@ -646,6 +646,159 @@
       [showModal]="true"
       (modalClosed)="fecharAuditoriaFolhaItem()"
     />
+  }
+
+  @if (showFiltroRelatorioEventoModal) {
+    <div class="folha-lancamentos-item-modal-backdrop" role="presentation">
+      <div
+        class="folha-lancamentos-item-modal folha-relatorio-evento-filtro-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lac-relatorio-evento-filtro-title"
+      >
+        <header class="folha-lancamentos-item-modal-head">
+          <h2 id="lac-relatorio-evento-filtro-title" class="folha-lancamentos-item-modal-title">
+            Folha por Evento — filtros
+          </h2>
+        </header>
+        <div class="folha-lancamentos-item-modal-body folha-relatorio-evento-filtro-body">
+          <p class="folha-relatorio-evento-filtro-intro">
+            Selecione os eventos que devem aparecer no relatório. Por padrão, todos estão marcados.
+          </p>
+          <div class="folha-relatorio-evento-filtro-acoes-massa" role="group" aria-label="Seleção em massa">
+            <button
+              type="button"
+              class="btn btn-sm btn-cancelar"
+              (click)="marcarTodosEventosRelatorio(true)"
+            >
+              Marcar todos
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-cancelar"
+              (click)="marcarTodosEventosRelatorio(false)"
+            >
+              Desmarcar todos
+            </button>
+            <span class="folha-relatorio-evento-filtro-contagem" aria-live="polite">
+              {{ contagemEventosSelecionadosRelatorio() }} de
+              {{ verbasOrdenadasParaRelatorioEvento().length }} selecionado(s)
+            </span>
+          </div>
+          <div class="folha-relatorio-evento-filtro-listas">
+            @if (verbasRelatorioEventoPorTipo(FolhaMovimentoTipo.RECEITA).length) {
+              <section class="folha-relatorio-evento-filtro-secao" aria-labelledby="lac-filtro-rec">
+                <div id="lac-filtro-rec" class="folha-relatorio-evento-filtro-secao-cabeca">
+                  <label
+                    class="folha-relatorio-evento-filtro-secao-label"
+                    [class.folha-relatorio-evento-filtro-secao-label--parcial]="
+                      secaoRelatorioEventoParcialmenteSelecionada(FolhaMovimentoTipo.RECEITA)
+                    "
+                  >
+                    <input
+                      type="checkbox"
+                      class="folha-relatorio-evento-filtro-secao-checkbox"
+                      [checked]="secaoRelatorioEventoTotalmenteSelecionada(FolhaMovimentoTipo.RECEITA)"
+                      [attr.aria-checked]="
+                        secaoRelatorioEventoParcialmenteSelecionada(FolhaMovimentoTipo.RECEITA)
+                          ? 'mixed'
+                          : secaoRelatorioEventoTotalmenteSelecionada(FolhaMovimentoTipo.RECEITA)
+                    "
+                      (change)="
+                        onSecaoRelatorioEventoChange(
+                          FolhaMovimentoTipo.RECEITA,
+                          $any($event.target).checked
+                        )
+                      "
+                    />
+                    <span class="folha-relatorio-evento-filtro-secao-titulo">Receitas</span>
+                  </label>
+                </div>
+                <ul class="folha-relatorio-evento-filtro-checklist">
+                  @for (vb of verbasRelatorioEventoPorTipo(FolhaMovimentoTipo.RECEITA); track vb.id) {
+                    <li>
+                      <label class="folha-relatorio-evento-filtro-item">
+                        <input
+                          type="checkbox"
+                          [name]="'rel-ev-' + vb.id"
+                          [(ngModel)]="relatorioEventoVerbaSelecionada[vb.id]"
+                        />
+                        <span>{{ vb.descricao }}</span>
+                      </label>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+            @if (verbasRelatorioEventoPorTipo(FolhaMovimentoTipo.DESPESA).length) {
+              <section class="folha-relatorio-evento-filtro-secao" aria-labelledby="lac-filtro-desp">
+                <div id="lac-filtro-desp" class="folha-relatorio-evento-filtro-secao-cabeca">
+                  <label
+                    class="folha-relatorio-evento-filtro-secao-label"
+                    [class.folha-relatorio-evento-filtro-secao-label--parcial]="
+                      secaoRelatorioEventoParcialmenteSelecionada(FolhaMovimentoTipo.DESPESA)
+                    "
+                  >
+                    <input
+                      type="checkbox"
+                      class="folha-relatorio-evento-filtro-secao-checkbox"
+                      [checked]="secaoRelatorioEventoTotalmenteSelecionada(FolhaMovimentoTipo.DESPESA)"
+                      [attr.aria-checked]="
+                        secaoRelatorioEventoParcialmenteSelecionada(FolhaMovimentoTipo.DESPESA)
+                          ? 'mixed'
+                          : secaoRelatorioEventoTotalmenteSelecionada(FolhaMovimentoTipo.DESPESA)
+                    "
+                      (change)="
+                        onSecaoRelatorioEventoChange(
+                          FolhaMovimentoTipo.DESPESA,
+                          $any($event.target).checked
+                        )
+                      "
+                    />
+                    <span class="folha-relatorio-evento-filtro-secao-titulo">Despesas</span>
+                  </label>
+                </div>
+                <ul class="folha-relatorio-evento-filtro-checklist">
+                  @for (vb of verbasRelatorioEventoPorTipo(FolhaMovimentoTipo.DESPESA); track vb.id) {
+                    <li>
+                      <label class="folha-relatorio-evento-filtro-item">
+                        <input
+                          type="checkbox"
+                          [name]="'rel-ev-' + vb.id"
+                          [(ngModel)]="relatorioEventoVerbaSelecionada[vb.id]"
+                        />
+                        <span>{{ vb.descricao }}</span>
+                      </label>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+          </div>
+        </div>
+        <footer class="folha-lancamentos-item-modal-actions">
+          <button
+            type="button"
+            class="btn btn-cancelar folha-lancamentos-item-modal-btn-footer"
+            (click)="fecharModalFiltroRelatorioPorEvento()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar folha-lancamentos-item-modal-btn-footer"
+            [disabled]="gerandoRelatorioFolhaGeral || contagemEventosSelecionadosRelatorio() === 0"
+            (click)="aplicarFiltroEGerarRelatorioPorEvento()"
+          >
+            @if (gerandoRelatorioFolhaGeral) {
+              Gerando…
+            } @else {
+              Aplicar e gerar relatório
+            }
+          </button>
+        </footer>
+      </div>
+    </div>
   }
 
   <app-confirmation-modal
