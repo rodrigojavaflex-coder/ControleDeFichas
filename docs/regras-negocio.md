@@ -94,7 +94,7 @@
 ### RN-012 — Congelamento por capa (folha do funcionário)
 
 - Além do **fechamento do lote** (RN-006), pode-se **congelar** uma **`folha_capa`** específica: flag `congelada` na capa, com auditoria opcional (`congeladaEm`, `congeladaPor`).
-- Enquanto a capa estiver **congelada** e desde que o lote permaneça **aberto** na API (RN-006), **não** é permitido: incluir, alterar ou excluir **`folha_item`** dessa capa; nem **`PATCH …/folha/funcionarios/:id`** para o funcionário vinculado (enquanto existir **qualquer** capa **congelada** para esse funcionário).
+- Enquanto a capa estiver **congelada** e desde que o lote permaneça **aberto** na API (RN-006), **não** é permitido incluir, alterar ou excluir **`folha_item`** dessa capa nem excluir a **`folha_capa`** (RN-016). O cadastro do funcionário (`PATCH …/folha/funcionarios/:id`) **pode** ser alterado independentemente de capas congeladas.
 - **Congelar** exige permissão **`folha-lancamento:congelar-capa`**; **liberar** exige **`folha-lancamento:liberar-capa`**. Endpoints canônicos: **`POST …/folha/capas/:id/congelar`** e **`POST …/folha/capas/:id/liberar`** (query **`unidade`** obrigatória, alinhada às demais rotas de capa).
 - Com lote **fechado**, permanece vedada qualquer alteração de lançamentos (RN-006); **congelar/liberar** também exige lote **aberto** na API.
 - **UI (Lançamento de folha):** exibe o estado congelado, botão **Congelar** ou **Liberar** conforme permissões e desabilita inclusão/edição/exclusão de eventos e o botão **Excluir** (capa) na capa congelada.

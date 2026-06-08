@@ -313,15 +313,6 @@ export class FolhaFuncionariosService {
       assertUnidadeFolha(usuario, dto.unidade as Unidade);
     }
 
-    const comCapaCongelada = await this.capaRepo.count({
-      where: { funcionario: { id }, congelada: true },
-    });
-    if (comCapaCongelada > 0) {
-      throw new BadRequestException(
-        'Este funcionário possui folha (capa) congelada. Libere a capa em Lançamento de folha antes de alterar o cadastro.',
-      );
-    }
-
     const {
       cargoId: patchCargoId,
       setorId: patchSetorId,
