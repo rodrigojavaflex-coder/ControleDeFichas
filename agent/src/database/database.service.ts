@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AgentDbConfig } from '../config/config.types';
-import { ValorCompraRow, VendasTotalRow } from './database.types';
+import { ValorCompraRow, VendasTotalRow, OrcamentoRow } from './database.types';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const Firebird = require('node-firebird');
@@ -423,5 +423,192 @@ export class DatabaseService {
 
   private formatDate(date: Date): string {
     return date.toISOString().slice(0, 10);
+  }
+
+  async buscarOrcamentos(
+    dataMinimaModificacao: string,
+    unit: number,
+  ): Promise<OrcamentoRow[]> {
+    const { sql, params } = this.buildOrcamentosQuery(
+      dataMinimaModificacao,
+      unit,
+    );
+    const options = this.getOptions();
+
+    return new Promise<OrcamentoRow[]>((resolve, reject) => {
+      Firebird.attach(options, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          this.logger.error('Erro ao conectar ao banco', attachErr);
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        this.logger.log(
+          `Executando query de orçamentos com ${params.length} parâmetros...`,
+        );
+        db.query(sql, params, (queryErr: Error, result: any[]) => {
+          db.detach();
+
+          if (queryErr) {
+            this.logger.error(
+              `Erro ao executar consulta de orçamentos: ${queryErr.message}`,
+              queryErr,
+            );
+            this.logger.error(`SQL: ${sql.trim()}`);
+            this.logger.error(`Parâmetros: ${JSON.stringify(params)}`);
+            return reject(
+              new InternalServerErrorException('Erro ao consultar orçamentos.'),
+            );
+          }
+
+          const rows = (result ?? []).map((row) => this.mapOrcamentoRow(row));
+          this.logger.log(
+            `Query de orçamentos executada. Registros retornados: ${rows.length}`,
+          );
+          resolve(rows);
+        });
+      });
+    });
+  }
+
+  private buildOrcamentosQuery(
+    dataMinimaModificacao: string,
+    unit: number,
+  ): { sql: string; params: Array<string | number> } {
+    const dataParam = dataMinimaModificacao.includes('T')
+      ? dataMinimaModificacao.replace('T', ' ')
+      : `${dataMinimaModificacao} 00:00:00`;
+
+    const sql = `
+      SELECT
+        o.dtmodificacao AS ultima_modificacao,
+        o.cdfil AS filial,
+        o.dtentr AS data_orcamento,
+        o.nrorc AS nrorc,
+        o.serieo AS serieo,
+        o.nrorc || '-' || o.serieo AS nr_orcamento,
+        CASE
+          WHEN COALESCE(o.qtaprov, 0) = 0 THEN 'REJEITADO'
+          ELSE 'APROVADO'
+        END AS status_orcamento,
+        CAST(o.prcobr - COALESCE(o.vrdsc, 0) AS NUMERIC(15, 2)) AS preco_venda,
+        o.prcobr AS preco_cobrado,
+        COALESCE(o.vrdsc, 0) AS desconto_formula,
+        COALESCE(o.cdcli, cap.cdcli) AS codigo_cliente,
+        o.cdfunre AS codigo_vendedor,
+        TRIM(v.nomefun) AS nome_vendedor,
+        TRIM(cap.nomepa) AS nome_cliente
+      FROM fc15100 o
+      JOIN fc15000 cap
+        ON cap.cdfil = o.cdfil
+       AND cap.nrorc = o.nrorc
+      JOIN fc08000 v
+        ON v.cdfun = o.cdfunre
+       AND v.cdcon = o.cdconre
+      WHERE o.cdfil = ?
+        AND o.dtmodificacao >= ?
+      ORDER BY o.dtmodificacao ASC, o.nrorc ASC, o.serieo ASC
+    `;
+
+    const params: Array<string | number> = [unit, dataParam];
+
+    this.logger.log(`Query SQL de orçamentos:`);
+    this.logger.log(`  Parâmetros: cdfil=${unit}, dtmodificacao>=${dataParam}`);
+
+    return { sql, params };
+  }
+
+  private mapOrcamentoRow(row: any): OrcamentoRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+
+    const ultimaModificacaoRaw = get('ultima_modificacao');
+    const dataOrcamentoRaw = get('data_orcamento');
+
+    const codigoCliente = get('codigo_cliente');
+    const nomeCliente = get('nome_cliente');
+    const codigoVendedor = get('codigo_vendedor');
+    const nomeVendedor = get('nome_vendedor');
+
+    return {
+      ultima_modificacao: this.formatDateTime(ultimaModificacaoRaw),
+      filial: Number(get('filial') ?? 0),
+      data_orcamento: this.formatDateField(dataOrcamentoRaw),
+      nrorc: Number(get('nrorc') ?? 0),
+      serieo: String(get('serieo') ?? '').trim(),
+      nr_orcamento: String(get('nr_orcamento') ?? '').trim(),
+      status_orcamento:
+        String(get('status_orcamento') ?? '').trim() === 'APROVADO'
+          ? 'APROVADO'
+          : 'REJEITADO',
+      preco_venda: Number(get('preco_venda') ?? 0),
+      preco_cobrado: Number(get('preco_cobrado') ?? 0),
+      desconto_formula: Number(get('desconto_formula') ?? 0),
+      codigo_cliente:
+        codigoCliente !== null && codigoCliente !== undefined && codigoCliente !== ''
+          ? Number(codigoCliente)
+          : null,
+      nome_cliente: nomeCliente ? String(nomeCliente).trim() : null,
+      codigo_vendedor:
+        codigoVendedor !== null &&
+        codigoVendedor !== undefined &&
+        codigoVendedor !== ''
+          ? Number(codigoVendedor)
+          : null,
+      nome_vendedor: nomeVendedor ? String(nomeVendedor).trim() : null,
+    };
+  }
+
+  private formatDateField(value: unknown): string {
+    if (!value) return '';
+    if (value instanceof Date) {
+      return this.formatDate(value);
+    }
+    const dateStr = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return this.formatDate(date);
+    }
+    const parts = dateStr.split(/[\/\-]/);
+    if (parts.length === 3) {
+      const day = parts[0].padStart(2, '0');
+      const month = parts[1].padStart(2, '0');
+      const year = parts[2];
+      return `${year}-${month}-${day}`;
+    }
+    return dateStr;
+  }
+
+  private formatDateTime(value: unknown): string {
+    if (!value) return '';
+    if (value instanceof Date) {
+      return this.toIsoDateTimeLocal(value);
+    }
+    const dateStr = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(dateStr)) {
+      return dateStr.replace(' ', 'T').slice(0, 19);
+    }
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return this.toIsoDateTimeLocal(date);
+    }
+    return dateStr;
+  }
+
+  private toIsoDateTimeLocal(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   }
 }

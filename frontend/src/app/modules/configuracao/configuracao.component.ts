@@ -7,7 +7,7 @@ import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
 import { MigracaoService, MigracaoResult, MigracaoProgress, MigracaoCadastrosProgress } from '../../services/migracao.service';
 import { SincronizacaoService } from '../../services/sincronizacao.service';
-import { SincronizacaoConfig, SincronizacaoResult } from '../../models/sincronizacao.model';
+import { SincronizacaoConfig, SincronizacaoResult, SincronizacaoProgress } from '../../models/sincronizacao.model';
 import { interval, Subscription } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
 
@@ -25,6 +25,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private progressSubscription?: Subscription;
   private cadastrosProgressSubscription?: Subscription;
+  private sincronizacaoProgressSubscription?: Subscription;
 
   configuracao: Configuracao | null = null;
   form: FormGroup;
@@ -57,6 +58,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   sincronizacaoLoading = false;
   sincronizacaoExecutando = false;
   sincronizacaoResultado: SincronizacaoResult[] | null = null;
+  sincronizacaoProgress: SincronizacaoProgress | null = null;
   agentesDisponiveis = [
     { value: 'inhumas', label: 'Inhumas' },
     { value: 'uberaba', label: 'Uberaba' },
@@ -67,6 +69,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     ativo: boolean;
     ultimaDataCliente: string;
     ultimaDataPrescritor: string;
+    ultimaModificacaoOrcamento: string;
     intervaloMinutos: number;
   }> = {};
 
@@ -124,6 +127,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
           ...config,
           ultimaDataCliente: config.ultimaDataCliente ? this.normalizarData(config.ultimaDataCliente) : undefined,
           ultimaDataPrescritor: config.ultimaDataPrescritor ? this.normalizarData(config.ultimaDataPrescritor) : undefined,
+          ultimaModificacaoOrcamento: config.ultimaModificacaoOrcamento
+            ? this.normalizarDateTime(config.ultimaModificacaoOrcamento)
+            : undefined,
         }));
         this.sincronizacaoLoading = false;
       },
@@ -166,8 +172,11 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   executarSincronizacao() {
     this.sincronizacaoExecutando = true;
     this.sincronizacaoResultado = null;
+    this.sincronizacaoProgress = null;
     this.error = null;
     this.success = null;
+
+    this.startSincronizacaoProgressPolling();
 
     this.sincronizacaoService.executarSincronizacao().subscribe({
       next: (resultados) => {
@@ -175,14 +184,123 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
         this.sincronizacaoResultado = resultados;
         const totalClientes = resultados.reduce((sum, r) => sum + r.clientesCriados, 0);
         const totalPrescritores = resultados.reduce((sum, r) => sum + r.prescritoresCriados, 0);
-        this.success = `Sincronização concluída! ${totalClientes} clientes e ${totalPrescritores} prescritores processados.`;
+        const totalOrcamentos = resultados.reduce((sum, r) => sum + r.orcamentosProcessados, 0);
+        this.success = `Sincronização concluída! ${totalClientes} clientes, ${totalPrescritores} prescritores e ${totalOrcamentos} orçamentos processados.`;
         this.carregarSincronizacaoConfigs();
+        this.stopSincronizacaoProgressPolling(true);
       },
       error: (err) => {
         this.sincronizacaoExecutando = false;
         this.error = 'Erro ao executar sincronização: ' + (err?.error?.message || err?.message);
+        this.stopSincronizacaoProgressPolling();
       }
     });
+  }
+
+  private startSincronizacaoProgressPolling(): void {
+    this.stopSincronizacaoProgressPolling();
+
+    this.sincronizacaoProgressSubscription = interval(500)
+      .pipe(
+        switchMap(() => this.sincronizacaoService.getProgresso()),
+        takeWhile(() => this.sincronizacaoExecutando, true),
+      )
+      .subscribe({
+        next: (progress) => {
+          if (progress) {
+            this.sincronizacaoProgress = progress;
+          }
+        },
+        error: () => {
+          // Ignorar erros de polling
+        },
+      });
+  }
+
+  private stopSincronizacaoProgressPolling(finalFetch = false): void {
+    if (this.sincronizacaoProgressSubscription) {
+      this.sincronizacaoProgressSubscription.unsubscribe();
+      this.sincronizacaoProgressSubscription = undefined;
+    }
+
+    if (finalFetch) {
+      this.sincronizacaoService.getProgresso().subscribe({
+        next: (progress) => {
+          if (progress) {
+            this.sincronizacaoProgress = progress;
+          }
+        },
+      });
+    }
+  }
+
+  getSincronizacaoProgressPercent(): number {
+    return this.sincronizacaoProgress?.percentual ?? 0;
+  }
+
+  getSincronizacaoSubProgressLabel(
+    tipo: 'clientes' | 'prescritores' | 'orcamentos',
+  ): string {
+    if (!this.sincronizacaoProgress) return '';
+    const map = {
+      clientes: {
+        atual: this.sincronizacaoProgress.clientesAtual,
+        total: this.sincronizacaoProgress.clientesTotal,
+        pct: this.sincronizacaoProgress.percentualClientes,
+      },
+      prescritores: {
+        atual: this.sincronizacaoProgress.prescritoresAtual,
+        total: this.sincronizacaoProgress.prescritoresTotal,
+        pct: this.sincronizacaoProgress.percentualPrescritores,
+      },
+      orcamentos: {
+        atual: this.sincronizacaoProgress.orcamentosAtual,
+        total: this.sincronizacaoProgress.orcamentosTotal,
+        pct: this.sincronizacaoProgress.percentualOrcamentos,
+      },
+    };
+    const item = map[tipo];
+    if (item.total <= 0) {
+      return '—';
+    }
+    return `${item.atual}/${item.total} (${item.pct}%)`;
+  }
+
+  getSincronizacaoSubProgressPercent(
+    tipo: 'clientes' | 'prescritores' | 'orcamentos',
+  ): number {
+    if (!this.sincronizacaoProgress) return 0;
+    switch (tipo) {
+      case 'clientes':
+        return this.sincronizacaoProgress.percentualClientes ?? 0;
+      case 'prescritores':
+        return this.sincronizacaoProgress.percentualPrescritores ?? 0;
+      case 'orcamentos':
+        return this.sincronizacaoProgress.percentualOrcamentos ?? 0;
+    }
+  }
+
+  isSincronizacaoEtapaAtiva(
+    tipo: 'clientes' | 'prescritores' | 'orcamentos',
+  ): boolean {
+    if (!this.sincronizacaoProgress) return false;
+    return this.sincronizacaoProgress.etapa === tipo;
+  }
+
+  getSincronizacaoEtapaTexto(): string {
+    if (!this.sincronizacaoProgress) return '';
+    const etapas: Record<string, string> = {
+      iniciando: 'Iniciando',
+      buscando: 'Buscando dados do agente',
+      clientes: 'Sincronizando clientes',
+      prescritores: 'Sincronizando prescritores',
+      orcamentos: 'Sincronizando orçamentos',
+      finalizando: 'Finalizando',
+      concluido: 'Concluído',
+    };
+    const agente = this.sincronizacaoProgress.agenteAtual;
+    const etapa = etapas[this.sincronizacaoProgress.etapa] || this.sincronizacaoProgress.etapa;
+    return agente ? `${etapa} — ${agente}` : etapa;
   }
 
   getConfigPorAgente(agente: string): SincronizacaoConfig | null {
@@ -208,6 +326,83 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     } catch {
       return data;
     }
+  }
+
+  formatarDateTime(data: string | null | undefined): string {
+    if (!data) return '-';
+    try {
+      const normalizada = this.normalizarDateTime(data);
+      const [datePart, timePart] = normalizada.split('T');
+      const [ano, mes, dia] = datePart.split('-');
+      if (!timePart) {
+        return this.formatarData(datePart);
+      }
+      const [hora, minuto] = timePart.split(':');
+      return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+    } catch {
+      return data;
+    }
+  }
+
+  /**
+   * Normaliza datetime para YYYY-MM-DDTHH:mm (input datetime-local)
+   */
+  normalizarDateTime(data: string | null | undefined): string {
+    if (!data) return '';
+
+    const trimmed = data.trim();
+    // ISO com Z/offset: converter para horário de Brasília (evita +3h na exibição)
+    if (/Z$|[+-]\d{2}:\d{2}$/.test(trimmed)) {
+      const parsed = new Date(trimmed);
+      if (!isNaN(parsed.getTime())) {
+        return this.isoDateTimeBrasilia(parsed).slice(0, 16);
+      }
+    }
+
+    const semTimezone = trimmed.replace(/\.\d{3}Z?$/, '').replace(' ', 'T');
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(semTimezone)) {
+      return semTimezone;
+    }
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(semTimezone)) {
+      return semTimezone.slice(0, 16);
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(semTimezone)) {
+      return `${semTimezone}T00:00`;
+    }
+
+    const parsed = new Date(data);
+    if (isNaN(parsed.getTime())) {
+      return data;
+    }
+    return this.isoDateTimeBrasilia(parsed).slice(0, 16);
+  }
+
+  private isoDateTimeBrasilia(date: Date): string {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(date);
+
+    const get = (type: string) =>
+      parts.find((part) => part.type === type)?.value ?? '00';
+
+    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
+  }
+
+  /**
+   * Converte datetime-local para formato enviado ao backend
+   */
+  dateTimeParaBackend(data: string | null | undefined): string | undefined {
+    if (!data) return undefined;
+    const normalizada = this.normalizarDateTime(data);
+    if (!normalizada) return undefined;
+    return normalizada.length === 16 ? `${normalizada}:00` : normalizada;
   }
 
   /**
@@ -241,6 +436,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       ativo: config?.ativo ?? false,
       ultimaDataCliente: this.normalizarData(config?.ultimaDataCliente) || '',
       ultimaDataPrescritor: this.normalizarData(config?.ultimaDataPrescritor) || '',
+      ultimaModificacaoOrcamento: this.normalizarDateTime(config?.ultimaModificacaoOrcamento) || '',
       intervaloMinutos: config?.intervaloMinutos || 60,
     };
   }
@@ -260,6 +456,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       // Normalizar as datas antes de enviar para garantir formato YYYY-MM-DD
       ultimaDataCliente: this.normalizarData(formData.ultimaDataCliente) || undefined,
       ultimaDataPrescritor: this.normalizarData(formData.ultimaDataPrescritor) || undefined,
+      ultimaModificacaoOrcamento: formData.ultimaModificacaoOrcamento
+        ? this.dateTimeParaBackend(formData.ultimaModificacaoOrcamento)
+        : null,
       intervaloMinutos: formData.intervaloMinutos,
     };
 
@@ -412,6 +611,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.stopProgressPolling();
     this.stopCadastrosProgressPolling();
+    this.stopSincronizacaoProgressPolling();
   }
 
   getProgressPercent(): number {

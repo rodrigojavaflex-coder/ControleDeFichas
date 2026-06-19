@@ -306,7 +306,7 @@
         <div>
           <h3 class="section-title">Sincronização Automática de Cadastros</h3>
           <p class="section-description">
-            Configure a sincronização automática de clientes e prescritores dos agentes Firebird.
+            Configure a sincronização automática de clientes, prescritores e orçamentos dos agentes Firebird.
           </p>
         </div>
         <button 
@@ -322,6 +322,72 @@
         </button>
       </div>
 
+      @if (sincronizacaoProgress && sincronizacaoExecutando) {
+        <div class="progress-container sincronizacao-progress-panel">
+          <div class="progress-block">
+            <div class="progress-header">
+              <span class="progress-text progress-text-main">
+                <i class="fas fa-sync-alt"></i> Geral — {{ getSincronizacaoEtapaTexto() }}
+              </span>
+              <span class="progress-percent-badge">{{ getSincronizacaoProgressPercent() }}%</span>
+            </div>
+            <div class="progress-bar progress-bar-main">
+              <div
+                class="progress-fill progress-fill-main"
+                [style.width.%]="getSincronizacaoProgressPercent()">
+              </div>
+            </div>
+            <div class="progress-stats">
+              <span>Agentes: {{ sincronizacaoProgress.agentesProcessados }}/{{ sincronizacaoProgress.totalAgentes }}</span>
+              @if (sincronizacaoProgress.erros > 0) {
+                <span class="error">Erros: {{ sincronizacaoProgress.erros }}</span>
+              }
+            </div>
+          </div>
+
+          <div class="progress-sub-grid">
+            <div class="progress-block progress-block-sub" [class.active]="isSincronizacaoEtapaAtiva('clientes')">
+              <div class="progress-sub-header">
+                <span class="progress-sub-label">Clientes</span>
+                <span class="progress-sub-value">{{ getSincronizacaoSubProgressLabel('clientes') }}</span>
+              </div>
+              <div class="progress-bar progress-bar-sub">
+                <div
+                  class="progress-fill progress-fill-clientes"
+                  [style.width.%]="getSincronizacaoSubProgressPercent('clientes')">
+                </div>
+              </div>
+            </div>
+
+            <div class="progress-block progress-block-sub" [class.active]="isSincronizacaoEtapaAtiva('prescritores')">
+              <div class="progress-sub-header">
+                <span class="progress-sub-label">Prescritores</span>
+                <span class="progress-sub-value">{{ getSincronizacaoSubProgressLabel('prescritores') }}</span>
+              </div>
+              <div class="progress-bar progress-bar-sub">
+                <div
+                  class="progress-fill progress-fill-prescritores"
+                  [style.width.%]="getSincronizacaoSubProgressPercent('prescritores')">
+                </div>
+              </div>
+            </div>
+
+            <div class="progress-block progress-block-sub" [class.active]="isSincronizacaoEtapaAtiva('orcamentos')">
+              <div class="progress-sub-header">
+                <span class="progress-sub-label">Orçamentos</span>
+                <span class="progress-sub-value">{{ getSincronizacaoSubProgressLabel('orcamentos') }}</span>
+              </div>
+              <div class="progress-bar progress-bar-sub">
+                <div
+                  class="progress-fill progress-fill-orcamentos"
+                  [style.width.%]="getSincronizacaoSubProgressPercent('orcamentos')">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
       @if (sincronizacaoResultado) {
         <div class="result-box success" style="margin-bottom: 2rem;">
           <strong>✓ Resultado da Sincronização:</strong>
@@ -331,6 +397,7 @@
               <ul>
                 <li>Clientes processados: {{ resultado.clientesProcessados }} ({{ resultado.clientesCriados }} criados, {{ resultado.clientesAtualizados }} atualizados)</li>
                 <li>Prescritores processados: {{ resultado.prescritoresProcessados }} ({{ resultado.prescritoresCriados }} criados, {{ resultado.prescritoresAtualizados }} atualizados)</li>
+                <li>Orçamentos processados: {{ resultado.orcamentosProcessados }} ({{ resultado.orcamentosCriados }} criados, {{ resultado.orcamentosAtualizados }} atualizados)</li>
                 @if (resultado.erros.length > 0) {
                   <li class="error">Erros: {{ resultado.erros.length }}</li>
                   <details>
@@ -360,6 +427,7 @@
                 <th>Status</th>
                 <th>Última Data Clientes</th>
                 <th>Última Data Prescritores</th>
+                <th>Última Mod. Orçamentos</th>
                 <th>Intervalo (min)</th>
                 <th>Ações</th>
               </tr>
@@ -405,6 +473,16 @@
                         class="form-input-inline" />
                     } @else {
                       {{ formatarData(config?.ultimaDataPrescritor) }}
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
+                      <input 
+                        type="datetime-local" 
+                        [(ngModel)]="formSincronizacao[agente.value].ultimaModificacaoOrcamento"
+                        class="form-input-inline" />
+                    } @else {
+                      {{ formatarDateTime(config?.ultimaModificacaoOrcamento) }}
                     }
                   </td>
                   <td>

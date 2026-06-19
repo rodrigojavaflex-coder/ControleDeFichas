@@ -380,6 +380,114 @@
   font-weight: 600;
 }
 
+/* Progresso sincronização — geral + sub-barras */
+.sincronizacao-progress-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sincronizacao-progress-panel .progress-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.progress-block-sub {
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary, #f9fafb);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.progress-block-sub.active {
+  border-color: var(--primary-color, #3b82f6);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color, #3b82f6) 25%, transparent);
+}
+
+.sincronizacao-progress-panel .progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.progress-text-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.progress-percent-badge {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--primary-color, #2563eb);
+  background: color-mix(in srgb, var(--primary-color, #3b82f6) 12%, transparent);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.progress-bar-main {
+  height: 28px;
+  margin-bottom: 0;
+}
+
+.progress-fill-main {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.progress-sub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .progress-sub-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.progress-sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.progress-sub-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+}
+
+.progress-sub-value {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #666);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-bar-sub {
+  height: 14px;
+  margin-bottom: 0;
+  border-radius: 8px;
+}
+
+.progress-fill-clientes {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.progress-fill-prescritores {
+  background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.progress-fill-orcamentos {
+  background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
 /* Estilos para seção de remoção de campos texto (operação irreversível) */
 .migracao-item-warning {
   border: 2px solid #f59e0b;

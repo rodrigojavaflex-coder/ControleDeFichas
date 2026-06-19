@@ -1,6 +1,6 @@
 import { Controller, Post, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { SincronizacaoService, SincronizacaoResult } from './sincronizacao.service';
+import { SincronizacaoService, SincronizacaoResult, SincronizacaoProgress } from './sincronizacao.service';
 
 @ApiTags('sincronizacao')
 @Controller('sincronizacao')
@@ -16,6 +16,16 @@ export class SincronizacaoController {
   })
   async executar(): Promise<SincronizacaoResult[]> {
     return this.sincronizacaoService.executarSincronizacao();
+  }
+
+  @Get('progresso')
+  @ApiOperation({ summary: 'Obter progresso da sincronização em andamento' })
+  @ApiResponse({
+    status: 200,
+    description: 'Progresso da sincronização',
+  })
+  getProgresso(): SincronizacaoProgress | null {
+    return this.sincronizacaoService.getProgress();
   }
 
   @Get('status')

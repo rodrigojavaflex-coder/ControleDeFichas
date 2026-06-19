@@ -29,6 +29,7 @@ export class SincronizacaoConfigService {
       // Manter como string YYYY-MM-DD, o transformer cuidará da conversão
       ultimaDataCliente: dto.ultimaDataCliente || undefined,
       ultimaDataPrescritor: dto.ultimaDataPrescritor || undefined,
+      ultimaModificacaoOrcamento: dto.ultimaModificacaoOrcamento || undefined,
     });
 
     return this.configRepository.save(config);
@@ -81,6 +82,10 @@ export class SincronizacaoConfigService {
       ultimaDataPrescritor: dto.ultimaDataPrescritor !== undefined
         ? dto.ultimaDataPrescritor || null
         : config.ultimaDataPrescritor,
+      ultimaModificacaoOrcamento:
+        dto.ultimaModificacaoOrcamento !== undefined
+          ? dto.ultimaModificacaoOrcamento || null
+          : config.ultimaModificacaoOrcamento,
     });
 
     return this.configRepository.save(config);

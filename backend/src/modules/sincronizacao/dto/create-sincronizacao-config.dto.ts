@@ -1,5 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsDateString, IsInt, IsBoolean, Min, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsDateString,
+  IsInt,
+  IsBoolean,
+  Min,
+  IsIn,
+  Matches,
+} from 'class-validator';
 
 export class CreateSincronizacaoConfigDto {
   @ApiProperty({
@@ -28,6 +37,19 @@ export class CreateSincronizacaoConfigDto {
   @IsOptional()
   @IsDateString()
   ultimaDataPrescritor?: string;
+
+  @ApiProperty({
+    description:
+      'Última data/hora de busca de orçamentos (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)',
+    example: '2026-01-01T00:00:00',
+    required: false,
+  })
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/, {
+    message:
+      'ultimaModificacaoOrcamento deve estar no formato YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss',
+  })
+  ultimaModificacaoOrcamento?: string;
 
   @ApiProperty({
     description: 'Intervalo em minutos entre sincronizações',

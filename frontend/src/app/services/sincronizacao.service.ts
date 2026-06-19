@@ -6,6 +6,7 @@ import {
   CreateSincronizacaoConfigDto,
   UpdateSincronizacaoConfigDto,
   SincronizacaoResult,
+  SincronizacaoProgress,
 } from '../models/sincronizacao.model';
 import { environment } from '../../environments/environment';
 
@@ -43,6 +44,12 @@ export class SincronizacaoService {
     return this.http.post<SincronizacaoResult[]>(
       `${this.syncApiUrl}/executar`,
       {},
+    );
+  }
+
+  getProgresso(): Observable<SincronizacaoProgress | null> {
+    return this.http.get<SincronizacaoProgress | null>(
+      `${this.syncApiUrl}/progresso`,
     );
   }
 }

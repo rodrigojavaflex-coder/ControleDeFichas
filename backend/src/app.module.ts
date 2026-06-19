@@ -19,6 +19,7 @@ import { VendedoresModule } from './modules/vendedores/vendedores.module';
 import { PrescritoresModule } from './modules/prescritores/prescritores.module';
 import { MigracaoModule } from './modules/migracao/migracao.module';
 import { SincronizacaoModule } from './modules/sincronizacao/sincronizacao.module';
+import { OrcamentosModule } from './modules/orcamentos/orcamentos.module';
 import { FolhaModule } from './modules/folha/folha.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
@@ -53,6 +54,7 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     PrescritoresModule,
     MigracaoModule,
     SincronizacaoModule,
+    OrcamentosModule,
     FolhaModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
