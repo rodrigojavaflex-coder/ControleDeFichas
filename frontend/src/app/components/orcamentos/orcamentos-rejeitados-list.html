@@ -1,0 +1,305 @@
+<div class="vendas-page orcamentos-rejeitados-page">
+  <section *ngIf="error" class="state-card error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </section>
+
+  <section class="results-card" *ngIf="!error">
+    <div class="results-header orcamentos-header-bar">
+      <div class="header-actions">
+        <button
+          *ngIf="canUpdate()"
+          class="btn btn-salvar btn-registrar-motivo"
+          (click)="openMotivoModal()"
+          [attr.disabled]="selectedIds.size === 0 || loading ? 'disabled' : null"
+          title="Registrar motivo nos selecionados">
+          <i class="fas fa-tag"></i>
+          Registrar Motivo
+        </button>
+      </div>
+      <div class="orcamentos-legenda" role="note" aria-label="Legenda de cores das linhas">
+        <span class="legenda-titulo">Legenda</span>
+        <div class="legenda-itens">
+          <span class="legenda-item legenda-sem-motivo">
+            <span class="legenda-amostra" aria-hidden="true"></span>
+            Sem motivo
+          </span>
+          <span class="legenda-item legenda-com-motivo">
+            <span class="legenda-amostra" aria-hidden="true"></span>
+            Com motivo
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="inline-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Atualizando lista...</span>
+    </div>
+
+    <div class="filters-inline">
+      <div
+        class="filters-panel-top"
+        role="button"
+        tabindex="0"
+        (click)="onContainerClick($event)"
+        (keydown)="onFiltersToggleKey($event)">
+        <div class="filters-controls">
+          <button
+            type="button"
+            class="filters-toggle btn btn-toggle-filtros"
+            (click)="toggleFiltersVisibility(); $event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()">
+            <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
+            <span class="filters-count" *ngIf="appliedFilters.length">{{ appliedFilters.length }}</span>
+            <i class="fas" [class.fa-chevron-up]="filtersPanelOpen" [class.fa-chevron-down]="!filtersPanelOpen"></i>
+          </button>
+          <div class="applied-filters-container" *ngIf="appliedFilters.length">
+            <div class="results-count" (click)="$event.stopPropagation()">
+              <i class="fas fa-filter"></i>
+              <span>{{ totalItems }} resultado(s)</span>
+            </div>
+            <div class="applied-filters-wrapper">
+              <div class="applied-filters-list">
+                <span class="filter-chip" *ngFor="let filter of appliedFilters" [title]="filter.value">
+                  <i class="fas" [ngClass]="getFilterIcon(filter.key)"></i>
+                  <strong>{{ filter.label }}:</strong>
+                  <span class="filter-value">{{ formatFilterValue(filter.value) }}</span>
+                  <button
+                    *ngIf="canRemoveFilter(filter.key)"
+                    type="button"
+                    class="chip-remove"
+                    (click)="removeFilter(filter.key); $event.stopPropagation()"
+                    [attr.aria-label]="'Remover filtro ' + filter.label">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </span>
+              </div>
+            </div>
+            <button
+              class="btn-clear-all"
+              type="button"
+              (click)="clearFilters(); $event.stopPropagation()"
+              title="Limpar todos os filtros">
+              <i class="fas fa-eraser"></i>
+              Limpar todos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="vendas-table">
+        <thead>
+          <tr>
+            <th class="checkbox-column">
+              <input
+                type="checkbox"
+                [checked]="isAllSelected()"
+                [indeterminate]="isIndeterminate()"
+                (change)="toggleSelectAll()" />
+            </th>
+            <th class="sortable" (click)="sortBy('unidade')">
+              Unidade <i class="fas" [ngClass]="getSortIcon('unidade')"></i>
+            </th>
+            <th class="sortable" (click)="sortBy('nrOrcamento')">
+              Nº orçamento <i class="fas" [ngClass]="getSortIcon('nrOrcamento')"></i>
+            </th>
+            <th class="sortable" (click)="sortBy('dataOrcamento')">
+              Data <i class="fas" [ngClass]="getSortIcon('dataOrcamento')"></i>
+            </th>
+            <th class="sortable" (click)="sortBy('nomeCliente')">
+              Cliente <i class="fas" [ngClass]="getSortIcon('nomeCliente')"></i>
+            </th>
+            <th class="sortable" (click)="sortBy('nomeVendedor')">
+              Vendedor <i class="fas" [ngClass]="getSortIcon('nomeVendedor')"></i>
+            </th>
+            <th class="sortable" (click)="sortBy('precoCobrado')">
+              Preço cobrado <i class="fas" [ngClass]="getSortIcon('precoCobrado')"></i>
+            </th>
+            <th>Motivo</th>
+            <th>Observação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let item of items"
+            [ngClass]="rowClass(item)"
+            (click)="onRowClick($event, item.id)">
+            <td class="checkbox-column" (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="isSelected(item.id)"
+                (change)="toggleSelection(item.id)" />
+            </td>
+            <td>{{ item.unidade }}</td>
+            <td>{{ item.nrOrcamento }}</td>
+            <td>{{ formatarData(item.dataOrcamento) }}</td>
+            <td>{{ item.nomeCliente || '—' }}</td>
+            <td>{{ item.nomeVendedor || '—' }}</td>
+            <td>{{ formatarMoeda(item.precoCobrado) }}</td>
+            <td>{{ item.motivoRejeicao?.descricao || '—' }}</td>
+            <td class="obs-cell">{{ item.observacaoRejeicao || '—' }}</td>
+          </tr>
+          <tr *ngIf="!loading && items.length === 0" class="no-data">
+            <td colspan="9">
+              <i class="fas fa-inbox"></i> Nenhum orçamento rejeitado encontrado
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination" *ngIf="totalPages > 1">
+      <button
+        class="btn btn-sm btn-cancelar"
+        (click)="goToPage(currentPage - 1)"
+        [attr.disabled]="(currentPage === 1 || loading) ? 'disabled' : null">
+        <i class="fas fa-chevron-left"></i> Anterior
+      </button>
+
+      <span class="page-info">
+        Página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} registros)
+      </span>
+
+      <button
+        class="btn btn-sm btn-cancelar"
+        (click)="goToPage(currentPage + 1)"
+        [attr.disabled]="(currentPage === totalPages || loading) ? 'disabled' : null">
+        Próximo <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </section>
+
+  <!-- Modal de Filtros -->
+  <div class="modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
+    <div class="modal-conteudo modal-filtros" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Filtros de Orçamentos Rejeitados</h3>
+        <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-corpo">
+        <div class="filters-grid">
+          <div class="filter-group date-range-field">
+            <app-date-range-filter
+              label="Data do orçamento"
+              startLabel="Início"
+              endLabel="Fim"
+              [start]="dataInicialFilter"
+              [end]="dataFinalFilter"
+              (rangeChange)="onDataRangeChangeModal($event)">
+            </app-date-range-filter>
+          </div>
+
+          <div class="filter-group">
+            <label for="unidadeFilterModal" class="label-campo">Unidade</label>
+            <select
+              id="unidadeFilterModal"
+              class="campo"
+              [(ngModel)]="unidadeFilter"
+              [disabled]="unidadeDisabled">
+              <option value="">Todas</option>
+              <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="nrOrcamentoFilterModal" class="label-campo">Nº orçamento</label>
+            <input
+              id="nrOrcamentoFilterModal"
+              type="text"
+              class="campo"
+              [(ngModel)]="nrOrcamentoFilter"
+              placeholder="Buscar por número..."
+              (keyup.enter)="applyFilters()" />
+          </div>
+
+          <div class="filter-group">
+            <label for="nomeClienteFilterModal" class="label-campo">Cliente</label>
+            <input
+              id="nomeClienteFilterModal"
+              type="text"
+              class="campo"
+              [(ngModel)]="nomeClienteFilter"
+              placeholder="Buscar por cliente..."
+              (keyup.enter)="applyFilters()" />
+          </div>
+
+          <div class="filter-group">
+            <label for="nomeVendedorFilterModal" class="label-campo">Vendedor</label>
+            <input
+              id="nomeVendedorFilterModal"
+              type="text"
+              class="campo"
+              [(ngModel)]="nomeVendedorFilter"
+              placeholder="Buscar por vendedor..."
+              (keyup.enter)="applyFilters()" />
+          </div>
+
+          <div class="filter-group">
+            <label for="motivoRejeicaoFilterModal" class="label-campo">Motivo registrado</label>
+            <select id="motivoRejeicaoFilterModal" class="campo" [(ngModel)]="motivoRejeicaoFilter">
+              <option value="">Todos</option>
+              <option value="sem">Sem motivo</option>
+              <option *ngFor="let m of motivos" [value]="m.id">{{ m.descricao }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-rodape">
+        <button type="button" class="botao botao-fantasma" (click)="clearFilters()">
+          <i class="fas fa-eraser"></i>
+          Limpar Filtros
+        </button>
+        <button type="button" class="botao botao-primario" (click)="applyFilters()">
+          <i class="fas fa-filter"></i>
+          Aplicar Filtros
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de motivo em lote -->
+  <div class="modal-overlay" *ngIf="showMotivoModal" (click)="closeMotivoModal()">
+    <div class="modal-conteudo orcamento-motivo-modal" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Registrar motivo de rejeição</h3>
+        <button type="button" class="modal-fechar" (click)="closeMotivoModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p class="modal-hint">{{ selectedIds.size }} orçamento(s) selecionado(s)</p>
+        <div class="filter-group">
+          <label class="label-campo" for="modal-motivo">Motivo *</label>
+          <select id="modal-motivo" class="campo" [(ngModel)]="modalMotivoId">
+            <option value="">Selecione...</option>
+            <option *ngFor="let m of motivos" [value]="m.id">{{ m.descricao }}</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="label-campo" for="modal-obs">Observação</label>
+          <textarea
+            id="modal-obs"
+            class="campo"
+            rows="4"
+            maxlength="2000"
+            [(ngModel)]="modalObservacao"></textarea>
+        </div>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="botao botao-fantasma" [disabled]="modalSubmitting" (click)="closeMotivoModal()">
+          Cancelar
+        </button>
+        <button type="button" class="botao botao-primario" [disabled]="modalSubmitting" (click)="confirmMotivoModal()">
+          {{ modalSubmitting ? 'Salvando...' : 'Confirmar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { ConfigService } from '@nestjs/config';
 import { AgentDbConfig } from '../config/config.types';
 import { ValorCompraRow, VendasTotalRow, OrcamentoRow } from './database.types';
+import { converterObjetoFirebird } from '../common/encoding.util';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const Firebird = require('node-firebird');
@@ -14,7 +15,8 @@ export class DatabaseService {
 
   async totalVendasDoDia(date: Date, unit: number): Promise<VendasTotalRow[]> {
     const { sql, params } = this.buildQuery(date, unit);
-    const options = this.getOptions();
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
 
     return new Promise<VendasTotalRow[]>((resolve, reject) => {
       Firebird.attach(options, (attachErr: Error, db: any) => {
@@ -31,7 +33,9 @@ export class DatabaseService {
             return reject(new InternalServerErrorException('Erro ao consultar banco.'));
           }
 
-          const rows = (result ?? []).map((row) => this.mapRow(row));
+          const rows = (result ?? []).map((row) =>
+            this.mapRow(converterObjetoFirebird(row, charset)),
+          );
           resolve(rows);
         });
       });
@@ -47,7 +51,8 @@ export class DatabaseService {
     }
 
     const { sql, params } = this.buildValorCompraQuery(unit, protocolos);
-    const options = this.getOptions();
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
 
     return new Promise<ValorCompraRow[]>((resolve, reject) => {
       Firebird.attach(options, (attachErr: Error, db: any) => {
@@ -68,7 +73,9 @@ export class DatabaseService {
             );
           }
 
-          const rows = (result ?? []).map((row) => this.mapValorCompraRow(row));
+          const rows = (result ?? []).map((row) =>
+            this.mapValorCompraRow(converterObjetoFirebird(row, charset)),
+          );
           resolve(rows);
         });
       });
@@ -135,7 +142,13 @@ export class DatabaseService {
     };
   }
 
-  private getOptions() {
+  private getDbCharset(): string {
+    const dbConfig = this.configService.get<AgentDbConfig>('agent.db');
+    const charset = dbConfig?.charset?.trim();
+    return charset || 'NONE';
+  }
+
+  private getConnectOptions(): Record<string, unknown> {
     const dbConfig = this.configService.get<AgentDbConfig>('agent.db');
 
     if (!dbConfig) {
@@ -146,16 +159,22 @@ export class DatabaseService {
       throw new InternalServerErrorException('DB_PATH não definido.');
     }
 
-    return {
+    const charset = this.getDbCharset();
+    const options: Record<string, unknown> = {
       host: dbConfig.host,
       port: dbConfig.port,
       database: dbConfig.path,
       user: dbConfig.user,
       password: dbConfig.password,
       role: dbConfig.role,
-      charset: dbConfig.charset ?? 'UTF8',
       lowercase_keys: true,
     };
+
+    if (charset && charset.toUpperCase() !== 'NONE') {
+      options.charset = charset;
+    }
+
+    return options;
   }
 
   async buscarClientes(
@@ -163,7 +182,8 @@ export class DatabaseService {
     unit: number,
   ): Promise<any[]> {
     const { sql, params } = this.buildClientesQuery(dataMinima, unit);
-    const options = this.getOptions();
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
 
     return new Promise<any[]>((resolve, reject) => {
       Firebird.attach(options, (attachErr: Error, db: any) => {
@@ -180,7 +200,9 @@ export class DatabaseService {
             return reject(new InternalServerErrorException('Erro ao consultar banco.'));
           }
 
-          const rows = (result ?? []).map((row) => this.mapClienteRow(row));
+          const rows = (result ?? []).map((row) =>
+            this.mapClienteRow(converterObjetoFirebird(row, charset)),
+          );
           resolve(rows);
         });
       });
@@ -189,7 +211,8 @@ export class DatabaseService {
 
   async buscarPrescritores(dataMinima: string): Promise<any[]> {
     const { sql, params } = this.buildPrescritoresQuery(dataMinima);
-    const options = this.getOptions();
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
 
     return new Promise<any[]>((resolve, reject) => {
       Firebird.attach(options, (attachErr: Error, db: any) => {
@@ -206,7 +229,9 @@ export class DatabaseService {
             return reject(new InternalServerErrorException('Erro ao consultar banco.'));
           }
 
-          const rows = (result ?? []).map((row) => this.mapPrescritorRow(row));
+          const rows = (result ?? []).map((row) =>
+            this.mapPrescritorRow(converterObjetoFirebird(row, charset)),
+          );
           resolve(rows);
         });
       });
@@ -227,7 +252,8 @@ export class DatabaseService {
     );
     const { sql: sqlPrescritores, params: paramsPrescritores } =
       this.buildPrescritoresQuery(dataMinimaPrescritor);
-    const options = this.getOptions();
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
 
     return new Promise<{ clientes: any[]; prescritores: any[] }>(
       (resolve, reject) => {
@@ -273,10 +299,10 @@ export class DatabaseService {
                 this.logger.log(`Query de prescritores executada com sucesso. Registros retornados: ${result2?.length || 0}`);
 
                 const clientes = (result1 ?? []).map((row) =>
-                  this.mapClienteRow(row),
+                  this.mapClienteRow(converterObjetoFirebird(row, charset)),
                 );
                 const prescritores = (result2 ?? []).map((row) =>
-                  this.mapPrescritorRow(row),
+                  this.mapPrescritorRow(converterObjetoFirebird(row, charset)),
                 );
 
                 this.logger.log(`Total processado: ${clientes.length} clientes, ${prescritores.length} prescritores`);
@@ -433,7 +459,8 @@ export class DatabaseService {
       dataMinimaModificacao,
       unit,
     );
-    const options = this.getOptions();
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
 
     return new Promise<OrcamentoRow[]>((resolve, reject) => {
       Firebird.attach(options, (attachErr: Error, db: any) => {
@@ -462,7 +489,9 @@ export class DatabaseService {
             );
           }
 
-          const rows = (result ?? []).map((row) => this.mapOrcamentoRow(row));
+          const rows = (result ?? []).map((row) =>
+            this.mapOrcamentoRow(converterObjetoFirebird(row, charset)),
+          );
           this.logger.log(
             `Query de orçamentos executada. Registros retornados: ${rows.length}`,
           );

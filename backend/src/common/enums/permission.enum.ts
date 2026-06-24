@@ -137,6 +137,16 @@ export enum Permission {
   FOLHA_WHATSAPP_READ = 'folha-whatsapp:read',
   /** Atendimento WhatsApp — responder manualmente (janela 24h). */
   FOLHA_WHATSAPP_REPLY = 'folha-whatsapp:reply',
+
+  /** Orçamentos — motivos de rejeição (cadastro global). */
+  ORCAMENTO_MOTIVO_CREATE = 'orcamento-motivo:create',
+  ORCAMENTO_MOTIVO_READ = 'orcamento-motivo:read',
+  ORCAMENTO_MOTIVO_UPDATE = 'orcamento-motivo:update',
+  ORCAMENTO_MOTIVO_DELETE = 'orcamento-motivo:delete',
+
+  /** Orçamentos — listagem e registro de motivo em rejeitados. */
+  ORCAMENTO_REJEITADO_READ = 'orcamento-rejeitado:read',
+  ORCAMENTO_REJEITADO_UPDATE = 'orcamento-rejeitado:update',
 }
 
 export const PERMISSION_GROUPS = {
@@ -302,6 +312,16 @@ export const PERMISSION_GROUPS = {
       key: Permission.FOLHA_WHATSAPP_REPLY,
       label: 'Responder conversas WhatsApp na janela de 24h',
     },
+  ],
+  'Orçamentos — Motivos': [
+    { key: Permission.ORCAMENTO_MOTIVO_CREATE, label: 'Criar motivos de rejeição' },
+    { key: Permission.ORCAMENTO_MOTIVO_READ, label: 'Visualizar motivos de rejeição' },
+    { key: Permission.ORCAMENTO_MOTIVO_UPDATE, label: 'Editar motivos de rejeição' },
+    { key: Permission.ORCAMENTO_MOTIVO_DELETE, label: 'Excluir motivos de rejeição' },
+  ],
+  'Orçamentos — Rejeitados': [
+    { key: Permission.ORCAMENTO_REJEITADO_READ, label: 'Visualizar orçamentos rejeitados' },
+    { key: Permission.ORCAMENTO_REJEITADO_UPDATE, label: 'Registrar motivo em orçamentos rejeitados' },
   ],
 };
 

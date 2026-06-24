@@ -8,6 +8,11 @@ import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Orcamento } from '../orcamentos/entities/orcamento.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { OrcamentoStatus } from '../../common/enums/orcamento-status.enum';
+import {
+  normalizarTextoLegado,
+  padronizarNomeDeSistemaLegado,
+  padronizarNomeLegadoNullable,
+} from '../../common/utils/encoding-legado.util';
 
 interface AgenteCliente {
   cdcli: number;
@@ -839,20 +844,20 @@ export class SincronizacaoService {
       precoCobrado: Number(orcamentoAgente.preco_cobrado ?? 0),
       descontoFormula: Number(orcamentoAgente.desconto_formula ?? 0),
       codigoCliente: orcamentoAgente.codigo_cliente ?? null,
-      nomeCliente: orcamentoAgente.nome_cliente
-        ? this.padronizarNome(orcamentoAgente.nome_cliente)
-        : null,
+      nomeCliente: padronizarNomeLegadoNullable(orcamentoAgente.nome_cliente),
       codigoVendedor: orcamentoAgente.codigo_vendedor ?? null,
-      nomeVendedor: orcamentoAgente.nome_vendedor
-        ? this.padronizarNome(orcamentoAgente.nome_vendedor)
-        : null,
+      nomeVendedor: padronizarNomeLegadoNullable(orcamentoAgente.nome_vendedor),
       ultimaModificacao: new Date(orcamentoAgente.ultima_modificacao),
     };
 
     if (!orcamento) {
       orcamento = this.orcamentoRepository.create(payload);
     } else {
+      const motivoRejeicaoId = orcamento.motivoRejeicaoId;
+      const observacaoRejeicao = orcamento.observacaoRejeicao;
       Object.assign(orcamento, payload);
+      orcamento.motivoRejeicaoId = motivoRejeicaoId;
+      orcamento.observacaoRejeicao = observacaoRejeicao;
     }
 
     await this.orcamentoRepository.save(orcamento);
@@ -1030,58 +1035,6 @@ export class SincronizacaoService {
   }
 
   /**
-   * Garante que a string está em UTF-8 válido
-   */
-  private garantirUtf8Valido(str: string): string {
-    if (!str) return str;
-    
-    try {
-      // Tenta decodificar e re-encodar para garantir UTF-8 válido
-      // Se a string já está em UTF-8 válido, isso não altera nada
-      const buffer = Buffer.from(str, 'utf8');
-      return buffer.toString('utf8');
-    } catch (error) {
-      // Se falhar, tenta remover caracteres inválidos
-      this.logger.warn(`String com encoding inválido detectada, removendo caracteres inválidos: ${str.substring(0, 50)}...`);
-      // Remove caracteres não-UTF-8 válidos
-      return str.replace(/[\uFFFD\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '');
-    }
-  }
-
-  /**
-   * Padroniza um nome: maiúsculas e normaliza espaços
-   * CORREÇÃO: 
-   * 1. Garante UTF-8 válido antes de processar
-   * 2. Usa toLocaleUpperCase('pt-BR') para preservar caracteres especiais (acentos, cedilha)
-   */
-  private padronizarNome(nome: string): string {
-    if (!nome) return nome;
-
-    // Primeiro garante que está em UTF-8 válido
-    let normalized = this.garantirUtf8Valido(nome);
-
-    // Normaliza espaços e pontos
-    normalized = normalized
-      .trim()
-      .replace(/\s+/g, ' ') // Normaliza múltiplos espaços para um único espaço
-      .replace(/\s+\./g, '.') // Remove espaços antes de ponto
-      .replace(/\.\s+/g, '. ') // Garante espaço após ponto (mas preserva . seguido de espaço)
-      .trim();
-
-    // Usa toLocaleUpperCase com locale pt-BR para preservar caracteres especiais corretamente
-    // Isso garante que Ç, Á, É, etc. sejam convertidos corretamente para maiúsculas
-    try {
-      normalized = normalized.toLocaleUpperCase('pt-BR');
-    } catch (error) {
-      // Fallback para toUpperCase se toLocaleUpperCase falhar
-      this.logger.warn(`Erro ao usar toLocaleUpperCase, usando toUpperCase: ${error.message}`);
-      normalized = normalized.toUpperCase();
-    }
-
-    return normalized;
-  }
-
-  /**
    * Processa e salva/atualiza um cliente
    * Retorna true se foi criado, false se foi atualizado
    */
@@ -1104,10 +1057,10 @@ export class SincronizacaoService {
     if (!cliente) {
       // Criar novo cliente
       cliente = this.clienteRepository.create({
-        nome: this.padronizarNome(clienteAgente.nomecli),
+        nome: padronizarNomeDeSistemaLegado(clienteAgente.nomecli),
         cdcliente: clienteAgente.cdcli,
-        cpf: clienteAgente.nrcnpj ? this.garantirUtf8Valido(clienteAgente.nrcnpj) : undefined,
-        email: clienteAgente.email ? this.garantirUtf8Valido(clienteAgente.email) : undefined,
+        cpf: clienteAgente.nrcnpj ? normalizarTextoLegado(clienteAgente.nrcnpj) : undefined,
+        email: clienteAgente.email ? normalizarTextoLegado(clienteAgente.email) : undefined,
         dataNascimento: clienteAgente.dtnas
           ? this.parseDate(clienteAgente.dtnas)
           : undefined,
@@ -1115,9 +1068,9 @@ export class SincronizacaoService {
       });
     } else {
       // Atualizar cliente existente
-      cliente.nome = this.padronizarNome(clienteAgente.nomecli);
-      if (clienteAgente.nrcnpj) cliente.cpf = this.garantirUtf8Valido(clienteAgente.nrcnpj);
-      if (clienteAgente.email) cliente.email = this.garantirUtf8Valido(clienteAgente.email);
+      cliente.nome = padronizarNomeDeSistemaLegado(clienteAgente.nomecli);
+      if (clienteAgente.nrcnpj) cliente.cpf = normalizarTextoLegado(clienteAgente.nrcnpj);
+      if (clienteAgente.email) cliente.email = normalizarTextoLegado(clienteAgente.email);
       if (clienteAgente.dtnas) {
         cliente.dataNascimento = this.parseDate(clienteAgente.dtnas);
       }
@@ -1136,8 +1089,10 @@ export class SincronizacaoService {
     prescritorAgente: AgentePrescritor,
   ): Promise<boolean> {
     // Padronizar nome para usar na busca
-    const nomePadronizado = this.padronizarNome(prescritorAgente.nomemed);
-    const ufcrmValido = prescritorAgente.ufcrm ? this.garantirUtf8Valido(prescritorAgente.ufcrm) : undefined;
+    const nomePadronizado = padronizarNomeDeSistemaLegado(prescritorAgente.nomemed);
+    const ufcrmValido = prescritorAgente.ufcrm
+      ? normalizarTextoLegado(prescritorAgente.ufcrm)
+      : undefined;
     
     // Buscar prescritor existente por nome + numeroCRM + UFCRM juntos
     // NUNCA buscar apenas por nome (pode ser o mesmo nome mas CRM diferente)

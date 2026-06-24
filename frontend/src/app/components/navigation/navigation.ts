@@ -125,6 +125,22 @@ export class NavigationComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      label: 'Orçamentos',
+      icon: 'feather-file-text',
+      requiredPermissions: [],
+      children: [
+        {
+          label: 'Rejeitados',
+          route: '/orcamentos/rejeitados',
+          icon: 'feather-x-circle',
+          requiredPermissions: [
+            Permission.ORCAMENTO_REJEITADO_READ,
+            Permission.ORCAMENTO_REJEITADO_UPDATE,
+          ],
+        },
+      ],
+    },
+    {
       label: 'Cadastros',
       icon: 'feather-user',
       requiredPermissions: [],
@@ -171,6 +187,17 @@ export class NavigationComponent implements OnInit, OnDestroy {
             Permission.FOLHA_FUNCIONARIO_READ,
             Permission.FOLHA_FUNCIONARIO_UPDATE,
             Permission.FOLHA_FUNCIONARIO_DELETE,
+          ],
+        },
+        {
+          label: 'Motivos de rejeição',
+          route: '/orcamentos/motivos-rejeicao',
+          icon: 'feather-list',
+          requiredPermissions: [
+            Permission.ORCAMENTO_MOTIVO_CREATE,
+            Permission.ORCAMENTO_MOTIVO_READ,
+            Permission.ORCAMENTO_MOTIVO_UPDATE,
+            Permission.ORCAMENTO_MOTIVO_DELETE,
           ],
         },
         {

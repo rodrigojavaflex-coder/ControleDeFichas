@@ -44,8 +44,8 @@ export default registerAs('agent', (): AgentConfig => {
       path: process.env.DB_PATH ?? '',
       user: process.env.DB_USER ?? '',
       password: process.env.DB_PASSWORD ?? '',
-      role: process.env.DB_ROLE,
-      charset: process.env.DB_CHARSET ?? 'UTF8',
+      role: process.env.DB_ROLE?.trim() || undefined,
+      charset: process.env.DB_CHARSET?.trim() || 'NONE',
     },
   };
 });

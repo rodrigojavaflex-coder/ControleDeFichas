@@ -312,6 +312,38 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'orcamentos/rejeitados',
+    loadComponent: () =>
+      import('./components/orcamentos/orcamentos-rejeitados-list').then(
+        (m) => m.OrcamentosRejeitadosListComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'orcamentos/motivos-rejeicao',
+    loadComponent: () =>
+      import('./components/orcamentos/orcamentos-motivos-page').then(
+        (m) => m.OrcamentosMotivosPage,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'orcamentos/motivos-rejeicao/new',
+    loadComponent: () =>
+      import('./components/orcamentos/orcamento-motivo-form').then(
+        (m) => m.OrcamentoMotivoFormComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'orcamentos/motivos-rejeicao/edit/:id',
+    loadComponent: () =>
+      import('./components/orcamentos/orcamento-motivo-form').then(
+        (m) => m.OrcamentoMotivoFormComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'folha/fechamento',
     redirectTo: 'folha/controle',
     pathMatch: 'full',

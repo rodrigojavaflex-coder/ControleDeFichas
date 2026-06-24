@@ -236,6 +236,30 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     requiredPermissions: [Permission.FOLHA_WHATSAPP_READ],
   },
   {
+    id: 'orcamentos-rejeitados',
+    label: 'Orçamentos rejeitados',
+    route: '/orcamentos/rejeitados',
+    icon: 'feather-x-circle',
+    category: 'Orçamentos',
+    requiredPermissions: [
+      Permission.ORCAMENTO_REJEITADO_READ,
+      Permission.ORCAMENTO_REJEITADO_UPDATE,
+    ],
+  },
+  {
+    id: 'orcamentos-motivos-rejeicao',
+    label: 'Motivos de rejeição',
+    route: '/orcamentos/motivos-rejeicao',
+    icon: 'feather-list',
+    category: 'Orçamentos',
+    requiredPermissions: [
+      Permission.ORCAMENTO_MOTIVO_CREATE,
+      Permission.ORCAMENTO_MOTIVO_READ,
+      Permission.ORCAMENTO_MOTIVO_UPDATE,
+      Permission.ORCAMENTO_MOTIVO_DELETE,
+    ],
+  },
+  {
     id: 'relatorios-baixas',
     label: 'Baixas',
     route: '/relatorios/baixas',

@@ -1,8 +1,9 @@
-import { Entity, Column, Index, Unique } from 'typeorm';
+import { Entity, Column, Index, Unique, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Unidade } from '../../../common/enums/unidade.enum';
 import { OrcamentoStatus } from '../../../common/enums/orcamento-status.enum';
+import { OrcamentoMotivoRejeicao } from './orcamento-motivo-rejeicao.entity';
 
 @Entity('orcamentos')
 @Unique('uq_orcamentos_unidade_nrorc_serieo', ['unidade', 'nrorc', 'serieo'])
@@ -87,4 +88,16 @@ export class Orcamento extends BaseEntity {
   @ApiProperty()
   @Column({ type: 'timestamp' })
   ultimaModificacao: Date;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'uuid', nullable: true })
+  motivoRejeicaoId?: string | null;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'text', nullable: true })
+  observacaoRejeicao?: string | null;
+
+  @ManyToOne(() => OrcamentoMotivoRejeicao, { nullable: true })
+  @JoinColumn({ name: 'motivoRejeicaoId' })
+  motivoRejeicao?: OrcamentoMotivoRejeicao | null;
 }

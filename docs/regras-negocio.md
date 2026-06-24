@@ -161,6 +161,33 @@
 - **MVP:** sem auto-resposta, sem template lembrete, sem IA.
 - **Envio recibo (RN-015):** grava **wamid** na auditoria e mensagem outbound para correlacionar status (`delivered`/`read`/`failed`).
 
+### RN-ORC-001 — Orçamentos rejeitados (listagem)
+
+- Tela **`/orcamentos/rejeitados`** lista apenas orçamentos com `status = REJEITADO`, paginados.
+- Escopo por unidade conforme **RN-007** (`usuario.unidade`; admin global vê todas; filtro de unidade na query respeita o escopo).
+- Com unidade vinculada, o filtro é aplicado automaticamente, o campo fica desabilitado e a unidade aparece nos chips de filtros aplicados (como na lista de vendas).
+- **Filtro padrão de data** ao abrir a tela: **segunda-feira** → orçamentos com `dataOrcamento` **maior que** D-2; **demais dias** → **maior que** D-1 (data local do navegador).
+- Permissão: **`orcamento-rejeitado:read`**.
+
+### RN-ORC-002 — Registro de motivo em rejeitados
+
+- Orçamento rejeitado pode receber **um motivo** (`motivoRejeicaoId`, FK para cadastro global) e **observação** opcional (`observacaoRejeicao`, texto).
+- Registro em lote via **`PATCH /orcamentos/rejeitados/em-massa`** com `{ ids[], motivoRejeicaoId, observacaoRejeicao? }`.
+- Motivo deve estar **ativo** no cadastro; motivo é **obrigatório** no registro.
+- Permissão: **`orcamento-rejeitado:update`**.
+- UI destaca linhas **sem motivo** vs **com motivo** (cores distintas em tema claro e escuro).
+
+### RN-ORC-003 — Motivos de rejeição (cadastro global)
+
+- CRUD em **`/orcamentos/motivos-rejeicao`**; campos: `descricao`, `ativo` (padrão `true`).
+- Motivos são **globais** (não por unidade).
+- Exclusão bloqueada se o motivo já estiver vinculado a orçamentos — usar inativação.
+- Permissões: **`orcamento-motivo:create|read|update|delete`**.
+
+### RN-ORC-004 — Sincronização preserva motivo
+
+- Na sincronização incremental de orçamentos (`processarOrcamento`), o upsert **não altera** `motivoRejeicaoId` nem `observacaoRejeicao` em registros já existentes.
+
 ---
 
 ## Demais módulos

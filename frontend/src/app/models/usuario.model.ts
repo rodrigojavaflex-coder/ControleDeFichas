@@ -132,6 +132,14 @@ export enum Permission {
 
   FOLHA_WHATSAPP_READ = 'folha-whatsapp:read',
   FOLHA_WHATSAPP_REPLY = 'folha-whatsapp:reply',
+
+  ORCAMENTO_MOTIVO_CREATE = 'orcamento-motivo:create',
+  ORCAMENTO_MOTIVO_READ = 'orcamento-motivo:read',
+  ORCAMENTO_MOTIVO_UPDATE = 'orcamento-motivo:update',
+  ORCAMENTO_MOTIVO_DELETE = 'orcamento-motivo:delete',
+
+  ORCAMENTO_REJEITADO_READ = 'orcamento-rejeitado:read',
+  ORCAMENTO_REJEITADO_UPDATE = 'orcamento-rejeitado:update',
 }
 
 export interface PermissionGroup {

@@ -1,0 +1,65 @@
+<div class="folha-lista-container folha-tipos">
+  @if (!pode().r) {
+    <div class="alert alert-error">Você não possui permissão para visualizar motivos de rejeição.</div>
+  } @else {
+    <section class="filters">
+      @if (pode().c) {
+        <button type="button" class="btn btn-novo" (click)="irNovo()" [disabled]="carregando">
+          Novo motivo
+        </button>
+      }
+    </section>
+
+    @if (carregando) {
+      <div class="loading">Carregando motivos…</div>
+    } @else {
+      <div class="table-container">
+        <table class="folha-data-table">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Ativo</th>
+              <th>Criado em</th>
+              @if (pode().u || pode().d) {
+                <th>Ações</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of lista; track m.id) {
+              <tr>
+                <td>{{ m.descricao }}</td>
+                <td>
+                  <span class="folha-badge-ativo" [class.sim]="m.ativo" [class.nao]="!m.ativo">
+                    {{ m.ativo ? 'Sim' : 'Não' }}
+                  </span>
+                </td>
+                <td>{{ formatData(m.criadoEm) }}</td>
+                @if (pode().u || pode().d) {
+                  <td class="action-buttons">
+                    @if (pode().u) {
+                      <button type="button" class="btn btn-sm btn-editar" (click)="irEditar(m)">Editar</button>
+                      <button
+                        type="button"
+                        [ngClass]="m.ativo ? 'btn btn-sm btn-cancelar' : 'btn btn-sm btn-baixa'"
+                        (click)="alternarAtivo(m)">
+                        {{ m.ativo ? 'Inativar' : 'Ativar' }}
+                      </button>
+                    }
+                    @if (pode().d) {
+                      <button type="button" class="btn btn-sm btn-excluir" (click)="excluir(m)">Excluir</button>
+                    }
+                  </td>
+                }
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="no-data">Nenhum motivo cadastrado.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

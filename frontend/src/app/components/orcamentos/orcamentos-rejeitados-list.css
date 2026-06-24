@@ -1,0 +1,174 @@
+.orcamentos-rejeitados-page .vendas-table tbody tr.row-sem-motivo {
+  background: color-mix(in srgb, var(--warning-color, #f59e0b) 12%, transparent);
+}
+
+.orcamentos-rejeitados-page .vendas-table tbody tr.row-com-motivo {
+  background: color-mix(in srgb, var(--success-color, #22c55e) 10%, transparent);
+}
+
+.orcamentos-rejeitados-page .vendas-table tbody tr.row-selected {
+  outline: 2px solid var(--primary-color, #3b82f6);
+  outline-offset: -2px;
+}
+
+.orcamentos-rejeitados-page .results-header.orcamentos-header-bar {
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.orcamentos-rejeitados-page .header-actions .btn-registrar-motivo {
+  background-color: var(--cor-primaria) !important;
+  border-color: var(--cor-primaria) !important;
+  color: #fff !important;
+  min-height: 36px;
+  padding: 0.45rem 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--cor-primaria) 38%, transparent);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.orcamentos-rejeitados-page .header-actions .btn-registrar-motivo:hover:not(:disabled),
+.orcamentos-rejeitados-page .header-actions .btn-registrar-motivo:focus-visible:not(:disabled) {
+  background-color: var(--cor-primaria-hover) !important;
+  border-color: var(--cor-primaria-hover) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--cor-primaria) 48%, transparent);
+  transform: translateY(-1px);
+}
+
+.orcamentos-rejeitados-page .header-actions .btn-registrar-motivo:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+body.theme-dark .orcamentos-rejeitados-page .header-actions .btn-registrar-motivo {
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--cor-primaria) 55%, transparent);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .header-actions .btn-registrar-motivo:hover:not(:disabled),
+body.theme-dark .orcamentos-rejeitados-page .header-actions .btn-registrar-motivo:focus-visible:not(:disabled) {
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--cor-primaria) 65%, transparent);
+}
+
+.orcamentos-rejeitados-page .orcamentos-legenda {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  background: var(--cor-fundo-alt, #f8fafc);
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--cor-texto-primario, #0f172a) 6%, transparent);
+}
+
+.orcamentos-rejeitados-page .legenda-titulo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #64748b);
+  padding-right: 0.65rem;
+  border-right: 1px solid var(--border-color, #e2e8f0);
+  white-space: nowrap;
+}
+
+.orcamentos-rejeitados-page .legenda-itens {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.orcamentos-rejeitados-page .legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto-primario, #334155);
+  white-space: nowrap;
+}
+
+.orcamentos-rejeitados-page .legenda-amostra {
+  width: 1.35rem;
+  height: 0.85rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--cor-texto-primario, #0f172a) 12%, transparent);
+  flex-shrink: 0;
+}
+
+.orcamentos-rejeitados-page .legenda-sem-motivo .legenda-amostra {
+  background: color-mix(in srgb, var(--warning-color, #f59e0b) 12%, transparent);
+  border-color: color-mix(in srgb, var(--warning-color, #f59e0b) 45%, transparent);
+}
+
+.orcamentos-rejeitados-page .legenda-com-motivo .legenda-amostra {
+  background: color-mix(in srgb, var(--success-color, #22c55e) 10%, transparent);
+  border-color: color-mix(in srgb, var(--success-color, #22c55e) 45%, transparent);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .orcamentos-legenda {
+  background: var(--cor-superficie-hover, #1e293b);
+  border-color: var(--border-color, #334155);
+  box-shadow: 0 1px 3px color-mix(in srgb, #000 25%, transparent);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .legenda-titulo {
+  color: var(--text-secondary, #94a3b8);
+  border-right-color: var(--border-color, #334155);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .legenda-item {
+  color: var(--cor-texto-primario, #e2e8f0);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .legenda-sem-motivo .legenda-amostra {
+  background: color-mix(in srgb, var(--warning-color, #fbbf24) 18%, transparent);
+  border-color: color-mix(in srgb, var(--warning-color, #fbbf24) 50%, transparent);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .legenda-com-motivo .legenda-amostra {
+  background: color-mix(in srgb, var(--success-color, #4ade80) 14%, transparent);
+  border-color: color-mix(in srgb, var(--success-color, #4ade80) 50%, transparent);
+}
+
+.orcamentos-rejeitados-page .page-info {
+  color: var(--text-secondary, #475569);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .page-info {
+  color: var(--text-secondary, #94a3b8);
+}
+
+.obs-cell {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orcamento-motivo-modal {
+  max-width: 480px;
+  width: 100%;
+}
+
+.modal-hint {
+  margin-bottom: 1rem;
+  color: var(--text-secondary, #64748b);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .vendas-table tbody tr.row-sem-motivo {
+  background: color-mix(in srgb, var(--warning-color, #fbbf24) 18%, transparent);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .vendas-table tbody tr.row-com-motivo {
+  background: color-mix(in srgb, var(--success-color, #4ade80) 14%, transparent);
+}

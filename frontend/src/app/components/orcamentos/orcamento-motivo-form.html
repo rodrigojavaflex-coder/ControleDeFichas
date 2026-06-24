@@ -1,0 +1,52 @@
+<div class="folha-entity-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar motivo de rejeição' : 'Novo motivo de rejeição' }}</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  }
+
+  @if (error && !loading) {
+    <div class="alert alert-error">{{ error }}</div>
+  }
+
+  @if (!loading) {
+    <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label class="form-label" for="motivo-desc">Descrição *</label>
+        <input
+          id="motivo-desc"
+          type="text"
+          class="form-control"
+          formControlName="descricao"
+          maxlength="200"
+          [class.error]="form.get('descricao')!.invalid && form.get('descricao')!.touched"
+        />
+        @if (form.get('descricao')!.invalid && form.get('descricao')!.touched) {
+          <div class="error-message">Descrição obrigatória.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input id="motivo-ativo" type="checkbox" formControlName="ativo" />
+          <label class="form-label" for="motivo-ativo" style="margin: 0">Ativo</label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancelar" [disabled]="isSubmitting" (click)="onCancel()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+          @if (!isSubmitting) {
+            {{ isEditMode ? 'Atualizar' : 'Cadastrar' }}
+          } @else {
+            Salvando...
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>
