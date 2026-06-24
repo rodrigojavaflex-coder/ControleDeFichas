@@ -46,6 +46,9 @@ interface AgenteOrcamento {
   nome_cliente?: string | null;
   codigo_vendedor?: number | null;
   nome_vendedor?: string | null;
+  crm_medico?: string | null;
+  ufcrm_medico?: string | null;
+  nome_medico?: string | null;
 }
 
 export interface SincronizacaoResult {
@@ -847,6 +850,9 @@ export class SincronizacaoService {
       nomeCliente: padronizarNomeLegadoNullable(orcamentoAgente.nome_cliente),
       codigoVendedor: orcamentoAgente.codigo_vendedor ?? null,
       nomeVendedor: padronizarNomeLegadoNullable(orcamentoAgente.nome_vendedor),
+      nomeMedico: padronizarNomeLegadoNullable(orcamentoAgente.nome_medico),
+      crmMedico: orcamentoAgente.crm_medico?.trim() || null,
+      ufcrmMedico: orcamentoAgente.ufcrm_medico?.trim() || null,
       ultimaModificacao: new Date(orcamentoAgente.ultima_modificacao),
     };
 

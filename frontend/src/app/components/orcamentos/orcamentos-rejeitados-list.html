@@ -115,6 +115,7 @@
             <th class="sortable" (click)="sortBy('nomeVendedor')">
               Vendedor <i class="fas" [ngClass]="getSortIcon('nomeVendedor')"></i>
             </th>
+            <th>Médico</th>
             <th class="sortable" (click)="sortBy('precoCobrado')">
               Preço cobrado <i class="fas" [ngClass]="getSortIcon('precoCobrado')"></i>
             </th>
@@ -138,12 +139,13 @@
             <td>{{ formatarData(item.dataOrcamento) }}</td>
             <td>{{ item.nomeCliente || '—' }}</td>
             <td>{{ item.nomeVendedor || '—' }}</td>
+            <td>{{ formatarMedico(item) }}</td>
             <td>{{ formatarMoeda(item.precoCobrado) }}</td>
             <td>{{ item.motivoRejeicao?.descricao || '—' }}</td>
             <td class="obs-cell">{{ item.observacaoRejeicao || '—' }}</td>
           </tr>
           <tr *ngIf="!loading && items.length === 0" class="no-data">
-            <td colspan="9">
+            <td colspan="10">
               <i class="fas fa-inbox"></i> Nenhum orçamento rejeitado encontrado
             </td>
           </tr>

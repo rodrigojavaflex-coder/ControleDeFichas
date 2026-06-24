@@ -527,7 +527,10 @@ export class DatabaseService {
         COALESCE(o.cdcli, cap.cdcli) AS codigo_cliente,
         o.cdfunre AS codigo_vendedor,
         TRIM(v.nomefun) AS nome_vendedor,
-        TRIM(cap.nomepa) AS nome_cliente
+        TRIM(cap.nomepa) AS nome_cliente,
+        CAST(o.NRCRM AS VARCHAR(20)) AS crm_medico,
+        TRIM(o.UFCRM) AS ufcrm_medico,
+        TRIM(med.NOMEMED) AS nome_medico
       FROM fc15100 o
       JOIN fc15000 cap
         ON cap.cdfil = o.cdfil
@@ -535,6 +538,10 @@ export class DatabaseService {
       JOIN fc08000 v
         ON v.cdfun = o.cdfunre
        AND v.cdcon = o.cdconre
+      LEFT JOIN fc04000 med
+        ON med.pfcrm = o.pfcrm
+       AND med.ufcrm = o.ufcrm
+       AND med.nrcrm = o.nrcrm
       WHERE o.cdfil = ?
         AND o.dtmodificacao >= ?
       ORDER BY o.dtmodificacao ASC, o.nrorc ASC, o.serieo ASC
@@ -559,6 +566,9 @@ export class DatabaseService {
     const nomeCliente = get('nome_cliente');
     const codigoVendedor = get('codigo_vendedor');
     const nomeVendedor = get('nome_vendedor');
+    const crmMedico = get('crm_medico');
+    const ufcrmMedico = get('ufcrm_medico');
+    const nomeMedico = get('nome_medico');
 
     return {
       ultima_modificacao: this.formatDateTime(ultimaModificacaoRaw),
@@ -586,6 +596,15 @@ export class DatabaseService {
           ? Number(codigoVendedor)
           : null,
       nome_vendedor: nomeVendedor ? String(nomeVendedor).trim() : null,
+      crm_medico:
+        crmMedico !== null && crmMedico !== undefined && String(crmMedico).trim()
+          ? String(crmMedico).trim()
+          : null,
+      ufcrm_medico:
+        ufcrmMedico !== null && ufcrmMedico !== undefined && String(ufcrmMedico).trim()
+          ? String(ufcrmMedico).trim()
+          : null,
+      nome_medico: nomeMedico ? String(nomeMedico).trim() : null,
     };
   }
 

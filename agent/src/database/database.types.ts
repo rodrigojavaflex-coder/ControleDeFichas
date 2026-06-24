@@ -26,4 +26,7 @@ export interface OrcamentoRow {
   nome_cliente?: string | null;
   codigo_vendedor?: number | null;
   nome_vendedor?: string | null;
+  crm_medico?: string | null;
+  ufcrm_medico?: string | null;
+  nome_medico?: string | null;
 }

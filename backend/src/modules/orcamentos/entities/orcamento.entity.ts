@@ -85,6 +85,18 @@ export class Orcamento extends BaseEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   nomeVendedor?: string | null;
 
+  @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  nomeMedico?: string | null;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  crmMedico?: string | null;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 2, nullable: true })
+  ufcrmMedico?: string | null;
+
   @ApiProperty()
   @Column({ type: 'timestamp' })
   ultimaModificacao: Date;

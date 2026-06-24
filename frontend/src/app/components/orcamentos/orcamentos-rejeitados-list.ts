@@ -468,6 +468,24 @@ export class OrcamentosRejeitadosListComponent implements OnInit {
     });
   }
 
+  formatarMedico(item: Orcamento): string {
+    const partes: string[] = [];
+    const nome = item.nomeMedico?.trim();
+    if (nome) {
+      partes.push(nome);
+    }
+    const crm = item.crmMedico?.trim();
+    const uf = item.ufcrmMedico?.trim();
+    if (crm && uf) {
+      partes.push(`${crm}-${uf}`);
+    } else if (crm) {
+      partes.push(crm);
+    } else if (uf) {
+      partes.push(uf);
+    }
+    return partes.length ? partes.join(' ') : '—';
+  }
+
   rowClass(item: Orcamento): string {
     const classes = [];
     if (this.isSelected(item.id)) classes.push('row-selected');

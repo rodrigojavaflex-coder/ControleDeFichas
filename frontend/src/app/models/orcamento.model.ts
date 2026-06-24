@@ -29,6 +29,9 @@ export interface Orcamento {
   nomeCliente?: string | null;
   codigoVendedor?: number | null;
   nomeVendedor?: string | null;
+  nomeMedico?: string | null;
+  crmMedico?: string | null;
+  ufcrmMedico?: string | null;
   ultimaModificacao: string;
   motivoRejeicaoId?: string | null;
   observacaoRejeicao?: string | null;
