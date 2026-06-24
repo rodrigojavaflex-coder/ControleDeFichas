@@ -95,17 +95,17 @@ export class OrcamentosRejeitadosListComponent implements OnInit {
     this.loadItems();
   }
 
-  /** Segunda: data > D-2; demais dias: data > D-1 (data local). */
+  /** Segunda: intervalo D-2 até hoje; demais dias: D-1 até hoje (data local). */
   private initializeDateFilters(): void {
-    if (this.dataInicialFilter || this.dataFinalFilter) {
+    if (this.dataInicialFilter && this.dataFinalFilter) {
       return;
     }
     const now = new Date();
     const daysBack = now.getDay() === 1 ? 2 : 1;
-    const cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - daysBack);
-    this.dataInicialFilter = this.formatDateLocal(cutoff);
-    this.dataFinalFilter = '';
+    const start = new Date(now);
+    start.setDate(start.getDate() - daysBack);
+    this.dataInicialFilter = this.formatDateLocal(start);
+    this.dataFinalFilter = this.formatDateLocal(now);
   }
 
   private formatDateLocal(date: Date): string {
