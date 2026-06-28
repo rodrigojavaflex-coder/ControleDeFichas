@@ -18,6 +18,8 @@ export const HOME_SHORTCUT_IDS = [
   'folha-lancamentos',
   'folha-controle',
   'folha-atendimento-whatsapp',
+  'orcamentos-dashboard',
+  'orcamentos',
   'orcamentos-rejeitados',
   'orcamentos-motivos-rejeicao',
   'relatorios-baixas',

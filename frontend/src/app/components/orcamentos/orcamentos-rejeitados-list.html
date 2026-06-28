@@ -8,23 +8,47 @@
     <div class="results-header orcamentos-header-bar">
       <div class="header-actions">
         <button
-          *ngIf="canUpdate()"
+          *ngIf="canSync()"
+          type="button"
+          class="btn btn-salvar btn-atualizar-orcamentos"
+          (click)="atualizarOrcamentos()"
+          [attr.disabled]="syncOrcamentosExecutando || loading ? 'disabled' : null"
+          title="Buscar orçamentos atualizados no sistema legado">
+          <i class="fas fa-sync-alt" [class.fa-spin]="syncOrcamentosExecutando"></i>
+          Atualizar orçamentos
+        </button>
+        <button
+          *ngIf="exibirColunasRejeitado() && canUpdate()"
           class="btn btn-salvar btn-registrar-motivo"
           (click)="openMotivoModal()"
-          [attr.disabled]="selectedIds.size === 0 || loading ? 'disabled' : null"
+          [attr.disabled]="selectedIds.size === 0 || loading || syncOrcamentosExecutando ? 'disabled' : null"
           title="Registrar motivo nos selecionados">
           <i class="fas fa-tag"></i>
           Registrar Motivo
         </button>
+        <button
+          *ngIf="canPrint()"
+          type="button"
+          class="btn btn-salvar btn-imprimir-rejeitados"
+          (click)="imprimirFiltrados()"
+          [attr.disabled]="totalItems === 0 || loading || printLoading || syncOrcamentosExecutando ? 'disabled' : null"
+          title="Imprimir todos os orçamentos do filtro atual">
+          <i class="fas fa-print" [class.fa-spin]="printLoading"></i>
+          Imprimir
+        </button>
       </div>
-      <div class="orcamentos-legenda" role="note" aria-label="Legenda de cores das linhas">
+      <div class="orcamentos-legenda" *ngIf="exibirLegenda()" role="note" aria-label="Legenda de cores das linhas">
         <span class="legenda-titulo">Legenda</span>
         <div class="legenda-itens">
-          <span class="legenda-item legenda-sem-motivo">
+          <span class="legenda-item legenda-aprovado" *ngIf="exibirLegendaAprovado()">
+            <span class="legenda-amostra" aria-hidden="true"></span>
+            Aprovado
+          </span>
+          <span class="legenda-item legenda-sem-motivo" *ngIf="exibirLegendaMotivo()">
             <span class="legenda-amostra" aria-hidden="true"></span>
             Sem motivo
           </span>
-          <span class="legenda-item legenda-com-motivo">
+          <span class="legenda-item legenda-com-motivo" *ngIf="exibirLegendaMotivo()">
             <span class="legenda-amostra" aria-hidden="true"></span>
             Com motivo
           </span>
@@ -38,6 +62,33 @@
     </div>
 
     <div class="filters-inline">
+      <div
+        class="orcamentos-status-tabs"
+        *ngIf="showStatusFilterOptions()"
+        role="tablist"
+        aria-label="Filtrar por tipo de orçamento">
+        <button
+          type="button"
+          class="orcamentos-status-tab"
+          [class.is-active]="statusFilter === 'TODOS'"
+          (click)="statusFilter = 'TODOS'; onStatusFilterChange()">
+          Todos
+        </button>
+        <button
+          type="button"
+          class="orcamentos-status-tab"
+          [class.is-active]="statusFilter === 'APROVADO'"
+          (click)="statusFilter = 'APROVADO'; onStatusFilterChange()">
+          Aprovados
+        </button>
+        <button
+          type="button"
+          class="orcamentos-status-tab"
+          [class.is-active]="statusFilter === 'REJEITADO'"
+          (click)="statusFilter = 'REJEITADO'; onStatusFilterChange()">
+          Rejeitados
+        </button>
+      </div>
       <div
         class="filters-panel-top"
         role="button"
@@ -93,7 +144,7 @@
       <table class="vendas-table">
         <thead>
           <tr>
-            <th class="checkbox-column">
+            <th class="checkbox-column" *ngIf="exibirCheckboxSelecao()">
               <input
                 type="checkbox"
                 [checked]="isAllSelected()"
@@ -115,23 +166,31 @@
             <th class="sortable" (click)="sortBy('nomeVendedor')">
               Vendedor <i class="fas" [ngClass]="getSortIcon('nomeVendedor')"></i>
             </th>
-            <th>Médico</th>
-            <th class="sortable" (click)="sortBy('precoCobrado')">
-              Preço cobrado <i class="fas" [ngClass]="getSortIcon('precoCobrado')"></i>
+            <th class="sortable" (click)="sortBy('nomeMedico')">
+              Médico <i class="fas" [ngClass]="getSortIcon('nomeMedico')"></i>
             </th>
-            <th>Motivo</th>
-            <th>Observação</th>
+            <th class="sortable" *ngIf="exibirColunaTipo()" (click)="sortBy('status')">
+              Tipo <i class="fas" [ngClass]="getSortIcon('status')"></i>
+            </th>
+            <th class="sortable" *ngIf="canViewValores()" (click)="sortBy('precoCobrado')">
+              Valor <i class="fas" [ngClass]="getSortIcon('precoCobrado')"></i>
+            </th>
+            <th *ngIf="exibirColunasRejeitado()">Motivo</th>
+            <th *ngIf="exibirColunasRejeitado()">Observação</th>
           </tr>
         </thead>
         <tbody>
           <tr
             *ngFor="let item of items"
             [ngClass]="rowClass(item)"
-            (click)="onRowClick($event, item.id)">
-            <td class="checkbox-column" (click)="$event.stopPropagation()">
+            (click)="onRowClick($event, item)">
+            <td class="checkbox-column" *ngIf="exibirCheckboxSelecao()" (click)="$event.stopPropagation()">
               <input
                 type="checkbox"
                 [checked]="isSelected(item.id)"
+                [disabled]="!isSelecionavel(item)"
+                [attr.aria-disabled]="!isSelecionavel(item) ? 'true' : null"
+                [attr.title]="!isSelecionavel(item) ? 'Orçamentos aprovados não podem receber motivo' : null"
                 (change)="toggleSelection(item.id)" />
             </td>
             <td>{{ item.unidade }}</td>
@@ -140,13 +199,14 @@
             <td>{{ item.nomeCliente || '—' }}</td>
             <td>{{ item.nomeVendedor || '—' }}</td>
             <td>{{ formatarMedico(item) }}</td>
-            <td>{{ formatarMoeda(item.precoCobrado) }}</td>
-            <td>{{ item.motivoRejeicao?.descricao || '—' }}</td>
-            <td class="obs-cell">{{ item.observacaoRejeicao || '—' }}</td>
+            <td *ngIf="exibirColunaTipo()">{{ formatarStatus(item.status) }}</td>
+            <td *ngIf="canViewValores()">{{ formatarMoeda(item.precoCobrado) }}</td>
+            <td *ngIf="exibirColunasRejeitado()">{{ item.motivoRejeicao?.descricao || '—' }}</td>
+            <td *ngIf="exibirColunasRejeitado()" class="obs-cell">{{ item.observacaoRejeicao || '—' }}</td>
           </tr>
           <tr *ngIf="!loading && items.length === 0" class="no-data">
-            <td colspan="10">
-              <i class="fas fa-inbox"></i> Nenhum orçamento rejeitado encontrado
+            <td [attr.colspan]="getTableColspan()">
+              <i class="fas fa-inbox"></i> Nenhum orçamento encontrado
             </td>
           </tr>
         </tbody>
@@ -178,77 +238,100 @@
   <div class="modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
     <div class="modal-conteudo modal-filtros" (click)="$event.stopPropagation()">
       <div class="modal-cabecalho">
-        <h3 class="modal-titulo">Filtros de Orçamentos Rejeitados</h3>
+        <h3 class="modal-titulo">Filtros de Orçamentos</h3>
         <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
           <i class="fas fa-times"></i>
         </button>
       </div>
 
-      <div class="modal-corpo">
-        <div class="filters-grid">
-          <div class="filter-group date-range-field">
-            <app-date-range-filter
-              label="Data do orçamento"
-              startLabel="Início"
-              endLabel="Fim"
-              [start]="dataInicialFilter"
-              [end]="dataFinalFilter"
-              (rangeChange)="onDataRangeChangeModal($event)">
-            </app-date-range-filter>
-          </div>
+      <div class="modal-corpo modal-corpo-filtros">
+        <div class="filtros-periodo-row">
+          <app-date-range-filter
+            label="Data do orçamento"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialFilter"
+            [end]="dataFinalFilter"
+            (rangeChange)="onDataRangeChangeModal($event)">
+          </app-date-range-filter>
+        </div>
 
-          <div class="filter-group">
-            <label for="unidadeFilterModal" class="label-campo">Unidade</label>
-            <select
-              id="unidadeFilterModal"
-              class="campo"
-              [(ngModel)]="unidadeFilter"
-              [disabled]="unidadeDisabled">
-              <option value="">Todas</option>
-              <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
-            </select>
-          </div>
+        <div class="filtros-scroll-area">
+          <div class="filters-grid orcamentos-rejeitados-filtros-grid">
+            <div class="filter-group" *ngIf="showStatusFilterOptions()">
+              <label for="statusFilterModal" class="label-campo">Tipo</label>
+              <select
+                id="statusFilterModal"
+                class="campo"
+                [(ngModel)]="statusFilter"
+                (ngModelChange)="onStatusFilterChange()">
+                <option value="TODOS">Todos</option>
+                <option value="APROVADO">Aprovados</option>
+                <option value="REJEITADO">Rejeitados</option>
+              </select>
+            </div>
 
-          <div class="filter-group">
-            <label for="nrOrcamentoFilterModal" class="label-campo">Nº orçamento</label>
-            <input
-              id="nrOrcamentoFilterModal"
-              type="text"
-              class="campo"
-              [(ngModel)]="nrOrcamentoFilter"
-              placeholder="Buscar por número..."
-              (keyup.enter)="applyFilters()" />
-          </div>
+            <div class="filter-group">
+              <label for="unidadeFilterModal" class="label-campo">Unidade</label>
+              <select
+                id="unidadeFilterModal"
+                class="campo"
+                [(ngModel)]="unidadeFilter"
+                [disabled]="unidadeDisabled">
+                <option value="">Todas</option>
+                <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
+              </select>
+            </div>
 
-          <div class="filter-group">
-            <label for="nomeClienteFilterModal" class="label-campo">Cliente</label>
-            <input
-              id="nomeClienteFilterModal"
-              type="text"
-              class="campo"
-              [(ngModel)]="nomeClienteFilter"
-              placeholder="Buscar por cliente..."
-              (keyup.enter)="applyFilters()" />
-          </div>
+            <div class="filter-group">
+              <label for="nrOrcamentoFilterModal" class="label-campo">Nº orçamento</label>
+              <input
+                id="nrOrcamentoFilterModal"
+                type="text"
+                class="campo"
+                [(ngModel)]="nrOrcamentoFilter"
+                placeholder="Buscar por número..."
+                (keyup.enter)="applyFilters()" />
+            </div>
 
-          <div class="filter-group">
-            <label for="nomeVendedorFilterModal" class="label-campo">Vendedor</label>
-            <input
-              id="nomeVendedorFilterModal"
-              type="text"
-              class="campo"
-              [(ngModel)]="nomeVendedorFilter"
-              placeholder="Buscar por vendedor..."
-              (keyup.enter)="applyFilters()" />
-          </div>
+            <div class="filter-group" *ngIf="exibirColunasRejeitado()">
+              <label for="motivoRejeicaoFilterModal" class="label-campo">Motivo registrado</label>
+              <select id="motivoRejeicaoFilterModal" class="campo" [(ngModel)]="motivoRejeicaoFilter">
+                <option value="">Todos</option>
+                <option value="sem">Sem motivo</option>
+                <option *ngFor="let m of motivos" [value]="m.id">{{ m.descricao }}</option>
+              </select>
+            </div>
 
-          <div class="filter-group">
-            <label for="motivoRejeicaoFilterModal" class="label-campo">Motivo registrado</label>
-            <select id="motivoRejeicaoFilterModal" class="campo" [(ngModel)]="motivoRejeicaoFilter">
-              <option value="">Todos</option>
-              <option value="sem">Sem motivo</option>
-              <option *ngFor="let m of motivos" [value]="m.id">{{ m.descricao }}</option>
-            </select>
+            <div class="filter-group">
+              <label for="nomeClienteFilterModal" class="label-campo">Cliente</label>
+              <input
+                id="nomeClienteFilterModal"
+                type="text"
+                class="campo"
+                [(ngModel)]="nomeClienteFilter"
+                placeholder="Buscar por cliente..."
+                (keyup.enter)="applyFilters()" />
+            </div>
+
+            <div class="filter-group">
+              <label for="nomeVendedorFilterModal" class="label-campo">Vendedor</label>
+              <input
+                id="nomeVendedorFilterModal"
+                type="text"
+                class="campo"
+                [(ngModel)]="nomeVendedorFilter"
+                placeholder="Buscar por vendedor..."
+                (keyup.enter)="applyFilters()" />
+            </div>
+
+            <div class="filter-group filter-group-medico">
+              <app-orcamentos-rejeitados-medico-filtro
+                [opcoes]="opcoesMedico"
+                [loading]="loadingOpcoesMedico"
+                [selectedMedicos]="selectedMedicos"
+                (selectedMedicosChange)="onMedicosSelected($event)" />
+            </div>
           </div>
         </div>
       </div>
@@ -300,6 +383,108 @@
         </button>
         <button type="button" class="botao botao-primario" [disabled]="modalSubmitting" (click)="confirmMotivoModal()">
           {{ modalSubmitting ? 'Salvando...' : 'Confirmar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de parâmetros do relatório -->
+  <div class="modal-overlay" *ngIf="showPrintModal">
+    <div class="modal-conteudo orcamento-relatorio-modal" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho orcamento-relatorio-modal-cabecalho">
+        <h3 class="modal-titulo">
+          <i class="fas fa-print" aria-hidden="true"></i>
+          Relatório de orçamentos
+        </h3>
+      </div>
+      <div class="modal-corpo">
+        <p class="modal-hint">
+          Serão impressos <strong>{{ totalItems }}</strong> registro(s) conforme os filtros aplicados na listagem.
+        </p>
+
+        <section class="relatorio-opcao-bloco">
+          <h4 class="relatorio-opcao-titulo">1. Tipo de relatório</h4>
+          <div class="relatorio-opcoes-lista relatorio-opcoes-inline">
+            <label class="relatorio-opcao-item">
+              <input
+                type="radio"
+                name="printTipoRelatorio"
+                value="analitico"
+                [(ngModel)]="printTipoRelatorio" />
+              <span>Analítico (Detalhado)</span>
+            </label>
+            <label class="relatorio-opcao-item">
+              <input
+                type="radio"
+                name="printTipoRelatorio"
+                value="sintetico"
+                [(ngModel)]="printTipoRelatorio" />
+              <span>Sintético (totais por grupo)</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="relatorio-opcao-bloco">
+          <h4 class="relatorio-opcao-titulo">2. Agrupamento</h4>
+          <div class="filter-group relatorio-agrupamento-select">
+            <select
+              id="printAgrupamentoSecundario"
+              class="form-control campo"
+              [(ngModel)]="printAgrupamentoSecundario"
+              aria-label="Agrupamento">
+              <option
+                *ngFor="let opcao of printAgrupamentoSecundarioOpcoes"
+                [ngValue]="opcao.value">
+                {{ opcao.label }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-group relatorio-agrupamento-select relatorio-agrupamento-data">
+            <select
+              id="printAgrupamentoData"
+              class="form-control campo"
+              [(ngModel)]="printAgrupamentoData"
+              aria-label="Quebra por data">
+              <option
+                *ngFor="let opcao of printAgrupamentoDataOpcoes"
+                [ngValue]="opcao.value">
+                {{ opcao.label }}
+              </option>
+            </select>
+          </div>
+          <div
+            class="filter-group relatorio-agrupamento-select relatorio-agrupamento-tipo"
+            *ngIf="showPrintAgrupamentoTipoOptions()">
+            <select
+              id="printAgrupamentoTipo"
+              class="form-control campo"
+              [(ngModel)]="printAgrupamentoTipo"
+              (ngModelChange)="onPrintAgrupamentoTipoChange()"
+              aria-label="Tipo de orçamento">
+              <option
+                *ngFor="let opcao of printAgrupamentoTipoOpcoes"
+                [ngValue]="opcao.value">
+                {{ opcao.label }}
+              </option>
+            </select>
+          </div>
+        </section>
+      </div>
+      <div class="modal-rodape orcamento-relatorio-modal-rodape">
+        <button
+          type="button"
+          class="btn btn-cancelar"
+          [disabled]="printLoading"
+          (click)="closePrintModal()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-imprimir"
+          [disabled]="printLoading"
+          (click)="confirmGerarRelatorio()">
+          <i class="fas fa-print" [class.fa-spin]="printLoading"></i>
+          {{ printLoading ? 'Gerando...' : 'Gerar relatório' }}
         </button>
       </div>
     </div>

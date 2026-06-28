@@ -30,4 +30,8 @@ export class GlobalBlockingOverlayComponent {
     }
     return `${state.progressCurrent} de ${state.progressTotal}`;
   }
+
+  dismiss(): void {
+    this.blocking.hide();
+  }
 }

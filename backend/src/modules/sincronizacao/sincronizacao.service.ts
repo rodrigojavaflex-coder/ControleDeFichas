@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -13,6 +13,7 @@ import {
   padronizarNomeDeSistemaLegado,
   padronizarNomeLegadoNullable,
 } from '../../common/utils/encoding-legado.util';
+import { Usuario } from '../usuarios/entities/usuario.entity';
 
 interface AgenteCliente {
   cdcli: number;
@@ -129,6 +130,12 @@ export class SincronizacaoService {
     neropolis: 4,
   };
 
+  private readonly unidadeAgenteMap: Record<Unidade, string> = {
+    [Unidade.INHUMAS]: 'inhumas',
+    [Unidade.UBERABA]: 'uberaba',
+    [Unidade.NERÓPOLIS]: 'neropolis',
+  };
+
   constructor(
     @InjectRepository(SincronizacaoConfig)
     private readonly configRepository: Repository<SincronizacaoConfig>,
@@ -143,6 +150,10 @@ export class SincronizacaoService {
 
   getProgress(): SincronizacaoProgress | null {
     return this.syncProgress;
+  }
+
+  estaEmExecucao(): boolean {
+    return this.isRunning;
   }
 
   private iniciarProgresso(totalAgentes: number): void {
@@ -268,8 +279,7 @@ export class SincronizacaoService {
    */
   async executarSincronizacao(): Promise<SincronizacaoResult[]> {
     if (this.isRunning) {
-      this.logger.warn('Sincronização já está em execução');
-      return [];
+      throw new ConflictException('Sincronização já está em execução');
     }
 
     this.isRunning = true;
@@ -350,6 +360,179 @@ export class SincronizacaoService {
 
     return resultados;
   }
+
+  /**
+   * Sincroniza somente orçamentos. Usuário com unidade: agente correspondente;
+   * sem unidade: todos os agentes ativos com watermark configurado.
+   */
+  async executarSincronizacaoOrcamentos(
+    usuario: Usuario,
+  ): Promise<SincronizacaoResult[]> {
+    if (this.isRunning) {
+      throw new ConflictException('Sincronização já está em execução');
+    }
+
+    this.isRunning = true;
+    const resultados: SincronizacaoResult[] = [];
+
+    try {
+      let configs = await this.configRepository.find({
+        where: { ativo: true },
+      });
+
+      configs = configs.filter((c) => !!c.ultimaModificacaoOrcamento);
+
+      const unidadeUsuario = usuario.unidade?.trim();
+      if (unidadeUsuario) {
+        const agente = this.unidadeAgenteMap[unidadeUsuario as Unidade];
+        if (!agente) {
+          throw new BadRequestException(
+            `Unidade ${unidadeUsuario} não possui agente de sincronização mapeado`,
+          );
+        }
+        configs = configs.filter((c) => c.agente === agente);
+      }
+
+      if (configs.length === 0) {
+        throw new BadRequestException(
+          unidadeUsuario
+            ? `Nenhuma configuração de sincronização de orçamentos ativa para a unidade ${unidadeUsuario}`
+            : 'Nenhuma configuração de sincronização de orçamentos ativa com data inicial configurada',
+        );
+      }
+
+      this.iniciarProgresso(configs.length);
+      this.atualizarProgresso({
+        etapa: 'orcamentos',
+        message: 'Iniciando atualização de orçamentos...',
+      });
+
+      for (let i = 0; i < configs.length; i++) {
+        const config = configs[i];
+        this.definirAgenteProgresso(i, config.agente);
+        try {
+          const resultado = await this.sincronizarOrcamentosDeAgente(config);
+          resultados.push(resultado);
+          if (this.syncProgress) {
+            this.syncProgress.erros += resultado.erros.length;
+          }
+        } catch (error: any) {
+          this.logger.error(
+            `Erro ao sincronizar orçamentos do agente ${config.agente}:`,
+            error,
+          );
+          resultados.push({
+            agente: config.agente,
+            clientesProcessados: 0,
+            clientesCriados: 0,
+            clientesAtualizados: 0,
+            prescritoresProcessados: 0,
+            prescritoresCriados: 0,
+            prescritoresAtualizados: 0,
+            orcamentosProcessados: 0,
+            orcamentosCriados: 0,
+            orcamentosAtualizados: 0,
+            erros: [error.message || 'Erro desconhecido'],
+          });
+          if (this.syncProgress) {
+            this.syncProgress.erros += 1;
+          }
+        }
+
+        this.progressFase = 1;
+        this.atualizarProgresso({
+          agentesProcessados: i + 1,
+          etapa: i + 1 >= configs.length ? 'finalizando' : 'orcamentos',
+          message:
+            i + 1 >= configs.length
+              ? 'Finalizando atualização de orçamentos...'
+              : `Agente ${config.agente} concluído`,
+        });
+      }
+
+      this.finalizarProgresso(
+        'completed',
+        'Atualização de orçamentos concluída com sucesso!',
+      );
+    } catch (error: any) {
+      if (error?.code === '42P01' || error?.driverError?.code === '42P01') {
+        this.logger.debug(
+          'Tabela sincronizacao_config ainda não existe. Execute a migration primeiro.',
+        );
+        return [];
+      }
+      this.finalizarProgresso(
+        'error',
+        error?.message || 'Erro na atualização de orçamentos',
+      );
+      throw error;
+    } finally {
+      this.isRunning = false;
+    }
+
+    return resultados;
+  }
+
+  private criarResultadoVazio(agente: string): SincronizacaoResult {
+    return {
+      agente,
+      clientesProcessados: 0,
+      clientesCriados: 0,
+      clientesAtualizados: 0,
+      prescritoresProcessados: 0,
+      prescritoresCriados: 0,
+      prescritoresAtualizados: 0,
+      orcamentosProcessados: 0,
+      orcamentosCriados: 0,
+      orcamentosAtualizados: 0,
+      erros: [],
+    };
+  }
+
+  private async sincronizarOrcamentosDeAgente(
+    config: SincronizacaoConfig,
+  ): Promise<SincronizacaoResult> {
+    const agentesConfig = this.configService.get('agentes');
+    const agenteConfig = agentesConfig[config.agente];
+
+    if (!agenteConfig?.url || !agenteConfig?.token) {
+      throw new Error(
+        `Configuração do agente ${config.agente} não encontrada ou incompleta`,
+      );
+    }
+
+    const resultado = this.criarResultadoVazio(config.agente);
+
+    if (!config.ultimaModificacaoOrcamento) {
+      resultado.erros.push('ultimaModificacaoOrcamento não configurada');
+      return resultado;
+    }
+
+    await this.sincronizarOrcamentos(
+      config,
+      agenteConfig.url,
+      agenteConfig.token,
+      resultado,
+    );
+
+    await this.persistirWatermarkOrcamentos(config);
+    return resultado;
+  }
+
+  private async persistirWatermarkOrcamentos(
+    config: SincronizacaoConfig,
+  ): Promise<void> {
+    if (!config.ultimaModificacaoOrcamento) {
+      return;
+    }
+
+    await this.configRepository.update(config.id, {
+      ultimaModificacaoOrcamento: String(config.ultimaModificacaoOrcamento)
+        .replace('T', ' ')
+        .slice(0, 19),
+    });
+  }
+
   async sincronizarAgente(
     config: SincronizacaoConfig,
   ): Promise<SincronizacaoResult> {
@@ -631,7 +814,6 @@ export class SincronizacaoService {
         .slice(0, 19);
     }
 
-    // Usar update() para garantir que o transformer seja aplicado corretamente
     await this.configRepository.update(config.id, updateData);
 
     this.logger.log(
@@ -859,11 +1041,20 @@ export class SincronizacaoService {
     if (!orcamento) {
       orcamento = this.orcamentoRepository.create(payload);
     } else {
+      const statusAnterior = orcamento.status;
       const motivoRejeicaoId = orcamento.motivoRejeicaoId;
       const observacaoRejeicao = orcamento.observacaoRejeicao;
       Object.assign(orcamento, payload);
-      orcamento.motivoRejeicaoId = motivoRejeicaoId;
-      orcamento.observacaoRejeicao = observacaoRejeicao;
+      if (
+        statusAnterior === OrcamentoStatus.REJEITADO &&
+        status === OrcamentoStatus.APROVADO
+      ) {
+        orcamento.motivoRejeicaoId = null;
+        orcamento.observacaoRejeicao = null;
+      } else {
+        orcamento.motivoRejeicaoId = motivoRejeicaoId;
+        orcamento.observacaoRejeicao = observacaoRejeicao;
+      }
     }
 
     await this.orcamentoRepository.save(orcamento);

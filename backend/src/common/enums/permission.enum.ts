@@ -144,9 +144,18 @@ export enum Permission {
   ORCAMENTO_MOTIVO_UPDATE = 'orcamento-motivo:update',
   ORCAMENTO_MOTIVO_DELETE = 'orcamento-motivo:delete',
 
-  /** Orçamentos — listagem e registro de motivo em rejeitados. */
+  /** Orçamentos — listagem (aprovados e rejeitados). */
   ORCAMENTO_REJEITADO_READ = 'orcamento-rejeitado:read',
+  ORCAMENTO_APROVADO_READ = 'orcamento-aprovado:read',
+  ORCAMENTO_VIEW_VALORES = 'orcamento:view-valores',
   ORCAMENTO_REJEITADO_UPDATE = 'orcamento-rejeitado:update',
+  ORCAMENTO_REJEITADO_SYNC = 'orcamento-rejeitado:sync',
+  ORCAMENTO_PRINT = 'orcamento:print',
+
+  /** Orçamentos — painel de indicadores (dashboard analítico). */
+  ORCAMENTO_DASHBOARD_READ = 'orcamento-dashboard:read',
+  /** Orçamentos — visualização de valores monetários no dashboard. */
+  ORCAMENTO_DASHBOARD_VIEW_VALORES = 'orcamento-dashboard:view-valores',
 }
 
 export const PERMISSION_GROUPS = {
@@ -319,9 +328,41 @@ export const PERMISSION_GROUPS = {
     { key: Permission.ORCAMENTO_MOTIVO_UPDATE, label: 'Editar motivos de rejeição' },
     { key: Permission.ORCAMENTO_MOTIVO_DELETE, label: 'Excluir motivos de rejeição' },
   ],
-  'Orçamentos — Rejeitados': [
-    { key: Permission.ORCAMENTO_REJEITADO_READ, label: 'Visualizar orçamentos rejeitados' },
-    { key: Permission.ORCAMENTO_REJEITADO_UPDATE, label: 'Registrar motivo em orçamentos rejeitados' },
+  Orçamentos: [
+    {
+      key: Permission.ORCAMENTO_REJEITADO_READ,
+      label: 'Visualizar orçamentos rejeitados',
+    },
+    {
+      key: Permission.ORCAMENTO_APROVADO_READ,
+      label: 'Visualizar orçamentos aprovados',
+    },
+    {
+      key: Permission.ORCAMENTO_VIEW_VALORES,
+      label: 'Visualizar valores',
+    },
+    {
+      key: Permission.ORCAMENTO_REJEITADO_UPDATE,
+      label: 'Registrar motivos de rejeição',
+    },
+    {
+      key: Permission.ORCAMENTO_REJEITADO_SYNC,
+      label: 'Atualizar orçamentos',
+    },
+    {
+      key: Permission.ORCAMENTO_PRINT,
+      label: 'Imprimir',
+    },
+  ],
+  'Orçamentos — Dashboard': [
+    {
+      key: Permission.ORCAMENTO_DASHBOARD_READ,
+      label: 'Visualizar painel de indicadores de orçamentos',
+    },
+    {
+      key: Permission.ORCAMENTO_DASHBOARD_VIEW_VALORES,
+      label: 'Visualizar valores monetários no painel de orçamentos',
+    },
   ],
 };
 

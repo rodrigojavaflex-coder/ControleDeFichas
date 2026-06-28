@@ -561,37 +561,27 @@
 
 .analise-valores-modal-conteudo .filters-grid > .filter-group.date-range-field app-date-range-filter,
 .analise-valores-modal-conteudo .filters-grid > .filter-group.date-range-field .date-range-filter {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-}
-
-.analise-valores-modal-conteudo .filters-grid .fechamento-container {
-  grid-column: span 2;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.analise-valores-modal-conteudo .filters-grid .fechamento-container .filter-group {
-  min-width: 0;
-}
-
-.analise-valores-modal-conteudo .filters-grid .fechamento-container .fechamento-checkboxes-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 1rem 1.5rem;
-  align-items: center;
-}
-
-.analise-valores-modal-conteudo .filters-grid .fechamento-container .filter-group.date-range-field {
-  padding: 0;
+  width: 100%;
 }
 
 .analise-valores-modal-conteudo .filters-grid .filter-group.date-range-field .date-range-filter {
   margin: 0;
   width: 100%;
+}
+
+.analise-valores-modal-conteudo .filters-grid .fechamento-checkboxes-row {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  padding: 0.1rem 0;
+}
+
+.analise-valores-modal-conteudo .filters-grid .fechamento-checkboxes-row .checkbox-label {
+  margin: 0;
 }
 
 .analise-valores-modal-conteudo .filters-grid .filter-group app-multi-select-dropdown {

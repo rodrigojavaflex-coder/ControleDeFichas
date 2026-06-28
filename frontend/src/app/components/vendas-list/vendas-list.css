@@ -238,11 +238,31 @@
 /* Melhorar visualização do componente de data no modal */
 .filters-grid .filter-group.date-range-field {
   padding: 0;
+  align-items: stretch;
 }
 
 .filters-grid .filter-group.date-range-field .date-range-filter {
   margin: 0;
   width: 100%;
+}
+
+/* Modal de Vendas: datas com largura mínima e demais filtros em mais linhas */
+.modal-filtros .filters-grid.vendas-filtros-grid {
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+}
+
+.modal-filtros .filters-grid.vendas-filtros-grid .date-range-field {
+  grid-column: span 1;
+}
+
+.modal-filtros .filters-grid.vendas-filtros-grid .filter-group.date-range-field {
+  align-items: flex-start;
+}
+
+.modal-filtros .filters-grid.vendas-filtros-grid .filter-group.date-range-field app-date-range-filter,
+.modal-filtros .filters-grid.vendas-filtros-grid .filter-group.date-range-field .date-range-filter {
+  width: fit-content;
+  max-width: 100%;
 }
 
 /* Estilizar multi-select dropdown */
@@ -527,6 +547,10 @@
   .btn-clear-all {
     width: 100%;
     justify-content: center;
+  }
+
+  .modal-filtros .filters-grid.vendas-filtros-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

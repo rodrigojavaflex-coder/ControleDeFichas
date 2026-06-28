@@ -109,6 +109,48 @@
   line-height: 1.4;
 }
 
+.global-blocking-done-icon {
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--success-color, #22c55e);
+}
+
+.global-blocking-dismiss-btn {
+  margin-top: 0.35rem;
+  min-height: 40px;
+  padding: 0.55rem 1.35rem;
+  border: 1px solid var(--cor-sucesso, #28a745);
+  border-radius: 8px;
+  background: var(--cor-sucesso-clara, #d4edda);
+  color: var(--cor-sucesso-texto, #155724);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+}
+
+.global-blocking-dismiss-btn:hover,
+.global-blocking-dismiss-btn:focus-visible {
+  background: color-mix(in srgb, var(--cor-sucesso-clara, #d4edda) 55%, var(--cor-sucesso, #28a745) 45%);
+  border-color: var(--cor-sucesso-hover, #218838);
+  color: var(--cor-sucesso-texto, #155724);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+body.theme-dark .global-blocking-dismiss-btn {
+  background: color-mix(in srgb, var(--cor-sucesso, #48c774) 22%, var(--bg-primary, #0f172a));
+  border-color: var(--cor-sucesso, #48c774);
+  color: color-mix(in srgb, var(--cor-sucesso, #48c774) 65%, #fff);
+}
+
+body.theme-dark .global-blocking-dismiss-btn:hover,
+body.theme-dark .global-blocking-dismiss-btn:focus-visible {
+  background: color-mix(in srgb, var(--cor-sucesso, #48c774) 35%, var(--bg-primary, #0f172a));
+  border-color: var(--cor-sucesso-hover, #5cd68a);
+  color: #ecfdf5;
+}
+
 body.global-blocking-active {
   overflow: hidden;
 }

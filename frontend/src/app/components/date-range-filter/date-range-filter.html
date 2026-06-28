@@ -1,29 +1,45 @@
 <div class="date-range-filter" [class.disabled]="disabled">
+  <label class="range-main-label">{{ label }} - Filtro aplicado: {{ selectedPresetLabel }}</label>
   <div class="range-row">
-    <div class="field">
-      <label>{{ label }}</label>
-      <select class="form-control" [(ngModel)]="preset" (change)="onPresetChange(preset)" [attr.disabled]="disabled ? true : null">
-        <option *ngFor="let p of presets" [value]="p.value" [title]="p.description">{{ p.label }}</option>
-      </select>
+    <div class="field-preset">
+      <div class="preset-trigger-wrap" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          class="preset-icon-btn"
+          [disabled]="disabled"
+          [title]="'Abrir opções de período'"
+          (click)="togglePresetMenu($event)">
+          <i class="fas fa-calendar-alt"></i>
+        </button>
+        <div class="preset-menu" *ngIf="presetMenuOpen">
+          <button
+            type="button"
+            class="preset-menu-item"
+            *ngFor="let p of presets"
+            [class.active]="preset === p.value"
+            (click)="onPresetSelect(p.value, $event)">
+            {{ p.label }}
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="field">
-      <label>{{ startLabel }}</label>
+    <div class="field field-date">
       <input
         type="date"
         class="form-control"
+        [attr.aria-label]="startLabel"
         [(ngModel)]="start"
-        (change)="onStartChange(start)"
+        (ngModelChange)="onStartChange($event)"
         [attr.disabled]="disabled ? true : null">
     </div>
-    <div class="field">
-      <label>{{ endLabel }}</label>
+    <div class="field field-date">
       <input
         type="date"
         class="form-control"
+        [attr.aria-label]="endLabel"
         [(ngModel)]="end"
-        (change)="onEndChange(end)"
+        (ngModelChange)="onEndChange($event)"
         [attr.disabled]="disabled ? true : null">
     </div>
   </div>
-  <p class="range-description" *ngIf="description">{{ description }}</p>
 </div>

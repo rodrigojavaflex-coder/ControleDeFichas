@@ -1,4 +1,12 @@
-import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  HostListener,
+  Input,
+  Output,
+  OnChanges,
+  SimpleChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -34,6 +42,7 @@ export class DateRangeFilterComponent implements OnChanges {
   @Output() rangeChange = new EventEmitter<DateRangeValue>();
 
   preset: PresetValue = 'custom';
+  presetMenuOpen = false;
 
   presets: PresetOption[] = [
     { value: 'today', label: 'Hoje', description: 'Filtrar data atual' },
@@ -46,8 +55,29 @@ export class DateRangeFilterComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['start'] || changes['end']) {
-      // Não alterar preset automaticamente para evitar reset da seleção
+      this.preset = this.inferPresetFromRange();
     }
+  }
+
+  get selectedPresetLabel(): string {
+    const option = this.presets.find((p) => p.value === this.preset);
+    return option?.label ?? 'Personalizado';
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.presetMenuOpen = false;
+  }
+
+  togglePresetMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.presetMenuOpen = !this.presetMenuOpen;
+  }
+
+  onPresetSelect(value: PresetValue, event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.presetMenuOpen = false;
+    this.onPresetChange(value);
   }
 
   onPresetChange(value: PresetValue): void {
@@ -134,5 +164,21 @@ export class DateRangeFilterComponent implements OnChanges {
 
     // Custom
     return { start: this.start || '', end: this.end || '' };
+  }
+
+  private inferPresetFromRange(): PresetValue {
+    const current: DateRangeValue = { start: this.start || '', end: this.end || '' };
+
+    if (!current.start && !current.end) {
+      return 'custom';
+    }
+
+    const presetsToMatch: PresetValue[] = ['today', 'yesterday', 'month', 'year'];
+    const matchedPreset = presetsToMatch.find((preset) => {
+      const range = this.getRangeForPreset(preset);
+      return range.start === current.start && range.end === current.end;
+    });
+
+    return matchedPreset ?? 'custom';
   }
 }

@@ -130,12 +130,18 @@ export class NavigationComponent implements OnInit, OnDestroy {
       requiredPermissions: [],
       children: [
         {
-          label: 'Rejeitados',
-          route: '/orcamentos/rejeitados',
-          icon: 'feather-x-circle',
+          label: 'Indicadores',
+          route: '/orcamentos/dashboard',
+          icon: 'feather-bar-chart-2',
+          requiredPermissions: [Permission.ORCAMENTO_DASHBOARD_READ],
+        },
+        {
+          label: 'Orçamentos',
+          route: '/orcamentos',
+          icon: 'feather-file-text',
           requiredPermissions: [
             Permission.ORCAMENTO_REJEITADO_READ,
-            Permission.ORCAMENTO_REJEITADO_UPDATE,
+            Permission.ORCAMENTO_APROVADO_READ,
           ],
         },
       ],

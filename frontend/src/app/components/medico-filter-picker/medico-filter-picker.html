@@ -1,0 +1,120 @@
+<div class="medico-filter-picker">
+  <div
+    class="filter-entity-card filter-entity-clickable"
+    *ngIf="opcoes.length || loading"
+    title="Clique para abrir seleção de médicos"
+    (click)="abrirModal($event)">
+    <div class="filter-entity-top">
+      <label class="filter-entity-title">
+        <i class="fas fa-user-md filter-title-icon"></i>
+        Médico ({{ medicoResumo }})
+        <i class="fas fa-filter filter-open-icon"></i>
+      </label>
+      <div class="filter-section-actions filter-entity-actions">
+        <button
+          type="button"
+          class="btn-filter-action btn-filter-muted btn-filter-icon-only"
+          title="Remove todos os médicos selecionados do filtro"
+          aria-label="Limpar médicos"
+          (click)="limparSelecionados($event)">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
+    </div>
+    <div
+      class="selected-names-list"
+      *ngIf="opcoes.length && medicosSelecionadosLista.length; else medicoTodosHint">
+      <span
+        class="selected-name-chip"
+        *ngFor="let nome of medicosSelecionadosLista; trackBy: trackByNome">
+        {{ nome }}
+      </span>
+    </div>
+    <ng-template #medicoTodosHint>
+      <span class="filter-empty-hint" *ngIf="opcoes.length">{{ hintTodos }}</span>
+    </ng-template>
+    <span class="filter-empty-hint" *ngIf="loading && !opcoes.length">
+      Carregando opções...
+    </span>
+  </div>
+
+  <div
+    #modalBackdrop
+    class="medico-filter-picker-backdrop"
+    *ngIf="modalOpen">
+    <section class="picker-modal" (click)="$event.stopPropagation()">
+      <header class="picker-modal-header">
+        <h3 class="picker-modal-title">
+          <i class="fas fa-user-md picker-modal-title-icon" aria-hidden="true"></i>
+          Selecionar médicos
+        </h3>
+      </header>
+      <div class="picker-modal-body">
+        <div class="picker-modal-controls">
+          <div class="picker-ordenacao-row">
+            <label class="picker-ordenacao-label" for="medicoOrdenacaoSelect">Ordenar por:</label>
+            <select
+              id="medicoOrdenacaoSelect"
+              class="form-control picker-ordenacao-select"
+              [(ngModel)]="ordenacaoModal"
+              aria-label="Ordenar médicos">
+              <option value="total">Mais orçamentos</option>
+              <option value="aprovados">Mais orçamentos aprovados</option>
+              <option value="rejeitados">Mais orçamentos rejeitados</option>
+              <option value="alfabetica">Ordem alfabética</option>
+            </select>
+          </div>
+          <div class="picker-limite-row">
+            <label class="picker-ordenacao-label" for="medicoLimiteSelect">Qtd. de registros:</label>
+            <select
+              id="medicoLimiteSelect"
+              class="form-control picker-ordenacao-select"
+              [(ngModel)]="limiteExibicaoModal"
+              aria-label="Quantidade de registros exibidos">
+              <option *ngFor="let limite of limiteExibicaoOpcoes" [ngValue]="limite">
+                {{ labelLimiteExibicao(limite) }}
+              </option>
+            </select>
+          </div>
+          <input
+            type="text"
+            class="form-control filter-search"
+            placeholder="Buscar médico..."
+            [(ngModel)]="buscaModal" />
+        </div>
+        <div class="filter-suggestions picker-list" *ngIf="sugestoesMedicoOrdenadas.length; else medicoSemOpcaoModal">
+          <div class="picker-list-header">
+            <label class="picker-list-toggle-all">
+              <input
+                type="checkbox"
+                [checked]="todosFiltradosMarcados"
+                (change)="toggleTodosRascunho($any($event.target).checked)" />
+              Marcar/Desmarcar todos
+            </label>
+          </div>
+          <label
+            class="suggestion-item suggestion-check"
+            *ngFor="let medico of sugestoesMedico; trackBy: trackByMedicoOpcao">
+            <input
+              type="checkbox"
+              [checked]="selectedRascunho.has(medico.nome)"
+              (change)="toggleRascunho(medico.nome, $any($event.target).checked)" />
+            <span>{{ medico.nome }}</span>
+          </label>
+        </div>
+        <ng-template #medicoSemOpcaoModal>
+          <span class="filter-empty-hint">Nenhum médico encontrado</span>
+        </ng-template>
+      </div>
+      <footer class="picker-modal-footer">
+        <button type="button" class="medico-picker-btn medico-picker-btn-cancel" (click)="fecharModal()">
+          Cancelar
+        </button>
+        <button type="button" class="medico-picker-btn medico-picker-btn-confirm" (click)="confirmar()">
+          <i class="fas fa-check" aria-hidden="true"></i>
+          {{ confirmLabel }}
+        </button>
+      </footer>
+    </section>
+  </div>
+</div>

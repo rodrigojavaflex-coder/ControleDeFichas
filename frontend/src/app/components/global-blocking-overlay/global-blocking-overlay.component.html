@@ -5,16 +5,22 @@
       role="alertdialog"
       aria-modal="true"
       [attr.aria-label]="state.title"
-      aria-busy="true"
+      [attr.aria-busy]="state.phase === 'processing'"
     >
       <div class="global-blocking-modal">
         <div class="global-blocking-content">
-          <div class="global-blocking-spinner" aria-hidden="true"></div>
+          @if (state.phase === 'processing') {
+            <div class="global-blocking-spinner" aria-hidden="true"></div>
+          } @else {
+            <div class="global-blocking-done-icon" aria-hidden="true">
+              <i class="fas fa-check-circle"></i>
+            </div>
+          }
           <h2 class="global-blocking-title">{{ state.title }}</h2>
           @if (state.message) {
             <p class="global-blocking-message">{{ state.message }}</p>
           }
-          @if (state.progressTotal > 0) {
+          @if (state.phase === 'processing' && state.progressTotal > 0) {
             <div class="global-blocking-progress-wrap">
               <div class="global-blocking-progress-header">
                 <span class="global-blocking-progress-text">
@@ -41,8 +47,17 @@
               }
             </div>
           }
-          @if (state.note) {
+          @if (state.phase === 'processing' && state.note) {
             <p class="global-blocking-note">{{ state.note }}</p>
+          }
+          @if (state.phase === 'done') {
+            <button
+              type="button"
+              class="global-blocking-dismiss-btn"
+              (click)="dismiss()"
+            >
+              {{ state.dismissButtonLabel || 'Concluir atualização' }}
+            </button>
           }
         </div>
       </div>

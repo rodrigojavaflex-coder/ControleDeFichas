@@ -66,3 +66,8 @@ export interface SincronizacaoProgress {
   percentualOrcamentos: number;
   erros: number;
 }
+
+export interface SincronizacaoStatus {
+  emExecucao: boolean;
+  progresso: SincronizacaoProgress | null;
+}

@@ -312,12 +312,25 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'orcamentos/rejeitados',
+    path: 'orcamentos/dashboard',
+    loadComponent: () =>
+      import('./components/orcamentos/orcamentos-dashboard-page').then(
+        (m) => m.OrcamentosDashboardPage,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'orcamentos',
     loadComponent: () =>
       import('./components/orcamentos/orcamentos-rejeitados-list').then(
         (m) => m.OrcamentosRejeitadosListComponent,
       ),
     canActivate: [authGuard],
+  },
+  {
+    path: 'orcamentos/rejeitados',
+    redirectTo: 'orcamentos',
+    pathMatch: 'full',
   },
   {
     path: 'orcamentos/motivos-rejeicao',

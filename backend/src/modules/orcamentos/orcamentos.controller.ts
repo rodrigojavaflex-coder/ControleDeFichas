@@ -15,7 +15,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { OrcamentosService } from './orcamentos.service';
-import { FindOrcamentosRejeitadosDto } from './dto/find-orcamentos-rejeitados.dto';
+import { FindOrcamentosDto } from './dto/find-orcamentos.dto';
 import { BulkUpdateRejeitadosDto } from './dto/bulk-update-rejeitados.dto';
 import { OrcamentosRejeitadosOpcoesFiltroDto } from './dto/orcamentos-rejeitados-opcoes-filtro.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -25,20 +25,22 @@ import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { Orcamento } from './entities/orcamento.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 
-/** Rotas legadas — preferir `GET /orcamentos`. */
-@ApiTags('Orçamentos — Rejeitados (legado)')
-@Controller('orcamentos/rejeitados')
+@ApiTags('Orçamentos')
+@Controller('orcamentos')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-export class OrcamentosRejeitadosController {
+export class OrcamentosController {
   constructor(private readonly service: OrcamentosService) {}
 
   @Get('opcoes-filtro')
-  @Permissions(Permission.ORCAMENTO_REJEITADO_READ)
-  @ApiOperation({ summary: '[Legado] Opções de filtro para orçamentos rejeitados' })
+  @Permissions(
+    Permission.ORCAMENTO_REJEITADO_READ,
+    Permission.ORCAMENTO_APROVADO_READ,
+  )
+  @ApiOperation({ summary: 'Opções de filtro para listagem de orçamentos' })
   @ApiResponse({ status: 200, type: OrcamentosRejeitadosOpcoesFiltroDto })
   getOpcoesFiltro(
-    @Query() dto: FindOrcamentosRejeitadosDto,
+    @Query() dto: FindOrcamentosDto,
     @Req() req: { user: Usuario },
   ): Promise<OrcamentosRejeitadosOpcoesFiltroDto> {
     return this.service.getOpcoesFiltroOrcamentos(
@@ -46,30 +48,30 @@ export class OrcamentosRejeitadosController {
         unidade: dto.unidade,
         dataInicial: dto.dataInicial,
         dataFinal: dto.dataFinal,
-        status: 'REJEITADO',
+        status: dto.status,
       },
       req.user,
     );
   }
 
   @Get()
-  @Permissions(Permission.ORCAMENTO_REJEITADO_READ)
-  @ApiOperation({ summary: '[Legado] Listar orçamentos rejeitados (paginado)' })
+  @Permissions(
+    Permission.ORCAMENTO_REJEITADO_READ,
+    Permission.ORCAMENTO_APROVADO_READ,
+  )
+  @ApiOperation({ summary: 'Listar orçamentos (paginado)' })
   @ApiResponse({ status: 200, type: PaginatedResponseDto })
-  findRejeitados(
-    @Query() dto: FindOrcamentosRejeitadosDto,
+  findOrcamentos(
+    @Query() dto: FindOrcamentosDto,
     @Req() req: { user: Usuario },
   ): Promise<PaginatedResponseDto<Orcamento>> {
-    return this.service.findOrcamentos(
-      { ...dto, status: 'REJEITADO' },
-      req.user,
-    );
+    return this.service.findOrcamentos(dto, req.user);
   }
 
-  @Patch('em-massa')
+  @Patch('rejeitados/em-massa')
   @Permissions(Permission.ORCAMENTO_REJEITADO_UPDATE)
-  @ApiOperation({ summary: '[Legado] Registrar motivo e observação em lote' })
-  atualizarEmMassa(
+  @ApiOperation({ summary: 'Registrar motivo e observação em lote (rejeitados)' })
+  atualizarRejeitadosEmMassa(
     @Body() dto: BulkUpdateRejeitadosDto,
     @Req() req: { user: Usuario },
   ): Promise<{ atualizados: number }> {

@@ -1,0 +1,491 @@
+<div class="vendas-page orcamentos-dashboard-page">
+  <section *ngIf="error" class="state-card error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </section>
+
+  <section class="results-card" *ngIf="!error">
+    <div class="inline-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Atualizando indicadores...</span>
+    </div>
+
+    <div class="dashboard-layout" [class.filters-collapsed]="filtersSidebarHidden">
+      <aside class="dashboard-filters-sidebar">
+        <header class="dashboard-filters-sidebar-header">
+          <div class="filters-header-main">
+            <button
+              type="button"
+              class="filters-hamburger-btn"
+              [attr.aria-label]="filtersSidebarHidden ? 'Mostrar filtros' : 'Ocultar filtros'"
+              [attr.title]="filtersSidebarHidden ? 'Mostrar filtros' : 'Ocultar filtros'"
+              (click)="toggleFiltersSidebar()">
+              <i class="fas fa-bars"></i>
+            </button>
+            <h3 *ngIf="!filtersSidebarHidden">Filtros</h3>
+          </div>
+          <div class="filters-header-actions" *ngIf="!filtersSidebarHidden">
+            <button
+              type="button"
+              class="btn-filter-action btn-filter-icon-only btn-filter-refresh"
+              title="Atualizar painel com os filtros atuais"
+              aria-label="Atualizar painel"
+              (click)="atualizarPainel()"
+              [disabled]="loading">
+              <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+            </button>
+            <button
+              type="button"
+              class="btn-filter-action btn-filter-muted btn-filter-icon-only"
+              title="Limpar filtros"
+              aria-label="Limpar filtros"
+              (click)="clearFilters()"
+              [disabled]="loading">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        </header>
+
+        <div class="dashboard-filters-sidebar-body">
+          <div class="filters-grid dashboard-filters-grid">
+            <div class="filter-field filter-field-wide filter-field-periodo">
+              <app-date-range-filter
+                label="Período"
+                [start]="dataInicialFilter"
+                [end]="dataFinalFilter"
+                (rangeChange)="onDateRangeChange($event)">
+              </app-date-range-filter>
+            </div>
+
+            <div
+              class="filter-field filter-field-wide filter-field-unidade"
+              *ngIf="!unidadeDisabled"
+              role="button"
+              tabindex="0"
+              title="Clique para marcar/desmarcar todas as unidades"
+              (click)="onUnidadesContainerClick($event)"
+              (keydown.enter)="toggleTodasUnidades()"
+              (keydown.space)="toggleTodasUnidades(); $event.preventDefault()">
+              <div class="filter-section-header">
+                <div class="filter-section-title-wrap">
+                  <label><i class="fas fa-map-marker-alt filter-title-icon"></i> Unidades</label>
+                </div>
+                <div class="filter-section-actions filter-entity-actions" *ngIf="!unidadeDisabled">
+                  <button
+                    type="button"
+                    class="btn-filter-action btn-filter-muted btn-filter-icon-only"
+                    title="Remove todas as unidades selecionadas do filtro"
+                    aria-label="Limpar unidades"
+                    (click)="limparUnidades(); $event.stopPropagation()">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="unidades-grid">
+                <label
+                  *ngFor="let u of unidades"
+                  class="unidade-item"
+                  [class.is-selected]="selectedUnidades.has(u)"
+                  [class.is-disabled]="unidadeDisabled">
+                  <input
+                    type="checkbox"
+                    [checked]="selectedUnidades.has(u)"
+                    [disabled]="unidadeDisabled"
+                    (change)="toggleUnidade(u, $any($event.target).checked)" />
+                  <span>{{ u }}</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="filter-field filter-field-wide filter-entities-container">
+              <div
+                class="filter-entity-card filter-entity-clickable"
+                *ngIf="opcoesVendedor.length || loadingOpcoesFiltro"
+                title="Clique para abrir seleção de vendedores"
+                (click)="abrirModalVendedores()">
+                <div class="filter-entity-top">
+                  <label class="filter-entity-title">
+                    <i class="fas fa-user-tie filter-title-icon"></i>
+                    Vendedor ({{ vendedorResumo }})
+                    <i class="fas fa-filter filter-open-icon"></i>
+                  </label>
+                  <div class="filter-section-actions filter-entity-actions">
+                    <button
+                      type="button"
+                      class="btn-filter-action btn-filter-muted btn-filter-icon-only"
+                      title="Remove todos os vendedores selecionados do filtro"
+                      aria-label="Limpar vendedores"
+                      (click)="$event.stopPropagation(); limparVendedoresSelecionados()">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="selected-names-list" *ngIf="opcoesVendedor.length && vendedoresSelecionadosLista.length; else vendedorTodosHint">
+                  <span class="selected-name-chip" *ngFor="let nome of vendedoresSelecionadosLista; trackBy: trackByNome">
+                    {{ nome }}
+                  </span>
+                </div>
+                <ng-template #vendedorTodosHint>
+                  <span class="chart-subtitle filter-empty-hint" *ngIf="opcoesVendedor.length">Todos os vendedores</span>
+                </ng-template>
+                <span class="chart-subtitle filter-empty-hint" *ngIf="loadingOpcoesFiltro && !opcoesVendedor.length">
+                  Carregando opções...
+                </span>
+              </div>
+
+              <app-medico-filter-picker
+                [opcoes]="opcoesMedico"
+                [loading]="loadingOpcoesFiltro"
+                [selectedMedicos]="selectedMedicos"
+                resumoVazio="Todos"
+                hintTodos="Todos os médicos"
+                (selectedMedicosChange)="onMedicosSelected($event)"
+                (confirmed)="onMedicosConfirmados()"
+                (cleared)="onMedicosLimpos()">
+              </app-medico-filter-picker>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+      <div class="dashboard-main-content">
+        <ng-container *ngIf="dados as d">
+      <div class="dashboard-filtros-resumo">
+        <span><strong>Período:</strong> {{ resumoPeriodoTexto }}</span>
+        <span><strong>Unidade:</strong> {{ resumoUnidadesTexto }}</span>
+        <span><strong>Vendedores:</strong> {{ resumoVendedoresTexto }}</span>
+        <span><strong>Médicos:</strong> {{ resumoMedicosTexto }}</span>
+      </div>
+      <div class="dashboard-kpi-grid">
+        <article class="dashboard-kpi-card kpi-primary">
+          <h3>Total de Orçamentos</h3>
+          <p class="kpi-value">
+            {{
+              canViewValores()
+                ? formatarMoeda(d.kpis.volumeTotal.valor)
+                : formatarInteiro(d.kpis.volumeTotal.quantidade)
+            }}
+          </p>
+          <p class="kpi-sub">
+            {{
+              canViewValores()
+                ? formatarInteiro(d.kpis.volumeTotal.quantidade) + ' orçamentos'
+                : 'orçamentos'
+            }}
+          </p>
+        </article>
+        <article class="dashboard-kpi-card kpi-success">
+          <h3>Orçamentos Aprovados</h3>
+          <p class="kpi-value">
+            {{
+              canViewValores()
+                ? formatarMoeda(d.kpis.receitaAprovada.valor)
+                : formatarPercentual(d.kpis.taxaConversao.percentual)
+            }}
+          </p>
+          <p class="kpi-sub">
+            {{ formatarInteiro(d.kpis.receitaAprovada.quantidade) }} orçamentos
+          </p>
+        </article>
+        <article class="dashboard-kpi-card kpi-danger">
+          <h3>Orçamentos Rejeitados</h3>
+          <p class="kpi-value">
+            {{
+              canViewValores()
+                ? formatarMoeda(d.kpis.valorPerdido.valor)
+                : formatarPercentual(
+                    getPercentualRejeicao(
+                      d.kpis.taxaConversao.quantidadeTotal,
+                      d.kpis.taxaConversao.quantidadeAprovada
+                    )
+                  )
+            }}
+          </p>
+          <p class="kpi-sub">
+            {{ formatarInteiro(d.kpis.valorPerdido.quantidade) }} rejeitados
+          </p>
+        </article>
+        <article class="dashboard-kpi-card">
+          <h3>Taxa de conversão</h3>
+          <p class="kpi-value">{{ formatarPercentual(d.kpis.taxaConversao.percentual) }}</p>
+          <p class="kpi-sub">
+            {{ formatarInteiro(d.kpis.taxaConversao.quantidadeAprovada) }}
+            /
+            {{ formatarInteiro(d.kpis.taxaConversao.quantidadeTotal) }}
+          </p>
+        </article>
+      </div>
+
+      <div class="dashboard-charts-grid">
+        <article
+          class="dashboard-chart-card dashboard-chart-wide"
+          [class.is-collapsed]="isPerformanceCardCollapsed('vendedor')">
+          <header class="dashboard-chart-card-header">
+            <h3>Performance por vendedor</h3>
+            <button
+              type="button"
+              class="btn-chart-collapse"
+              [attr.aria-expanded]="!isPerformanceCardCollapsed('vendedor')"
+              [attr.aria-label]="isPerformanceCardCollapsed('vendedor') ? 'Expandir performance por vendedor' : 'Ocultar performance por vendedor'"
+              [title]="isPerformanceCardCollapsed('vendedor') ? 'Expandir' : 'Ocultar'"
+              (click)="togglePerformanceCard('vendedor')">
+              <i
+                class="fas"
+                [ngClass]="isPerformanceCardCollapsed('vendedor') ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+            </button>
+          </header>
+          <div class="dashboard-chart-card-body" *ngIf="!isPerformanceCardCollapsed('vendedor')">
+          <div
+            class="performance-metric-grid"
+            *ngIf="d.performanceVendedor.detalhes.length; else vendedorSemDados">
+            <section
+              class="performance-metric-col"
+              *ngFor="let coluna of performanceMetricColunas; trackBy: trackByColunaPerformance">
+              <h4>{{ coluna.titulo }}</h4>
+              <div class="bar-list bar-list-compact">
+                <div
+                  class="bar-item"
+                  *ngFor="
+                    let item of getPerformanceOrdenadosPorColuna(d.performanceVendedor.detalhes, coluna.key, d.performanceVendedor.top);
+                    trackBy: trackByVendedor
+                  ">
+                  <div class="bar-header">
+                    <span class="bar-label" [title]="item.nomeVendedor || 'Sem vendedor'">
+                      {{ formatarNomeVendedorResumo(item.nomeVendedor) }}
+                    </span>
+                    <span class="bar-value">{{ formatarValorColunaPerformance(item, coluna) }}</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      [ngClass]="coluna.barClass"
+                      [style.width.%]="
+                        getPercentualBarra(item[coluna.key], getMaxPerformanceColuna(d.performanceVendedor.detalhes, coluna.key, d.performanceVendedor.top))
+                      "></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+          <ng-template #vendedorSemDados>
+            <p class="chart-placeholder">
+              <i class="fas fa-inbox"></i> Nenhum dado de vendedor no período
+            </p>
+          </ng-template>
+          </div>
+        </article>
+
+        <article
+          class="dashboard-chart-card dashboard-chart-wide"
+          [class.is-collapsed]="isPerformanceCardCollapsed('unidade')">
+          <header class="dashboard-chart-card-header">
+            <h3>Performance por unidade</h3>
+            <button
+              type="button"
+              class="btn-chart-collapse"
+              [attr.aria-expanded]="!isPerformanceCardCollapsed('unidade')"
+              [attr.aria-label]="isPerformanceCardCollapsed('unidade') ? 'Expandir performance por unidade' : 'Ocultar performance por unidade'"
+              [title]="isPerformanceCardCollapsed('unidade') ? 'Expandir' : 'Ocultar'"
+              (click)="togglePerformanceCard('unidade')">
+              <i
+                class="fas"
+                [ngClass]="isPerformanceCardCollapsed('unidade') ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+            </button>
+          </header>
+          <div class="dashboard-chart-card-body" *ngIf="!isPerformanceCardCollapsed('unidade')">
+          <div
+            class="performance-metric-grid"
+            *ngIf="d.performanceUnidade.detalhes.length; else unidadeSemDados">
+            <section
+              class="performance-metric-col"
+              *ngFor="let coluna of performanceMetricColunas; trackBy: trackByColunaPerformance">
+              <h4>{{ coluna.titulo }}</h4>
+              <div class="bar-list bar-list-compact">
+                <div
+                  class="bar-item"
+                  *ngFor="
+                    let item of getPerformanceOrdenadosPorColuna(d.performanceUnidade.detalhes, coluna.key);
+                    trackBy: trackByUnidade
+                  ">
+                  <div class="bar-header">
+                    <span class="bar-label" [title]="item.unidade">{{ item.unidade }}</span>
+                    <span class="bar-value">{{ formatarValorColunaPerformance(item, coluna) }}</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      [ngClass]="coluna.barClass"
+                      [style.width.%]="
+                        getPercentualBarra(item[coluna.key], getMaxPerformanceColuna(d.performanceUnidade.detalhes, coluna.key))
+                      "></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+          <ng-template #unidadeSemDados>
+            <p class="chart-placeholder">
+              <i class="fas fa-inbox"></i> Nenhum dado de unidade no período
+            </p>
+          </ng-template>
+          </div>
+        </article>
+
+        <article
+          class="dashboard-chart-card dashboard-chart-wide"
+          [class.is-collapsed]="isPerformanceCardCollapsed('medico')">
+          <header class="dashboard-chart-card-header">
+            <h3>Performance por médico</h3>
+            <button
+              type="button"
+              class="btn-chart-collapse"
+              [attr.aria-expanded]="!isPerformanceCardCollapsed('medico')"
+              [attr.aria-label]="isPerformanceCardCollapsed('medico') ? 'Expandir performance por médico' : 'Ocultar performance por médico'"
+              [title]="isPerformanceCardCollapsed('medico') ? 'Expandir' : 'Ocultar'"
+              (click)="togglePerformanceCard('medico')">
+              <i
+                class="fas"
+                [ngClass]="isPerformanceCardCollapsed('medico') ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+            </button>
+          </header>
+          <div class="dashboard-chart-card-body" *ngIf="!isPerformanceCardCollapsed('medico')">
+          <div
+            class="performance-metric-grid"
+            *ngIf="d.performanceMedico.detalhes.length; else medicoSemDados">
+            <section
+              class="performance-metric-col"
+              *ngFor="let coluna of performanceMetricColunas; trackBy: trackByColunaPerformance">
+              <h4>{{ coluna.titulo }}</h4>
+              <div class="bar-list bar-list-compact">
+                <div
+                  class="bar-item"
+                  *ngFor="
+                    let item of getPerformanceOrdenadosPorColuna(
+                      d.performanceMedico.detalhes,
+                      coluna.key,
+                      getLimitePerformanceMedico(d.performanceMedico),
+                      true
+                    );
+                    trackBy: trackByMedico
+                  ">
+                  <div class="bar-header">
+                    <span class="bar-label" [title]="item.nomeMedico || 'Sem médico'">
+                      {{ formatarNomeMedicoResumo(item.nomeMedico) }}
+                    </span>
+                    <span class="bar-value">{{ formatarValorColunaPerformance(item, coluna) }}</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      [ngClass]="coluna.barClass"
+                      [style.width.%]="
+                        getPercentualBarra(
+                          item[coluna.key],
+                          getMaxPerformanceColuna(
+                            d.performanceMedico.detalhes,
+                            coluna.key,
+                            getLimitePerformanceMedico(d.performanceMedico),
+                            true
+                          )
+                        )
+                      "></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+          <ng-template #medicoSemDados>
+            <p class="chart-placeholder">
+              <i class="fas fa-inbox"></i> Nenhum dado de médico no período
+            </p>
+          </ng-template>
+          </div>
+        </article>
+
+        <article class="dashboard-chart-card dashboard-chart-wide">
+          <h3>Análise de perdas</h3>
+          <p class="chart-subtitle">
+            {{
+              canViewValores()
+                ? 'Valor perdido por motivo (inclui classificação Sem motivo)'
+                : 'Quantidade e percentual acumulado por motivo (inclui classificação Sem motivo)'
+            }}
+          </p>
+          <div class="bar-list">
+            <div class="bar-item" *ngFor="let item of d.analisePerdas.pareto; trackBy: trackByPareto">
+              <div class="bar-header">
+                <span class="bar-label">{{ item.descricao }}</span>
+                <span class="bar-value">
+                  {{
+                    canViewValores()
+                      ? formatarMoeda(item.valorPerdido) + ' (' + formatarInteiro(item.quantidade) + ')'
+                      : formatarInteiro(item.quantidade) + ' (' + formatarPercentual(item.percentualAcumuladoQuantidade) + ')'
+                  }}
+                </span>
+              </div>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  [ngClass]="getParetoBarClass(item)"
+                  [style.width.%]="
+                    canViewValores()
+                      ? getPercentualBarra(item.valorPerdido, getMaxValorPerdidoPareto(d.analisePerdas.pareto))
+                      : getPercentualBarra(item.quantidade, getMaxQuantidadePareto(d.analisePerdas.pareto))
+                  "></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+        </ng-container>
+      </div>
+    </div>
+
+    <div class="picker-modal-backdrop" *ngIf="vendedorModalOpen">
+      <section class="picker-modal" (click)="$event.stopPropagation()">
+        <header class="picker-modal-header">
+          <h3>Selecionar vendedores</h3>
+        </header>
+        <div class="picker-modal-body">
+          <div class="picker-modal-top-row">
+            <input
+              type="text"
+              class="form-control filter-search"
+              placeholder="Buscar vendedor..."
+              [(ngModel)]="buscaVendedorModal" />
+          </div>
+          <div class="filter-suggestions picker-list" *ngIf="sugestoesVendedor.length; else vendedorSemOpcaoModal">
+            <div class="picker-list-header">
+              <span class="picker-list-col-title">Selecionar</span>
+              <label class="picker-list-toggle-all">
+                <input
+                  type="checkbox"
+                  [checked]="todosVendedoresFiltradosMarcados"
+                  (change)="toggleTodosVendedoresRascunho($any($event.target).checked)" />
+                Marcar/Desmarcar todos
+              </label>
+            </div>
+            <label class="suggestion-item suggestion-check" *ngFor="let nome of sugestoesVendedor; trackBy: trackByNome">
+              <input
+                type="checkbox"
+                [checked]="selectedVendedoresRascunho.has(nome)"
+                (change)="toggleVendedorRascunho(nome, $any($event.target).checked)" />
+              <span>{{ nome }}</span>
+            </label>
+          </div>
+          <ng-template #vendedorSemOpcaoModal>
+            <span class="chart-subtitle">Nenhum vendedor encontrado</span>
+          </ng-template>
+        </div>
+        <footer class="picker-modal-footer">
+          <button type="button" class="btn btn-cancelar" (click)="fecharModalVendedores()">Cancelar</button>
+          <button type="button" class="btn btn-modal-primary" (click)="confirmarVendedores()">
+            Adicionar e aplicar
+          </button>
+        </footer>
+      </section>
+    </div>
+
+  </section>
+</div>

@@ -139,7 +139,14 @@ export enum Permission {
   ORCAMENTO_MOTIVO_DELETE = 'orcamento-motivo:delete',
 
   ORCAMENTO_REJEITADO_READ = 'orcamento-rejeitado:read',
+  ORCAMENTO_APROVADO_READ = 'orcamento-aprovado:read',
+  ORCAMENTO_VIEW_VALORES = 'orcamento:view-valores',
   ORCAMENTO_REJEITADO_UPDATE = 'orcamento-rejeitado:update',
+  ORCAMENTO_REJEITADO_SYNC = 'orcamento-rejeitado:sync',
+  ORCAMENTO_PRINT = 'orcamento:print',
+
+  ORCAMENTO_DASHBOARD_READ = 'orcamento-dashboard:read',
+  ORCAMENTO_DASHBOARD_VIEW_VALORES = 'orcamento-dashboard:view-valores',
 }
 
 export interface PermissionGroup {

@@ -236,14 +236,33 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     requiredPermissions: [Permission.FOLHA_WHATSAPP_READ],
   },
   {
-    id: 'orcamentos-rejeitados',
-    label: 'Orçamentos rejeitados',
-    route: '/orcamentos/rejeitados',
-    icon: 'feather-x-circle',
+    id: 'orcamentos-dashboard',
+    label: 'Indicadores',
+    route: '/orcamentos/dashboard',
+    icon: 'feather-bar-chart-2',
+    category: 'Orçamentos',
+    requiredPermissions: [Permission.ORCAMENTO_DASHBOARD_READ],
+  },
+  {
+    id: 'orcamentos',
+    label: 'Orçamentos',
+    route: '/orcamentos',
+    icon: 'feather-file-text',
     category: 'Orçamentos',
     requiredPermissions: [
       Permission.ORCAMENTO_REJEITADO_READ,
-      Permission.ORCAMENTO_REJEITADO_UPDATE,
+      Permission.ORCAMENTO_APROVADO_READ,
+    ],
+  },
+  {
+    id: 'orcamentos-rejeitados',
+    label: 'Orçamentos',
+    route: '/orcamentos',
+    icon: 'feather-file-text',
+    category: 'Orçamentos',
+    requiredPermissions: [
+      Permission.ORCAMENTO_REJEITADO_READ,
+      Permission.ORCAMENTO_APROVADO_READ,
     ],
   },
   {

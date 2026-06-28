@@ -1,20 +1,43 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { Unidade } from '../../../common/enums/unidade.enum';
+
+export const ORCAMENTO_LISTA_STATUS = ['APROVADO', 'REJEITADO', 'TODOS'] as const;
+export type OrcamentoListaStatusFiltro = (typeof ORCAMENTO_LISTA_STATUS)[number];
 
 function toStringArray(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
     return value.map(String).filter((s) => s.trim() !== '');
   }
   if (typeof value === 'string' && value.trim() !== '') {
-    return value.split(',').map((s) => s.trim()).filter(Boolean);
+    return value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   return undefined;
 }
 
-export class FindOrcamentosRejeitadosDto extends PaginationDto {
+export class FindOrcamentosDto extends PaginationDto {
+  @ApiPropertyOptional({
+    enum: ORCAMENTO_LISTA_STATUS,
+    description:
+      'APROVADO, REJEITADO ou TODOS (requer ambas permissões de leitura)',
+  })
+  @IsOptional()
+  @IsIn(ORCAMENTO_LISTA_STATUS)
+  status?: OrcamentoListaStatusFiltro;
+
   @ApiPropertyOptional({ enum: Unidade })
   @IsOptional()
   @IsEnum(Unidade)
@@ -55,7 +78,9 @@ export class FindOrcamentosRejeitadosDto extends PaginationDto {
   @IsBoolean()
   comMotivo?: boolean;
 
-  @ApiPropertyOptional({ description: 'Filtrar por motivo de rejeição cadastrado (UUID)' })
+  @ApiPropertyOptional({
+    description: 'Filtrar por motivo de rejeição cadastrado (UUID)',
+  })
   @IsOptional()
   @IsUUID('4')
   motivoRejeicaoId?: string;

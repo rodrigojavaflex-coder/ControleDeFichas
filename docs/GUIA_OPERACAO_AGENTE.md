@@ -143,6 +143,25 @@ Criterios de aceite:
 
 ---
 
+## Regra para novos cards/graficos (dashboard)
+
+Sempre que criar ou alterar cards/graficos no painel de orcamentos:
+
+- respeitar permissao de acesso ao painel: `orcamento-dashboard:read`;
+- respeitar permissao de valores monetarios: `orcamento-dashboard:view-valores`;
+- sem `view-valores`, ocultar valores monetarios e exibir somente quantidades e percentuais;
+- aplicar a regra no backend (payload seguro) e no frontend (renderizacao condicional);
+- manter essa regra valida para qualquer novo card/tabela/grafico adicionado no painel.
+
+Checklist obrigatorio no prompt:
+
+1) O novo card/grafico exibe campos monetarios?
+2) Como ele se comporta sem `orcamento-dashboard:view-valores`?
+3) O backend ja mascara/remover os valores do payload sem essa permissao?
+4) O frontend ja renderiza somente quantidade/% nesse cenario?
+
+---
+
 ## Segredos e variaveis de ambiente
 
 - **Nao** pedir ao agente para ler `backend/.env`, `frontend/.env` ou `agent/.env`.

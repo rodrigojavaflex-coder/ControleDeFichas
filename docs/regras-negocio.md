@@ -161,13 +161,18 @@
 - **MVP:** sem auto-resposta, sem template lembrete, sem IA.
 - **Envio recibo (RN-015):** grava **wamid** na auditoria e mensagem outbound para correlacionar status (`delivered`/`read`/`failed`).
 
-### RN-ORC-001 — Orçamentos rejeitados (listagem)
+### RN-ORC-001 — Orçamentos (listagem)
 
-- Tela **`/orcamentos/rejeitados`** lista apenas orçamentos com `status = REJEITADO`, paginados.
+- Tela **`/orcamentos`** lista orçamentos **aprovados** e/ou **rejeitados**, conforme permissões e filtro de tipo.
+- Rota legada **`/orcamentos/rejeitados`** redireciona para **`/orcamentos`**.
+- API: **`GET /orcamentos`** com `status=APROVADO|REJEITADO|TODOS` (padrão conforme permissões do usuário).
 - Escopo por unidade conforme **RN-007** (`usuario.unidade`; admin global vê todas; filtro de unidade na query respeita o escopo).
 - Com unidade vinculada, o filtro é aplicado automaticamente, o campo fica desabilitado e a unidade aparece nos chips de filtros aplicados (como na lista de vendas).
 - **Filtro padrão de data** ao abrir a tela: **segunda-feira** → orçamentos com `dataOrcamento` **maior que** D-2; **demais dias** → **maior que** D-1 (data local do navegador).
-- Permissão: **`orcamento-rejeitado:read`**.
+- Usuário com **ambas** permissões de leitura vê abas/filtro **Todos | Aprovados | Rejeitados**; com apenas uma, o tipo fica fixo.
+- Permissões de leitura: **`orcamento-rejeitado:read`** (rejeitados) e **`orcamento-aprovado:read`** (aprovados).
+- Coluna **Valor** e totais monetários na listagem/relatório exigem **`orcamento:view-valores`**.
+- Impressão exige **`orcamento:print`**.
 
 ### RN-ORC-002 — Registro de motivo em rejeitados
 
@@ -175,7 +180,7 @@
 - Registro em lote via **`PATCH /orcamentos/rejeitados/em-massa`** com `{ ids[], motivoRejeicaoId, observacaoRejeicao? }`.
 - Motivo deve estar **ativo** no cadastro; motivo é **obrigatório** no registro.
 - Permissão: **`orcamento-rejeitado:update`**.
-- UI destaca linhas **sem motivo** vs **com motivo** (cores distintas em tema claro e escuro).
+- UI destaca linhas **sem motivo** vs **com motivo** (cores distintas em tema claro e escuro) — apenas na visualização de rejeitados.
 
 ### RN-ORC-003 — Motivos de rejeição (cadastro global)
 
@@ -184,9 +189,31 @@
 - Exclusão bloqueada se o motivo já estiver vinculado a orçamentos — usar inativação.
 - Permissões: **`orcamento-motivo:create|read|update|delete`**.
 
-### RN-ORC-004 — Sincronização preserva motivo
+### RN-ORC-004 — Sincronização e motivo de rejeição
 
-- Na sincronização incremental de orçamentos (`processarOrcamento`), o upsert **não altera** `motivoRejeicaoId` nem `observacaoRejeicao` em registros já existentes.
+- Na sincronização incremental de orçamentos (`processarOrcamento`), o upsert **preserva** `motivoRejeicaoId` e `observacaoRejeicao` enquanto o registro permanece **REJEITADO** (ou muda de APROVADO para REJEITADO).
+- Se o status mudar de **REJEITADO** para **APROVADO**, `motivoRejeicaoId` e `observacaoRejeicao` são **limpos** (`null`).
+
+### RN-ORC-005 — Atualização manual de orçamentos (listagem)
+
+- Botão **Atualizar orçamentos** na listagem de orçamentos dispara **`POST /sincronizacao/orcamentos`** (somente orçamentos, não clientes/prescritores).
+- Permissão: **`orcamento-rejeitado:sync`**.
+- Usuário **com unidade** no cadastro: sincroniza apenas o agente mapeado à unidade, usando `ultimaModificacaoOrcamento` da configuração correspondente.
+- Usuário **sem unidade**: sincroniza **todas** as configurações ativas com watermark de orçamentos configurado.
+- Enquanto houver sync em andamento (`isRunning`), novas requisições retornam **409**; a UI exibe progresso via **`GET /sincronizacao/progresso`**.
+- Ao concluir, o watermark `ultimaModificacaoOrcamento` é atualizado na configuração de sincronização.
+
+### RN-ORC-006 — Painel de indicadores (dashboard)
+
+- Tela **`/orcamentos/dashboard`** consolida KPIs e gráficos analíticos sobre **todos** os orçamentos (`APROVADO` e `REJEITADO`), respeitando filtros globais.
+- Permissão exclusiva: **`orcamento-dashboard:read`** (independente de `orcamento-rejeitado:read`).
+- Visualização de valores monetários no painel exige a permissão **`orcamento-dashboard:view-valores`**.
+- Sem a permissão de valores, o painel deve exibir apenas **quantidades** e **percentuais**, ocultando campos monetários.
+- Escopo por unidade conforme **RN-007** (usuário com unidade vê apenas a própria; admin global vê todas).
+- Métrica monetária: **`precoVenda`**. Eixo temporal: **`dataOrcamento`** (`YYYY-MM-DD`).
+- Agrupamento de vendedor e médico: **por nome** (`nomeVendedor`, `nomeMedico`).
+- Rejeitados sem `motivoRejeicaoId` classificam-se como **`Sem motivo`** na análise de perdas (Pareto).
+- Endpoint consolidado: **`GET /orcamentos/dashboard/indicadores`**; opções de filtro: **`GET /orcamentos/dashboard/opcoes-filtro`**.
 
 ---
 

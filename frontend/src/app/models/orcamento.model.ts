@@ -50,19 +50,45 @@ export interface UpdateOrcamentoMotivoRejeicaoDto {
   ativo?: boolean;
 }
 
-export interface FindOrcamentosRejeitadosDto {
+export type OrcamentoListaStatusFiltro = 'APROVADO' | 'REJEITADO' | 'TODOS';
+
+export interface FindOrcamentosDto {
   page?: number;
   limit?: number;
+  status?: OrcamentoListaStatusFiltro;
   unidade?: Unidade;
   nrOrcamento?: string;
   nomeCliente?: string;
   nomeVendedor?: string;
+  nomesMedico?: string[];
   comMotivo?: boolean;
   motivoRejeicaoId?: string;
   dataInicial?: string;
   dataFinal?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+/** @deprecated Use FindOrcamentosDto */
+export type FindOrcamentosRejeitadosDto = FindOrcamentosDto;
+
+export interface OrcamentosRejeitadosOpcoesFiltro {
+  medicos: OrcamentoMedicoOpcaoFiltro[];
+}
+
+export type MedicoOrdenacaoFiltro =
+  | 'total'
+  | 'aprovados'
+  | 'rejeitados'
+  | 'alfabetica';
+
+export type MedicoLimiteExibicaoFiltro = 10 | 15 | 20 | 'todos';
+
+export interface OrcamentoMedicoOpcaoFiltro {
+  nome: string;
+  total: number;
+  aprovados: number;
+  rejeitados: number;
 }
 
 export interface BulkUpdateRejeitadosDto {

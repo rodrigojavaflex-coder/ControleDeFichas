@@ -299,27 +299,26 @@
           </app-date-range-filter>
         </div>
 
-        <div class="filter-group fechamento-container">
-          <div class="filter-group checkbox-field fechamento-checkboxes-row">
-            <label class="label-campo checkbox-label">
-              <input
-                type="checkbox"
-                checked
-                disabled
-                name="comDataFechamentoFilter">
-              Vendas com fechamento
-            </label>
-          </div>
-          <div class="filter-group date-range-field">
-            <app-date-range-filter
-              label="Data de Fechamento"
-              startLabel="Início"
-              endLabel="Fim"
-              [start]="dataInicialFechamentoFilter"
-              [end]="dataFinalFechamentoFilter"
-              (rangeChange)="onFechamentoRangeChangeModal($event)">
-            </app-date-range-filter>
-          </div>
+        <div class="filter-group date-range-field">
+          <app-date-range-filter
+            label="Data de Fechamento"
+            startLabel="Início"
+            endLabel="Fim"
+            [start]="dataInicialFechamentoFilter"
+            [end]="dataFinalFechamentoFilter"
+            (rangeChange)="onFechamentoRangeChangeModal($event)">
+          </app-date-range-filter>
+        </div>
+
+        <div class="filter-group checkbox-field fechamento-checkboxes-row">
+          <label class="label-campo checkbox-label">
+            <input
+              type="checkbox"
+              checked
+              disabled
+              name="comDataFechamentoFilter">
+            Vendas com fechamento
+          </label>
         </div>
 
         <div class="filter-group">
