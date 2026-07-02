@@ -39,6 +39,26 @@
   min-height: auto;
 }
 
+.venda-fechada-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacamento-sm);
+  margin-bottom: var(--espacamento-md);
+  padding: var(--espacamento-sm) var(--espacamento-md);
+  border: 1px solid var(--cor-borda-base);
+  border-radius: var(--raio-borda-md, 6px);
+  background: var(--cor-fundo-secundario, var(--cor-fundo-base));
+  color: var(--cor-texto-base);
+  font-size: var(--tamanho-fonte-sm, 0.875rem);
+  line-height: 1.4;
+}
+
+.venda-fechada-aviso i {
+  margin-top: 0.15rem;
+  color: var(--cor-texto-secundario);
+  flex-shrink: 0;
+}
+
 .modal-venda .modal-titulo {
   font-size: var(--tamanho-fonte-base);
   line-height: 1.1;

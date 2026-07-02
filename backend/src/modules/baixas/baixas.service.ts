@@ -397,54 +397,12 @@ export class BaixasService {
   }
 
   /**
-   * Atualiza o status da venda baseado no total das baixas
-   * 
-   * Regras de atualização de status:
-   * - REGISTRADO: Nenhuma baixa (totalPago = 0)
-   * - PAGO_PARCIAL: Valor baixado > 0 E menor que valorCliente
-   * - PAGO: Valor baixado >= valorCliente
-   * 
-   * O status é sempre atualizado baseado nas baixas, independente de dataFechamento.
-   * 
-   * @param idvenda - ID da venda para atualizar o status
+   * Recalcula o status da venda pelas baixas (independente de dataFechamento).
+   * Delega a VendasService.updateVendaStatusBasedOnBaixas para não passar pelo
+   * PATCH genérico, que bloqueia alterações em vendas fechadas (RN-VND-002).
    */
   private async updateVendaStatus(idvenda: string): Promise<void> {
-    try {
-      // Buscar venda
-      const venda = await this.vendasService.findOne(idvenda);
-
-      // Calcular total das baixas para esta venda
-      const totalBaixas = await this.baixaRepository
-        .createQueryBuilder('baixa')
-        .select('SUM(baixa.valorBaixa)', 'total')
-        .where('baixa.idvenda = :idvenda', { idvenda })
-        .getRawOne();
-
-      const totalPago = parseFloat(totalBaixas?.total || '0');
-      const valorCliente = venda.valorCliente || 0;
-
-      // Determinar novo status baseado nas regras de negócio
-      let novoStatus: VendaStatus;
-
-      if (totalPago === 0) {
-        // Nenhuma baixa: status REGISTRADO
-        novoStatus = VendaStatus.REGISTRADO;
-      } else if (totalPago >= valorCliente) {
-        // Valor baixado >= valor cliente: status PAGO
-        novoStatus = VendaStatus.PAGO;
-      } else {
-        // Valor baixado > 0 E < valor cliente: status PAGO_PARCIAL
-        novoStatus = VendaStatus.PAGO_PARCIAL;
-      }
-
-      // Sempre atualizar baseado nas baixas, independente de dataFechamento
-      if (venda.status !== novoStatus) {
-        await this.vendasService.update(idvenda, { status: novoStatus });
-      }
-    } catch (error) {
-      this.logger.error(`Erro ao atualizar status da venda ${idvenda}:`, error);
-      throw error;
-    }
+    await this.vendasService.updateVendaStatusBasedOnBaixas(idvenda);
   }
 
   async processarBaixasEmMassa(

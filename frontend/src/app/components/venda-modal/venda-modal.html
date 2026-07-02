@@ -3,7 +3,7 @@
   <div class="modal-conteudo modal-grande modal-venda" (click)="$event.stopPropagation()">
     <!-- Header -->
     <div class="modal-cabecalho">
-      <h3 class="modal-titulo">{{ isEditing ? 'Editar Venda' : 'Nova Venda' }}</h3>
+      <h3 class="modal-titulo">{{ isEditing ? (vendaFechada ? 'Observações da Venda' : 'Editar Venda') : 'Nova Venda' }}</h3>
       <button type="button" class="modal-fechar" (click)="closeModal()" [attr.disabled]="isLoading ? 'disabled' : null">
         <i class="fas fa-times"></i>
       </button>
@@ -11,6 +11,14 @@
 
     <!-- Form -->
     <form [formGroup]="vendaForm" (ngSubmit)="onSubmit()" class="modal-corpo">
+      <div class="venda-fechada-aviso" *ngIf="vendaFechada" role="status">
+        <i class="fas fa-lock" aria-hidden="true"></i>
+        <span>
+          Venda fechada em <strong>{{ dataFechamentoFormatada }}</strong>.
+          Apenas observações podem ser alteradas. Baixas e status continuam conforme pagamento do cliente.
+        </span>
+      </div>
+
       <!-- Primeira linha: Protocolo, Data Venda, Origem, Status, Unidade -->
       <div class="grid-formulario" style="grid-template-columns: repeat(5, 1fr); margin-bottom: var(--espacamento-md);">
         <div class="grupo-campo">
@@ -275,7 +283,7 @@
         (click)="onSubmit()"
         [attr.disabled]="(isLoading || vendaForm.invalid) ? 'disabled' : null"
         [ngClass]="{'botao-carregando': isLoading}">
-        {{ isLoading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Criar Venda') }}
+        {{ isLoading ? 'Salvando...' : (isEditing ? (vendaFechada ? 'Salvar observação' : 'Atualizar') : 'Criar Venda') }}
       </button>
     </div>
   </div>

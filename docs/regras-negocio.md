@@ -215,6 +215,26 @@
 - Rejeitados sem `motivoRejeicaoId` classificam-se como **`Sem motivo`** na análise de perdas (Pareto).
 - Endpoint consolidado: **`GET /orcamentos/dashboard/indicadores`**; opções de filtro: **`GET /orcamentos/dashboard/opcoes-filtro`**.
 
+### RN-VND-001 — Fechamento vs status da venda
+
+- **`dataFechamento`** registra o **pagamento do fechamento** (lado compra/origem: `valorCompra`, `valorPago`). Não altera o `status` da venda.
+- **`status`** (`REGISTRADO`, `PAGO_PARCIAL`, `PAGO`) reflete o **pagamento recebido do cliente**, calculado pelas **baixas**.
+- Fechar venda: **`POST …/vendas/fechamento-massa`** (perm. **`venda:fechar`**). Cancelar fechamento: **`POST …/vendas/cancelamento-massa`** (perm. **`venda:cancelar-fechamento`**).
+
+### RN-VND-002 — Edição de venda com fechamento registrado
+
+- Com **`dataFechamento`** preenchido, **`PATCH …/vendas/:id`** aceita **somente** o campo **`observacao`**.
+- Demais campos (protocolo, cliente, valores, status, `dataFechamento`, etc.) retornam **400** com mensagem funcional informando a data do fechamento.
+- A UI (`venda-modal`) exibe aviso, desabilita os demais campos e envia apenas `observacao`.
+- **Cancelar fechamento** restaura a edição completa da venda.
+
+### RN-VND-003 — Baixas em venda fechada
+
+- **Baixa individual** (criar, editar, excluir): mantém as validações atuais; **não** bloqueia por `dataFechamento`.
+- Após baixa individual, o **status** da venda é recalculado pelas baixas (`updateVendaStatusBasedOnBaixas`), **sem** passar pelo `PATCH` restrito da RN-VND-002.
+- **Baixa em massa** (`processarBaixasEmMassa`): continua **bloqueada** para vendas com fechamento registrado.
+- **Atualizar valor compra em massa**: continua **bloqueada** para vendas com fechamento registrado.
+
 ---
 
 ## Demais módulos

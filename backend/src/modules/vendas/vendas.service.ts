@@ -329,6 +329,19 @@ export class VendasService {
     try {
       const venda = await this.findOne(id);
 
+      if (venda.dataFechamento) {
+        this.assertApenasObservacaoEmVendaFechada(venda, updateVendaDto);
+
+        if (updateVendaDto.observacao === undefined) {
+          return venda;
+        }
+
+        await this.vendaRepository.update(id, {
+          observacao: updateVendaDto.observacao ?? null,
+        });
+        return this.findOne(id);
+      }
+
       // Validar e buscar os objetos relacionados (se estiverem sendo atualizados)
       let cliente: Cliente | null | undefined = undefined;
       if (updateVendaDto.clienteId) {
@@ -423,6 +436,23 @@ export class VendasService {
     const venda = await this.findOne(id);
 
     await this.vendaRepository.remove(venda);
+  }
+
+  private assertApenasObservacaoEmVendaFechada(
+    venda: Venda,
+    updateVendaDto: UpdateVendaDto,
+  ): void {
+    const camposPermitidos = new Set(['observacao']);
+    const camposProibidos = Object.entries(updateVendaDto)
+      .filter(([, value]) => value !== undefined)
+      .map(([key]) => key)
+      .filter((key) => !camposPermitidos.has(key));
+
+    if (camposProibidos.length > 0) {
+      throw new BadRequestException(
+        `Venda com fechamento registrado em ${venda.dataFechamento}. Apenas observações podem ser alteradas.`,
+      );
+    }
   }
 
   private applyFilters(

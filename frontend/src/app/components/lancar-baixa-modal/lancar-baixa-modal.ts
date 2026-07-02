@@ -105,8 +105,33 @@ export class LancarBaixaModalComponent {
       return;
     }
 
-    // Sempre pedir confirmação antes de fechar
-    this.showCloseConfirmationModal = true;
+    if (this.hasUnsavedChanges()) {
+      this.showCloseConfirmationModal = true;
+      return;
+    }
+
+    this.closeModal();
+  }
+
+  hasUnsavedChanges(): boolean {
+    if (this.modoEdicao) {
+      return true;
+    }
+
+    if (this.baixaData.valorBaixa > 0) {
+      return true;
+    }
+
+    if (this.baixaData.observacao?.trim()) {
+      return true;
+    }
+
+    if (this.baixaData.tipoDaBaixa !== TipoDaBaixa.CARTAO_PIX) {
+      return true;
+    }
+
+    const hoje = new Date().toISOString().split('T')[0];
+    return this.baixaData.dataBaixa !== hoje;
   }
 
   private closeModal(): void {
@@ -439,7 +464,30 @@ export class LancarBaixaModalComponent {
     if (!this.venda) return 0;
     const valorCliente = this.venda.valorCliente || 0;
     const totalBaixas = this.getTotalBaixas();
-    return valorCliente - totalBaixas;
+    return Math.max(0, Number((valorCliente - totalBaixas).toFixed(2)));
+  }
+
+  getPercentualBaixado(): number {
+    if (!this.venda?.valorCliente) {
+      return 0;
+    }
+    const percentual = (this.getTotalBaixas() / this.venda.valorCliente) * 100;
+    return Math.min(100, Math.round(percentual));
+  }
+
+  canPreencherSaldoRestante(): boolean {
+    return this.getValorRestante() > 0;
+  }
+
+  preencherSaldoRestante(): void {
+    const restante = this.getValorRestante();
+    if (restante <= 0) {
+      this.errorModalService.show('Não há saldo restante para preencher.', 'Atenção');
+      return;
+    }
+
+    this.baixaData.valorBaixa = restante;
+    this.valorDisplay = this.formatCurrencyDisplay(restante);
   }
 
   hasPermission(permission: Permission): boolean {
@@ -467,8 +515,7 @@ export class LancarBaixaModalComponent {
     
     // Scroll para o formulário
     setTimeout(() => {
-      const formulario = document.querySelector('form');
-      formulario?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.querySelector('.baixa-form-section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
   }
 
@@ -628,6 +675,14 @@ export class LancarBaixaModalComponent {
   formatDateDisplay(date: string | Date | null | undefined): string {
     if (!date) {
       return '-';
+    }
+
+    if (typeof date === 'string') {
+      const parte = date.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(parte)) {
+        const [ano, mes, dia] = parte.split('-');
+        return `${dia}/${mes}/${ano}`;
+      }
     }
 
     const parsedDate = typeof date === 'string' ? new Date(date) : date;

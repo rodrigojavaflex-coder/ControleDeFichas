@@ -96,6 +96,19 @@
   border-color: var(--cor-info-hover) !important;
 }
 
+.btn-recibo {
+  /* Gerar recibo de pagamento */
+  background-color: var(--cor-info) !important;
+  border-color: var(--cor-info) !important;
+  color: #fff !important;
+}
+
+.btn-recibo:hover,
+.btn-recibo:focus {
+  background-color: var(--cor-info-hover) !important;
+  border-color: var(--cor-info-hover) !important;
+}
+
 .btn-auditoria {
   /* Ver histórico de auditoria */
   background-color: var(--cor-secundaria) !important;
@@ -211,6 +224,7 @@
 .btn-sm.btn-cancelar,
 .btn-sm.btn-limpar,
 .btn-sm.btn-imprimir,
+.btn-sm.btn-recibo,
 .btn-sm.btn-auditoria,
 .btn-sm.btn-baixa,
 .btn-sm.btn-upload,
@@ -240,6 +254,9 @@
    
    <!-- Botão Imprimir (Grid) -->
    <button class="btn btn-sm btn-imprimir">Imprimir</button>
+
+   <!-- Botão Recibo (Grid Baixas) -->
+   <button class="btn btn-sm btn-recibo">Recibo</button>
    
    <!-- Botão Auditoria (Grid) -->
    <button class="btn btn-sm btn-auditoria">Auditoria</button>

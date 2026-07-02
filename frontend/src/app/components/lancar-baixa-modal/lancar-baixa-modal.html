@@ -1,117 +1,198 @@
-<!-- Modal de Lançar Baixa - Design System -->
-<div class="modal-overlay" *ngIf="showModal" (click)="!loading && onClose()">
-  <div class="modal-conteudo modal-grande" (click)="$event.stopPropagation()">
-    <div class="modal-cabecalho">
-      <h3 class="modal-titulo">
-        Baixar Protocolo: {{ venda?.protocolo }} ({{ getClienteNome(venda) }})
-        <span class="valor-destaque">{{ formatCurrency(venda?.valorCliente || 0) }}</span>
+<!-- Modal de Lançar Baixa -->
+<div class="modal-overlay" *ngIf="showModal">
+  <div class="modal-conteudo modal-grande modal-baixa" (click)="$event.stopPropagation()">
+    <div class="modal-cabecalho baixa-modal-cabecalho">
+      <h3 class="modal-titulo baixa-modal-titulo" *ngIf="venda">
+        <span class="baixa-modal-protocolo">
+          <i class="fas fa-hashtag" aria-hidden="true"></i>
+          Protocolo {{ venda.protocolo || '—' }}
+        </span>
+        <span class="baixa-modal-cliente-nome">
+          <i class="fas fa-user" aria-hidden="true"></i>
+          {{ getClienteNome(venda) }}
+        </span>
       </h3>
-      <button type="button" class="modal-fechar" (click)="onClose()" [attr.disabled]="loading ? 'disabled' : null">
+      <div class="baixa-modal-meta" *ngIf="venda">
+        <span class="status-badge" [ngClass]="getStatusClass(venda.status)">
+          {{ getStatusLabel(venda.status) }}
+        </span>
+        <span class="baixa-fechamento-badge" *ngIf="venda.dataFechamento">
+          <i class="fas fa-lock" aria-hidden="true"></i>
+          {{ formatDateDisplay(venda.dataFechamento) }}
+        </span>
+      </div>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="onClose()"
+        [attr.disabled]="loading ? 'disabled' : null"
+        aria-label="Fechar modal">
         <i class="fas fa-times"></i>
       </button>
     </div>
 
-    <div class="modal-corpo" *ngIf="venda">
-      <!-- Loading Baixas -->
-      <div class="cartao" style="margin-bottom: var(--espacamento-lg);" *ngIf="loadingBaixas">
-        <div class="cartao-corpo">
-          <div class="loading-container">
-            <div class="spinner"></div>
-            <span>Carregando baixas...</span>
-          </div>
+    <div class="modal-corpo baixa-modal-corpo" *ngIf="venda">
+      <!-- Resumo financeiro -->
+      <section class="baixa-resumo" aria-label="Resumo da venda">
+        <div class="baixa-resumo-card">
+          <span class="baixa-resumo-label">Valor cliente</span>
+          <strong class="baixa-resumo-valor">{{ formatCurrency(venda.valorCliente || 0) }}</strong>
         </div>
+        <div class="baixa-resumo-card">
+          <span class="baixa-resumo-label">Total baixado</span>
+          <strong class="baixa-resumo-valor baixa-resumo-valor--info">{{ formatCurrency(getTotalBaixas()) }}</strong>
+        </div>
+        <div class="baixa-resumo-card" [class.baixa-resumo-card--completo]="getValorRestante() <= 0">
+          <span class="baixa-resumo-label">Saldo restante</span>
+          <strong
+            class="baixa-resumo-valor"
+            [class.baixa-resumo-valor--alerta]="getValorRestante() > 0"
+            [class.baixa-resumo-valor--sucesso]="getValorRestante() <= 0">
+            {{ formatCurrency(getValorRestante()) }}
+          </strong>
+        </div>
+        <div class="baixa-progresso" role="progressbar"
+          [attr.aria-valuenow]="getPercentualBaixado()"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-label]="'Progresso do pagamento: ' + getPercentualBaixado() + '%'">
+          <div class="baixa-progresso-barra" [style.width.%]="getPercentualBaixado()"></div>
+        </div>
+      </section>
+
+      <!-- Banner modo edição -->
+      <div class="baixa-edicao-aviso" *ngIf="modoEdicao" role="status">
+        <i class="fas fa-pen" aria-hidden="true"></i>
+        <span>Editando {{ formatCurrency(baixaEmEdicao?.valorBaixa || 0) }}</span>
+        <button type="button" class="baixa-edicao-cancelar" (click)="cancelarEdicao()" [disabled]="loading">
+          Cancelar
+        </button>
       </div>
 
-      <!-- Formulário de Baixa -->
-      <form (ngSubmit)="onSubmit()">
-        <div class="grid-formulario-baixa">
-          <div class="grupo-campo campo-reduzido">
-            <label for="tipoDaBaixa" class="label-campo obrigatorio">Tipo da Baixa</label>
-            <select
-              id="tipoDaBaixa"
-              [(ngModel)]="baixaData.tipoDaBaixa"
-              name="tipoDaBaixa"
-              class="campo"
-              required>
-              <option value="" disabled>Selecione o tipo</option>
-              <option *ngFor="let tipo of tiposBaixa" [value]="tipo">
-                {{ getTipoBaixaLabel(tipo) }}
-              </option>
-            </select>
+      <!-- Loading baixas -->
+      <div class="baixa-loading" *ngIf="loadingBaixas">
+        <div class="spinner"></div>
+        <span>Carregando...</span>
+      </div>
+
+      <!-- Formulário -->
+      <section class="baixa-form-section" aria-label="Formulário de baixa">
+        <form (ngSubmit)="onSubmit()" class="baixa-form">
+          <div class="baixa-form-grid">
+            <div class="grupo-campo">
+              <label for="tipoDaBaixa" class="label-campo obrigatorio">Tipo</label>
+              <select
+                id="tipoDaBaixa"
+                [(ngModel)]="baixaData.tipoDaBaixa"
+                name="tipoDaBaixa"
+                class="campo"
+                required>
+                <option value="" disabled>Selecione</option>
+                <option *ngFor="let tipo of tiposBaixa" [value]="tipo">
+                  {{ getTipoBaixaLabel(tipo) }}
+                </option>
+              </select>
+            </div>
+
+            <div class="grupo-campo">
+              <label for="valorBaixa" class="label-campo obrigatorio">Valor</label>
+              <div class="baixa-valor-linha">
+                <div class="grupo-input baixa-valor-input">
+                  <span class="prefixo-input">R$</span>
+                  <input
+                    id="valorBaixa"
+                    type="text"
+                    [(ngModel)]="valorDisplay"
+                    name="valorDisplay"
+                    class="campo"
+                    placeholder="0,00"
+                    inputmode="decimal"
+                    (input)="formatCurrencyInput($event)"
+                    (blur)="formatCurrencyOnBlur()"
+                    (focus)="onValorFocus()"
+                    required>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-acao-icone baixa-btn-saldo"
+                  (click)="preencherSaldoRestante()"
+                  [disabled]="loading || !canPreencherSaldoRestante()"
+                  title="Usar saldo restante">
+                  <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="grupo-campo">
+              <label for="dataBaixa" class="label-campo obrigatorio">Data</label>
+              <input
+                id="dataBaixa"
+                type="date"
+                [(ngModel)]="baixaData.dataBaixa"
+                name="dataBaixa"
+                class="campo"
+                required>
+            </div>
           </div>
 
-          <div class="grupo-campo campo-reduzido">
-            <label for="valorBaixa" class="label-campo obrigatorio">Valor da Baixa</label>
-            <input
-              id="valorBaixa"
-              type="text"
-              [(ngModel)]="valorDisplay"
-              name="valorDisplay"
-              class="campo"
-              placeholder="0,00"
-              (input)="formatCurrencyInput($event)"
-              (blur)="formatCurrencyOnBlur()"
-              (focus)="onValorFocus()"
-              required>
-          </div>
+          <div class="baixa-form-linha-obs">
+            <div class="grupo-campo baixa-campo-observacao">
+              <label for="observacao" class="label-campo">Observação</label>
+              <input
+                id="observacao"
+                type="text"
+                [(ngModel)]="baixaData.observacao"
+                name="observacao"
+                class="campo"
+                placeholder="Observações sobre a baixa (opcional)"
+                maxlength="500">
+            </div>
 
-          <div class="grupo-campo campo-reduzido">
-            <label for="dataBaixa" class="label-campo obrigatorio">Data da Baixa</label>
-            <input
-              id="dataBaixa"
-              type="date"
-              [(ngModel)]="baixaData.dataBaixa"
-              name="dataBaixa"
-              class="campo"
-              required>
+            <div class="grupo-campo baixa-campo-acao">
+              <label class="label-campo baixa-label-acao" aria-hidden="true">&nbsp;</label>
+              <button
+                type="submit"
+                class="botao botao-primario botao-lancar-baixa"
+                [attr.disabled]="loading ? 'disabled' : null"
+                [ngClass]="{'botao-carregando': loading}">
+                {{ loading ? (modoEdicao ? 'Atualizando...' : 'Lançando...') : (modoEdicao ? 'Atualizar Baixa' : 'Lançar Baixa') }}
+              </button>
+            </div>
           </div>
+        </form>
+      </section>
 
-          <div class="grupo-campo campo-observacao">
-            <label for="observacao" class="label-campo">Observação</label>
-            <input
-              id="observacao"
-              type="text"
-              [(ngModel)]="baixaData.observacao"
-              name="observacao"
-              class="campo"
-              placeholder="Observações sobre a baixa..."
-              maxlength="500">
-          </div>
+      <!-- Histórico de baixas -->
+      <section class="baixas-historico" aria-labelledby="baixas-historico-titulo">
+        <h4 id="baixas-historico-titulo" class="titulo-baixas">
+          Baixas
+          <span class="baixas-contador" *ngIf="!loadingBaixas">({{ baixasExistentes.length }})</span>
+        </h4>
 
-          <div class="grupo-campo campo-botao">
-            <label class="label-campo" style="visibility: hidden;">Ação</label>
-            <button
-              type="submit"
-              class="botao botao-primario botao-lancar-baixa"
-              [attr.disabled]="loading ? 'disabled' : null"
-              [ngClass]="{'botao-carregando': loading}">
-              {{ loading ? (modoEdicao ? 'Atualizando...' : 'Lançando...') : (modoEdicao ? 'Atualizar Baixa' : 'Lançar Baixa') }}
-            </button>
-          </div>
-        </div>
-      </form>
+        <p class="baixas-vazio" *ngIf="!loadingBaixas && baixasExistentes.length === 0">
+          Nenhuma baixa registrada.
+        </p>
 
-      <!-- Baixas Existentes -->
-      <div class="baixas-container" *ngIf="baixasExistentes.length > 0" style="margin-top: var(--espacamento-lg);">
-        <h6 class="titulo-baixas">Baixas realizadas</h6>
-        <div class="tabela-responsive">
-          <table class="tabela">
+        <div class="tabela-responsive baixas-tabela-wrapper" *ngIf="baixasExistentes.length > 0">
+          <table class="tabela baixas-tabela">
             <thead>
               <tr>
-                <th>Data Baixa</th>
-                <th>Tipo Baixa</th>
-                <th>Valor</th>
-                <th>Obs</th>
-                <th>Ações</th>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th class="col-valor">Valor</th>
+                <th>Observação</th>
+                <th class="col-acoes">Ações</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let baixa of baixasExistentes" [class.editing-row]="baixaEmEdicao?.id === baixa.id">
-                <td>{{ baixa.dataBaixa | date:'dd/MM/yyyy' }}</td>
+              <tr
+                *ngFor="let baixa of baixasExistentes"
+                [class.editing-row]="baixaEmEdicao?.id === baixa.id">
+                <td>{{ formatDateDisplay(baixa.dataBaixa) }}</td>
                 <td>{{ getTipoBaixaLabel(baixa.tipoDaBaixa) }}</td>
-                <td>{{ formatCurrency(baixa.valorBaixa) }}</td>
-                <td>{{ baixa.observacao || '-' }}</td>
-                <td>
+                <td class="col-valor">{{ formatCurrency(baixa.valorBaixa) }}</td>
+                <td class="col-obs">{{ baixa.observacao || '—' }}</td>
+                <td class="col-acoes">
                   <button
                     *ngIf="hasPermission(Permission.VENDA_UPDATE)"
                     type="button"
@@ -141,36 +222,21 @@
             </tbody>
           </table>
         </div>
-        <div class="resumo-baixas">
-          <span class="resumo-item">
-            <strong>Total Baixado:</strong>{{ formatCurrency(getTotalBaixas()) }}
-          </span>
-          <span class="resumo-item">
-            <strong>Valor Cliente:</strong>{{ formatCurrency(venda.valorCliente) }}
-          </span>
-          <span class="resumo-item">
-            <strong>Valor Restante:</strong>
-            <span [class]="getValorRestante() > 0 ? 'text-warning' : 'text-success'">
-              {{ formatCurrency(getValorRestante()) }}
-            </span>
-          </span>
-        </div>
-      </div>
+      </section>
     </div>
 
-    <div class="modal-rodape">
+    <div class="modal-rodape baixa-modal-rodape">
       <button
         type="button"
         class="botao botao-fantasma"
         (click)="modoEdicao ? cancelarEdicao() : onClose()"
         [attr.disabled]="loading ? 'disabled' : null">
-        {{ modoEdicao ? 'Cancelar Edição' : 'Cancelar' }}
+        {{ modoEdicao ? 'Cancelar Edição' : 'Fechar' }}
       </button>
     </div>
   </div>
 </div>
 
-<!-- Modal de confirmação de exclusão de baixa -->
 <app-confirmation-modal
   [isVisible]="showDeleteBaixaModal"
   title="Confirmar Exclusão"
@@ -181,23 +247,21 @@
   (cancelled)="onDeleteBaixaCancelled()"
 ></app-confirmation-modal>
 
-<!-- Modal de confirmação de fechamento -->
 <app-confirmation-modal
   [isVisible]="showCloseConfirmationModal"
   title="Confirmar Fechamento"
-  message="Você tem alterações não salvas. Deseja realmente fechar e perder as alterações?"
+  message="Existem alterações não salvas no formulário. Deseja fechar e descartar?"
   confirmText="Fechar"
-  cancelText="Cancelar"
+  cancelText="Continuar editando"
   (confirmed)="onCloseConfirmed()"
   (cancelled)="onCloseCancelled()"
 ></app-confirmation-modal>
 
-<!-- Modal de confirmação de data futura -->
 <app-confirmation-modal
   [isVisible]="showDataFuturaModal"
   title="Confirmar Data Futura"
   [message]="'A data informada (' + formatDateDisplay(baixaData.dataBaixa) + ') é maior que a data atual. Deseja realmente realizar esta baixa com data futura?'"
-  confirmText="Sim, Confirmar"
+  confirmText="Sim, confirmar"
   cancelText="Cancelar"
   (confirmed)="onDataFuturaConfirmed()"
   (cancelled)="onDataFuturaCancelled()"

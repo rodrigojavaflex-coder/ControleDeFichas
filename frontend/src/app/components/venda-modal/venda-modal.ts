@@ -87,12 +87,27 @@ export class VendaModalComponent implements OnInit, OnChanges {
     }
   }
 
+  get vendaFechada(): boolean {
+    return !!(this.venda?.dataFechamento);
+  }
+
+  get dataFechamentoFormatada(): string {
+    if (!this.venda?.dataFechamento) {
+      return '';
+    }
+    const raw = this.venda.dataFechamento.split('T')[0];
+    const [ano, mes, dia] = raw.split('-');
+    return `${dia}/${mes}/${ano}`;
+  }
+
   ngOnChanges(changes: any) {
     if (changes['showModal'] && this.showModal && this.venda) {
       this.isEditing = true;
       this.initializeFormWithData(this.venda);
-      // Focar no protocolo após um pequeno delay para garantir que o modal está renderizado
-      setTimeout(() => this.focusProtocolo(), 100);
+      setTimeout(
+        () => (this.vendaFechada ? this.focusObservacao() : this.focusProtocolo()),
+        100,
+      );
     } else if (changes['showModal'] && this.showModal && !this.venda) {
       this.isEditing = false;
       this.resetForm();
@@ -105,6 +120,32 @@ export class VendaModalComponent implements OnInit, OnChanges {
     if (this.protocoloInput?.nativeElement) {
       this.protocoloInput.nativeElement.focus();
     }
+  }
+
+  private focusObservacao(): void {
+    const el = document.getElementById('observacao') as HTMLTextAreaElement | null;
+    el?.focus();
+  }
+
+  private applyFormLockForVendaFechada(): void {
+    if (!this.vendaFechada) {
+      return;
+    }
+    Object.keys(this.vendaForm.controls).forEach((key) => {
+      if (key === 'observacao') {
+        this.vendaForm.get(key)?.enable({ emitEvent: false });
+      } else {
+        this.vendaForm.get(key)?.disable({ emitEvent: false });
+      }
+    });
+  }
+
+  private enableAllFormFieldsExceptStatus(): void {
+    Object.keys(this.vendaForm.controls).forEach((key) => {
+      if (key !== 'status') {
+        this.vendaForm.get(key)?.enable({ emitEvent: false });
+      }
+    });
   }
 
   private initializeForm() {
@@ -208,6 +249,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
     });
 
     this.podeVisualizarValorCompra = this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
+    this.applyFormLockForVendaFechada();
   }
 
   closeModal() {
@@ -265,10 +307,7 @@ export class VendaModalComponent implements OnInit, OnChanges {
     });
     // Garantir que o status fique desabilitado
     this.vendaForm.get('status')?.disable();
-    // Reabilitar campos de autocomplete (caso tenham sido desabilitados)
-    this.vendaForm.get('clienteId')?.enable({ emitEvent: false });
-    this.vendaForm.get('vendedorId')?.enable({ emitEvent: false });
-    this.vendaForm.get('prescritorId')?.enable({ emitEvent: false });
+    this.enableAllFormFieldsExceptStatus();
     
     // Limpar autocompletes (exceto vendedor se usuário tiver vendedor)
     setTimeout(() => {
@@ -286,6 +325,11 @@ export class VendaModalComponent implements OnInit, OnChanges {
   }
 
   onSubmit() {
+    if (this.isEditing && this.vendaFechada) {
+      this.submitObservacaoFechada();
+      return;
+    }
+
     if (this.vendaForm.valid) {
       // Garantir que os valores dos autocompletes estão sincronizados com o FormControl
       // IMPORTANTE: Fazer isso ANTES de qualquer outra operação
@@ -407,6 +451,25 @@ export class VendaModalComponent implements OnInit, OnChanges {
     } else {
       this.markFormGroupTouched();
     }
+  }
+
+  private submitObservacaoFechada(): void {
+    const observacao = this.vendaForm.get('observacao')?.value?.trim() || null;
+    this.isLoading = true;
+
+    this.vendaService.updateVenda(this.venda!.id, { observacao }).subscribe({
+      next: (venda) => {
+        this.isLoading = false;
+        this.vendaForm.markAsPristine();
+        this.saved.emit(venda);
+        this.closeModal();
+      },
+      error: (error) => {
+        this.isLoading = false;
+        const message = error.error?.message || 'Erro ao salvar observação';
+        this.errorModalService.show(message, 'Erro');
+      },
+    });
   }
 
   aplicarDescontoValorPago(): void {
