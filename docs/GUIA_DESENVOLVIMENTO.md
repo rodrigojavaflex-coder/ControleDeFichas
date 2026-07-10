@@ -59,9 +59,23 @@ Sem `data.permissions` (ou lista vazia), o `permissionGuard` libera qualquer aut
 - Endpoints de **consulta** (GET) de dados sensíveis também precisam de permissão — não só POST/PUT/DELETE.
 - Várias permissões no decorator = OR (basta uma).
 
+## Versão do frontend (anti-cache)
+
+Objetivo: usuário não ficar preso em JS/CSS antigos após deploy.
+
+| Peça | Função |
+|------|--------|
+| `outputHashing: "all"` (`angular.json`) | Bundles com hash no nome |
+| `public/_headers` | `index.html` e `version.json` sem cache; `*.js`/`*.css` com cache longo |
+| `scripts/generate-version.mjs` | Gera `public/version.json` no `prebuild` / `prestart` |
+| `AppVersionService` | Em produção, compara `buildId` a cada 5 min e ao focar a aba; banner “Atualizar” |
+
+**Deploy:** o diretório publicado do Static Site deve incluir `_headers` e `version.json` (saem de `public/` no build Angular). Confirmar no painel do host (ex.: Render) se `_headers` é suportado; se não for, configurar Cache-Control equivalente no CDN/host.
+
 ## Referências
 
 - Guard: `frontend/src/app/guards/permission.guard.ts`
 - Rotas: `frontend/src/app/app.routes.ts`
 - Menu: `frontend/src/app/components/navigation/navigation.ts`
+- Versão: `frontend/src/app/services/app-version.service.ts`
 - Checklist de atalhos: `docs/GUIA_OPERACAO_AGENTE.md`

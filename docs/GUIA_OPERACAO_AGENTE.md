@@ -222,7 +222,7 @@ Validacao: lint e teste manual do fluxo.
 
 | Documento | Uso |
 |-----------|-----|
-| `docs/GUIA_DESENVOLVIMENTO.md` | Padrao de rotas, `permissionGuard` e checklist de nova tela |
+| `docs/GUIA_DESENVOLVIMENTO.md` | Padrao de rotas, `permissionGuard`, anti-cache de versao e checklist de nova tela |
 | `docs/regras-negocio.md` | RN-* oficiais |
 | `docs/ENCODING_SISTEMAS_LEGADOS.md` | Encoding Firebird/agente/backend; checklist para novos campos de texto no agente |
 | `docs/WHATSAPP_RECIBO_FOLHA.md` | Envio de recibo de folha por WhatsApp (especificacao + checklist pre-dev) |

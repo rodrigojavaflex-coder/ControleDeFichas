@@ -2,11 +2,13 @@
   "name": "frontend",
   "version": "0.0.0",
   "scripts": {
-    "prebuild": "node ./scripts/ensure-prod-env.mjs",
+    "prebuild": "node ./scripts/ensure-prod-env.mjs && node ./scripts/generate-version.mjs",
+    "prestart": "node ./scripts/generate-version.mjs",
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
     "build": "npx ng build",
-    "watch": "ng build --watch --configuration development"
+    "watch": "ng build --watch --configuration development",
+    "generate-version": "node ./scripts/generate-version.mjs"
   },
   "prettier": {
     "printWidth": 100,

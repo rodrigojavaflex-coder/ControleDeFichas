@@ -13,3 +13,4 @@ export * from './prescritores.service';
 export * from './migracao.service';
 export * from './folha.service';
 export * from './home-shortcuts.service';
+export * from './app-version.service';

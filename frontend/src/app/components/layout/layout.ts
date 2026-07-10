@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ErrorModalService, AuthService, NavigationService } from '../../services';
+import { AppVersionService } from '../../services/app-version.service';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { NavigationComponent } from '../navigation/navigation';
@@ -25,13 +26,20 @@ import { GlobalBlockingOverlayComponent } from '../global-blocking-overlay/globa
 export class LayoutComponent implements OnInit {
   private authService = inject(AuthService);
   private navigationService = inject(NavigationService);
+  private appVersionService = inject(AppVersionService);
   public errorModalService = inject(ErrorModalService);
-  
+
   isAuthenticated = false;
   isMenuOpen = false; // Menu inicia fechado por padrão
   isDesktop = window.innerWidth > 768;
+  updateAvailable = false;
 
   ngOnInit() {
+    void this.appVersionService.start();
+    this.appVersionService.updateAvailable$.subscribe(
+      (available) => (this.updateAvailable = available),
+    );
+
     this.authService.isAuthenticated$.subscribe(
       authenticated => this.isAuthenticated = authenticated
     );
@@ -52,5 +60,9 @@ export class LayoutComponent implements OnInit {
 
   closeMenu() {
     this.navigationService.closeMobile();
+  }
+
+  atualizarVersao(): void {
+    this.appVersionService.applyUpdate();
   }
 }

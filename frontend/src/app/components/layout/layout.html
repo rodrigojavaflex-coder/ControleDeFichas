@@ -7,6 +7,17 @@
 
 <app-global-blocking-overlay />
 
+<div
+  class="app-version-banner"
+  *ngIf="updateAvailable"
+  role="status"
+  aria-live="polite">
+  <span>Nova versão disponível.</span>
+  <button type="button" class="btn btn-sm app-version-banner__btn" (click)="atualizarVersao()">
+    Atualizar
+  </button>
+</div>
+
 <div class="layout-container" *ngIf="isAuthenticated">
   <app-header></app-header>
   <div class="main-content-wrapper">
