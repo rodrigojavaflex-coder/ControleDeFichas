@@ -287,6 +287,14 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     requiredPermissions: [Permission.VENDA_BAIXAR],
   },
   {
+    id: 'relatorios-fechamento-caixa',
+    label: 'Fechamento de Caixa',
+    route: '/relatorios/fechamento-caixa',
+    icon: 'feather-dollar-sign',
+    category: 'Relatórios',
+    requiredPermissions: [Permission.VENDA_FECHAR_CAIXA],
+  },
+  {
     id: 'relatorios-acompanhar-vendas',
     label: 'Acompanhar (Vendas)',
     route: '/relatorios/acompanhar-vendas',
