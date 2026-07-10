@@ -191,12 +191,15 @@ Ao criar ou expor uma **nova rota no menu lateral** que o usuario possa fixar co
 
 | # | Arquivo | O que fazer |
 |---|---------|-------------|
-| 1 | `frontend/src/app/app.routes.ts` | Rota lazy/standalone |
+| 1 | `frontend/src/app/app.routes.ts` | Rota + `canActivate: [authGuard, permissionGuard]` + `data.permissions` (mesmo OR do menu) |
 | 2 | `frontend/src/app/components/navigation/navigation.ts` | Item no menu + permissões |
 | 3 | `frontend/src/app/config/home-shortcuts.registry.ts` | Entrada em `HOME_SHORTCUTS_CATALOG` |
 | 4 | `backend/src/common/constants/home-shortcut-ids.ts` | Mesmo `id` em `HOME_SHORTCUT_IDS` |
+| 5 | Controller NestJS | `@Permissions` também nos GETs sensíveis (não só escrita) |
 
 **Importante:** se faltar o passo **4**, o usuario seleciona o atalho na home, salva, e o backend **remove silenciosamente** o ID na sanitizacao de `PATCH /users/:id/atalhos-home`. O atalho nao persiste apos recarregar.
+
+**Acesso por URL:** esconder o menu **nao** bloqueia a tela. Sem `permissionGuard` + `data.permissions`, qualquer usuario autenticado abre a rota digitando o endereço. Padrao completo: `docs/GUIA_DESENVOLVIMENTO.md`.
 
 Opcional: citar RN-* de atalhos em `docs/regras-negocio.md` (secao atalhos da home).
 
@@ -219,6 +222,7 @@ Validacao: lint e teste manual do fluxo.
 
 | Documento | Uso |
 |-----------|-----|
+| `docs/GUIA_DESENVOLVIMENTO.md` | Padrao de rotas, `permissionGuard` e checklist de nova tela |
 | `docs/regras-negocio.md` | RN-* oficiais |
 | `docs/ENCODING_SISTEMAS_LEGADOS.md` | Encoding Firebird/agente/backend; checklist para novos campos de texto no agente |
 | `docs/WHATSAPP_RECIBO_FOLHA.md` | Envio de recibo de folha por WhatsApp (especificacao + checklist pre-dev) |

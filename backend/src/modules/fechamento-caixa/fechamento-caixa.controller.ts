@@ -70,15 +70,21 @@ export class FechamentoCaixaController {
   }
 
   @Get('saldos-iniciais')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS, Permission.VENDA_FECHAR_CAIXA)
   @ApiOperation({ summary: 'Listar saldo inicial de caixa por unidade' })
   @ApiResponse({ status: HttpStatus.OK, type: [CaixaSaldoInicialUnidadeDto] })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Sem permissão' })
   listarSaldosIniciais(): Promise<CaixaSaldoInicialUnidadeDto[]> {
     return this.consolidadoService.listarSaldosIniciais();
   }
 
   @Put('saldos-iniciais')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
   @ApiOperation({ summary: 'Atualizar saldo inicial de caixa de uma unidade' })
   @ApiResponse({ status: HttpStatus.OK, type: CaixaSaldoInicialUnidadeDto })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Sem permissão' })
   atualizarSaldoInicial(
     @Body() dto: AtualizarSaldoInicialUnidadeDto,
   ): Promise<CaixaSaldoInicialUnidadeDto> {
@@ -86,8 +92,11 @@ export class FechamentoCaixaController {
   }
 
   @Get('consolidado')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.VENDA_FECHAR_CAIXA)
   @ApiOperation({ summary: 'Obter rascunho consolidado ERP + terceiro' })
   @ApiResponse({ status: HttpStatus.OK, type: FechamentoConsolidadoResponseDto })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Sem permissão' })
   obterConsolidado(
     @Query() query: FechamentoConsolidadoQueryDto,
   ): Promise<FechamentoConsolidadoResponseDto> {
@@ -95,6 +104,8 @@ export class FechamentoCaixaController {
   }
 
   @Get('consolidado/detalhado')
+  @UseGuards(PermissionsGuard)
+  @Permissions(Permission.VENDA_FECHAR_CAIXA)
   @ApiOperation({
     summary: 'Obter detalhes de baixas e pagamentos ERP para relatório',
   })
@@ -102,6 +113,7 @@ export class FechamentoCaixaController {
     status: HttpStatus.OK,
     type: FechamentoCaixaDetalhadoResponseDto,
   })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Sem permissão' })
   async obterCaixaDetalhado(
     @Query() query: FechamentoConsolidadoQueryDto,
   ): Promise<FechamentoCaixaDetalhadoResponseDto> {

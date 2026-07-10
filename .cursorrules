@@ -14,6 +14,7 @@
 - Use `inject()` para dependências; utilize construtor só quando for necessário chamar `super()` ou executar inicializações específicas.
 - Tipar explicitamente todos os Observables/retornos HTTP; evite `any`.
 - Mantenha templates limpos, movendo lógica não trivial para o componente ou para pipes.
+- **Rotas:** toda tela de negócio deve usar `canActivate: [authGuard, permissionGuard]` com `data.permissions` alinhado ao menu. Esconder o menu não bloqueia URL — ver `docs/GUIA_DESENVOLVIMENTO.md`.
 
 # NestJS (Backend)
 - Preserve a arquitetura Controller → Service → TypeORM Repository.

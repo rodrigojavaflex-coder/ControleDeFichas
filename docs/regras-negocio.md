@@ -285,7 +285,7 @@
 - Tela **Fechamento de Caixa** (`/relatorios/fechamento-caixa`): consolida ERP + baixas terceiro por `(unidade, data)`.
 - Bloco **DINHEIRO**: saldo inicial + linhas ERP `DINHEIRO` e `CONVENIO-DINHEIRO` + terceiro por origem + despesas + retirada; total do bloco inclui `CONVENIO-DINHEIRO`.
 - Cards exibidos: **DINHEIRO**, **CARTÃO/PIX** e **DEPOSITO** (sem card Convênio ou Outros).
-- Permissões: **`venda:fechar-caixa`** (salvar rascunho/confirmar) e **`venda:reabrir-caixa`** (reabrir último confirmado).
+- Permissões: **`venda:fechar-caixa`** (acessar a tela/rota, consultar consolidado/detalhado, importar ERP, salvar rascunho e confirmar) e **`venda:reabrir-caixa`** (reabrir último confirmado). Acesso direto por URL sem a permissão deve ser bloqueado no frontend (`permissionGuard`) e na API (`@Permissions`).
 - Persistência: `caixa_fechamento` + `caixa_fechamento_linha`; despesas e retirada manual (dinheiro).
 - Saldo inicial: config por unidade (**valor + data de referência**) ou `saldo_final` do fechamento anterior confirmado. O saldo configurado só se aplica a fechamentos com `data >= dataSaldo`; sem fechamento anterior e sem data configurada, usa-se o valor legado (quando `dataSaldo` nulo).
 

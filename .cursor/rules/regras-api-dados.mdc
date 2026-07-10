@@ -66,6 +66,7 @@ alwaysApply: true
 - Alterou persistencia? Migration criada e revisada.
 - Alterou resposta da API? Models/services consumidores atualizados.
 - Validou cenarios de erro (4xx/5xx) e mensagens ao usuario.
+- Nova tela no frontend? `authGuard` + `permissionGuard` + `data.permissions` (ver `docs/GUIA_DESENVOLVIMENTO.md`); GETs sensiveis tambem com `@Permissions`.
 
 ## Quando pedir confirmacao
 - Alteracao com potencial breaking change de contrato.
