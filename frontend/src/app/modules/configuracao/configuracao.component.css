@@ -629,6 +629,92 @@
   flex: 1;
 }
 
+.saldo-caixa-section {
+  padding: 1.5rem 0;
+}
+
+.saldo-caixa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.saldo-caixa-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.saldo-caixa-unidade {
+  font-weight: 700;
+  color: var(--text-primary, #334155);
+}
+
+.saldo-caixa-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.saldo-caixa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.saldo-caixa-field label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.saldo-caixa-field .campo-moeda {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.saldo-caixa-save {
+  align-self: flex-end;
+}
+
+@media (max-width: 640px) {
+  .saldo-caixa-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.importacao-section {
+  padding: 1.5rem 0;
+}
+
+.importacao-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.btn-importacao-caixa {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .importacao-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-importacao-caixa {
+    width: 100%;
+  }
+}
+
 .sincronizacao-grid-container {
   overflow-x: auto;
   background: var(--bg-primary, #fff);

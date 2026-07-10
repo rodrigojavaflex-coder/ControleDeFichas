@@ -21,6 +21,7 @@ import { MigracaoModule } from './modules/migracao/migracao.module';
 import { SincronizacaoModule } from './modules/sincronizacao/sincronizacao.module';
 import { OrcamentosModule } from './modules/orcamentos/orcamentos.module';
 import { FolhaModule } from './modules/folha/folha.module';
+import { FechamentoCaixaModule } from './modules/fechamento-caixa/fechamento-caixa.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 import agentesConfig from './config/agentes.config';
@@ -56,6 +57,7 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     SincronizacaoModule,
     OrcamentosModule,
     FolhaModule,
+  FechamentoCaixaModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],

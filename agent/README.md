@@ -2,8 +2,14 @@
 
 Este agente roda na rede local junto ao `banco.ib` e expõe APIs restritas para a aplicação no Render.
 
-## Endpoints iniciais
-- `POST /api/v1/vendas/total-dia` — body `{ "date": "YYYY-MM-DD", "unit": number }`. Retorna totais por forma de pagamento.
+## Endpoints
+- `POST /api/v1/vendas/valor-compra` — valor compra por protocolos (FC12000).
+- `POST /api/v1/caixa/pagamentos` — pagamentos FC31600 (SQL validado, líquido com troco).
+- `POST /api/v1/caixa/itens` — itens analíticos FC31110.
+- `POST /api/v1/caixa/requisicoes-pagas` — requisições pagas FC17000.
+- `POST /api/v1/caixa/fechamento-dia` — resumo por forma (equivalente ao rodapé PDF).
+- `GET /api/v1/sincronizacao` — clientes + prescritores.
+- `GET /api/v1/orcamentos` — orçamentos modificados.
 - `GET /api/health` — health-check simples.
 
 Headers de autenticação: `Authorization: Bearer <AUTH_TOKEN>` ou `x-api-key: <AUTH_TOKEN>`.
@@ -20,8 +26,8 @@ Headers de autenticação: `Authorization: Bearer <AUTH_TOKEN>` ou `x-api-key: <
 ## Notas técnicas
 - Segurança: guard global exige `AUTH_TOKEN` em todas as rotas.
 - Validação: `class-validator` com `ValidationPipe` global e payload compacto (`whitelist`).
-- Banco: `DatabaseService` usa `node-firebird` com SQL parametrizado para o `total-dia`.
-- Organização: módulos separados (`vendas`, `database`, `health`).
+- Banco: `DatabaseService` usa `node-firebird` com SQL parametrizado (caixa, vendas, sync).
+- Organização: módulos separados (`vendas`, `caixa`, `database`, `health`, `sincronizacao`, `orcamentos`).
 
 ## Próximos passos
 - Parametrizar o bind para ouvir apenas na interface da VPN/túnel.
@@ -43,9 +49,9 @@ Headers de autenticação: `Authorization: Bearer <AUTH_TOKEN>` ou `x-api-key: <
 4. Teste health-check:
    - `curl -H "Authorization: Bearer sua-chave-forte" http://localhost:<porta>/api/health`
    - Esperado: `{"status":"ok","timestamp":"..."}`.
-5. Teste endpoint de vendas (consultando o banco real):
-   - `curl -X POST http://localhost:<porta>/api/v1/vendas/total-dia -H "Authorization: Bearer sua-chave-forte" -H "Content-Type: application/json" -d "{\"date\":\"2025-11-18\",\"unit\":2}"`
-   - Esperado: lista com `unidade` (cdfil), `data`, `forma_pagamento`, `total_pago`, `qtde_linhas`.
+5. Teste endpoint de caixa (consultando o banco real):
+   - `curl -X POST http://localhost:<porta>/api/v1/caixa/fechamento-dia -H "Authorization: Bearer sua-chave-forte" -H "Content-Type: application/json" -d "{\"unit\":2,\"start\":\"2025-10-01\",\"end\":\"2025-10-31\"}"`
+   - Esperado: `resumo` por forma e `totalLiquido` (out/2025 filial 2 ≈ R$ 211.286,42).
 6. Erros comuns:
    - 401: token ausente ou diferente do configurado em `AUTH_TOKEN`.
    - 400: data fora de `YYYY-MM-DD` ou `unit` não é inteiro.

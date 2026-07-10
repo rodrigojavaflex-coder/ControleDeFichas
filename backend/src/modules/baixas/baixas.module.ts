@@ -10,6 +10,7 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { VendasModule } from '../vendas/vendas.module';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { FechamentoCaixaModule } from '../fechamento-caixa/fechamento-caixa.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AuditoriaModule } from '../auditoria/auditoria.module';
     ConfigModule,
     forwardRef(() => VendasModule),
     forwardRef(() => AuditoriaModule),
+    FechamentoCaixaModule,
   ],
   controllers: [BaixasController],
   providers: [BaixasService, PermissionsGuard],

@@ -1,0 +1,126 @@
+<div class="modal-overlay baixa-form-overlay" *ngIf="showModal">
+  <div class="modal-conteudo modal-baixa-form" (click)="$event.stopPropagation()">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">{{ tituloModal }}</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="onClose()"
+        [attr.disabled]="loading ? 'disabled' : null"
+        aria-label="Fechar modal">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <form (ngSubmit)="onSubmit()" class="baixa-form">
+        <div class="baixa-form-grid">
+          <div class="grupo-campo">
+            <label for="tipoDaBaixaForm" class="label-campo obrigatorio">Tipo</label>
+            <select
+              id="tipoDaBaixaForm"
+              [(ngModel)]="baixaData.tipoDaBaixa"
+              name="tipoDaBaixa"
+              class="campo"
+              required>
+              <option value="" disabled>Selecione</option>
+              <option *ngFor="let tipo of tiposBaixa" [value]="tipo">
+                {{ getTipoBaixaLabel(tipo) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="grupo-campo">
+            <label for="valorBaixaForm" class="label-campo obrigatorio">Valor</label>
+            <div class="baixa-valor-linha">
+              <div class="grupo-input baixa-valor-input">
+                <span class="prefixo-input">R$</span>
+                <input
+                  id="valorBaixaForm"
+                  type="text"
+                  [(ngModel)]="valorDisplay"
+                  name="valorDisplay"
+                  class="campo"
+                  placeholder="0,00"
+                  inputmode="decimal"
+                  (input)="formatCurrencyInput($event)"
+                  (blur)="formatCurrencyOnBlur()"
+                  (focus)="onValorFocus()"
+                  required>
+              </div>
+              <button
+                type="button"
+                class="btn btn-sm btn-acao-icone baixa-btn-saldo"
+                (click)="preencherSaldoRestante()"
+                [disabled]="loading || !canPreencherSaldoRestante()"
+                title="Usar saldo restante">
+                <i class="fas fa-money-bill-wave" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="grupo-campo">
+            <label for="dataBaixaForm" class="label-campo obrigatorio">Data</label>
+            <input
+              id="dataBaixaForm"
+              type="date"
+              [(ngModel)]="baixaData.dataBaixa"
+              name="dataBaixa"
+              class="campo"
+              required>
+          </div>
+        </div>
+
+        <div class="grupo-campo baixa-campo-observacao">
+          <label for="observacaoForm" class="label-campo">Observação</label>
+          <input
+            id="observacaoForm"
+            type="text"
+            [(ngModel)]="baixaData.observacao"
+            name="observacao"
+            class="campo"
+            placeholder="Observações sobre a baixa (opcional)"
+            maxlength="500">
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="onClose()"
+        [attr.disabled]="loading ? 'disabled' : null">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="onSubmit()"
+        [attr.disabled]="loading ? 'disabled' : null"
+        [ngClass]="{'botao-carregando': loading}">
+        {{ loading ? (modoEdicao ? 'Atualizando...' : 'Lançando...') : (modoEdicao ? 'Atualizar Baixa' : 'Lançar Baixa') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<app-confirmation-modal
+  [isVisible]="showCloseConfirmationModal"
+  title="Confirmar Fechamento"
+  message="Existem alterações não salvas no formulário. Deseja fechar e descartar?"
+  confirmText="Fechar"
+  cancelText="Continuar editando"
+  (confirmed)="onCloseConfirmed()"
+  (cancelled)="onCloseCancelled()"
+></app-confirmation-modal>
+
+<app-confirmation-modal
+  [isVisible]="showDataFuturaModal"
+  title="Confirmar Data Futura"
+  [message]="'A data informada (' + formatDateDisplay(baixaData.dataBaixa) + ') é maior que a data atual. Deseja realmente realizar esta baixa com data futura?'"
+  confirmText="Sim, confirmar"
+  cancelText="Cancelar"
+  (confirmed)="onDataFuturaConfirmed()"
+  (cancelled)="onDataFuturaCancelled()"
+></app-confirmation-modal>

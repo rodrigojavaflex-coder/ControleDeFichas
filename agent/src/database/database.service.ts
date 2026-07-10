@@ -1,7 +1,14 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AgentDbConfig } from '../config/config.types';
-import { ValorCompraRow, VendasTotalRow, OrcamentoRow } from './database.types';
+import {
+  CaixaFechamentoDiaRow,
+  CaixaItemRow,
+  CaixaPagamentoRow,
+  CaixaRequisicaoPagaRow,
+  OrcamentoRow,
+  ValorCompraRow,
+} from './database.types';
 import { converterObjetoFirebird } from '../common/encoding.util';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -12,35 +19,6 @@ export class DatabaseService {
   private readonly logger = new Logger(DatabaseService.name);
 
   constructor(private readonly configService: ConfigService) {}
-
-  async totalVendasDoDia(date: Date, unit: number): Promise<VendasTotalRow[]> {
-    const { sql, params } = this.buildQuery(date, unit);
-    const options = this.getConnectOptions();
-    const charset = this.getDbCharset();
-
-    return new Promise<VendasTotalRow[]>((resolve, reject) => {
-      Firebird.attach(options, (attachErr: Error, db: any) => {
-        if (attachErr) {
-          this.logger.error('Erro ao conectar ao banco', attachErr);
-          return reject(new InternalServerErrorException('Erro de conexão ao banco.'));
-        }
-
-        db.query(sql, params, (queryErr: Error, result: any[]) => {
-          db.detach();
-
-          if (queryErr) {
-            this.logger.error('Erro ao executar consulta', queryErr);
-            return reject(new InternalServerErrorException('Erro ao consultar banco.'));
-          }
-
-          const rows = (result ?? []).map((row) =>
-            this.mapRow(converterObjetoFirebird(row, charset)),
-          );
-          resolve(rows);
-        });
-      });
-    });
-  }
 
   async valorCompraPorProtocolos(
     unit: number,
@@ -82,26 +60,6 @@ export class DatabaseService {
     });
   }
 
-  private buildQuery(date: Date, unit: number): { sql: string; params: Array<string | number> } {
-    const dateParam = this.formatDate(date);
-    const params: Array<string | number> = [dateParam, unit];
-
-    const sql = `
-      SELECT
-        cdfil AS unidade,
-        dtope AS data,
-        CASE fmpag WHEN '1' THEN 'DINHEIRO' WHEN '4' THEN 'DEPOSITO' WHEN '6' THEN 'CARTAO' ELSE 'OUTRA' END AS forma_pagamento,
-        SUM(vrpag) AS total_pago,
-        COUNT(*)   AS qtde_linhas
-      FROM fc31600
-      WHERE dtope = ? AND cdfil = ?
-      GROUP BY unidade, data, forma_pagamento
-      ORDER BY unidade, data, forma_pagamento
-    `;
-
-    return { sql, params };
-  }
-
   private buildValorCompraQuery(
     unit: number,
     protocolos: number[],
@@ -118,18 +76,6 @@ export class DatabaseService {
 
     const params: Array<string | number> = [unit, ...protocolos];
     return { sql, params };
-  }
-
-  private mapRow(row: any): VendasTotalRow {
-    const get = (key: string) => row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
-
-    return {
-      unidade: String(get('unidade') ?? ''),
-      data: String(get('data') ?? ''),
-      forma_pagamento: String(get('forma_pagamento') ?? ''),
-      total_pago: Number(get('total_pago') ?? 0),
-      qtde_linhas: Number(get('qtde_linhas') ?? 0),
-    };
   }
 
   private mapValorCompraRow(row: any): ValorCompraRow {
@@ -658,5 +604,451 @@ export class DatabaseService {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
+  async buscarCaixaPagamentos(
+    unit: number,
+    start: string,
+    end: string,
+    filtrarFlagBaixa = false,
+  ): Promise<CaixaPagamentoRow[]> {
+    const { sql, params } = this.buildCaixaPagamentosQuery(
+      unit,
+      start,
+      end,
+      filtrarFlagBaixa,
+    );
+    return this.executarConsultaCaixa(sql, params, (row) =>
+      this.mapCaixaPagamentoRow(row),
+    );
+  }
+
+  async buscarCaixaItens(
+    unit: number,
+    start: string,
+    end: string,
+    filtrarFlagBaixa = false,
+  ): Promise<CaixaItemRow[]> {
+    const { sql, params } = this.buildCaixaItensQuery(
+      unit,
+      start,
+      end,
+      filtrarFlagBaixa,
+    );
+    return this.executarConsultaCaixa(sql, params, (row) =>
+      this.mapCaixaItemRow(row),
+    );
+  }
+
+  async buscarCaixaRequisicoesPagas(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<CaixaRequisicaoPagaRow[]> {
+    const { sql, params } = this.buildCaixaRequisicoesPagasQuery(
+      unit,
+      start,
+      end,
+    );
+    return this.executarConsultaCaixa(sql, params, (row) =>
+      this.mapCaixaRequisicaoPagaRow(row),
+    );
+  }
+
+  async buscarCaixaFechamentoDia(
+    unit: number,
+    start: string,
+    end: string,
+    filtrarFlagBaixa = false,
+  ): Promise<CaixaFechamentoDiaRow[]> {
+    const { sql, params } = this.buildCaixaFechamentoDiaQuery(
+      unit,
+      start,
+      end,
+      filtrarFlagBaixa,
+    );
+    return this.executarConsultaCaixa(sql, params, (row) =>
+      this.mapCaixaFechamentoDiaRow(row),
+    );
+  }
+
+  private executarConsultaCaixa<T>(
+    sql: string,
+    params: Array<string | number>,
+    mapper: (row: Record<string, unknown>) => T,
+  ): Promise<T[]> {
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    return new Promise<T[]>((resolve, reject) => {
+      Firebird.attach(options, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          this.logger.error('Erro ao conectar ao banco (caixa)', attachErr);
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        db.query(sql, params, (queryErr: Error, result: any[]) => {
+          db.detach();
+
+          if (queryErr) {
+            this.logger.error('Erro ao executar consulta caixa', queryErr);
+            return reject(
+              new InternalServerErrorException('Erro ao consultar banco.'),
+            );
+          }
+
+          const rows = (result ?? []).map((row) =>
+            mapper(converterObjetoFirebird(row, charset) as Record<string, unknown>),
+          );
+          resolve(rows);
+        });
+      });
+    });
+  }
+
+  private buildCaixaPagamentosQuery(
+    unit: number,
+    start: string,
+    end: string,
+    filtrarFlagBaixa: boolean,
+  ): { sql: string; params: Array<string | number> } {
+    const flagFilter = filtrarFlagBaixa
+      ? " AND COALESCE(capa.flagbxa, 'N') = 'S'"
+      : '';
+
+    const sql = `
+      SELECT
+        pag.cdfil AS filial,
+        pag.dtope AS data,
+        pag.nrcpm AS cupom,
+        pag.cdtml AS cdtml,
+        pag.operid AS operid,
+        pag.fmpag AS fmpag,
+        COALESCE(pag.indrecconv, 'N') AS indrecconv,
+        CASE pag.fmpag
+          WHEN '1' THEN
+            CASE WHEN COALESCE(pag.indrecconv, 'N') = 'S'
+                 THEN 'CONVENIO-DINHEIRO'
+                 ELSE 'DINHEIRO'
+            END
+          WHEN '4' THEN 'DEPOSITO'
+          WHEN '6' THEN 'CARTAO PRE'
+          ELSE TRIM(pag.fmpag)
+        END AS forma_pagamento,
+        pag.vrpag AS valor_bruto,
+        COALESCE(pag.vrtrc, 0) AS troco,
+        pag.vrpag - COALESCE(pag.vrtrc, 0) AS valor_liquido,
+        capa.vrtot AS total_cupom_bruto,
+        capa.vrliq AS total_cupom_liquido,
+        capa.cdcli AS cdcli,
+        capa.cdfunre AS codigo_operador,
+        fun_oper.nomefun AS operador_caixa
+      FROM fc31600 pag
+      LEFT JOIN fc31100 capa
+        ON capa.cdfil = pag.cdfil
+       AND capa.cdtml = pag.cdtml
+       AND capa.dtope = pag.dtope
+       AND capa.operid = pag.operid
+       AND capa.nrcpm = pag.nrcpm
+      LEFT JOIN fc08000 fun_oper
+        ON fun_oper.cdfun = capa.cdfunre
+       AND fun_oper.cdcon = capa.cdconre
+      WHERE pag.cdfil = ?
+        AND pag.dtope BETWEEN ? AND ?${flagFilter}
+      ORDER BY pag.dtope, pag.nrcpm, forma_pagamento
+    `;
+
+    return { sql, params: [unit, start, end] };
+  }
+
+  private buildCaixaItensQuery(
+    unit: number,
+    start: string,
+    end: string,
+    filtrarFlagBaixa = false,
+  ): { sql: string; params: Array<string | number> } {
+    const flagFilter = filtrarFlagBaixa
+      ? " AND COALESCE(capa.flagbxa, 'N') = 'S'"
+      : '';
+
+    const sql = `
+      SELECT
+        capa.cdfil AS filial,
+        capa.dtope AS data,
+        capa.nrcpm AS cupom,
+        capa.cdtml AS cdtml,
+        capa.operid AS operid,
+        item.itemid AS item_cupom,
+        CASE
+          WHEN req.nrrqu IS NOT NULL THEN 'REQUISICAO'
+          ELSE 'PRODUTO'
+        END AS tipo_item,
+        COALESCE(req.nrrqu, item.cdpro) AS codigo_item,
+        req.nrrqu AS requisicao,
+        CASE
+          WHEN req.nrrqu IS NOT NULL THEN NULL
+          ELSE TRIM(COALESCE(prod.descr, prod.descrprd))
+        END AS descricao_item,
+        item.quant AS quant,
+        item.vrtot AS valor_item_bruto,
+        item.vrliq AS valor_item_liquido,
+        item.vrdsc AS desconto_item,
+        COALESCE((
+          SELECT SUM(p.vrpag - COALESCE(p.vrtrc, 0))
+          FROM fc31600 p
+          WHERE p.cdfil = capa.cdfil
+            AND p.cdtml = capa.cdtml
+            AND p.dtope = capa.dtope
+            AND p.operid = capa.operid
+            AND p.nrcpm = capa.nrcpm
+        ), 0) AS pagamento_cupom
+      FROM fc31100 capa
+      JOIN fc31110 item
+        ON item.cdfil = capa.cdfil
+       AND item.cdtml = capa.cdtml
+       AND item.dtope = capa.dtope
+       AND item.operid = capa.operid
+       AND item.nrcpm = capa.nrcpm
+      LEFT JOIN fc31200 req
+        ON req.cdfil = item.cdfil
+       AND req.cdtml = item.cdtml
+       AND req.dtope = item.dtope
+       AND req.operid = item.operid
+       AND req.nrcpm = item.nrcpm
+       AND req.itemid = item.itemid
+      LEFT JOIN fc03000 prod
+        ON prod.cdpro = item.cdpro
+      WHERE capa.cdfil = ?
+        AND capa.dtope BETWEEN ? AND ?${flagFilter}
+      ORDER BY capa.dtope, capa.nrcpm, item.itemid
+    `;
+
+    return { sql, params: [unit, start, end] };
+  }
+
+  private buildCaixaRequisicoesPagasQuery(
+    unit: number,
+    start: string,
+    end: string,
+  ): { sql: string; params: Array<string | number> } {
+    const sql = `
+      SELECT
+        r.cdfil AS filial,
+        r.dtefe AS data_pagamento,
+        r.nrrqu AS requisicao,
+        r.nrcpm AS cupom,
+        form.nrorc AS nr_orcamento,
+        orc.qtd_formulas AS qtd_formulas,
+        orc.valor_orcamento AS valor_orcamento,
+        r.vrrqu AS valor_requisicao_bruto,
+        r.vrdsc AS desconto_requisicao,
+        r.vrliq AS valor_pago_requisicao,
+        r.vrrqu - r.vrdsc - r.vrliq AS diferenca_calculo,
+        orc.valor_orcamento - r.vrliq AS gap_orcamento_vs_pago,
+        vend.cdfun AS codigo_vendedor,
+        fun.nomefun AS vendedor
+      FROM fc17000 r
+      LEFT JOIN fc12100 form
+        ON form.cdfil = r.cdfil
+       AND form.nrrqu = r.nrrqu
+       AND form.serier = '0'
+      LEFT JOIN (
+        SELECT
+          o.cdfil,
+          o.nrorc,
+          COUNT(*) AS qtd_formulas,
+          SUM(o.prcobr - COALESCE(o.vrdsc, 0)) AS valor_orcamento
+        FROM fc15100 o
+        GROUP BY o.cdfil, o.nrorc
+      ) orc
+        ON orc.cdfil = form.cdfil
+       AND orc.nrorc = form.nrorc
+      LEFT JOIN fc17200 vend
+        ON vend.cdfil = r.cdfil
+       AND vend.nrrqu = r.nrrqu
+       AND vend.tptar = 'R'
+      LEFT JOIN fc08000 fun
+        ON fun.cdfun = vend.cdfun
+       AND fun.cdcon = vend.cdcon
+      WHERE r.cdfil = ?
+        AND r.dtefe BETWEEN ? AND ?
+        AND COALESCE(r.vrliq, 0) <> 0
+      ORDER BY r.dtefe, r.nrcpm, r.nrrqu
+    `;
+
+    return { sql, params: [unit, start, end] };
+  }
+
+  private buildCaixaFechamentoDiaQuery(
+    unit: number,
+    start: string,
+    end: string,
+    filtrarFlagBaixa: boolean,
+  ): { sql: string; params: Array<string | number> } {
+    const flagJoin = filtrarFlagBaixa
+      ? `
+      JOIN fc31100 capa
+        ON capa.cdfil = pag.cdfil
+       AND capa.cdtml = pag.cdtml
+       AND capa.dtope = pag.dtope
+       AND capa.operid = pag.operid
+       AND capa.nrcpm = pag.nrcpm
+       AND COALESCE(capa.flagbxa, 'N') = 'S'`
+      : '';
+
+    const sql = `
+      SELECT
+        CASE pag.fmpag
+          WHEN '1' THEN
+            CASE WHEN COALESCE(pag.indrecconv, 'N') = 'S'
+                 THEN 'CONVENIO-DINHEIRO'
+                 ELSE 'DINHEIRO'
+            END
+          WHEN '4' THEN 'DEPOSITO'
+          WHEN '6' THEN 'CARTAO PRE'
+          ELSE TRIM(pag.fmpag)
+        END AS forma_pagamento,
+        COUNT(*) AS qtd_baixas,
+        SUM(pag.vrpag) AS total_bruto,
+        SUM(COALESCE(pag.vrtrc, 0)) AS total_troco,
+        SUM(pag.vrpag - COALESCE(pag.vrtrc, 0)) AS total_liquido
+      FROM fc31600 pag${flagJoin}
+      WHERE pag.cdfil = ?
+        AND pag.dtope BETWEEN ? AND ?
+      GROUP BY 1
+      ORDER BY 1
+    `;
+
+    return { sql, params: [unit, start, end] };
+  }
+
+  private mapCaixaPagamentoRow(row: Record<string, unknown>): CaixaPagamentoRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+
+    const filial = Number(get('filial') ?? 0);
+    const data = this.formatDateField(get('data'));
+    const cupom = Number(get('cupom') ?? 0);
+    const cdtml = Number(get('cdtml') ?? 0);
+    const operid = Number(get('operid') ?? 0);
+    const fmpag = String(get('fmpag') ?? '').trim();
+    const indrecconv = String(get('indrecconv') ?? 'N').trim();
+
+    return {
+      filial,
+      data,
+      cupom,
+      cdtml,
+      operid,
+      fmpag,
+      indrecconv,
+      forma_pagamento: String(get('forma_pagamento') ?? '').trim(),
+      valor_bruto: Number(get('valor_bruto') ?? 0),
+      troco: Number(get('troco') ?? 0),
+      valor_liquido: Number(get('valor_liquido') ?? 0),
+      total_cupom_bruto:
+        get('total_cupom_bruto') != null
+          ? Number(get('total_cupom_bruto'))
+          : null,
+      total_cupom_liquido:
+        get('total_cupom_liquido') != null
+          ? Number(get('total_cupom_liquido'))
+          : null,
+      cdcli: get('cdcli') != null ? Number(get('cdcli')) : null,
+      codigo_operador:
+        get('codigo_operador') != null ? Number(get('codigo_operador')) : null,
+      operador_caixa: get('operador_caixa')
+        ? String(get('operador_caixa')).trim()
+        : null,
+      chave_erp: `${filial}-${cdtml}-${data}-${operid}-${cupom}-${fmpag}`,
+    };
+  }
+
+  private mapCaixaItemRow(row: Record<string, unknown>): CaixaItemRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+
+    const filial = Number(get('filial') ?? 0);
+    const data = this.formatDateField(get('data'));
+    const cupom = Number(get('cupom') ?? 0);
+    const cdtml = Number(get('cdtml') ?? 0);
+    const operid = Number(get('operid') ?? 0);
+    const itemCupom = Number(get('item_cupom') ?? 0);
+    const tipoRaw = String(get('tipo_item') ?? 'PRODUTO').trim();
+
+    return {
+      filial,
+      data,
+      cupom,
+      cdtml,
+      operid,
+      item_cupom: itemCupom,
+      tipo_item: tipoRaw === 'REQUISICAO' ? 'REQUISICAO' : 'PRODUTO',
+      codigo_item: get('codigo_item') != null ? Number(get('codigo_item')) : null,
+      requisicao: get('requisicao') != null ? Number(get('requisicao')) : null,
+      descricao_item: get('descricao_item')
+        ? String(get('descricao_item')).trim()
+        : null,
+      quant: Number(get('quant') ?? 0),
+      valor_item_bruto: Number(get('valor_item_bruto') ?? 0),
+      valor_item_liquido: Number(get('valor_item_liquido') ?? 0),
+      desconto_item: Number(get('desconto_item') ?? 0),
+      pagamento_cupom: Number(get('pagamento_cupom') ?? 0),
+      chave_erp: `${filial}-${cdtml}-${data}-${operid}-${cupom}-${itemCupom}`,
+    };
+  }
+
+  private mapCaixaRequisicaoPagaRow(
+    row: Record<string, unknown>,
+  ): CaixaRequisicaoPagaRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+
+    const filial = Number(get('filial') ?? 0);
+    const dataPagamento = this.formatDateField(get('data_pagamento'));
+    const requisicao = Number(get('requisicao') ?? 0);
+    const cupom = Number(get('cupom') ?? 0);
+
+    return {
+      filial,
+      data_pagamento: dataPagamento,
+      requisicao,
+      cupom,
+      nr_orcamento:
+        get('nr_orcamento') != null ? Number(get('nr_orcamento')) : null,
+      qtd_formulas:
+        get('qtd_formulas') != null ? Number(get('qtd_formulas')) : null,
+      valor_orcamento:
+        get('valor_orcamento') != null ? Number(get('valor_orcamento')) : null,
+      valor_requisicao_bruto: Number(get('valor_requisicao_bruto') ?? 0),
+      desconto_requisicao: Number(get('desconto_requisicao') ?? 0),
+      valor_pago_requisicao: Number(get('valor_pago_requisicao') ?? 0),
+      diferenca_calculo: Number(get('diferenca_calculo') ?? 0),
+      gap_orcamento_vs_pago:
+        get('gap_orcamento_vs_pago') != null
+          ? Number(get('gap_orcamento_vs_pago'))
+          : null,
+      codigo_vendedor:
+        get('codigo_vendedor') != null ? Number(get('codigo_vendedor')) : null,
+      vendedor: get('vendedor') ? String(get('vendedor')).trim() : null,
+      chave_erp: `${filial}-${requisicao}-${cupom}-${dataPagamento}`,
+    };
+  }
+
+  private mapCaixaFechamentoDiaRow(
+    row: Record<string, unknown>,
+  ): CaixaFechamentoDiaRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+
+    return {
+      forma_pagamento: String(get('forma_pagamento') ?? '').trim(),
+      qtd_baixas: Number(get('qtd_baixas') ?? 0),
+      total_bruto: Number(get('total_bruto') ?? 0),
+      total_troco: Number(get('total_troco') ?? 0),
+      total_liquido: Number(get('total_liquido') ?? 0),
+    };
   }
 }

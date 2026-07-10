@@ -235,6 +235,79 @@
 - **Baixa em massa** (`processarBaixasEmMassa`): continua **bloqueada** para vendas com fechamento registrado.
 - **Atualizar valor compra em massa**: continua **bloqueada** para vendas com fechamento registrado.
 
+### RN-VND-004 — Data da baixa (fechamento de caixa + última baixa)
+
+- Criar, editar ou excluir baixa exige **`dataBaixa` válida** conforme **duas regras cumulativas** (implantação gradual do fechamento de caixa por unidade):
+  1. **Fechamento de caixa:** se a unidade possui fechamento confirmado (`status = CONFIRMADO`), a data deve ser **posterior** à data do último fechamento. Se não houver fechamento confirmado, esta regra não bloqueia.
+  2. **Última baixa da unidade:** se já existem baixas na unidade, a data deve ser **>=** à data da última baixa registrada. Se não houver baixas na unidade, esta regra não bloqueia.
+- Validação aplicada em: `POST /baixas`, `PATCH /baixas/:id`, `DELETE /baixas/:id` e `POST /baixas/processar-em-massa`.
+- Em violação da regra 1: **409** com mensagem informando a data do último fechamento da unidade.
+- Em violação da regra 2: **409** com mensagem informando a data da última baixa e link para a listagem de baixas do dia.
+
+---
+
+## Caixa ERP (Firebird → PostgreSQL)
+
+### RN-CXA-001 — Separação caixa ERP vs vendas de terceiro
+
+- **Caixa local ERP** persiste em `caixa_pagamentos_erp`, `caixa_itens_erp` e `caixa_requisicoes_pagas` — **não** na tabela `baixas`.
+- **Vendas de terceiro** continuam em `vendas` + `baixas` (cadastro manual); fluxo de fechamento interunidades (RN-VND-001) **não** é alterado por import ERP.
+
+### RN-CXA-002 — Import manual via agente (sem job automático)
+
+- Disparo **somente** por ação explícita: `POST …/fechamento/importar-caixa-erp` (perm. **`venda:fechar-caixa`**).
+- Backend consulta o agente (`POST /api/v1/caixa/*`); **não** há sincronização agendada de caixa ERP.
+- **Não** usar FC31000 como gate ou condição de import.
+
+### RN-CXA-006 — Escopo da busca de caixa ERP
+
+- **Fechamento de Caixa (Atualizar Vendas):** importa **apenas o dia** selecionado na tela (`dataInicio` = `dataFim` = data do caixa), usando a unidade já informada. Não abre modal; exibe mensagem de sucesso ou erro na própria tela, sem resumo/preview da importação.
+- **Configuração → Importação (Buscar caixa ERP por período):** abre modal com **intervalo de datas** (início e fim) e unidade; ao concluir, exibe resumo da importação no modal.
+- Usuário **com** unidade no cadastro: importação **somente** na própria unidade (campo bloqueado na UI e validado na API).
+- Usuário **sem** unidade no cadastro: pode escolher qualquer unidade na UI (acesso global conforme permissões).
+- Exige **`venda:fechar-caixa`**.
+
+### RN-CXA-003 — Upsert idempotente por `chave_erp`
+
+- Pagamentos: `{unidade}-{codigo_terminal}-{data_operacao}-{id_operacao}-{numero_cupom}-{codigo_erp_fmpag}` (código FMPAG só na chave, não persistido).
+- Itens: `{unidade}-{codigo_terminal}-{data_operacao}-{id_operacao}-{numero_cupom}-{sequencia_item}`.
+- Requisições pagas: `{unidade}-{numero_requisicao}-{numero_cupom}-{data_pagamento}`.
+- Reimportar o mesmo dia **sempre atualiza** registros existentes (upsert por `chave_erp`); não duplica linhas.
+
+### RN-CXA-004 — Valor líquido e formas de pagamento (ERP)
+
+- Valor líquido: `vrpag - COALESCE(vrtrc, 0)` (dinheiro e convênio-dinheiro).
+- Mapeamento FMPAG: `1` → DINHEIRO; `1` + `INDRECCONV = S` → CONVENIO-DINHEIRO (linha no bloco **DINHEIRO**, somada ao total de dinheiro); `4` → DEPOSITO; `6` → CARTAO PRE.
+- Totais ERP do dia: agregação sobre `caixa_pagamentos_erp` filtrada por `unidade` e `data_operacao`.
+
+### RN-CXA-005 — Fechamento consolidado
+
+- Tela **Fechamento de Caixa** (`/relatorios/fechamento-caixa`): consolida ERP + baixas terceiro por `(unidade, data)`.
+- Bloco **DINHEIRO**: saldo inicial + linhas ERP `DINHEIRO` e `CONVENIO-DINHEIRO` + terceiro por origem + despesas + retirada; total do bloco inclui `CONVENIO-DINHEIRO`.
+- Cards exibidos: **DINHEIRO**, **CARTÃO/PIX** e **DEPOSITO** (sem card Convênio ou Outros).
+- Permissões: **`venda:fechar-caixa`** (salvar rascunho/confirmar) e **`venda:reabrir-caixa`** (reabrir último confirmado).
+- Persistência: `caixa_fechamento` + `caixa_fechamento_linha`; despesas e retirada manual (dinheiro).
+- Saldo inicial: config por unidade (**valor + data de referência**) ou `saldo_final` do fechamento anterior confirmado. O saldo configurado só se aplica a fechamentos com `data >= dataSaldo`; sem fechamento anterior e sem data configurada, usa-se o valor legado (quando `dataSaldo` nulo).
+
+### RN-CXA-007 — Terceiro no consolidado
+
+- Baixas: `v.unidade = unidade do fechamento`; quebra por `v.origem` (Comprado em) e `tipoDaBaixa`.
+- Tipos de baixa permitidos: **DINHEIRO**, **CARTÃO/PIX** e **DEPOSITO** (sem Outros).
+- Terceiro **não** possui forma CONVÊNIO; `CONVENIO-DINHEIRO` (ERP) compõe o bloco Dinheiro.
+
+### RN-CXA-008 — Último registro editável
+
+- Import ERP, despesas, retirada: somente se `data >=` último fechamento confirmado da unidade.
+- Reabrir: somente o último caixa fechado da unidade (`MAX(data)` entre fechamentos confirmados).
+- Caixas com data **anterior** ao último fechamento da unidade **não podem ser reabertos**.
+
+### RN-CXA-009 — Status de exibição do caixa
+
+- **Fechado (`FECHADO`)**: caixa confirmado pelo sistema (`status = CONFIRMADO`). Permite emissão dos relatórios **Caixa** e **Caixa Detalhado**.
+- **Bloqueado (`BLOQUEADO`)**: data anterior ao último fechamento da unidade e **não** confirmada pelo sistema. Não permite editar, fechar nem reabrir; **permite** emitir relatórios **Caixa** e **Caixa Detalhado**.
+- **Aberto (`RASCUNHO`)**: período em aberto (`data >=` último fechamento) ainda não confirmado. Exibido na UI como **Aberto**. Permite editar, fechar e emitir relatórios **Caixa** e **Caixa Detalhado**.
+- No relatório **Caixa** (resumido), o status é exibido acima do título com as cores de badge da tela (Fechado/Aberto/Bloqueado).
+
 ---
 
 ## Demais módulos

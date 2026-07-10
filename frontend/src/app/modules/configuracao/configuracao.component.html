@@ -21,6 +21,20 @@
       (click)="activeTab = 'sincronizacao'">
       Sincronização
     </button>
+    @if (canImportarCaixaErp()) {
+      <button
+        class="tab-button"
+        [class.active]="activeTab === 'importacao'"
+        (click)="activeTab = 'importacao'">
+        Importação
+      </button>
+    }
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'saldo-caixa'"
+      (click)="onTabChange('saldo-caixa')">
+      Saldo inicial caixa
+    </button>
   </div>
 
   <!-- Tab: Configurações Gerais -->
@@ -532,6 +546,91 @@
     </div>
   }
 
+  <!-- Tab: Importação caixa ERP -->
+  @if (activeTab === 'importacao' && canImportarCaixaErp()) {
+    <div class="importacao-section">
+      <div class="importacao-header">
+        <div>
+          <h3 class="section-title">Importação de caixa ERP</h3>
+          <p class="section-description">
+            Busque pagamentos e requisições do Firebird por unidade e período para alimentar o fechamento de caixa.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="btn-migracao btn-importacao-caixa"
+          (click)="abrirModalImportarCaixaErp()">
+          <i class="fas fa-cloud-download-alt"></i>
+          Buscar caixa ERP por período
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Tab: Saldo inicial caixa -->
+  @if (activeTab === 'saldo-caixa') {
+    <div class="saldo-caixa-section">
+      <h3 class="section-title">Saldo inicial de caixa por unidade</h3>
+      <p class="section-description">
+        Valor e data de referência usados na implantação ou quando ainda não existe fechamento confirmado anterior para a unidade. O saldo configurado vale a partir da data informada.
+      </p>
+
+      @if (saldoCaixaLoading) {
+        <p><i class="fas fa-spinner fa-spin"></i> Carregando...</p>
+      } @else {
+        <div class="saldo-caixa-grid">
+          @for (item of saldosCaixa; track item.unidade) {
+            <div class="saldo-caixa-item">
+              <div class="saldo-caixa-unidade">{{ item.unidade }}</div>
+              <div class="saldo-caixa-fields">
+                <div class="saldo-caixa-field">
+                  <label [for]="'data-saldo-' + item.unidade">Data do saldo</label>
+                  <input
+                    [id]="'data-saldo-' + item.unidade"
+                    type="date"
+                    class="form-input"
+                    [(ngModel)]="item.dataSaldo"
+                    [disabled]="saldoCaixaSaving === item.unidade" />
+                </div>
+                <div class="saldo-caixa-field">
+                  <label [for]="'saldo-' + item.unidade">Saldo (R$)</label>
+                  <input
+                    [id]="'saldo-' + item.unidade"
+                    type="text"
+                    inputmode="decimal"
+                    class="form-input campo-moeda"
+                    [ngModel]="item.saldoInicialDisplay"
+                    (ngModelChange)="onSaldoCaixaInput(item, $event)"
+                    (blur)="onSaldoCaixaBlur(item)"
+                    (focus)="onSaldoCaixaFocus(item)"
+                    [disabled]="saldoCaixaSaving === item.unidade" />
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn-migracao saldo-caixa-save"
+                (click)="salvarSaldoCaixa(item)"
+                [disabled]="saldoCaixaSaving === item.unidade">
+                @if (saldoCaixaSaving === item.unidade) {
+                  <i class="fas fa-spinner fa-spin"></i>
+                } @else {
+                  Salvar
+                }
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (saldoCaixaSuccess) {
+        <div class="alert alert-success">{{ saldoCaixaSuccess }}</div>
+      }
+      @if (saldoCaixaError) {
+        <div class="alert alert-danger">{{ saldoCaixaError }}</div>
+      }
+    </div>
+  }
+
   <!-- Mensagens de sucesso/erro -->
   @if (success && activeTab === 'geral') {
     <div class="alert alert-success">{{ success }}</div>
@@ -540,3 +639,8 @@
     <div class="alert alert-danger">{{ error }}</div>
   }
 </div>
+
+<app-importar-caixa-erp-modal
+  #caixaErpModal
+  (importacaoConcluida)="onImportacaoCaixaConcluida()">
+</app-importar-caixa-erp-modal>

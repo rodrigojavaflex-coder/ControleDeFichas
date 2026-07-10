@@ -5,7 +5,6 @@ export enum TipoDaBaixa {
   DINHEIRO = 'DINHEIRO',
   CARTAO_PIX = 'CARTÃO/PIX',
   DEPOSITO = 'DEPOSITO',
-  OUTROS = 'OUTROS',
 }
 
 export interface Baixa {

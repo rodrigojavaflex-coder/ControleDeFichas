@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
@@ -10,11 +10,20 @@ import { SincronizacaoService } from '../../services/sincronizacao.service';
 import { SincronizacaoConfig, SincronizacaoResult, SincronizacaoProgress } from '../../models/sincronizacao.model';
 import { interval, Subscription } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
+import { AuthService } from '../../services/auth.service';
+import { FechamentoCaixaService } from '../../services/fechamento-caixa.service';
+import { CaixaSaldoInicialUnidade } from '../../models/fechamento-caixa.model';
+import { ImportarCaixaErpModalComponent } from '../../components/importar-caixa-erp-modal/importar-caixa-erp-modal';
+import { Permission } from '../../models/usuario.model';
+
+type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
+  saldoInicialDisplay: string;
+};
 
 @Component({
   selector: 'app-configuracao',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ImportarCaixaErpModalComponent],
   templateUrl: './configuracao.component.html',
   styleUrls: ['./configuracao.component.css']
 })
@@ -22,7 +31,11 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   private configuracaoService = inject(ConfiguracaoService);
   private migracaoService = inject(MigracaoService);
   private sincronizacaoService = inject(SincronizacaoService);
+  private authService = inject(AuthService);
+  private fechamentoCaixaService = inject(FechamentoCaixaService);
   private fb = inject(FormBuilder);
+
+  @ViewChild('caixaErpModal') caixaErpModal?: ImportarCaixaErpModalComponent;
   private progressSubscription?: Subscription;
   private cadastrosProgressSubscription?: Subscription;
   private sincronizacaoProgressSubscription?: Subscription;
@@ -35,7 +48,13 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   logoPreview: string | null = null;
 
   // Abas
-  activeTab: 'geral' | 'migracao' | 'sincronizacao' = 'geral';
+  activeTab: 'geral' | 'migracao' | 'sincronizacao' | 'importacao' | 'saldo-caixa' = 'geral';
+
+  saldosCaixa: SaldoCaixaFormItem[] = [];
+  saldoCaixaLoading = false;
+  saldoCaixaSaving: string | null = null;
+  saldoCaixaSuccess: string | null = null;
+  saldoCaixaError: string | null = null;
 
   // Migração
   migrationLoading = false;
@@ -116,6 +135,104 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
 
     // Carregar configurações de sincronização
     this.carregarSincronizacaoConfigs();
+  }
+
+  carregarSaldosCaixa(): void {
+    this.saldoCaixaLoading = true;
+    this.saldoCaixaError = null;
+    this.fechamentoCaixaService.listarSaldosIniciais().subscribe({
+      next: (items) => {
+        this.saldosCaixa = items.map((item) => this.mapearSaldoCaixaFormItem(item));
+        this.saldoCaixaLoading = false;
+      },
+      error: (err) => {
+        this.saldoCaixaLoading = false;
+        this.saldoCaixaError =
+          err?.error?.message || 'Erro ao carregar saldos iniciais.';
+      },
+    });
+  }
+
+  salvarSaldoCaixa(item: SaldoCaixaFormItem): void {
+    if (!item.dataSaldo) {
+      this.saldoCaixaError = `Informe a data do saldo para ${item.unidade}.`;
+      return;
+    }
+
+    this.saldoCaixaSaving = item.unidade;
+    this.saldoCaixaSuccess = null;
+    this.saldoCaixaError = null;
+    this.fechamentoCaixaService
+      .atualizarSaldoInicial(item.unidade, item.saldoInicial, item.dataSaldo)
+      .subscribe({
+        next: (saved) => {
+          const idx = this.saldosCaixa.findIndex((s) => s.unidade === saved.unidade);
+          if (idx >= 0) {
+            this.saldosCaixa[idx] = this.mapearSaldoCaixaFormItem(saved);
+          }
+          this.saldoCaixaSaving = null;
+          this.saldoCaixaSuccess = `Saldo de ${saved.unidade} atualizado.`;
+        },
+        error: (err) => {
+          this.saldoCaixaSaving = null;
+          this.saldoCaixaError =
+            err?.error?.message || 'Erro ao salvar saldo inicial.';
+        },
+      });
+  }
+
+  onSaldoCaixaInput(item: SaldoCaixaFormItem, value: string): void {
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    const numerico = digits === '' ? 0 : parseInt(digits, 10) / 100;
+    item.saldoInicial = numerico;
+    item.saldoInicialDisplay = this.formatSaldoCaixaDisplay(numerico);
+  }
+
+  onSaldoCaixaBlur(item: SaldoCaixaFormItem): void {
+    item.saldoInicialDisplay = this.formatSaldoCaixaDisplay(item.saldoInicial);
+  }
+
+  onSaldoCaixaFocus(item: SaldoCaixaFormItem): void {
+    if (item.saldoInicialDisplay === '0,00') {
+      item.saldoInicialDisplay = '';
+    }
+  }
+
+  private mapearSaldoCaixaFormItem(
+    item: CaixaSaldoInicialUnidade,
+  ): SaldoCaixaFormItem {
+    return {
+      ...item,
+      dataSaldo: item.dataSaldo ?? '',
+      saldoInicialDisplay: this.formatSaldoCaixaDisplay(item.saldoInicial),
+    };
+  }
+
+  private formatSaldoCaixaDisplay(value: number): string {
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value ?? 0);
+  }
+
+  onTabChange(tab: typeof this.activeTab): void {
+    this.activeTab = tab;
+    if (tab === 'saldo-caixa' && this.saldosCaixa.length === 0) {
+      this.carregarSaldosCaixa();
+    }
+  }
+
+  canImportarCaixaErp(): boolean {
+    return this.authService.hasPermission(Permission.VENDA_FECHAR_CAIXA);
+  }
+
+  abrirModalImportarCaixaErp(): void {
+    this.caixaErpModal?.abrir({ modoPeriodo: true });
+  }
+
+  onImportacaoCaixaConcluida(): void {
+    this.success = 'Importação de caixa ERP concluída.';
+    this.error = null;
   }
 
   carregarSincronizacaoConfigs() {

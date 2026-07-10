@@ -1,0 +1,256 @@
+<div class="fechamento-caixa-page vendas-page">
+  <section class="results-card">
+    <div class="top-bar">
+      <div class="filter-group">
+        <label class="label-campo" for="fcUnidade">Unidade</label>
+        @if (unidadeBloqueada) {
+          <input id="fcUnidade" class="form-control" [value]="unidade" disabled readonly />
+        } @else {
+          <select
+            id="fcUnidade"
+            class="form-control"
+            [(ngModel)]="unidade"
+            (ngModelChange)="onFiltroChange()">
+            <option value="">Selecione...</option>
+            <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+          </select>
+        }
+      </div>
+      <div class="filter-group filter-group-data">
+        <label class="label-campo" for="fcData">Data</label>
+        <div class="data-navegacao">
+          <button
+            type="button"
+            class="btn-nav-data"
+            (click)="irParaDiaAnterior()"
+            [disabled]="loading || !data"
+            aria-label="Dia anterior"
+            title="Dia anterior">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <input
+            id="fcData"
+            type="date"
+            class="form-control"
+            [(ngModel)]="data"
+            (ngModelChange)="onFiltroChange()" />
+          <button
+            type="button"
+            class="btn-nav-data"
+            (click)="irParaProximoDia()"
+            [disabled]="loading || !data"
+            aria-label="Próximo dia"
+            title="Próximo dia">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+      @if (consolidado && consolidado.statusExibicao) {
+        <div class="filter-group status-group">
+          <span class="label-campo">Status</span>
+          <span
+            class="status-badge"
+            [class.status-confirmado]="consolidado.statusExibicao === 'FECHADO'"
+            [class.status-aberto]="consolidado.statusExibicao === 'RASCUNHO'"
+            [class.status-bloqueado]="consolidado.statusExibicao === 'BLOQUEADO'">
+            {{ getStatusLabel(consolidado.statusExibicao) }}
+          </span>
+        </div>
+      }
+      <div class="top-bar-actions header-actions">
+        <button
+          *ngIf="consolidado?.podeEmitirRelatorio"
+          class="btn btn-imprimir"
+          type="button"
+          (click)="imprimirCaixa()"
+          [disabled]="loading || gerandoRelatorio">
+          <i class="fas fa-print"></i>
+          Caixa
+        </button>
+        <button
+          *ngIf="consolidado?.podeEmitirRelatorio"
+          class="btn btn-imprimir"
+          type="button"
+          (click)="imprimirCaixaDetalhado()"
+          [disabled]="loading || gerandoRelatorio">
+          <i class="fas fa-print"></i>
+          Caixa Detalhado
+        </button>
+        <button
+          *ngIf="canBuscarErp() && unidade && data && consolidado?.podeEditar && !loading && !saving"
+          class="btn btn-filtrar"
+          type="button"
+          (click)="atualizarVendasErp()"
+          [disabled]="importandoErp">
+          <i class="fas fa-cloud-download-alt" [class.fa-spin]="importandoErp"></i>
+          Atualizar Vendas
+        </button>
+        <button
+          *ngIf="canFecharCaixa() && consolidado?.podeConfirmar && !loading && !saving"
+          class="btn btn-baixa"
+          type="button"
+          (click)="confirmarFechamento()">
+          <i class="fas fa-check"></i>
+          Fechar Caixa
+        </button>
+        @if (consolidado && canReabrirCaixa() && consolidado.podeReabrir && !loading && !saving) {
+          <button
+            class="btn btn-auditoria"
+            type="button"
+            (click)="reabrirFechamento()">
+            <i class="fas fa-undo"></i>
+            Reabrir
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+    <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+
+    <div class="inline-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Carregando fechamento...</span>
+    </div>
+
+    @if (!loading && !consolidado && unidade && data) {
+      <div class="state-empty">
+        <i class="fas fa-inbox"></i>
+        <span>Nenhum fechamento encontrado para os filtros selecionados.</span>
+      </div>
+    }
+
+    @if (!loading && (!unidade || !data)) {
+      <div class="state-empty">
+        <i class="fas fa-filter"></i>
+        <span>Selecione unidade e data para visualizar o fechamento.</span>
+      </div>
+    }
+
+    <section *ngIf="consolidado && !loading" class="consolidado-panel">
+      <div class="consolidado-meta">
+        <span><strong>Data:</strong> {{ formatDateDisplay(consolidado.data) }}</span>
+        <span><strong>Unidade:</strong> {{ consolidado.unidade }}</span>
+      </div>
+
+      <div class="forma-blocos-grid">
+      <div *ngFor="let bloco of formasOrdenadas" class="forma-bloco" [ngClass]="getFormaCardClass(bloco.forma)">
+        <div class="forma-bloco-header">
+          <h3 class="forma-titulo">
+            <span class="forma-icone" aria-hidden="true">
+              <i class="fas" [ngClass]="getFormaIcon(bloco.forma)"></i>
+            </span>
+            {{ getFormaTitulo(bloco.forma) }}
+          </h3>
+          <span class="forma-total" *ngIf="bloco.forma !== 'DINHEIRO'">
+            {{ formatCurrency(bloco.totalForma) }}
+          </span>
+        </div>
+
+        <div class="forma-linhas">
+          <ng-container *ngIf="bloco.forma === 'DINHEIRO'">
+            <div class="linha-valor">
+              <span>Saldo em caixa</span>
+              <strong class="valor">{{ formatCurrency(consolidado.saldoInicial) }}</strong>
+            </div>
+
+            @if (getLinhaErp(bloco, 'DINHEIRO'); as linhaDinheiro) {
+              <div class="linha-valor">
+                <span>DINHEIRO</span>
+                <strong class="valor">{{ formatCurrency(linhaDinheiro.liquido) }}</strong>
+              </div>
+            }
+
+            <div
+              class="linha-valor"
+              *ngFor="let item of bloco.terceiroPorOrigem">
+              <span>{{ getLinhaFormaOrigemLabel('DINHEIRO', item.origem) }}</span>
+              <strong class="valor">{{ formatCurrency(item.liquido) }}</strong>
+            </div>
+
+            @if (getLinhaErp(bloco, 'CONVENIO-DINHEIRO'); as linhaConvenio) {
+              <div class="linha-valor">
+                <span>CONVENIO-DINHEIRO</span>
+                <strong class="valor">{{ formatCurrency(linhaConvenio.liquido) }}</strong>
+              </div>
+            }
+
+            <div class="linha-valor subtotal">
+              <span>Total entradas dinheiro</span>
+              <strong class="valor">{{ formatCurrency(totalEntradasDinheiro) }}</strong>
+            </div>
+            <div class="linha-valor editavel">
+              <label for="fcDespesas">Saídas / Despesas</label>
+              <input
+                id="fcDespesas"
+                type="text"
+                inputmode="decimal"
+                class="form-control campo-valor campo-moeda"
+                [ngModel]="totalDespesasDisplay"
+                (ngModelChange)="onMonetarioInput($event, 'despesas')"
+                (blur)="onMonetarioBlur('despesas')"
+                (focus)="onMonetarioFocus('despesas')"
+                [disabled]="!consolidado.podeEditar || saving" />
+            </div>
+            <div class="linha-valor editavel">
+              <label for="fcRetirada">Fechamento / Retirada</label>
+              <input
+                id="fcRetirada"
+                type="text"
+                inputmode="decimal"
+                class="form-control campo-valor campo-moeda"
+                [ngModel]="totalRetiradaDisplay"
+                (ngModelChange)="onMonetarioInput($event, 'retirada')"
+                (blur)="onMonetarioBlur('retirada')"
+                (focus)="onMonetarioFocus('retirada')"
+                [disabled]="!consolidado.podeEditar || saving" />
+            </div>
+            @if (canFecharCaixa() && consolidado.podeEditar && !loading && !saving) {
+              <div class="linha-valor linha-acao-salvar">
+                <button
+                  class="btn btn-salvar btn-salvar-inline"
+                  type="button"
+                  (click)="salvarRascunho()">
+                  <i class="fas fa-save"></i>
+                  Salvar
+                </button>
+              </div>
+            }
+            <div class="linha-valor diferenca-caixa">
+              <span>Diferença</span>
+              <strong class="valor">{{ formatCurrency(diferencaCaixa) }}</strong>
+            </div>
+            <div class="linha-valor total-final">
+              <span>Saldo final</span>
+              <strong class="valor">{{ formatCurrency(isCaixaFechado(consolidado) ? consolidado.saldoFinalDinheiro : saldoFinalCalculado) }}</strong>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="bloco.forma !== 'DINHEIRO'">
+            <div class="linha-valor" *ngFor="let linha of getErpLinhas(bloco)">
+              <span>{{ linha.forma }}</span>
+              <strong class="valor">{{ formatCurrency(linha.liquido) }}</strong>
+            </div>
+
+            <div
+              class="linha-valor"
+              *ngFor="let item of bloco.terceiroPorOrigem">
+              <span>{{ getLinhaFormaOrigemLabel(bloco.forma, item.origem) }}</span>
+              <strong class="valor">{{ formatCurrency(item.liquido) }}</strong>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+      </div>
+    </section>
+  </section>
+</div>
+<app-confirmation-modal
+  [isVisible]="showFecharCaixaModal"
+  title="Fechar caixa"
+  [message]="fecharCaixaModalMensagem"
+  confirmText="Fechar Caixa"
+  cancelText="Cancelar"
+  (confirmed)="onConfirmarFecharCaixaModal()"
+  (cancelled)="onCancelarFecharCaixaModal()"
+/>

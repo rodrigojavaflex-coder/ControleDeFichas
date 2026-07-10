@@ -108,6 +108,14 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'relatorios/fechamento-caixa',
+    loadComponent: () =>
+      import('./components/fechamento-caixa-page/fechamento-caixa-page').then(
+        (m) => m.FechamentoCaixaPageComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  {
     path: 'relatorios/baixas',
     loadComponent: () =>
       import('./components/baixas-list/baixas-list').then((m) => m.BaixasListComponent),

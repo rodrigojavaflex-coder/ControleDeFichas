@@ -870,3 +870,25 @@ body.theme-dark .baixas-page td {
   background: #7f1d1d;
   border-color: #ef4444;
 }
+
+.header-actions .btn-exportar {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+  color: #047857;
+}
+
+.header-actions .btn-exportar:hover:not(:disabled) {
+  background: #d1fae5;
+  border-color: #34d399;
+}
+
+:host-context(body.theme-dark) .header-actions .btn-exportar {
+  background: #064e3b;
+  border-color: #059669;
+  color: #a7f3d0;
+}
+
+:host-context(body.theme-dark) .header-actions .btn-exportar:hover:not(:disabled) {
+  background: #065f46;
+  border-color: #10b981;
+}

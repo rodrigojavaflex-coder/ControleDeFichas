@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, OnDestroy } from '@angular/core';
+import { Component, OnInit, inject, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -856,7 +856,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
   }
 
-  private formatDateDisplay(value?: string): string {
+  formatDateDisplay(value?: string): string {
     if (!value) return '';
     const [year, month, day] = value.split('-');
     if (!year || !month || !day) {

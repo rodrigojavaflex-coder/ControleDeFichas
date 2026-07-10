@@ -299,6 +299,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
           requiredPermissions: [Permission.VENDA_BAIXAR]
         },
         {
+          label: 'Fechamento de Caixa',
+          route: '/relatorios/fechamento-caixa',
+          icon: 'feather-dollar-sign',
+          requiredPermissions: [Permission.VENDA_FECHAR_CAIXA]
+        },
+        {
           label: 'Acompanhar (Vendas)',
           route: '/relatorios/acompanhar-vendas',
           icon: 'feather-file-text',

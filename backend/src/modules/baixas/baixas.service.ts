@@ -17,6 +17,8 @@ import {
   PaginationMetaDto,
 } from '../../common/dto/paginated-response.dto';
 import { ProcessarBaixasEmMassaDto } from './dto/processar-baixas-em-massa.dto';
+import { FechamentoCaixaService } from '../fechamento-caixa/fechamento-caixa.service';
+import { Unidade } from '../../common/enums/unidade.enum';
 
 interface ProcessamentoBaixasEmMassaResult {
   sucesso: { idvenda: string; protocolo?: string; valorProcessado: number }[];
@@ -31,6 +33,7 @@ export class BaixasService {
     @InjectRepository(Baixa)
     private readonly baixaRepository: Repository<Baixa>,
     private readonly vendasService: VendasService,
+    private readonly fechamentoCaixaService: FechamentoCaixaService,
   ) {}
 
   async create(createBaixaDto: CreateBaixaDto): Promise<Baixa> {
@@ -41,7 +44,7 @@ export class BaixasService {
         throw new NotFoundException(`Venda com ID ${createBaixaDto.idvenda} não encontrada`);
       }
 
-      // NOVA VALIDAÇÃO: Validar data da baixa por unidade
+      // Validar data da baixa (fechamento de caixa + última baixa da unidade)
       if (venda.unidade) {
         this.logger.debug(
           `Validando criação de baixa. Venda: ${createBaixaDto.idvenda}, ` +
@@ -133,7 +136,7 @@ export class BaixasService {
     const baixa = await this.findOne(id);
     const venda = await this.vendasService.findOne(baixa.idvenda);
 
-    // Validar data da baixa por unidade: a data (nova ou atual) não pode ser anterior à última baixa da unidade
+    // Validar data da baixa (fechamento de caixa + última baixa da unidade)
     if (venda.unidade) {
       const dataAtual = typeof baixa.dataBaixa === 'string'
         ? baixa.dataBaixa
@@ -168,14 +171,12 @@ export class BaixasService {
 
     const venda = await this.vendasService.findOne(baixa.idvenda);
 
-    // NOVA VALIDAÇÃO: Validar data da baixa por unidade antes de excluir
+    // Validar data da baixa (fechamento de caixa + última baixa da unidade)
     if (venda.unidade) {
-      // Converter dataBaixa para string YYYY-MM-DD
       const dataBaixa = typeof baixa.dataBaixa === 'string' 
         ? baixa.dataBaixa 
         : (baixa.dataBaixa as Date).toISOString().split('T')[0];
       
-      // Passar o ID da baixa sendo excluída para excluir da busca
       await this.validarDataBaixaPorUnidade(dataBaixa, venda.unidade, baixa.id);
     }
 
@@ -230,111 +231,61 @@ export class BaixasService {
   }
 
   /**
-   * Busca a data da última baixa registrada para uma unidade
-   * @param unidade - Unidade para buscar
-   * @param excludeBaixaId - ID da baixa a ser excluída da busca (opcional, usado em edição/exclusão)
-   * @returns Data da última baixa no formato YYYY-MM-DD ou null se não houver baixas
+   * Valida se a data da baixa é permitida para a unidade.
+   * Aplica duas regras cumulativas (implantação gradual do fechamento de caixa):
+   * 1) data posterior ao último fechamento confirmado do caixa (quando existir);
+   * 2) data >= data da última baixa registrada na unidade (quando existir).
    */
-  private async getUltimaDataBaixaPorUnidade(unidade: string, excludeBaixaId?: string): Promise<string | null> {
-    try {
-      const queryBuilder = this.baixaRepository
-        .createQueryBuilder('baixa')
-        .innerJoin('baixa.venda', 'venda')
-        .where('venda.unidade = :unidade', { unidade });
+  private async validarDataBaixaPorUnidade(
+    dataBaixa: string,
+    unidade: string,
+    excludeBaixaId?: string,
+  ): Promise<void> {
+    const dataBaixaFormatada = dataBaixa.split('T')[0].substring(0, 10);
 
-      // Excluir a baixa específica se fornecida (caso de edição/exclusão)
-      if (excludeBaixaId) {
-        queryBuilder.andWhere('baixa.id != :excludeBaixaId', { excludeBaixaId });
-        this.logger.debug(
-          `Buscando última data de baixa para unidade ${unidade}, excluindo baixa ${excludeBaixaId}`
-        );
-      }
+    this.logger.debug(
+      `Validando data de baixa. Unidade: ${unidade}, Data informada: ${dataBaixaFormatada}` +
+      (excludeBaixaId ? `, Excluindo baixa: ${excludeBaixaId}` : ''),
+    );
 
-      const resultado = await queryBuilder
-        .orderBy('baixa.dataBaixa', 'DESC')
-        .addOrderBy('baixa.criadoEm', 'DESC')
-        .limit(1)
-        .getOne();
+    await this.fechamentoCaixaService.assertPodeRegistrarBaixa(
+      unidade as Unidade,
+      dataBaixaFormatada,
+    );
 
-      this.logger.debug(
-        `Buscando última data de baixa para unidade ${unidade}. ` +
-        `Resultado encontrado: ${resultado ? 'SIM' : 'NÃO'}`
-      );
+    await this.validarDataBaixaContraUltimaBaixaUnidade(
+      dataBaixaFormatada,
+      unidade,
+      excludeBaixaId,
+    );
 
-      if (!resultado || !resultado.dataBaixa) {
-        this.logger.debug(`Nenhuma baixa encontrada para unidade ${unidade}`);
-        return null;
-      }
-
-      // Converter dataBaixa para string YYYY-MM-DD
-      let ultimaData: string;
-      const dataBaixaValue: Date | string = resultado.dataBaixa as Date | string;
-      
-      if (dataBaixaValue instanceof Date) {
-        ultimaData = dataBaixaValue.toISOString().split('T')[0];
-      } else if (typeof dataBaixaValue === 'string') {
-        // Se já for string, garantir formato YYYY-MM-DD
-        ultimaData = dataBaixaValue.split('T')[0].substring(0, 10);
-      } else {
-        this.logger.warn(
-          `Formato inesperado de data retornado: ${typeof dataBaixaValue}, valor: ${dataBaixaValue}`
-        );
-        return null;
-      }
-
-      this.logger.debug(`Última data de baixa para unidade ${unidade}: ${ultimaData}`);
-      return ultimaData;
-    } catch (error) {
-      this.logger.error(
-        `Erro ao buscar última data de baixa para unidade ${unidade}:`,
-        error
-      );
-      return null;
-    }
+    this.logger.debug(`Validação de data aprovada para unidade ${unidade}`);
   }
 
   /**
-   * Valida se a data da baixa é permitida para a unidade
-   * Só permite se a data for >= data da última baixa da unidade
-   * Se não houver baixas na unidade, permite qualquer data
-   * @param dataBaixa - Data da baixa sendo criada/editada/excluída (formato YYYY-MM-DD)
-   * @param unidade - Unidade da venda
-   * @param excludeBaixaId - ID da baixa a ser excluída da busca (opcional, usado em edição/exclusão)
-   * @throws ConflictException se a data for anterior à última baixa
+   * Valida se a data da baixa não é anterior à última baixa da unidade.
+   * Se não houver baixas na unidade, permite qualquer data.
    */
-  private async validarDataBaixaPorUnidade(
-    dataBaixa: string, 
-    unidade: string, 
-    excludeBaixaId?: string
+  private async validarDataBaixaContraUltimaBaixaUnidade(
+    dataBaixa: string,
+    unidade: string,
+    excludeBaixaId?: string,
   ): Promise<void> {
-    // Garantir que dataBaixa está no formato YYYY-MM-DD
-    const dataBaixaFormatada = dataBaixa.split('T')[0].substring(0, 10);
-    
-    this.logger.debug(
-      `Validando data de baixa. Unidade: ${unidade}, Data informada: ${dataBaixaFormatada}` +
-      (excludeBaixaId ? `, Excluindo baixa: ${excludeBaixaId}` : '')
-    );
-
     const ultimaData = await this.getUltimaDataBaixaPorUnidade(unidade, excludeBaixaId);
-    
-    // Se não houver baixas na unidade, permitir qualquer data
+
     if (!ultimaData) {
-      this.logger.debug(`Unidade ${unidade} não possui baixas registradas. Permitindo operação.`);
+      this.logger.debug(
+        `Unidade ${unidade} não possui baixas registradas. Validação por última baixa ignorada.`,
+      );
       return;
     }
 
-    this.logger.debug(
-      `Comparando datas. Data informada: ${dataBaixaFormatada}, Última data: ${ultimaData}`
-    );
-
-    // Comparar datas (formato YYYY-MM-DD permite comparação direta como string)
-    if (dataBaixaFormatada < ultimaData) {
-      const protocoloUltimaBaixa = await this.getProtocoloUltimaBaixaPorUnidade(unidade, excludeBaixaId);
+    if (dataBaixa < ultimaData) {
       const ultimaDataFormatada = this.formatDateDisplay(ultimaData);
 
       this.logger.warn(
         `Tentativa de operação com baixa de data anterior à última baixa da unidade. ` +
-        `Unidade: ${unidade}, Última baixa: ${ultimaData}, Data informada: ${dataBaixaFormatada}`
+        `Unidade: ${unidade}, Última baixa: ${ultimaData}, Data informada: ${dataBaixa}`,
       );
 
       const urlBaixas = `/relatorios/baixas?dataInicial=${ultimaData}&dataFinal=${ultimaData}&unidade=${encodeURIComponent(unidade)}`;
@@ -343,30 +294,24 @@ export class BaixasService {
       const mensagem =
         '<strong>Não foi possível realizar esta operação!</strong><br><br>' +
         `Verifique as baixas do dia: <strong>${ultimaDataFormatada}</strong><br><br>` +
-        `O Caixa foi fechado no dia ${ultimaDataFormatada} não é possível fazer alterações antes desta data!<br><br>` +
+        `Já existem baixas registradas nesta unidade até ${ultimaDataFormatada}. ` +
+        'Não é possível registrar, alterar ou excluir baixas com data anterior.<br><br>' +
         `<a href="${urlBaixas}">${textoLink}</a>`;
 
       throw new ConflictException(mensagem);
     }
-
-    this.logger.debug(`Validação de data aprovada para unidade ${unidade}`);
   }
 
-  /**
-   * Busca o protocolo da venda da última baixa registrada para uma unidade
-   * @param unidade - Unidade para buscar
-   * @param excludeBaixaId - ID da baixa a ser excluída da busca (opcional)
-   * @returns Protocolo da venda ou null se não houver baixas
-   */
-  private async getProtocoloUltimaBaixaPorUnidade(unidade: string, excludeBaixaId?: string): Promise<string | null> {
+  private async getUltimaDataBaixaPorUnidade(
+    unidade: string,
+    excludeBaixaId?: string,
+  ): Promise<string | null> {
     try {
       const queryBuilder = this.baixaRepository
         .createQueryBuilder('baixa')
         .innerJoin('baixa.venda', 'venda')
-        .where('venda.unidade = :unidade', { unidade })
-        .select('venda.protocolo', 'protocolo');
+        .where('venda.unidade = :unidade', { unidade });
 
-      // Excluir a baixa específica se fornecida (caso de edição/exclusão)
       if (excludeBaixaId) {
         queryBuilder.andWhere('baixa.id != :excludeBaixaId', { excludeBaixaId });
       }
@@ -375,23 +320,36 @@ export class BaixasService {
         .orderBy('baixa.dataBaixa', 'DESC')
         .addOrderBy('baixa.criadoEm', 'DESC')
         .limit(1)
-        .getRawOne();
+        .getOne();
 
-      return resultado?.protocolo || null;
+      if (!resultado?.dataBaixa) {
+        return null;
+      }
+
+      const dataBaixaValue: Date | string = resultado.dataBaixa as Date | string;
+
+      if (dataBaixaValue instanceof Date) {
+        return dataBaixaValue.toISOString().split('T')[0];
+      }
+
+      if (typeof dataBaixaValue === 'string') {
+        return dataBaixaValue.split('T')[0].substring(0, 10);
+      }
+
+      return null;
     } catch (error) {
       this.logger.error(
-        `Erro ao buscar protocolo da última baixa para unidade ${unidade}:`,
-        error
+        `Erro ao buscar última data de baixa para unidade ${unidade}:`,
+        error,
       );
       return null;
     }
   }
 
-  /**
-   * Formata data para exibição (YYYY-MM-DD -> DD/MM/YYYY)
-   */
   private formatDateDisplay(date: string): string {
-    if (!date || date.length !== 10) return date;
+    if (!date || date.length !== 10) {
+      return date;
+    }
     const [year, month, day] = date.split('-');
     return `${day}/${month}/${year}`;
   }
@@ -437,7 +395,7 @@ export class BaixasService {
           continue;
         }
 
-        // NOVA VALIDAÇÃO: Validar data da baixa por unidade
+        // Validar data da baixa (fechamento de caixa + última baixa da unidade)
         if (venda.unidade) {
           try {
             await this.validarDataBaixaPorUnidade(processarDto.dataBaixa, venda.unidade);

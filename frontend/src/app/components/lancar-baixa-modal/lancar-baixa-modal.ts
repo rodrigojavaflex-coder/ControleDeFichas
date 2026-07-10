@@ -1,33 +1,31 @@
 import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Venda, VendaStatus } from '../../models/venda.model';
-import { TipoDaBaixa, LancarBaixaDto, Baixa } from '../../models/baixa.model';
+import { TipoDaBaixa, Baixa } from '../../models/baixa.model';
 import { BaixasService } from '../../services/baixas.service';
 import { ErrorModalService } from '../../services/error-modal.service';
-import { VendaService } from '../../services/vendas.service';
 import { AuthService } from '../../services/auth.service';
 import { Permission } from '../../models/usuario.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
+import { BaixaFormModalComponent } from '../baixa-form-modal/baixa-form-modal';
 
 @Component({
   selector: 'app-lancar-baixa-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmationModalComponent],
+  imports: [CommonModule, ConfirmationModalComponent, BaixaFormModalComponent],
   templateUrl: './lancar-baixa-modal.html',
-  styleUrls: ['./lancar-baixa-modal.css']
+  styleUrls: ['./lancar-baixa-modal.css'],
 })
 export class LancarBaixaModalComponent {
-  private baixasService = inject(BaixasService);
-  private errorModalService = inject(ErrorModalService);
-  private vendaService = inject(VendaService);
-  private authService = inject(AuthService);
-  private configuracaoService = inject(ConfiguracaoService);
+  private readonly baixasService = inject(BaixasService);
+  private readonly errorModalService = inject(ErrorModalService);
+  private readonly authService = inject(AuthService);
+  private readonly configuracaoService = inject(ConfiguracaoService);
 
-      @Input() set showModal(value: boolean) {
+  @Input() set showModal(value: boolean) {
     this._showModal = value;
     if (value && this.venda) {
       this.loadBaixasExistentes();
@@ -60,257 +58,58 @@ export class LancarBaixaModalComponent {
   @Output() baixaLancada = new EventEmitter<Venda>();
   @Output() modalClosed = new EventEmitter<void>();
 
-  // Estados
-  loading = false;
   loadingBaixas = false;
   deletingBaixaId: string | null = null;
+  showFormModal = false;
+  baixaEmEdicao: Baixa | null = null;
 
-  // Modal de confirmação de exclusão de baixa
   showDeleteBaixaModal = false;
   baixaToDelete: Baixa | null = null;
   deleteModalMessage = '';
 
-  // Modal de confirmação de fechamento
-  showCloseConfirmationModal = false;
-
-  // Modal de confirmação de data futura
-  showDataFuturaModal = false;
-  dataFuturaConfirmada = false;
-
-  // Baixas existentes da venda
   baixasExistentes: Baixa[] = [];
 
-  // Dados da baixa
-  baixaData: LancarBaixaDto = {
-    tipoDaBaixa: TipoDaBaixa.CARTAO_PIX,
-    valorBaixa: 0,
-    dataBaixa: new Date().toISOString().split('T')[0],
-    observacao: ''
-  };
-
-  // Variável para edição de baixa
-  baixaEmEdicao: Baixa | null = null;
-  modoEdicao = false;
-
-  // Variável para exibição formatada do valor
-  valorDisplay = '0,00';
-
-  // Enums para template
   TipoDaBaixa = TipoDaBaixa;
-  tiposBaixa = Object.values(TipoDaBaixa);
   Permission = Permission;
 
   onClose(): void {
-    if (this.loading) {
-      return;
-    }
-
-    if (this.hasUnsavedChanges()) {
-      this.showCloseConfirmationModal = true;
-      return;
-    }
-
+    this.fecharFormularioBaixa();
     this.closeModal();
   }
 
-  hasUnsavedChanges(): boolean {
-    if (this.modoEdicao) {
-      return true;
-    }
-
-    if (this.baixaData.valorBaixa > 0) {
-      return true;
-    }
-
-    if (this.baixaData.observacao?.trim()) {
-      return true;
-    }
-
-    if (this.baixaData.tipoDaBaixa !== TipoDaBaixa.CARTAO_PIX) {
-      return true;
-    }
-
-    const hoje = new Date().toISOString().split('T')[0];
-    return this.baixaData.dataBaixa !== hoje;
-  }
-
   private closeModal(): void {
-    this.resetForm();
     this.close.emit();
     this.modalClosed.emit();
   }
 
-  onCloseConfirmed(): void {
-    this.showCloseConfirmationModal = false;
-    this.closeModal();
-  }
-
-  onCloseCancelled(): void {
-    this.showCloseConfirmationModal = false;
-  }
-
-  onSubmit(): void {
-    if (!this.venda || !this.isFormValid()) {
+  abrirFormularioBaixa(): void {
+    if (!this.hasPermission(Permission.VENDA_BAIXAR)) {
+      this.errorModalService.show('Você não possui permissão para lançar baixas', 'Permissão Negada');
       return;
     }
 
-    // Verificar se a data é futura antes de submeter
-    if (this.isDataFutura(this.baixaData.dataBaixa) && !this.dataFuturaConfirmada) {
-      this.showDataFuturaModal = true;
-      return;
-    }
-
-    // Se chegou aqui, pode prosseguir (data não é futura ou foi confirmada)
-    this.dataFuturaConfirmada = false; // Resetar flag
-    this.processarBaixa();
-  }
-
-  /**
-   * Verifica se a data informada é maior que a data atual
-   */
-  private isDataFutura(dataBaixa: string): boolean {
-    if (!dataBaixa) {
-      return false;
-    }
-
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0); // Zerar horas para comparar apenas a data
-
-    const dataInformada = new Date(dataBaixa);
-    dataInformada.setHours(0, 0, 0, 0);
-
-    return dataInformada > hoje;
-  }
-
-  /**
-   * Processa a baixa (criação ou edição) após validações
-   */
-  private processarBaixa(): void {
-    this.loading = true;
-
-    if (this.modoEdicao && this.baixaEmEdicao) {
-      // Modo EDIÇÃO - Atualizar baixa existente
-      const updateBaixaDto = {
-        tipoDaBaixa: this.baixaData.tipoDaBaixa,
-        valorBaixa: this.baixaData.valorBaixa,
-        dataBaixa: this.baixaData.dataBaixa,
-        observacao: this.baixaData.observacao
-      };
-
-      this.baixasService.updateBaixa(this.baixaEmEdicao.id, updateBaixaDto).subscribe({
-        next: (baixaAtualizada) => {
-          this.loading = false;
-          this.resetForm();
-          this.modoEdicao = false;
-          this.baixaEmEdicao = null;
-          // Recarregar baixas para atualizar a lista do modal
-          this.loadBaixasExistentes();
-        },
-        error: (error) => {
-          this.loading = false;
-          const message = error.error?.message || 'Erro ao atualizar baixa';
-          this.errorModalService.show(message, 'Erro');
-        }
-      });
-    } else {
-      // Modo CRIAÇÃO - Criar nova baixa
-      const createBaixaDto = {
-        idvenda: this.venda!.id,
-        tipoDaBaixa: this.baixaData.tipoDaBaixa,
-        valorBaixa: this.baixaData.valorBaixa,
-        dataBaixa: this.baixaData.dataBaixa,
-        observacao: this.baixaData.observacao
-      };
-
-      this.baixasService.createBaixa(createBaixaDto).subscribe({
-        next: (baixaCriada) => {
-          this.loading = false;
-          this.resetForm();
-          // Recarregar baixas para atualizar a lista do modal
-          this.loadBaixasExistentes();
-        },
-        error: (error) => {
-          this.loading = false;
-          const message = error.error?.message || 'Erro ao lançar baixa';
-          this.errorModalService.show(message, 'Erro');
-        }
-      });
-    }
-  }
-
-  /**
-   * Confirma a operação com data futura
-   */
-  onDataFuturaConfirmed(): void {
-    this.showDataFuturaModal = false;
-    this.dataFuturaConfirmada = true;
-    // Chamar onSubmit novamente, agora com a flag confirmada
-    this.onSubmit();
-  }
-
-  /**
-   * Cancela a operação com data futura
-   */
-  onDataFuturaCancelled(): void {
-    this.showDataFuturaModal = false;
-    this.dataFuturaConfirmada = false;
-  }
-
-  private isFormValid(): boolean {
-    if (!this.baixaData.tipoDaBaixa) {
-      this.errorModalService.show('Selecione o tipo da baixa', 'Campo Obrigatório');
-      return false;
-    }
-
-    if (!this.baixaData.valorBaixa || this.baixaData.valorBaixa <= 0) {
-      this.errorModalService.show('Informe um valor válido para a baixa', 'Campo Obrigatório');
-      return false;
-    }
-
-    if (!this.baixaData.dataBaixa) {
-      this.errorModalService.show('Selecione a data da baixa', 'Campo Obrigatório');
-      return false;
-    }
-
-    // Validar se a soma das baixas não é maior que o valor do cliente
-    let totalBaixasAtual = this.getTotalBaixas();
-    
-    // Se está em modo edição, subtrair o valor anterior para não contar em duplicata
-    if (this.modoEdicao && this.baixaEmEdicao) {
-      totalBaixasAtual -= (this.baixaEmEdicao.valorBaixa || 0);
-    }
-    
-    const totalComNovaBaixa = totalBaixasAtual + this.baixaData.valorBaixa;
-    const valorCliente = this.venda?.valorCliente || 0;
-
-    if (totalComNovaBaixa > valorCliente) {
-      const diferenca = totalComNovaBaixa - valorCliente;
-      const valorRestante = valorCliente - totalBaixasAtual;
-      this.errorModalService.show(
-        `O valor da baixa ultrapassa o valor total em ${this.formatCurrency(diferenca)}. Valor restante: ${this.formatCurrency(valorRestante)}`,
-        'Valor Inválido'
-      );
-      return false;
-    }
-
-    return true;
-  }
-
-  private resetForm(): void {
-    this.baixaData = {
-      tipoDaBaixa: TipoDaBaixa.CARTAO_PIX,
-      valorBaixa: 0,
-      dataBaixa: new Date().toISOString().split('T')[0],
-      observacao: ''
-    };
-    this.valorDisplay = '0,00';
-    this.modoEdicao = false;
     this.baixaEmEdicao = null;
-    this.dataFuturaConfirmada = false; // Resetar flag ao resetar formulário
+    this.showFormModal = true;
   }
 
-  cancelarEdicao(): void {
-    this.resetForm();
+  onEditarBaixa(baixa: Baixa): void {
+    if (!this.hasPermission(Permission.VENDA_UPDATE)) {
+      this.errorModalService.show('Você não possui permissão para editar baixas', 'Permissão Negada');
+      return;
+    }
+
+    this.baixaEmEdicao = baixa;
+    this.showFormModal = true;
+  }
+
+  fecharFormularioBaixa(): void {
+    this.showFormModal = false;
+    this.baixaEmEdicao = null;
+  }
+
+  onBaixaSalva(): void {
+    this.fecharFormularioBaixa();
+    this.loadBaixasExistentes();
   }
 
   getTipoBaixaLabel(tipo: TipoDaBaixa): string {
@@ -318,7 +117,6 @@ export class LancarBaixaModalComponent {
       [TipoDaBaixa.DINHEIRO]: 'Dinheiro',
       [TipoDaBaixa.CARTAO_PIX]: 'Cartão/PIX',
       [TipoDaBaixa.DEPOSITO]: 'Depósito',
-      [TipoDaBaixa.OUTROS]: 'Outros'
     };
     return labels[tipo] || tipo;
   }
@@ -329,55 +127,8 @@ export class LancarBaixaModalComponent {
     }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(value);
-  }
-
-  // Formatação de Moeda para input
-  formatCurrencyInput(event: any): void {
-    const input = event.target;
-    let value = input.value.replace(/\D/g, '');
-    
-    // Limitar a 8 dígitos (para valores até 999.999,99)
-    if (value.length > 8) {
-      value = value.substring(0, 8);
-    }
-    
-    if (value === '') {
-      this.baixaData.valorBaixa = 0;
-      this.valorDisplay = '';
-      return;
-    }
-
-    const numValue = parseInt(value, 10) / 100;
-    this.baixaData.valorBaixa = numValue;
-    
-    // Atualizar display sem formatação durante digitação
-    this.valorDisplay = value.replace(/(\d{1,5})(\d{2})$/, '$1,$2').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-  }
-
-  private formatCurrencyDisplay(value: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(value);
-  }
-
-  formatCurrencyOnBlur(): void {
-    const value = this.baixaData.valorBaixa;
-    if (value !== null && value !== undefined && value !== 0) {
-      this.valorDisplay = this.formatCurrencyDisplay(value);
-    } else {
-      // Se for 0 ou vazio, mostrar 0,00
-      this.valorDisplay = '0,00';
-    }
-  }
-
-  onValorFocus(): void {
-    if (this.valorDisplay === '0,00' || this.valorDisplay === '') {
-      this.valorDisplay = '';
-      this.baixaData.valorBaixa = 0;
-    }
   }
 
   getStatusLabel(status: VendaStatus): string {
@@ -385,7 +136,7 @@ export class LancarBaixaModalComponent {
       [VendaStatus.REGISTRADO]: 'Registrado',
       [VendaStatus.CANCELADO]: 'Cancelado',
       [VendaStatus.PAGO]: 'Pago',
-      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial'
+      [VendaStatus.PAGO_PARCIAL]: 'Pago Parcial',
     };
     return labels[status] || status;
   }
@@ -397,8 +148,7 @@ export class LancarBaixaModalComponent {
     if (venda.cliente && typeof venda.cliente === 'object') {
       return venda.cliente.nome;
     }
-    // Compatibilidade temporária com campo texto (será removido após migration)
-    return (venda.cliente as any) || 'Cliente não informado';
+    return (venda.cliente as string) || 'Cliente não informado';
   }
 
   getVendedorNome(venda: Venda | null): string {
@@ -408,19 +158,7 @@ export class LancarBaixaModalComponent {
     if (venda.vendedor && typeof venda.vendedor === 'object') {
       return venda.vendedor.nome;
     }
-    // Compatibilidade temporária com campo texto (será removido após migration)
-    return (venda.vendedor as any) || 'Não informado';
-  }
-
-  getPrescritorNome(venda: Venda | null): string | null {
-    if (!venda) {
-      return null;
-    }
-    if (venda.prescritor && typeof venda.prescritor === 'object') {
-      return venda.prescritor.nome;
-    }
-    // Compatibilidade temporária com campo texto (será removido após migration)
-    return (venda.prescritor as any) || null;
+    return (venda.vendedor as string) || 'Não informado';
   }
 
   getStatusClass(status: VendaStatus): string {
@@ -428,13 +166,15 @@ export class LancarBaixaModalComponent {
       [VendaStatus.REGISTRADO]: 'status-registrado',
       [VendaStatus.CANCELADO]: 'status-cancelado',
       [VendaStatus.PAGO]: 'status-pago',
-      [VendaStatus.PAGO_PARCIAL]: 'status-pago-parcial'
+      [VendaStatus.PAGO_PARCIAL]: 'status-pago-parcial',
     };
     return classes[status] || '';
   }
 
   private loadBaixasExistentes(): void {
-    if (!this.venda) return;
+    if (!this.venda) {
+      return;
+    }
 
     this.loadingBaixas = true;
     this.baixasService.getBaixas({ idvenda: this.venda.id }).subscribe({
@@ -445,8 +185,7 @@ export class LancarBaixaModalComponent {
       error: (error) => {
         console.error('Erro ao carregar baixas existentes:', error);
         this.loadingBaixas = false;
-        // Não mostra erro para o usuário, apenas log no console
-      }
+      },
     });
   }
 
@@ -454,14 +193,13 @@ export class LancarBaixaModalComponent {
     if (!this.baixasExistentes || this.baixasExistentes.length === 0) {
       return 0;
     }
-    return this.baixasExistentes.reduce((total, baixa) => {
-      const valor = baixa.valorBaixa || 0;
-      return total + valor;
-    }, 0);
+    return this.baixasExistentes.reduce((total, baixa) => total + (baixa.valorBaixa || 0), 0);
   }
 
   getValorRestante(): number {
-    if (!this.venda) return 0;
+    if (!this.venda) {
+      return 0;
+    }
     const valorCliente = this.venda.valorCliente || 0;
     const totalBaixas = this.getTotalBaixas();
     return Math.max(0, Number((valorCliente - totalBaixas).toFixed(2)));
@@ -475,48 +213,8 @@ export class LancarBaixaModalComponent {
     return Math.min(100, Math.round(percentual));
   }
 
-  canPreencherSaldoRestante(): boolean {
-    return this.getValorRestante() > 0;
-  }
-
-  preencherSaldoRestante(): void {
-    const restante = this.getValorRestante();
-    if (restante <= 0) {
-      this.errorModalService.show('Não há saldo restante para preencher.', 'Atenção');
-      return;
-    }
-
-    this.baixaData.valorBaixa = restante;
-    this.valorDisplay = this.formatCurrencyDisplay(restante);
-  }
-
   hasPermission(permission: Permission): boolean {
     return this.authService.hasPermission(permission);
-  }
-
-  onEditarBaixa(baixa: Baixa): void {
-    if (!this.hasPermission(Permission.VENDA_UPDATE)) {
-      this.errorModalService.show('Você não possui permissão para editar baixas', 'Permissão Negada');
-      return;
-    }
-
-    // Ativar modo edição e armazenar a baixa sendo editada
-    this.modoEdicao = true;
-    this.baixaEmEdicao = baixa;
-    
-    // Preencher formulário com dados da baixa para edição
-    this.baixaData = {
-      tipoDaBaixa: baixa.tipoDaBaixa,
-      valorBaixa: baixa.valorBaixa,
-      dataBaixa: baixa.dataBaixa as any,
-      observacao: baixa.observacao || ''
-    };
-    this.valorDisplay = this.formatCurrencyDisplay(baixa.valorBaixa);
-    
-    // Scroll para o formulário
-    setTimeout(() => {
-      document.querySelector('.baixa-form-section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 100);
   }
 
   onRemoverBaixa(baixa: Baixa): void {
@@ -531,21 +229,22 @@ export class LancarBaixaModalComponent {
   }
 
   onDeleteBaixaConfirmed(): void {
-    if (!this.baixaToDelete) return;
+    if (!this.baixaToDelete) {
+      return;
+    }
 
     this.deletingBaixaId = this.baixaToDelete.id;
     this.baixasService.deleteBaixa(this.baixaToDelete.id).subscribe({
       next: () => {
         this.deletingBaixaId = null;
         this.closeDeleteBaixaModal();
-        // Recarregar baixas após remover (sem fechar o modal)
         this.loadBaixasExistentes();
       },
       error: (error) => {
         this.deletingBaixaId = null;
         const message = error.error?.message || 'Erro ao remover baixa';
         this.errorModalService.show(message, 'Erro');
-      }
+      },
     });
   }
 
@@ -561,8 +260,8 @@ export class LancarBaixaModalComponent {
 
   private loadConfiguracao(): void {
     this.configuracaoService.getConfiguracao().subscribe({
-      next: config => (this.configuracao = config),
-      error: () => (this.configuracao = null)
+      next: (config) => (this.configuracao = config),
+      error: () => (this.configuracao = null),
     });
   }
 
@@ -575,7 +274,7 @@ export class LancarBaixaModalComponent {
     if (!popup) {
       this.errorModalService.show(
         'Não foi possível abrir a janela de impressão. Verifique bloqueadores de pop-up.',
-        'Erro'
+        'Erro',
       );
       return;
     }
@@ -694,7 +393,9 @@ export class LancarBaixaModalComponent {
   }
 
   private getLogoUrl(): string | null {
-    if (!this.configuracao?.hasLogo) return null;
+    if (!this.configuracao?.hasLogo) {
+      return null;
+    }
     return `${environment.apiUrl}/configuracao/logo`;
   }
 }

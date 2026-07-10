@@ -1,0 +1,62 @@
+.baixa-form-overlay {
+  z-index: 1100;
+}
+
+.modal-baixa-form {
+  width: min(720px, 96vw);
+  max-height: fit-content;
+}
+
+.baixa-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacamento-md);
+}
+
+.baixa-form-grid {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(160px, 1.2fr) minmax(150px, 1fr);
+  gap: var(--espacamento-md);
+  align-items: end;
+}
+
+.baixa-form-grid .label-campo,
+.baixa-campo-observacao .label-campo {
+  font-size: var(--tamanho-fonte-sm);
+  margin-bottom: 4px;
+}
+
+.baixa-form-grid .campo,
+.baixa-campo-observacao .campo {
+  height: 38px;
+  font-size: var(--tamanho-fonte-sm);
+}
+
+.baixa-valor-linha {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.baixa-valor-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.baixa-btn-saldo {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+}
+
+@media (max-width: 768px) {
+  .baixa-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .baixa-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

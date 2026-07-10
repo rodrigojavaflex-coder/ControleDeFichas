@@ -55,6 +55,8 @@ export enum Permission {
   VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
   VENDA_ACOMPANHAR = 'venda:acompanhar',
   VENDA_ACESSAR_FECHAMENTO = 'venda:acessar-fechamento',
+  VENDA_FECHAR_CAIXA = 'venda:fechar-caixa',
+  VENDA_REABRIR_CAIXA = 'venda:reabrir-caixa',
   VENDA_ANALISE_VALORES = 'venda:analise-valores',
 
   // Clientes
@@ -216,11 +218,19 @@ export const PERMISSION_GROUPS = {
     { key: Permission.VENDA_BAIXAR, label: 'Baixar vendas' },
     { key: Permission.VENDA_REMOVE_BAIXA, label: 'Remover baixas' },
     { key: Permission.VENDA_AUDIT, label: 'Visualizar auditoria' },
-    { key: Permission.VENDA_FECHAR, label: 'Fechar vendas' },
-    { key: Permission.VENDA_CANCELAR_FECHAMENTO, label: 'Cancelar fechamento de vendas' },
     { key: Permission.VENDA_VIEW_VALOR_COMPRA, label: 'Visualizar valor de compra' },
     { key: Permission.VENDA_ACOMPANHAR, label: 'Acompanhar vendas por unidade' },
+  ],
+  'Fechamento de vendas': [
+    { key: Permission.VENDA_FECHAR, label: 'Fechar vendas' },
+    { key: Permission.VENDA_CANCELAR_FECHAMENTO, label: 'Cancelar fechamento de vendas' },
     { key: Permission.VENDA_ACESSAR_FECHAMENTO, label: 'Acessar tela de fechamento de vendas' },
+  ],
+  Caixa: [
+    { key: Permission.VENDA_FECHAR_CAIXA, label: 'Fechar caixa consolidado (inclui importar ERP)' },
+    { key: Permission.VENDA_REABRIR_CAIXA, label: 'Reabrir fechamento de caixa' },
+  ],
+  'Relatório Análise de Valores': [
     { key: Permission.VENDA_ANALISE_VALORES, label: 'Acessar relatório Análise de Valores' },
   ],
   Clientes: [

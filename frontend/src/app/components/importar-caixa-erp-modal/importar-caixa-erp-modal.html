@@ -1,0 +1,139 @@
+<div class="modal-overlay" *ngIf="visible">
+  <div class="modal-conteudo modal-caixa-erp">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">{{ tituloModal }}</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="loading"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="caixa-erp-form-grid" [class.caixa-erp-form-periodo]="modoPeriodo">
+        @if (modoPeriodo) {
+          <div class="filter-group filter-group-periodo">
+            <app-date-range-filter
+              label="Período"
+              startLabel="Data início"
+              endLabel="Data fim"
+              [start]="dataInicio"
+              [end]="dataFim"
+              [disabled]="loading"
+              (rangeChange)="onPeriodoRangeChange($event)">
+            </app-date-range-filter>
+          </div>
+        } @else {
+          <div class="filter-group">
+            <label for="caixaErpData" class="label-campo">Data do caixa</label>
+            <input
+              id="caixaErpData"
+              type="date"
+              class="campo"
+              [(ngModel)]="data"
+              [disabled]="loading" />
+          </div>
+        }
+
+        <div class="filter-group">
+          <label for="caixaErpUnidade" class="label-campo">Unidade</label>
+          @if (unidadeBloqueada) {
+            <input
+              id="caixaErpUnidade"
+              type="text"
+              class="campo"
+              [value]="unidade"
+              disabled
+              readonly />
+          } @else {
+            <select
+              id="caixaErpUnidade"
+              class="campo"
+              [(ngModel)]="unidade"
+              [disabled]="loading">
+              <option value="">Selecione...</option>
+              <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+            </select>
+          }
+        </div>
+      </div>
+
+      <div class="caixa-erp-erro" *ngIf="error">{{ error }}</div>
+
+      <div class="inline-loading caixa-erp-loading" *ngIf="loading">
+        <div class="spinner"></div>
+        <span>Consultando agente e gravando no PostgreSQL...</span>
+      </div>
+
+      @if (modoPeriodo && result && !loading) {
+        <section class="caixa-erp-resultado">
+          <h4>Resumo da importação</h4>
+          <p class="caixa-erp-preview-hint">
+            Período: {{ periodoResumo }}
+            · Unidade: {{ result.unidade }}
+          </p>
+          <ul class="caixa-erp-stats">
+            <li>Pagamentos: {{ result.pagamentosImportados }} novo(s), {{ result.pagamentosAtualizados }} atualizado(s)</li>
+            <li>Itens: {{ result.itensImportados }} novo(s), {{ result.itensAtualizados }} atualizado(s)</li>
+            <li>Requisições: {{ result.requisicoesImportadas }} nova(s), {{ result.requisicoesAtualizadas }} atualizada(s)</li>
+          </ul>
+
+          <h4>Preview — terceiro + ERP + consolidado</h4>
+          <p class="caixa-erp-preview-hint">Qtd / valor líquido por forma (total do período)</p>
+          <div class="table-wrapper caixa-erp-preview-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Forma</th>
+                  <th>Terceiro</th>
+                  <th>ERP</th>
+                  <th>Consolidado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of previewRows">
+                  <td>{{ row.forma }}</td>
+                  <td>{{ formatPreviewCell(row.terceiro) }}</td>
+                  <td>{{ formatPreviewCell(row.erp) }}</td>
+                  <td>{{ formatPreviewCell(row.consolidado) }}</td>
+                </tr>
+                <tr *ngIf="previewRows.length === 0">
+                  <td colspan="4" class="empty-state">Nenhum total retornado para o período.</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td><strong>Total</strong></td>
+                  <td>{{ formatCurrency(result.totalLiquidoTerceiro) }}</td>
+                  <td>{{ formatCurrency(result.totalLiquido) }}</td>
+                  <td><strong>{{ formatCurrency(result.totalConsolidado) }}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      }
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="fechar()"
+        [disabled]="loading">
+        Fechar
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="executarImportacao()"
+        [disabled]="!podeExecutarImportacao()">
+        <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+        {{ result && modoPeriodo ? 'Buscar novamente' : 'Buscar e importar' }}
+      </button>
+    </div>
+  </div>
+</div>

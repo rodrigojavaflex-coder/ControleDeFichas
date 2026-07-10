@@ -10,6 +10,7 @@ import { ClientesModule } from './clientes/clientes.module';
 import { PrescritoresModule } from './prescritores/prescritores.module';
 import { SincronizacaoModule } from './sincronizacao/sincronizacao.module';
 import { OrcamentosModule } from './orcamentos/orcamentos.module';
+import { CaixaModule } from './caixa/caixa.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { OrcamentosModule } from './orcamentos/orcamentos.module';
     PrescritoresModule,
     SincronizacaoModule,
     OrcamentosModule,
+    CaixaModule,
   ],
   providers: [
     {
