@@ -110,6 +110,7 @@ export interface CaixaBaixaDetalhe {
 export interface CaixaErpPagamentoDetalhe {
   numeroCupom: number;
   numeroRequisicao?: number | null;
+  referenciaRequisicao?: string | null;
   descricaoProduto?: string | null;
   codigoTerminal: number;
   formaPagamento: string;

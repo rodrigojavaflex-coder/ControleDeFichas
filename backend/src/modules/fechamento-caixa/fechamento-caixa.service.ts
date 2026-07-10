@@ -714,11 +714,12 @@ export class FechamentoCaixaService {
         .filter((codigo): codigo is number => codigo != null),
     );
 
-    const numerosRequisicao = await this.resolverNumerosRequisicaoPorCupom(
-      unidade,
-      data,
-      rows.map((pagamento) => pagamento.numeroCupom),
-    );
+    const referenciasRequisicao =
+      await this.resolverReferenciasRequisicaoPorCupomOperacao(
+        unidade,
+        data,
+        rows,
+      );
 
     const descricoesProduto = await this.resolverDescricoesProdutoPorCupom(
       unidade,
@@ -727,19 +728,25 @@ export class FechamentoCaixaService {
     );
 
     return rows.map((pagamento) => {
-      const numeroRequisicao =
-        numerosRequisicao.get(pagamento.numeroCupom) ?? null;
       const chaveCupom = this.buildChaveCupomOperacao(
         pagamento.numeroCupom,
         pagamento.codigoTerminal,
         pagamento.idOperacao,
       );
+      const referenciaRequisicao =
+        referenciasRequisicao.get(chaveCupom) ?? null;
+      const numeroRequisicao = referenciaRequisicao
+        ? Number(referenciaRequisicao.split(',')[0]?.trim())
+        : null;
 
       return {
         numeroCupom: pagamento.numeroCupom,
-        numeroRequisicao,
+        numeroRequisicao: Number.isFinite(numeroRequisicao)
+          ? numeroRequisicao
+          : null,
+        referenciaRequisicao,
         descricaoProduto:
-          numeroRequisicao == null
+          referenciaRequisicao == null
             ? descricoesProduto.get(chaveCupom) ?? null
             : null,
         codigoTerminal: pagamento.codigoTerminal,
@@ -831,34 +838,112 @@ export class FechamentoCaixaService {
     );
   }
 
-  private async resolverNumerosRequisicaoPorCupom(
+  private async resolverReferenciasRequisicaoPorCupomOperacao(
     unidade: Unidade,
     data: string,
-    cupons: number[],
-  ): Promise<Map<number, number>> {
-    const cuponsUnicos = [...new Set(cupons)];
+    pagamentos: CaixaPagamentoErp[],
+  ): Promise<Map<string, string>> {
+    const cuponsUnicos = [
+      ...new Set(pagamentos.map((pagamento) => pagamento.numeroCupom)),
+    ];
     if (cuponsUnicos.length === 0) {
       return new Map();
     }
 
-    const requisicoes = await this.requisicaoRepo.find({
+    const mapa = new Map<string, number[]>();
+
+    const itens = await this.itemRepo.find({
       where: {
         unidade,
-        dataPagamento: data,
+        dataOperacao: data,
+        tipoItem: CaixaTipoItem.REQUISICAO,
         numeroCupom: In(cuponsUnicos),
       },
-      select: ['numeroCupom', 'numeroRequisicao'],
-      order: { numeroRequisicao: 'ASC' },
+      select: [
+        'numeroCupom',
+        'codigoTerminal',
+        'idOperacao',
+        'numeroRequisicao',
+        'sequenciaItem',
+      ],
+      order: {
+        numeroCupom: 'ASC',
+        sequenciaItem: 'ASC',
+      },
     });
 
-    const mapa = new Map<number, number>();
-    for (const requisicao of requisicoes) {
-      if (!mapa.has(requisicao.numeroCupom)) {
-        mapa.set(requisicao.numeroCupom, requisicao.numeroRequisicao);
+    for (const item of itens) {
+      if (item.numeroRequisicao == null) {
+        continue;
+      }
+
+      const chave = this.buildChaveCupomOperacao(
+        item.numeroCupom,
+        item.codigoTerminal,
+        item.idOperacao,
+      );
+      const existentes = mapa.get(chave) ?? [];
+      if (!existentes.includes(item.numeroRequisicao)) {
+        existentes.push(item.numeroRequisicao);
+        mapa.set(chave, existentes);
       }
     }
 
-    return mapa;
+    const pagamentosSemRequisicao = pagamentos.filter((pagamento) => {
+      const chave = this.buildChaveCupomOperacao(
+        pagamento.numeroCupom,
+        pagamento.codigoTerminal,
+        pagamento.idOperacao,
+      );
+      return !mapa.has(chave);
+    });
+
+    const cuponsFallback = [
+      ...new Set(pagamentosSemRequisicao.map((pagamento) => pagamento.numeroCupom)),
+    ];
+
+    if (cuponsFallback.length > 0) {
+      const requisicoes = await this.requisicaoRepo.find({
+        where: {
+          unidade,
+          numeroCupom: In(cuponsFallback),
+        },
+        select: ['numeroCupom', 'numeroRequisicao'],
+        order: { numeroRequisicao: 'ASC' },
+      });
+
+      const requisicoesPorCupom = new Map<number, number[]>();
+      for (const requisicao of requisicoes) {
+        if (requisicao.numeroRequisicao == null) {
+          continue;
+        }
+        const existentes = requisicoesPorCupom.get(requisicao.numeroCupom) ?? [];
+        if (!existentes.includes(requisicao.numeroRequisicao)) {
+          existentes.push(requisicao.numeroRequisicao);
+          requisicoesPorCupom.set(requisicao.numeroCupom, existentes);
+        }
+      }
+
+      for (const pagamento of pagamentosSemRequisicao) {
+        const reqs = requisicoesPorCupom.get(pagamento.numeroCupom);
+        if (!reqs?.length) {
+          continue;
+        }
+        const chave = this.buildChaveCupomOperacao(
+          pagamento.numeroCupom,
+          pagamento.codigoTerminal,
+          pagamento.idOperacao,
+        );
+        mapa.set(chave, reqs);
+      }
+    }
+
+    return new Map(
+      [...mapa.entries()].map(([chave, requisicoes]) => [
+        chave,
+        requisicoes.join(', '),
+      ]),
+    );
   }
 
   private async resolverNomesClientesPorCodigo(

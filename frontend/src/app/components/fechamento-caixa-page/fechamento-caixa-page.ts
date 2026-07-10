@@ -980,6 +980,9 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
   private formatReferenciaErpPagamento(
     pagamento: CaixaErpPagamentoDetalhe,
   ): string {
+    if (pagamento.referenciaRequisicao?.trim()) {
+      return pagamento.referenciaRequisicao.trim();
+    }
     if (pagamento.numeroRequisicao != null) {
       return String(pagamento.numeroRequisicao);
     }

@@ -33,6 +33,14 @@ export class CaixaErpPagamentoDetalheDto {
   @ApiProperty({
     required: false,
     nullable: true,
+    description:
+      'Número(s) de requisição do cupom (pode conter várias separadas por vírgula)',
+  })
+  referenciaRequisicao?: string | null;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
     description: 'Nome do produto baixado (cupons tipo PRODUTO, sem requisição)',
   })
   descricaoProduto?: string | null;
