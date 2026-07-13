@@ -112,6 +112,7 @@ export class CaixaFechamentoConsolidadoService {
 
     const totalDespesas = fechamento ? Number(fechamento.totalDespesas) : 0;
     const totalRetirada = fechamento ? Number(fechamento.totalRetirada) : 0;
+    const observacao = fechamento?.observacao?.trim() || null;
 
     const formas = this.montarBlocosFormas(totaisErp, totaisTerceiroDetalhe);
 
@@ -176,6 +177,7 @@ export class CaixaFechamentoConsolidadoService {
         podeEditarData,
       formas,
       confirmadoPorNome,
+      observacao,
     };
   }
 
@@ -227,6 +229,7 @@ export class CaixaFechamentoConsolidadoService {
     await this.assertPodeEditarFechamento(dto.unidade, dto.data);
 
     const saldoInicial = await this.resolverSaldoInicial(dto.unidade, dto.data);
+    const observacao = this.normalizarObservacao(dto.observacao);
     let fechamento = await this.fechamentoRepo.findOne({
       where: { unidade: dto.unidade, dataOperacao: dto.data },
     });
@@ -245,12 +248,14 @@ export class CaixaFechamentoConsolidadoService {
         saldoInicial,
         totalDespesas: dto.totalDespesas,
         totalRetirada: dto.totalRetirada,
+        observacao,
         saldoFinal: null,
       });
     } else {
       fechamento.totalDespesas = dto.totalDespesas;
       fechamento.totalRetirada = dto.totalRetirada;
       fechamento.saldoInicial = saldoInicial;
+      fechamento.observacao = observacao;
     }
 
     const saved = await this.fechamentoRepo.save(fechamento);
@@ -490,6 +495,13 @@ export class CaixaFechamentoConsolidadoService {
       return true;
     }
     return data >= ultimaDataConfirmada;
+  }
+
+  private normalizarObservacao(
+    observacao: string | null | undefined,
+  ): string | null {
+    const texto = observacao?.trim();
+    return texto ? texto : null;
   }
 
   private async assertPodeEditarFechamento(

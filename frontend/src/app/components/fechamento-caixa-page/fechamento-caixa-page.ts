@@ -56,6 +56,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
   consolidado: FechamentoConsolidado | null = null;
   totalDespesas = 0;
   totalRetirada = 0;
+  observacao = '';
   totalDespesasDisplay = '0,00';
   totalRetiradaDisplay = '0,00';
 
@@ -126,6 +127,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
           this.consolidado = result;
           this.totalDespesas = result.totalDespesas;
           this.totalRetirada = result.totalRetirada;
+          this.observacao = result.observacao ?? '';
           this.syncMonetariosExibicao();
           this.loading = false;
         },
@@ -187,12 +189,14 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
         data: this.data,
         totalDespesas: this.totalDespesas,
         totalRetirada: this.totalRetirada,
+        observacao: this.observacao.trim() || null,
       })
       .subscribe({
         next: (result) => {
           this.consolidado = result;
           this.totalDespesas = result.totalDespesas;
           this.totalRetirada = result.totalRetirada;
+          this.observacao = result.observacao ?? '';
           this.syncMonetariosExibicao();
           this.saving = false;
           this.success = 'Salvo com sucesso.';
@@ -210,7 +214,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
     }
 
     this.fecharCaixaModalMensagem =
-      `Deseja fechar o caixa de ${this.formatDateDisplay(this.data)} (${this.unidade})? Após o fechamento, despesas e retiradas não poderão ser alteradas até reabrir.`;
+      `Deseja fechar o caixa de ${this.formatDateDisplay(this.data)} (${this.unidade})? Após o fechamento, despesas, retiradas e observações não poderão ser alteradas até reabrir.`;
     this.showFecharCaixaModal = true;
   }
 
@@ -235,6 +239,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
         data: this.data,
         totalDespesas: this.totalDespesas,
         totalRetirada: this.totalRetirada,
+        observacao: this.observacao.trim() || null,
       })
       .subscribe({
         next: () => {
@@ -243,6 +248,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
             .subscribe({
               next: (result) => {
                 this.consolidado = result;
+                this.observacao = result.observacao ?? '';
                 this.saving = false;
                 this.success = 'Caixa fechado com sucesso.';
               },
@@ -422,6 +428,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       .map((bloco) => this.montarCardRelatorioResumido(bloco, consolidado, saldoFinal))
       .join('');
 
+    const observacaoHtml = this.montarCardObservacaoRelatorio(consolidado);
     const rodapeFechamento = this.montarRodapeFechamentoRelatorio(consolidado);
 
     return `
@@ -429,8 +436,38 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       <div class="caixa-dia-titulo">
         Caixa dia ${this.formatDateDisplay(consolidado.data)} ${this.escapeHtml(consolidado.unidade)}
       </div>
-      <div class="forma-blocos-stack">${blocosHtml}</div>
+      <div class="relatorio-caixa-layout">
+        <div class="relatorio-caixa-col-esquerda">
+          <div class="forma-blocos-stack">${blocosHtml}</div>
+        </div>
+        <div class="relatorio-caixa-col-observacao">
+          ${observacaoHtml}
+        </div>
+      </div>
       ${rodapeFechamento}
+    `;
+  }
+
+  private montarCardObservacaoRelatorio(
+    consolidado: FechamentoConsolidado,
+  ): string {
+    const texto = consolidado.observacao?.trim();
+    const conteudo = texto
+      ? `<p class="observacao-texto">${this.escapeHtml(texto).replace(/\n/g, '<br />')}</p>`
+      : `<p class="observacao-vazia">Sem observações registradas.</p>`;
+
+    return `
+      <article class="forma-bloco forma-card-observacao observacao-relatorio">
+        <div class="forma-bloco-header">
+          <h2 class="forma-titulo">
+            <span class="forma-icone" aria-hidden="true">
+              <i class="fas fa-sticky-note"></i>
+            </span>
+            Observação
+          </h2>
+        </div>
+        <div class="observacao-conteudo">${conteudo}</div>
+      </article>
     `;
   }
 
@@ -543,7 +580,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
 
       linhas.push(
         this.renderLinhaValorRelatorio(
-          `TOTAL ${this.getFormaTitulo(bloco.forma).toUpperCase()}`,
+          this.getTotalFormaRotulo(bloco.forma),
           this.formatCurrency(bloco.totalForma),
           'destaque',
         ),
@@ -947,7 +984,14 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
 
     return `${base}
       body.relatorio-resumido { margin: 6px; font-size: 10px; }
-      .relatorio-caixa-conteudo { width: 35%; max-width: 35%; margin: 0 auto; }
+      .relatorio-caixa-conteudo { width: 100%; max-width: 920px; margin: 0 auto; }
+      .relatorio-caixa-layout { display: flex; align-items: stretch; gap: 0.9rem; }
+      .relatorio-caixa-col-esquerda { flex: 0 0 38%; max-width: 38%; }
+      .relatorio-caixa-col-observacao { flex: 1 1 auto; min-width: 0; }
+      .observacao-relatorio { height: 100%; min-height: 220px; display: flex; flex-direction: column; }
+      .observacao-conteudo { flex: 1 1 auto; padding: 0.55rem 0.65rem; }
+      .observacao-texto { margin: 0; white-space: pre-wrap; word-break: break-word; line-height: 1.45; color: #1e293b; font-size: 0.78rem; }
+      .observacao-vazia { margin: 0; color: #64748b; font-style: italic; font-size: 0.76rem; }
       .caixa-status-relatorio { text-align: center; margin: 0 0 0.35rem; }
       .status-badge-relatorio { display: inline-flex; align-items: center; padding: 0.2rem 0.65rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid transparent; }
       .status-badge-relatorio.status-confirmado { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
@@ -962,6 +1006,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       .forma-card-dinheiro .forma-icone { background: #ecfdf5; color: #047857; }
       .forma-card-cartao .forma-icone { background: #eff6ff; color: #1d4ed8; }
       .forma-card-deposito .forma-icone { background: #f5f3ff; color: #6d28d9; }
+      .forma-card-observacao .forma-icone { background: #fff7ed; color: #c2410c; }
       .forma-tabela { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #d1d5db; }
       .forma-tabela td { padding: 0.12rem 0.4rem; font-size: 0.76rem; color: #1e293b; line-height: 1.4; vertical-align: middle; border: 1px solid #d1d5db; }
       .forma-tabela td:first-child { width: 62%; text-align: center; text-transform: uppercase; font-weight: 500; letter-spacing: 0.01em; }
@@ -972,7 +1017,8 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       .caixa-fechado-por { margin: 0.75rem 0 0; padding: 0; font-size: 0.76rem; font-weight: 600; color: #334155; text-align: center; }
       @media print {
         body.relatorio-resumido { margin: 0; }
-        .relatorio-caixa-conteudo { width: 35%; max-width: 35%; margin: 0 auto; }
+        .relatorio-caixa-conteudo { width: 100%; max-width: 920px; margin: 0 auto; }
+        .relatorio-caixa-layout { gap: 0.75rem; }
       }
     `;
   }
@@ -1090,6 +1136,10 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       default:
         return forma;
     }
+  }
+
+  getTotalFormaRotulo(forma: string): string {
+    return `TOTAL ${this.getFormaTitulo(forma).toUpperCase()}`;
   }
 
   getFormaIcon(forma: string): string {

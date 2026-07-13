@@ -88,6 +88,7 @@ export interface FechamentoConsolidado {
   podeConfirmar: boolean;
   formas: FechamentoFormaBloco[];
   confirmadoPorNome?: string | null;
+  observacao?: string | null;
 }
 
 export interface SalvarFechamentoRascunhoDto {
@@ -95,6 +96,7 @@ export interface SalvarFechamentoRascunhoDto {
   data: string;
   totalDespesas: number;
   totalRetirada: number;
+  observacao?: string | null;
 }
 
 export interface CaixaBaixaDetalhe {

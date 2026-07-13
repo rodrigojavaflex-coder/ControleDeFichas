@@ -98,6 +98,10 @@ export class CaixaFechamento extends BaseEntity {
   @Column({ type: 'uuid', name: 'confirmado_por', nullable: true })
   confirmadoPor: string | null;
 
+  @ApiProperty({ required: false, nullable: true })
+  @Column({ type: 'text', nullable: true })
+  observacao: string | null;
+
   @OneToMany(() => CaixaFechamentoLinha, (l) => l.fechamento, {
     cascade: true,
   })

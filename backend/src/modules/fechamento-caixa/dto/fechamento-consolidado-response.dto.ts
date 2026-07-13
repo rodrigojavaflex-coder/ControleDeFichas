@@ -69,4 +69,7 @@ export class FechamentoConsolidadoResponseDto {
 
   @ApiProperty({ required: false, nullable: true })
   confirmadoPorNome?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  observacao?: string | null;
 }

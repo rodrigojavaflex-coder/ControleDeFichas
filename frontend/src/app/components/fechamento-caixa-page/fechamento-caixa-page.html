@@ -142,9 +142,6 @@
             </span>
             {{ getFormaTitulo(bloco.forma) }}
           </h3>
-          <span class="forma-total" *ngIf="bloco.forma !== 'DINHEIRO'">
-            {{ formatCurrency(bloco.totalForma) }}
-          </span>
         </div>
 
         <div class="forma-linhas">
@@ -238,7 +235,45 @@
               <span>{{ getLinhaFormaOrigemLabel(bloco.forma, item.origem) }}</span>
               <strong class="valor">{{ formatCurrency(item.liquido) }}</strong>
             </div>
+
+            <div class="linha-valor total-bloco-forma">
+              <span>{{ getTotalFormaRotulo(bloco.forma) }}</span>
+              <strong class="valor">{{ formatCurrency(bloco.totalForma) }}</strong>
+            </div>
           </ng-container>
+        </div>
+      </div>
+
+      <div class="forma-bloco forma-card-observacao observacao-card">
+        <div class="forma-bloco-header">
+          <h3 class="forma-titulo">
+            <span class="forma-icone" aria-hidden="true">
+              <i class="fas fa-sticky-note"></i>
+            </span>
+            Observação
+          </h3>
+        </div>
+        <div class="forma-linhas observacao-linhas">
+          <label class="sr-only" for="fcObservacao">Observação do fechamento</label>
+          <textarea
+            id="fcObservacao"
+            class="form-control observacao-textarea"
+            rows="8"
+            maxlength="2000"
+            [(ngModel)]="observacao"
+            placeholder="Observações opcionais sobre o fechamento do dia..."
+            [disabled]="!consolidado.podeEditar || saving"></textarea>
+          @if (canFecharCaixa() && consolidado.podeEditar && !loading && !saving) {
+            <div class="linha-valor linha-acao-salvar observacao-acao-salvar">
+              <button
+                class="btn btn-salvar btn-salvar-inline"
+                type="button"
+                (click)="salvarRascunho()">
+                <i class="fas fa-save"></i>
+                Salvar
+              </button>
+            </div>
+          }
         </div>
       </div>
       </div>

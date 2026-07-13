@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsNumber, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
@@ -23,4 +31,16 @@ export class SalvarFechamentoRascunhoDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   totalRetirada: number;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    example: 'Diferença conferida com o operador do caixa.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000, {
+    message: 'observacao deve ter no máximo 2000 caracteres',
+  })
+  observacao?: string | null;
 }
