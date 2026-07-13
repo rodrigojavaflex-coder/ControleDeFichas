@@ -39,7 +39,22 @@
                 <i class="fas fa-exclamation-triangle" *ngIf="sessionNearExpiry"></i>
                 Expira em {{ sessionExpirationLabel }}
               </div>
+              <div class="user-app-version" *ngIf="appVersionLabel">
+                Versão: {{ appVersionLabel }}
+                <span class="user-app-build" *ngIf="appBuildLabel">· build {{ appBuildLabel }}</span>
+              </div>
             </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-section">
+            <button
+              class="dropdown-item change-password-btn atualizar-sistema-btn"
+              type="button"
+              (click)="atualizarSistema()"
+              title="Recarrega a aplicação com a versão mais recente">
+              <i class="fas fa-sync-alt"></i>
+              Atualizar sistema
+            </button>
           </div>
           <div class="dropdown-divider"></div>
           <!-- Alterar Senha -->

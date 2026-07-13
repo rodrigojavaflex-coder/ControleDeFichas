@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService, NavigationService, ThemeService } from '../../services/index';
+import { AppVersionService } from '../../services/app-version.service';
 import { Usuario, Permission } from '../../models/usuario.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { ChangePasswordModalComponent } from '../change-password-modal/change-password-modal';
@@ -20,6 +21,7 @@ export class HeaderComponent {
   private authService = inject(AuthService);
   private navigationService = inject(NavigationService);
   private themeService = inject(ThemeService);
+  private appVersionService = inject(AppVersionService);
   private pageContextService = inject(PageContextService);
   private router = inject(Router);
   private destroy$ = new Subject<void>();
@@ -44,11 +46,15 @@ export class HeaderComponent {
   loginElapsedLabel = '';
   sessionExpirationLabel = '';
   sessionNearExpiry = false;
+  appVersionLabel = '';
+  appBuildLabel = '';
   private loginTimestamp: number | null = null;
   private tokenExpiration: number | null = null;
   private timeTicker: any = null;
 
   ngOnInit() {
+    void this.carregarVersaoAplicacao();
+
     // Observar mudanças de tema para mostrar notificação
     this.themeService.themeChanged
       .pipe(takeUntil(this.destroy$))
@@ -116,6 +122,17 @@ export class HeaderComponent {
     // Fechar o dropdown antes de abrir o modal
     this.showUserDropdown = false;
     this.showChangePasswordModal = true;
+  }
+
+  atualizarSistema(): void {
+    this.showUserDropdown = false;
+    void this.appVersionService.forceReload();
+  }
+
+  private async carregarVersaoAplicacao(): Promise<void> {
+    const info = await this.appVersionService.getCurrentVersion();
+    this.appVersionLabel = this.appVersionService.formatVersionLabel(info);
+    this.appBuildLabel = this.appVersionService.formatBuildLabel(info);
   }
 
   onChangePasswordClosed() {

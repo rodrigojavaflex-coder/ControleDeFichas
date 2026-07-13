@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface AppVersionInfo {
+  version: string;
   buildId: string;
   generatedAt?: string;
 }
@@ -49,8 +50,40 @@ export class AppVersionService {
     document.addEventListener('visibilitychange', this.onVisibility);
   }
 
+  /** Obtém a versão publicada atual (sem cache HTTP). */
+  async getCurrentVersion(): Promise<AppVersionInfo | null> {
+    return this.fetchVersion();
+  }
+
+  formatVersionLabel(info: AppVersionInfo | null): string {
+    if (!info) {
+      return '';
+    }
+    return info.version?.trim() || '0.0.0';
+  }
+
+  formatBuildLabel(info: AppVersionInfo | null): string {
+    if (!info?.buildId) {
+      return '';
+    }
+    return info.buildId.split('-')[0];
+  }
+
   /** Recarrega a página para obter a versão publicada. */
   applyUpdate(): void {
+    void this.forceReload();
+  }
+
+  /** Força busca da versão remota e recarrega a aplicação (mantém sessão). */
+  async forceReload(): Promise<void> {
+    try {
+      await fetch(`/version.json?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' },
+      });
+    } catch {
+      // Recarrega mesmo se version.json estiver indisponível (ex.: dev local).
+    }
     window.location.reload();
   }
 
@@ -76,11 +109,18 @@ export class AppVersionService {
       if (!response.ok) {
         return null;
       }
-      const data = (await response.json()) as AppVersionInfo;
+      const data = (await response.json()) as Partial<AppVersionInfo>;
       if (!data?.buildId || typeof data.buildId !== 'string') {
         return null;
       }
-      return data;
+      return {
+        version:
+          typeof data.version === 'string' && data.version.trim()
+            ? data.version.trim()
+            : '0.0.0',
+        buildId: data.buildId,
+        generatedAt: data.generatedAt,
+      };
     } catch {
       return null;
     }

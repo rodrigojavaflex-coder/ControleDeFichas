@@ -1,0 +1,57 @@
+name: Bump frontend version
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - '.github/workflows/bump-version.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    name: Incrementar patch (frontend)
+    runs-on: ubuntu-latest
+    if: >-
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, 'chore(release):')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Configurar Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump patch (somente patch, minor/major manual)
+        working-directory: frontend
+        run: npm version patch --no-git-tag-version
+
+      - name: Commit e push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git add frontend/package.json frontend/package-lock.json
+          if git diff --staged --quiet; then
+            echo "Nenhuma alteração de versão."
+            exit 0
+          fi
+          NEW_VERSION=$(node -p "require('./frontend/package.json').version")
+          git commit -m "chore(release): bump frontend para v${NEW_VERSION} [skip ci]"
+          git push origin HEAD:master
