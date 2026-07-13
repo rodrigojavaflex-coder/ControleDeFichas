@@ -105,9 +105,10 @@ export class CaixaFechamentoConsolidadoService {
         query.data,
       );
 
-    const saldoInicial = fechamento
-      ? Number(fechamento.saldoInicial)
-      : await this.resolverSaldoInicial(query.unidade, query.data);
+    const saldoInicial =
+      fechamento?.status === CaixaFechamentoStatus.CONFIRMADO
+        ? Number(fechamento.saldoInicial)
+        : await this.resolverSaldoInicial(query.unidade, query.data);
 
     const totalDespesas = fechamento ? Number(fechamento.totalDespesas) : 0;
     const totalRetirada = fechamento ? Number(fechamento.totalRetirada) : 0;
