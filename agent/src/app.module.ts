@@ -11,6 +11,8 @@ import { PrescritoresModule } from './prescritores/prescritores.module';
 import { SincronizacaoModule } from './sincronizacao/sincronizacao.module';
 import { OrcamentosModule } from './orcamentos/orcamentos.module';
 import { CaixaModule } from './caixa/caixa.module';
+import { PainelModule } from './painel/painel.module';
+import { ProducaoModule } from './producao/producao.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { CaixaModule } from './caixa/caixa.module';
     SincronizacaoModule,
     OrcamentosModule,
     CaixaModule,
+    PainelModule,
+    ProducaoModule,
   ],
   providers: [
     {

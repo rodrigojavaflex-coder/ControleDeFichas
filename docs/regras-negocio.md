@@ -203,6 +203,16 @@
 - Enquanto houver sync em andamento (`isRunning`), novas requisições retornam **409**; a UI exibe progresso via **`GET /sincronizacao/progresso`**.
 - Ao concluir, o watermark `ultimaModificacaoOrcamento` é atualizado na configuração de sincronização.
 
+### RN-ORC-007 — Importação manual de orçamentos por período (Configuração)
+
+- Endpoint: **`POST /sincronizacao/orcamentos/importar`** com `unidade`, `dataInicio`, `dataFim`.
+- Agente: **`POST /api/v1/orcamentos/periodo`** filtrando `dtentr` (data do orçamento) no intervalo.
+- Upsert idempotente via `processarOrcamento`; **não** altera `ultimaModificacaoOrcamento`.
+- Disparo pela aba **Configuração → Importação** (modal *Buscar orçamentos por período*).
+- Permissão: **`configuracao:access`**.
+
+---
+
 ### RN-ORC-006 — Painel de indicadores (dashboard)
 
 - Tela **`/orcamentos/dashboard`** consolida KPIs e gráficos analíticos sobre **todos** os orçamentos (`APROVADO` e `REJEITADO`), respeitando filtros globais.
@@ -246,6 +256,49 @@
 
 ---
 
+## Painel médicos × representantes
+
+### RN-REP-001 — Importação do painel médicos × representantes
+
+- Origem: Firebird **FC04200** + **FC04000** + **FC08000** via agente (`GET /api/v1/painel/medicos-representantes`).
+- Escopo por agente/unidade: filtro `cdcon` + lista `cdfun` em `sincronizacao_config.painelContratoRepresentantes` (persistido como `9999 1,2`; na UI de configuração, campos separados **Filial do Painel** e **Representantes do Painel (ex 1,2)**).
+- Sem filial no ERP: a unidade (**INHUMAS**, **UBERABA**, **NERÓPOLIS**) é gravada no PostgreSQL conforme mapeamento do agente.
+- Chave de identificação: `unidade + crm_medico + uf_crm_medico + contrato_representante + codigo_representante`.
+- A cada sincronização geral: criar, atualizar e **remover** registros do escopo configurado que não constarem na lista retornada pelo ERP (conforme **RN-REP-002**).
+- Sem watermark de data; a configuração de contrato/representantes substitui o filtro temporal.
+- Integrada à sync geral (`POST /sincronizacao/executar`), após orçamentos, quando `painelContratoRepresentantes` estiver preenchido.
+- Encoding: `padronizarNomeDeSistemaLegado()` / `normalizarTextoLegado()` em campos de texto legados.
+
+### RN-REP-002 — Histórico do painel médicos × representantes
+
+- Toda remoção do painel ativo gera registro em `painel_medicos_representantes_historico` com snapshot completo.
+- Motivo **`NAO_CONSTA_ERP`**: médico deixou de constar na carteira do ERP durante sincronização.
+- Motivo **`CONFIG_ALTERADA`**: representante ou contrato removido/alterado em `painelContratoRepresentantes` (ao salvar config).
+- Campo `configNoMomento` registra a config vigente na hora da exclusão.
+- Histórico é append-only (sem update/delete).
+- Histórico não é reimportado automaticamente para o painel ativo.
+
+---
+
+## Etapas de produção (SLA resumo)
+
+### RN-PCP-001 — Importação de etapas de produção (SLA resumo)
+
+- Origem: SQL validado `producao_etapas_sla_resumo.sql` via agente (`POST /api/v1/producao/etapas-resumo`).
+- Persistência: tabela `producao_etapas_resumo`; chave upsert: `unidade + filial + requisicao + formula + cod_etapa`.
+- Filtro de movimentos: data do evento PCP (`p.data` na FC12500), não `dtentr` (data de retirada é apenas informativa).
+- **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`. Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*).
+- **Importação automática:** integrada à sync geral quando `ultimaModificacaoProducaoEtapas` estiver configurada; filtra movimentos posteriores ao watermark; ao concluir, atualiza watermark com hora do processamento (America/Sao_Paulo), alinhado ao padrão de orçamentos.
+- Registros sem entrada na etapa são excluídos pelo SQL (`HAVING`); etapas só com saída não são importadas.
+- Campo `principios_ativos`: texto livre (`TEXT`), lista separada por vírgula.
+- Campo `tempo_etapa`: minutos (inteiro); `NULL` quando entrada/saída incompletas.
+- Campos do prescritor na requisição (`fc12100` + `fc04000`): `nomePrescritor`, `crf`, `ufCrf`; com **fallback** na mesma `nrrqu` quando a fórmula atual não tiver CRM (prioriza série `0`).
+- Campo `codigoCliente` / `cliente`: `req.cdcli` + `FC07000`; com **fallback** do `CDCLI` de outra fórmula da mesma requisição. Nome do cliente: prioriza `FC07000` da **mesma filial** da requisição; se ausente, usa cadastro do mesmo `CDCLI` em **outra filial**.
+- Escopo inicial: importação e persistência; painéis/relatórios são demandas posteriores.
+- Permissão importação manual: **`configuracao:access`**.
+
+---
+
 ## Caixa ERP (Firebird → PostgreSQL)
 
 ### RN-CXA-001 — Separação caixa ERP vs vendas de terceiro
@@ -262,7 +315,8 @@
 ### RN-CXA-006 — Escopo da busca de caixa ERP
 
 - **Fechamento de Caixa (Atualizar Vendas):** importa **apenas o dia** selecionado na tela (`dataInicio` = `dataFim` = data do caixa), usando a unidade já informada. Não abre modal; exibe mensagem de sucesso ou erro na própria tela, sem resumo/preview da importação.
-- **Configuração → Importação (Buscar caixa ERP por período):** abre modal com **intervalo de datas** (início e fim) e unidade; ao concluir, exibe resumo da importação no modal.
+- **Configuração → Importação (Buscar caixa ERP por período):** abre modal com **intervalo de datas** (início e fim) e unidade; ao concluir, exibe resumo da importação no modal. Permite reimportar períodos **anteriores** ao último fechamento confirmado (`reimportacaoHistorica: true`; exige **`configuracao:access`**).
+- **Configuração → Importação (Buscar etapas por período):** abre modal com unidade e intervalo de datas (mesmo padrão do caixa ERP); ao concluir, exibe resumo da importação no modal.
 - Usuário **com** unidade no cadastro: importação **somente** na própria unidade (campo bloqueado na UI e validado na API).
 - Usuário **sem** unidade no cadastro: pode escolher qualquer unidade na UI (acesso global conforme permissões).
 - Exige **`venda:fechar-caixa`**.
@@ -273,6 +327,7 @@
 - Itens: `{unidade}-{codigo_terminal}-{data_operacao}-{id_operacao}-{numero_cupom}-{sequencia_item}`.
 - Requisições pagas: `{unidade}-{numero_requisicao}-{numero_cupom}-{data_pagamento}`.
 - Reimportar o mesmo dia **sempre atualiza** registros existentes (upsert por `chave_erp`); não duplica linhas.
+- **`caixa_requisicoes_pagas`:** orçamento (`NRORC`), qtd/valor de fórmulas e prescritor usam **fallback agregado** em `FC12100` por requisição (prioriza série `0`, depois outras fórmulas e requisição-fonte `NRRQUFON`). Considera apenas `NRORC > 0`. **Não altera** `valor_pago_requisicao` nem totais de `caixa_pagamentos_erp`.
 
 ### RN-CXA-004 — Valor líquido e formas de pagamento (ERP)
 
@@ -297,7 +352,8 @@
 
 ### RN-CXA-008 — Último registro editável
 
-- Import ERP, despesas, retirada e observação: somente se `data >=` último fechamento confirmado da unidade.
+- **Fechamento de Caixa:** import ERP do dia, despesas, retirada e observação somente se `data >=` último fechamento confirmado da unidade.
+- **Configuração → Buscar caixa ERP por período:** importação histórica permitida (upsert), sem bloqueio por último fechamento confirmado.
 - Reabrir: somente o último caixa fechado da unidade (`MAX(data)` entre fechamentos confirmados).
 - Caixas com data **anterior** ao último fechamento da unidade **não podem ser reabertos**.
 

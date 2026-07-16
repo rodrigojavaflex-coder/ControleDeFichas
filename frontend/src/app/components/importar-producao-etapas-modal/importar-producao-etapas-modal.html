@@ -1,0 +1,103 @@
+<div class="modal-overlay" *ngIf="visible">
+  <div class="modal-conteudo modal-importacao-periodo">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Buscar etapas por período</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="loading"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="importacao-periodo-form-grid importacao-periodo-form-periodo">
+        <div class="filter-group filter-group-periodo">
+          <app-date-range-filter
+            label="Período"
+            startLabel="Data início"
+            endLabel="Data fim"
+            [start]="dataInicio"
+            [end]="dataFim"
+            [disabled]="loading"
+            (rangeChange)="onPeriodoRangeChange($event)">
+          </app-date-range-filter>
+        </div>
+
+        <div class="filter-group">
+          <label for="etapasUnidade" class="label-campo">Unidade</label>
+          @if (unidadeBloqueada) {
+            <input
+              id="etapasUnidade"
+              type="text"
+              class="campo"
+              [value]="unidade"
+              disabled
+              readonly />
+          } @else {
+            <select
+              id="etapasUnidade"
+              class="campo"
+              [(ngModel)]="unidade"
+              [disabled]="loading">
+              <option value="">Selecione...</option>
+              <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+            </select>
+          }
+        </div>
+      </div>
+
+      <div class="importacao-periodo-erro" *ngIf="error">{{ error }}</div>
+
+      <div class="inline-loading importacao-periodo-loading" *ngIf="loading">
+        <div class="spinner"></div>
+        <span>Consultando agente e gravando no PostgreSQL...</span>
+      </div>
+
+      @if (result && !loading) {
+        <section class="importacao-periodo-resultado">
+          <h4>Resumo da importação</h4>
+          <p class="importacao-periodo-preview-hint">
+            Período: {{ periodoResumo }}
+            · Unidade: {{ result.unidade }}
+          </p>
+          <ul class="importacao-periodo-stats">
+            <li>Processados: {{ result.processados }}</li>
+            <li>Criados: {{ result.criados }}</li>
+            <li>Atualizados: {{ result.atualizados }}</li>
+          </ul>
+          @if (result.erros.length) {
+            <div class="importacao-periodo-erros-lista">
+              <strong>Avisos/erros ({{ result.erros.length }}):</strong>
+              <ul>
+                @for (erro of result.erros; track erro) {
+                  <li>{{ erro }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </section>
+      }
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="fechar()"
+        [disabled]="loading">
+        Fechar
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="executarImportacao()"
+        [disabled]="!podeExecutarImportacao()">
+        <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+        {{ result ? 'Buscar novamente' : 'Buscar e importar' }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -92,7 +92,7 @@ export function converterObjetoFirebird<T>(
   }
 
   if (Buffer.isBuffer(obj)) {
-    return obj as T;
+    return converterTextoFirebird(obj, sourceCharset) as T;
   }
 
   if (
@@ -112,7 +112,7 @@ export function converterObjetoFirebird<T>(
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       const convertedKey = converterTextoFirebird(key, sourceCharset);
       converted[convertedKey] =
-        typeof value === 'string'
+        typeof value === 'string' || Buffer.isBuffer(value)
           ? converterTextoFirebird(value, sourceCharset)
           : converterObjetoFirebird(value, sourceCharset);
     }
@@ -138,6 +138,8 @@ export function corrigirEncodingLegado(
 /** Corrige nomes já persistidos/gravados com substituição errada (sem ý). */
 export function corrigirPadroesGravadosErrados(str: string): string {
   return str
+    .replace(/\bCÇpsulas?\b/gi, (match) => match.replace(/CÇ/i, 'Cá'))
+    .replace(/\b(\w+)ÇÇo\b/gi, (_, prefix: string) => `${prefix}ção`)
     .replace(/\bJÇ([A-ZÀ-Ú])/g, 'JÉ$1')
     .replace(/\b([A-ZÀ-Ú]+)ÇO\b/g, (match, prefix: string) => {
       const palavra = `${prefix}ÇO`;
@@ -150,6 +152,9 @@ function fixCorruptedChars(str: string): string {
   if (!str) return str;
 
   let fixed = str
+    .replace(/Cýpsula/gi, 'Cápsula')
+    .replace(/Loýção/gi, 'Loção')
+    .replace(/Loýo/gi, 'Loção')
     .replace(/ÇýO/gi, 'ÇÃO')
     .replace(/([A-ZÀ-Ú])ýO/gi, '$1ÃO')
     .replace(/([A-ZÀ-Ú])ý(?=[A-ZÀ-Ú])/g, '$1É')
@@ -253,8 +258,9 @@ export function normalizarTextoLegado(
   sourceCharset: string = 'NONE',
 ): string {
   if (!str) return '';
-  if (precisaCorrecaoEncoding(str)) {
-    return converterTextoFirebird(str, sourceCharset).trim();
+  const trimmed = str.trim();
+  if (precisaCorrecaoEncoding(trimmed)) {
+    return converterTextoFirebird(trimmed, sourceCharset).trim();
   }
-  return str.trim();
+  return corrigirPadroesGravadosErrados(trimmed);
 }

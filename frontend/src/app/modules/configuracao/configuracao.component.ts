@@ -14,7 +14,9 @@ import { AuthService } from '../../services/auth.service';
 import { FechamentoCaixaService } from '../../services/fechamento-caixa.service';
 import { CaixaSaldoInicialUnidade } from '../../models/fechamento-caixa.model';
 import { ImportarCaixaErpModalComponent } from '../../components/importar-caixa-erp-modal/importar-caixa-erp-modal';
-import { Permission } from '../../models/usuario.model';
+import { ImportarProducaoEtapasModalComponent } from '../../components/importar-producao-etapas-modal/importar-producao-etapas-modal';
+import { ImportarOrcamentosModalComponent } from '../../components/importar-orcamentos-modal/importar-orcamentos-modal';
+import { Permission, Unidade } from '../../models/usuario.model';
 
 type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
   saldoInicialDisplay: string;
@@ -23,7 +25,7 @@ type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
 @Component({
   selector: 'app-configuracao',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, ImportarCaixaErpModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ImportarCaixaErpModalComponent, ImportarProducaoEtapasModalComponent, ImportarOrcamentosModalComponent],
   templateUrl: './configuracao.component.html',
   styleUrls: ['./configuracao.component.css']
 })
@@ -36,6 +38,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
 
   @ViewChild('caixaErpModal') caixaErpModal?: ImportarCaixaErpModalComponent;
+  @ViewChild('etapasModal') etapasModal?: ImportarProducaoEtapasModalComponent;
+  @ViewChild('orcamentosModal') orcamentosModal?: ImportarOrcamentosModalComponent;
   private progressSubscription?: Subscription;
   private cadastrosProgressSubscription?: Subscription;
   private sincronizacaoProgressSubscription?: Subscription;
@@ -89,6 +93,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     ultimaDataCliente: string;
     ultimaDataPrescritor: string;
     ultimaModificacaoOrcamento: string;
+    painelContrato: string | number;
+    painelRepresentantes: string;
+    ultimaModificacaoProducaoEtapas: string;
     intervaloMinutos: number;
   }> = {};
 
@@ -226,12 +233,37 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     return this.authService.hasPermission(Permission.VENDA_FECHAR_CAIXA);
   }
 
+  canAcessarAbaImportacao(): boolean {
+    return this.authService.hasPermission(Permission.CONFIGURACAO_ACCESS);
+  }
+
   abrirModalImportarCaixaErp(): void {
-    this.caixaErpModal?.abrir({ modoPeriodo: true });
+    this.caixaErpModal?.abrir({
+      modoPeriodo: true,
+      reimportacaoHistorica: true,
+    });
   }
 
   onImportacaoCaixaConcluida(): void {
     this.success = 'Importação de caixa ERP concluída.';
+    this.error = null;
+  }
+
+  abrirModalImportarProducaoEtapas(): void {
+    this.etapasModal?.abrir();
+  }
+
+  onImportacaoEtapasConcluida(): void {
+    this.success = 'Importação de etapas de produção concluída.';
+    this.error = null;
+  }
+
+  abrirModalImportarOrcamentos(): void {
+    this.orcamentosModal?.abrir();
+  }
+
+  onImportacaoOrcamentosConcluida(): void {
+    this.success = 'Importação de orçamentos concluída.';
     this.error = null;
   }
 
@@ -246,6 +278,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
           ultimaDataPrescritor: config.ultimaDataPrescritor ? this.normalizarData(config.ultimaDataPrescritor) : undefined,
           ultimaModificacaoOrcamento: config.ultimaModificacaoOrcamento
             ? this.normalizarDateTime(config.ultimaModificacaoOrcamento)
+            : undefined,
+          ultimaModificacaoProducaoEtapas: config.ultimaModificacaoProducaoEtapas
+            ? this.normalizarDateTime(config.ultimaModificacaoProducaoEtapas)
             : undefined,
         }));
         this.sincronizacaoLoading = false;
@@ -302,7 +337,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
         const totalClientes = resultados.reduce((sum, r) => sum + r.clientesCriados, 0);
         const totalPrescritores = resultados.reduce((sum, r) => sum + r.prescritoresCriados, 0);
         const totalOrcamentos = resultados.reduce((sum, r) => sum + r.orcamentosProcessados, 0);
-        this.success = `Sincronização concluída! ${totalClientes} clientes, ${totalPrescritores} prescritores e ${totalOrcamentos} orçamentos processados.`;
+        const totalPainel = resultados.reduce((sum, r) => sum + r.painelProcessados, 0);
+        const totalEtapas = resultados.reduce((sum, r) => sum + r.producaoEtapasProcessados, 0);
+        this.success = `Sincronização concluída! ${totalClientes} clientes, ${totalPrescritores} prescritores, ${totalOrcamentos} orçamentos, ${totalPainel} painel e ${totalEtapas} etapas processados.`;
         this.carregarSincronizacaoConfigs();
         this.stopSincronizacaoProgressPolling(true);
       },
@@ -356,7 +393,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   }
 
   getSincronizacaoSubProgressLabel(
-    tipo: 'clientes' | 'prescritores' | 'orcamentos',
+    tipo: 'clientes' | 'prescritores' | 'orcamentos' | 'painel' | 'producao_etapas',
   ): string {
     if (!this.sincronizacaoProgress) return '';
     const map = {
@@ -375,6 +412,16 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
         total: this.sincronizacaoProgress.orcamentosTotal,
         pct: this.sincronizacaoProgress.percentualOrcamentos,
       },
+      painel: {
+        atual: this.sincronizacaoProgress.painelAtual,
+        total: this.sincronizacaoProgress.painelTotal,
+        pct: this.sincronizacaoProgress.percentualPainel,
+      },
+      producao_etapas: {
+        atual: this.sincronizacaoProgress.producaoEtapasAtual,
+        total: this.sincronizacaoProgress.producaoEtapasTotal,
+        pct: this.sincronizacaoProgress.percentualProducaoEtapas,
+      },
     };
     const item = map[tipo];
     if (item.total <= 0) {
@@ -384,7 +431,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   }
 
   getSincronizacaoSubProgressPercent(
-    tipo: 'clientes' | 'prescritores' | 'orcamentos',
+    tipo: 'clientes' | 'prescritores' | 'orcamentos' | 'painel' | 'producao_etapas',
   ): number {
     if (!this.sincronizacaoProgress) return 0;
     switch (tipo) {
@@ -394,11 +441,15 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
         return this.sincronizacaoProgress.percentualPrescritores ?? 0;
       case 'orcamentos':
         return this.sincronizacaoProgress.percentualOrcamentos ?? 0;
+      case 'painel':
+        return this.sincronizacaoProgress.percentualPainel ?? 0;
+      case 'producao_etapas':
+        return this.sincronizacaoProgress.percentualProducaoEtapas ?? 0;
     }
   }
 
   isSincronizacaoEtapaAtiva(
-    tipo: 'clientes' | 'prescritores' | 'orcamentos',
+    tipo: 'clientes' | 'prescritores' | 'orcamentos' | 'painel' | 'producao_etapas',
   ): boolean {
     if (!this.sincronizacaoProgress) return false;
     return this.sincronizacaoProgress.etapa === tipo;
@@ -412,6 +463,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       clientes: 'Sincronizando clientes',
       prescritores: 'Sincronizando prescritores',
       orcamentos: 'Sincronizando orçamentos',
+      painel: 'Sincronizando painel',
+      producao_etapas: 'Sincronizando etapas de produção',
       finalizando: 'Finalizando',
       concluido: 'Concluído',
     };
@@ -548,12 +601,16 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   }
 
   iniciarEdicao(agente: string, config: SincronizacaoConfig | null) {
+    const painel = this.parsePainelParaFormulario(config?.painelContratoRepresentantes);
     this.editandoAgente = agente;
     this.formSincronizacao[agente] = {
       ativo: config?.ativo ?? false,
       ultimaDataCliente: this.normalizarData(config?.ultimaDataCliente) || '',
       ultimaDataPrescritor: this.normalizarData(config?.ultimaDataPrescritor) || '',
       ultimaModificacaoOrcamento: this.normalizarDateTime(config?.ultimaModificacaoOrcamento) || '',
+      painelContrato: painel.contrato,
+      painelRepresentantes: painel.representantes,
+      ultimaModificacaoProducaoEtapas: this.normalizarDateTime(config?.ultimaModificacaoProducaoEtapas) || '',
       intervaloMinutos: config?.intervaloMinutos || 60,
     };
   }
@@ -567,6 +624,17 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     const formData = this.formSincronizacao[agente];
     if (!formData) return;
 
+    const painelContratoRepresentantes = this.buildPainelContratoRepresentantes(
+      formData.painelContrato,
+      formData.painelRepresentantes,
+    );
+    if (painelContratoRepresentantes === false) {
+      this.error =
+        'Painel: informe a filial e ao menos um representante (ex.: filial 9999, representantes 1,2).';
+      this.success = null;
+      return;
+    }
+
     const dto = {
       agente: agente,
       ativo: formData.ativo,
@@ -576,11 +644,69 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       ultimaModificacaoOrcamento: formData.ultimaModificacaoOrcamento
         ? this.dateTimeParaBackend(formData.ultimaModificacaoOrcamento)
         : null,
+      painelContratoRepresentantes,
+      ultimaModificacaoProducaoEtapas: formData.ultimaModificacaoProducaoEtapas
+        ? this.dateTimeParaBackend(formData.ultimaModificacaoProducaoEtapas)
+        : null,
       intervaloMinutos: formData.intervaloMinutos,
     };
 
     this.criarOuAtualizarSincronizacao(config, dto);
     this.cancelarEdicao(agente);
+  }
+
+  formatarPainelContrato(value?: string | null): string {
+    const contrato = this.parsePainelParaFormulario(value).contrato;
+    return contrato || '-';
+  }
+
+  formatarPainelRepresentantes(value?: string | null): string {
+    const representantes = this.parsePainelParaFormulario(value).representantes;
+    return representantes || '-';
+  }
+
+  private parsePainelParaFormulario(
+    value?: string | null,
+  ): { contrato: string; representantes: string } {
+    if (!value?.trim()) {
+      return { contrato: '', representantes: '' };
+    }
+
+    const match = value.trim().match(/^(\d+)\s+([\d,\s]+)$/);
+    if (!match) {
+      return { contrato: '', representantes: '' };
+    }
+
+    return {
+      contrato: match[1],
+      representantes: match[2]
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join(','),
+    };
+  }
+
+  private buildPainelContratoRepresentantes(
+    contrato: string | number | null | undefined,
+    representantes: string | number | null | undefined,
+  ): string | null | false {
+    const contratoLimpo = String(contrato ?? '').trim();
+    const representantesTexto = String(representantes ?? '').trim();
+    const representantesLimpos = representantesTexto
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => /^\d+$/.test(item));
+
+    if (!contratoLimpo && representantesLimpos.length === 0) {
+      return null;
+    }
+
+    if (!contratoLimpo || representantesLimpos.length === 0) {
+      return false;
+    }
+
+    return `${contratoLimpo} ${representantesLimpos.join(',')}`;
   }
 
   onLogoChange(event: any) {

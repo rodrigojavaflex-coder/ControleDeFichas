@@ -14,6 +14,17 @@ import {
   padronizarNomeLegadoNullable,
 } from '../../common/utils/encoding-legado.util';
 import { Usuario } from '../usuarios/entities/usuario.entity';
+import { PainelMedicosService } from '../painel-medicos/painel-medicos.service';
+import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.service';
+import { parsePainelContratoRepresentantes } from '../../common/utils/painel-config.util';
+import {
+  ImportarProducaoEtapasDto,
+  ImportarProducaoEtapasResponseDto,
+} from './dto/importar-producao-etapas.dto';
+import {
+  ImportarOrcamentosDto,
+  ImportarOrcamentosResponseDto,
+} from './dto/importar-orcamentos.dto';
 
 interface AgenteCliente {
   cdcli: number;
@@ -63,6 +74,14 @@ export interface SincronizacaoResult {
   orcamentosProcessados: number;
   orcamentosCriados: number;
   orcamentosAtualizados: number;
+  painelProcessados: number;
+  painelCriados: number;
+  painelAtualizados: number;
+  painelRemovidos: number;
+  painelHistoricoGravados: number;
+  producaoEtapasProcessados: number;
+  producaoEtapasCriados: number;
+  producaoEtapasAtualizados: number;
   erros: string[];
 }
 
@@ -72,6 +91,8 @@ export type SincronizacaoProgressEtapa =
   | 'clientes'
   | 'prescritores'
   | 'orcamentos'
+  | 'painel'
+  | 'producao_etapas'
   | 'finalizando'
   | 'concluido';
 
@@ -88,6 +109,8 @@ export interface SincronizacaoProgress {
   clientesProcessados: number;
   prescritoresProcessados: number;
   orcamentosProcessados: number;
+  painelProcessados: number;
+  producaoEtapasProcessados: number;
   /** Progresso do lote atual do agente */
   clientesAtual: number;
   clientesTotal: number;
@@ -98,6 +121,12 @@ export interface SincronizacaoProgress {
   orcamentosAtual: number;
   orcamentosTotal: number;
   percentualOrcamentos: number;
+  painelAtual: number;
+  painelTotal: number;
+  percentualPainel: number;
+  producaoEtapasAtual: number;
+  producaoEtapasTotal: number;
+  percentualProducaoEtapas: number;
   erros: number;
 }
 
@@ -146,7 +175,33 @@ export class SincronizacaoService {
     @InjectRepository(Orcamento)
     private readonly orcamentoRepository: Repository<Orcamento>,
     private readonly configService: ConfigService,
+    private readonly painelMedicosService: PainelMedicosService,
+    private readonly producaoEtapasService: ProducaoEtapasService,
   ) {}
+
+  private criarResultadoVazio(agente: string, erros: string[] = []): SincronizacaoResult {
+    return {
+      agente,
+      clientesProcessados: 0,
+      clientesCriados: 0,
+      clientesAtualizados: 0,
+      prescritoresProcessados: 0,
+      prescritoresCriados: 0,
+      prescritoresAtualizados: 0,
+      orcamentosProcessados: 0,
+      orcamentosCriados: 0,
+      orcamentosAtualizados: 0,
+      painelProcessados: 0,
+      painelCriados: 0,
+      painelAtualizados: 0,
+      painelRemovidos: 0,
+      painelHistoricoGravados: 0,
+      producaoEtapasProcessados: 0,
+      producaoEtapasCriados: 0,
+      producaoEtapasAtualizados: 0,
+      erros,
+    };
+  }
 
   getProgress(): SincronizacaoProgress | null {
     return this.syncProgress;
@@ -171,6 +226,8 @@ export class SincronizacaoService {
       clientesProcessados: 0,
       prescritoresProcessados: 0,
       orcamentosProcessados: 0,
+      painelProcessados: 0,
+      producaoEtapasProcessados: 0,
       clientesAtual: 0,
       clientesTotal: 0,
       percentualClientes: 0,
@@ -180,6 +237,12 @@ export class SincronizacaoService {
       orcamentosAtual: 0,
       orcamentosTotal: 0,
       percentualOrcamentos: 0,
+      painelAtual: 0,
+      painelTotal: 0,
+      percentualPainel: 0,
+      producaoEtapasAtual: 0,
+      producaoEtapasTotal: 0,
+      percentualProducaoEtapas: 0,
       erros: 0,
     };
   }
@@ -235,6 +298,12 @@ export class SincronizacaoService {
       orcamentosAtual: 0,
       orcamentosTotal: 0,
       percentualOrcamentos: 0,
+      painelAtual: 0,
+      painelTotal: 0,
+      percentualPainel: 0,
+      producaoEtapasAtual: 0,
+      producaoEtapasTotal: 0,
+      percentualProducaoEtapas: 0,
     });
   }
 
@@ -244,7 +313,12 @@ export class SincronizacaoService {
   }
 
   private atualizarProgressoEtapa(
-    tipo: 'clientes' | 'prescritores' | 'orcamentos',
+    tipo:
+      | 'clientes'
+      | 'prescritores'
+      | 'orcamentos'
+      | 'painel'
+      | 'producao_etapas',
     atual: number,
     total: number,
     fase: number,
@@ -265,10 +339,18 @@ export class SincronizacaoService {
       partial.prescritoresAtual = atual;
       partial.prescritoresTotal = total;
       partial.percentualPrescritores = percentual;
-    } else {
+    } else if (tipo === 'orcamentos') {
       partial.orcamentosAtual = atual;
       partial.orcamentosTotal = total;
       partial.percentualOrcamentos = percentual;
+    } else if (tipo === 'painel') {
+      partial.painelAtual = atual;
+      partial.painelTotal = total;
+      partial.percentualPainel = percentual;
+    } else {
+      partial.producaoEtapasAtual = atual;
+      partial.producaoEtapasTotal = total;
+      partial.percentualProducaoEtapas = percentual;
     }
 
     this.atualizarProgresso(partial);
@@ -313,19 +395,11 @@ export class SincronizacaoService {
             `Erro ao sincronizar agente ${config.agente}:`,
             error,
           );
-          resultados.push({
-            agente: config.agente,
-            clientesProcessados: 0,
-            clientesCriados: 0,
-            clientesAtualizados: 0,
-            prescritoresProcessados: 0,
-            prescritoresCriados: 0,
-            prescritoresAtualizados: 0,
-            orcamentosProcessados: 0,
-            orcamentosCriados: 0,
-            orcamentosAtualizados: 0,
-            erros: [error.message || 'Erro desconhecido'],
-          });
+          resultados.push(
+            this.criarResultadoVazio(config.agente, [
+              error.message || 'Erro desconhecido',
+            ]),
+          );
           if (this.syncProgress) {
             this.syncProgress.erros += 1;
           }
@@ -421,19 +495,11 @@ export class SincronizacaoService {
             `Erro ao sincronizar orçamentos do agente ${config.agente}:`,
             error,
           );
-          resultados.push({
-            agente: config.agente,
-            clientesProcessados: 0,
-            clientesCriados: 0,
-            clientesAtualizados: 0,
-            prescritoresProcessados: 0,
-            prescritoresCriados: 0,
-            prescritoresAtualizados: 0,
-            orcamentosProcessados: 0,
-            orcamentosCriados: 0,
-            orcamentosAtualizados: 0,
-            erros: [error.message || 'Erro desconhecido'],
-          });
+          resultados.push(
+            this.criarResultadoVazio(config.agente, [
+              error.message || 'Erro desconhecido',
+            ]),
+          );
           if (this.syncProgress) {
             this.syncProgress.erros += 1;
           }
@@ -471,22 +537,6 @@ export class SincronizacaoService {
     }
 
     return resultados;
-  }
-
-  private criarResultadoVazio(agente: string): SincronizacaoResult {
-    return {
-      agente,
-      clientesProcessados: 0,
-      clientesCriados: 0,
-      clientesAtualizados: 0,
-      prescritoresProcessados: 0,
-      prescritoresCriados: 0,
-      prescritoresAtualizados: 0,
-      orcamentosProcessados: 0,
-      orcamentosCriados: 0,
-      orcamentosAtualizados: 0,
-      erros: [],
-    };
   }
 
   private async sincronizarOrcamentosDeAgente(
@@ -554,19 +604,7 @@ export class SincronizacaoService {
       );
     }
 
-    const resultado: SincronizacaoResult = {
-      agente: config.agente,
-      clientesProcessados: 0,
-      clientesCriados: 0,
-      clientesAtualizados: 0,
-      prescritoresProcessados: 0,
-      prescritoresCriados: 0,
-      prescritoresAtualizados: 0,
-      orcamentosProcessados: 0,
-      orcamentosCriados: 0,
-      orcamentosAtualizados: 0,
-      erros: [],
-    };
+    const resultado = this.criarResultadoVazio(config.agente);
 
     // Preparar datas mínimas (já vêm como string YYYY-MM-DD do transformer)
     const dataMinimaCliente = config.ultimaDataCliente
@@ -774,6 +812,48 @@ export class SincronizacaoService {
       );
     }
 
+    if (config.painelContratoRepresentantes?.trim()) {
+      try {
+        await this.sincronizarPainel(
+          config,
+          agenteConfig.url,
+          agenteConfig.token,
+          resultado,
+        );
+      } catch (error: any) {
+        this.logger.error(
+          `Erro ao sincronizar painel do agente ${config.agente}:`,
+          error,
+        );
+        resultado.erros.push(`Painel: ${error.message}`);
+      }
+    } else {
+      this.logger.log(
+        `[${config.agente}] Sincronização de painel ignorada: painelContratoRepresentantes não configurado`,
+      );
+    }
+
+    if (config.ultimaModificacaoProducaoEtapas) {
+      try {
+        await this.sincronizarProducaoEtapas(
+          config,
+          agenteConfig.url,
+          agenteConfig.token,
+          resultado,
+        );
+      } catch (error: any) {
+        this.logger.error(
+          `Erro ao sincronizar etapas de produção do agente ${config.agente}:`,
+          error,
+        );
+        resultado.erros.push(`Etapas produção: ${error.message}`);
+      }
+    } else {
+      this.logger.log(
+        `[${config.agente}] Sincronização de etapas ignorada: ultimaModificacaoProducaoEtapas não configurada`,
+      );
+    }
+
     // Antes de salvar, garantir que as datas sejam strings YYYY-MM-DD
     // CORREÇÃO: Manter a data atual se não foi atualizada (não usar '2000-01-01')
     const ultimaDataClienteStr = config.ultimaDataCliente 
@@ -814,10 +894,22 @@ export class SincronizacaoService {
         .slice(0, 19);
     }
 
+    if (config.painelContratoRepresentantes) {
+      updateData.painelContratoRepresentantes = config.painelContratoRepresentantes;
+    }
+
+    if (config.ultimaModificacaoProducaoEtapas) {
+      updateData.ultimaModificacaoProducaoEtapas = String(
+        config.ultimaModificacaoProducaoEtapas,
+      )
+        .replace('T', ' ')
+        .slice(0, 19);
+    }
+
     await this.configRepository.update(config.id, updateData);
 
     this.logger.log(
-      `Sincronização concluída para agente ${config.agente}: ${resultado.clientesCriados} clientes, ${resultado.prescritoresCriados} prescritores, ${resultado.orcamentosCriados} orçamentos criados, ${resultado.orcamentosAtualizados} orçamentos atualizados`,
+      `Sincronização concluída para agente ${config.agente}: ${resultado.clientesCriados} clientes, ${resultado.prescritoresCriados} prescritores, ${resultado.orcamentosCriados} orçamentos, ${resultado.painelCriados} painel, ${resultado.producaoEtapasCriados} etapas criados`,
     );
 
     return resultado;
@@ -930,6 +1022,267 @@ export class SincronizacaoService {
     );
   }
 
+  private atualizarWatermarkProducaoEtapas(config: SincronizacaoConfig): void {
+    const watermark = this.formatarDataHoraBrasilia();
+    config.ultimaModificacaoProducaoEtapas = watermark;
+    this.logger.log(
+      `[${config.agente}] Watermark de etapas produção atualizado para hora do processamento (Brasília): ${watermark}`,
+    );
+  }
+
+  private async sincronizarPainel(
+    config: SincronizacaoConfig,
+    url: string,
+    token: string,
+    resultado: SincronizacaoResult,
+  ): Promise<void> {
+    const painelConfig = parsePainelContratoRepresentantes(
+      config.painelContratoRepresentantes,
+    );
+    if (!painelConfig) {
+      return;
+    }
+
+    this.atualizarProgresso({
+      etapa: 'painel',
+      message: `Buscando painel (${config.agente})...`,
+      fase: 0.82,
+    });
+
+    const registros = await this.painelMedicosService.buscarDoAgente(
+      url,
+      token,
+      painelConfig,
+      config.agente,
+    );
+
+    this.atualizarProgresso({
+      etapa: 'painel',
+      message: `Processando ${registros.length} registros do painel (${config.agente})...`,
+      fase: 0.84,
+      painelAtual: 0,
+      painelTotal: registros.length,
+      percentualPainel: 0,
+    });
+
+    const painelResult = await this.painelMedicosService.sincronizar(
+      config.agente,
+      painelConfig.raw,
+      registros,
+    );
+
+    resultado.painelProcessados = painelResult.processados;
+    resultado.painelCriados = painelResult.criados;
+    resultado.painelAtualizados = painelResult.atualizados;
+    resultado.painelRemovidos = painelResult.removidos;
+    resultado.painelHistoricoGravados = painelResult.historicoGravados;
+
+    if (this.syncProgress) {
+      this.syncProgress.painelProcessados += painelResult.processados;
+      this.atualizarProgressoEtapa(
+        'painel',
+        registros.length,
+        registros.length || 1,
+        0.86,
+        `Painel concluído (${config.agente})`,
+      );
+    }
+  }
+
+  private async sincronizarProducaoEtapas(
+    config: SincronizacaoConfig,
+    url: string,
+    token: string,
+    resultado: SincronizacaoResult,
+  ): Promise<void> {
+    const unit = this.agenteCdfilMap[config.agente];
+    if (!unit) {
+      throw new Error(`Unidade não mapeada para o agente: ${config.agente}`);
+    }
+
+    const dataMinimaMovimento = this.formatDateTimeForAgent(
+      config.ultimaModificacaoProducaoEtapas,
+    );
+
+    this.atualizarProgresso({
+      etapa: 'producao_etapas',
+      message: `Buscando etapas de produção (${config.agente})...`,
+      fase: 0.88,
+    });
+
+    const etapas = await this.producaoEtapasService.buscarIncrementalDoAgente(
+      url,
+      token,
+      unit,
+      dataMinimaMovimento,
+      config.agente,
+    );
+
+    if (!etapas.length) {
+      this.logger.log(
+        `[${config.agente}] Nenhuma etapa de produção retornada pelo agente`,
+      );
+      this.atualizarWatermarkProducaoEtapas(config);
+      return;
+    }
+
+    const unidade = this.producaoEtapasService.getUnidadePorAgente(config.agente);
+
+    this.atualizarProgresso({
+      etapa: 'producao_etapas',
+      message: `Processando ${etapas.length} etapas (${config.agente})...`,
+      fase: 0.9,
+      producaoEtapasAtual: 0,
+      producaoEtapasTotal: etapas.length,
+      percentualProducaoEtapas: 0,
+    });
+
+    const lote = await this.producaoEtapasService.processarLote(etapas, unidade);
+    resultado.producaoEtapasProcessados = lote.processados;
+    resultado.producaoEtapasCriados = lote.criados;
+    resultado.producaoEtapasAtualizados = lote.atualizados;
+
+    if (this.syncProgress) {
+      this.syncProgress.producaoEtapasProcessados += lote.processados;
+      this.atualizarProgressoEtapa(
+        'producao_etapas',
+        etapas.length,
+        etapas.length,
+        0.95,
+        `Etapas ${etapas.length}/${etapas.length} (${config.agente})`,
+      );
+    }
+
+    this.atualizarWatermarkProducaoEtapas(config);
+  }
+
+  async importarProducaoEtapasManual(
+    dto: ImportarProducaoEtapasDto,
+  ): Promise<ImportarProducaoEtapasResponseDto> {
+    const agente = this.unidadeAgenteMap[dto.unidade];
+    if (!agente) {
+      throw new BadRequestException(
+        `Unidade ${dto.unidade} não possui agente de sincronização mapeado`,
+      );
+    }
+
+    const agentesConfig = this.configService.get('agentes');
+    const agenteConfig = agentesConfig[agente];
+    if (!agenteConfig?.url || !agenteConfig?.token) {
+      throw new BadRequestException(
+        `Configuração do agente ${agente} não encontrada ou incompleta`,
+      );
+    }
+
+    const unit = this.agenteCdfilMap[agente];
+    const erros: string[] = [];
+
+    try {
+      const etapas = await this.producaoEtapasService.buscarPeriodoDoAgente(
+        agenteConfig.url,
+        agenteConfig.token,
+        unit,
+        dto.dataInicio,
+        dto.dataFim,
+        agente,
+      );
+
+      const lote = await this.producaoEtapasService.processarLote(
+        etapas,
+        dto.unidade,
+      );
+
+      return {
+        unidade: dto.unidade,
+        processados: lote.processados,
+        criados: lote.criados,
+        atualizados: lote.atualizados,
+        erros,
+      };
+    } catch (error: any) {
+      erros.push(error.message || 'Erro desconhecido');
+      return {
+        unidade: dto.unidade,
+        processados: 0,
+        criados: 0,
+        atualizados: 0,
+        erros,
+      };
+    }
+  }
+
+  async importarOrcamentosManual(
+    dto: ImportarOrcamentosDto,
+  ): Promise<ImportarOrcamentosResponseDto> {
+    const agente = this.unidadeAgenteMap[dto.unidade];
+    if (!agente) {
+      throw new BadRequestException(
+        `Unidade ${dto.unidade} não possui agente de sincronização mapeado`,
+      );
+    }
+
+    const agentesConfig = this.configService.get('agentes');
+    const agenteConfig = agentesConfig[agente];
+    if (!agenteConfig?.url || !agenteConfig?.token) {
+      throw new BadRequestException(
+        `Configuração do agente ${agente} não encontrada ou incompleta`,
+      );
+    }
+
+    const unit = this.agenteCdfilMap[agente];
+    const erros: string[] = [];
+    let processados = 0;
+    let criados = 0;
+    let atualizados = 0;
+
+    try {
+      const orcamentos = await this.buscarOrcamentosPeriodoDoAgente(
+        agenteConfig.url,
+        agenteConfig.token,
+        unit,
+        dto.dataInicio,
+        dto.dataFim,
+        agente,
+      );
+
+      for (const orcamentoAgente of orcamentos) {
+        processados++;
+        try {
+          const foiCriado = await this.processarOrcamento(
+            orcamentoAgente,
+            dto.unidade,
+          );
+          if (foiCriado) {
+            criados++;
+          } else {
+            atualizados++;
+          }
+        } catch (error: any) {
+          erros.push(
+            `Orçamento ${orcamentoAgente.nr_orcamento}: ${error.message || 'Erro desconhecido'}`,
+          );
+        }
+      }
+
+      return {
+        unidade: dto.unidade,
+        processados,
+        criados,
+        atualizados,
+        erros,
+      };
+    } catch (error: any) {
+      erros.push(error.message || 'Erro desconhecido');
+      return {
+        unidade: dto.unidade,
+        processados,
+        criados,
+        atualizados,
+        erros,
+      };
+    }
+  }
+
   private formatarDataHoraBrasilia(date: Date = new Date()): string {
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'America/Sao_Paulo',
@@ -946,6 +1299,58 @@ export class SincronizacaoService {
       parts.find((part) => part.type === type)?.value ?? '00';
 
     return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
+  }
+
+  private async buscarOrcamentosPeriodoDoAgente(
+    url: string,
+    token: string,
+    unit: number,
+    start: string,
+    end: string,
+    agente: string,
+  ): Promise<AgenteOrcamento[]> {
+    const urlCompleta = `${url}/api/v1/orcamentos/periodo`;
+
+    this.logger.log(
+      `[${agente}] Chamando agente orçamentos por período: ${urlCompleta} (${start} a ${end})`,
+    );
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
+
+    try {
+      const response = await fetch(urlCompleta, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ unit, start, end }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Erro ao buscar orçamentos do agente: ${response.status} - ${errorText}`,
+        );
+      }
+
+      const data = await response.json();
+      this.logger.log(
+        `[${agente}] Resposta do agente: ${data.orcamentos?.length || 0} orçamentos`,
+      );
+
+      return data.orcamentos || [];
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Timeout ao buscar orçamentos do agente');
+      }
+      throw error;
+    }
   }
 
   private async buscarOrcamentosDoAgente(

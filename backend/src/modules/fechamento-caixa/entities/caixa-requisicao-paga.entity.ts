@@ -138,6 +138,18 @@ export class CaixaRequisicaoPaga {
   nomeVendedor?: string | null;
 
   @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'nome_medico' })
+  nomeMedico?: string | null;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'crm_medico' })
+  crmMedico?: string | null;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 2, nullable: true, name: 'uf_crm_medico' })
+  ufCrmMedico?: string | null;
+
+  @ApiProperty({ required: false })
   @Column({ type: 'uuid', nullable: true, name: 'orcamento_id' })
   orcamentoId?: string | null;
 

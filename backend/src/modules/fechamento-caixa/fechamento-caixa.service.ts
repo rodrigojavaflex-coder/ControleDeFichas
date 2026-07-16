@@ -9,7 +9,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, Repository } from 'typeorm';
+import { Permission } from '../../common/enums/permission.enum';
 import { Unidade } from '../../common/enums/unidade.enum';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import {
   normalizarTextoLegado,
   padronizarNomeDeSistemaLegado,
@@ -36,7 +38,10 @@ import {
   CaixaErpPagamentoDetalheDto,
   FechamentoCaixaDetalhadoResponseDto,
 } from './dto/fechamento-caixa-detalhado-response.dto';
-import { normalizarDataIso } from '../../common/utils/data-date.util';
+import {
+  dividirPeriodoEmSegmentosMensais,
+  normalizarDataIso,
+} from '../../common/utils/data-date.util';
 import {
   normalizarFormaErp,
   normalizarFormaTerceiro,
@@ -97,11 +102,20 @@ interface AgenteCaixaRequisicaoRow {
   gap_orcamento_vs_pago: number | null;
   codigo_vendedor: number | null;
   vendedor: string | null;
+  crm_medico: string | null;
+  uf_crm_medico: string | null;
+  nome_medico: string | null;
+}
+
+interface UpsertStats {
+  importados: number;
+  atualizados: number;
 }
 
 @Injectable()
 export class FechamentoCaixaService {
   private readonly logger = new Logger(FechamentoCaixaService.name);
+  private static readonly CAIXA_AGENTE_TIMEOUT_MS = 300_000;
 
   constructor(
     private readonly configService: ConfigService,
@@ -134,59 +148,45 @@ export class FechamentoCaixaService {
       );
     }
 
-    const body = {
-      unit: agente.unit,
-      start: dto.dataInicio,
-      end: dto.dataFim,
-    };
-
     this.logger.log(
       `Importando caixa ERP: unidade=${dto.unidade}, periodo=${dto.dataInicio}..${dto.dataFim}, cdfil=${agente.unit}`,
     );
 
-    const [pagamentosResp, itensResp, requisicoesResp] = await Promise.all([
-      this.chamarAgente<{ pagamentos: AgenteCaixaPagamentoRow[] }>(
-        agente,
-        '/api/v1/caixa/pagamentos',
-        body,
-      ),
-      this.chamarAgente<{ itens: AgenteCaixaItemRow[] }>(
-        agente,
-        '/api/v1/caixa/itens',
-        body,
-      ),
-      this.chamarAgente<{ requisicoes: AgenteCaixaRequisicaoRow[] }>(
-        agente,
-        '/api/v1/caixa/requisicoes-pagas',
-        body,
-      ),
-    ]);
-
-    const pagamentosStats = await this.upsertPagamentos(
-      pagamentosResp.pagamentos ?? [],
-      dto.unidade,
-      true,
-    );
-
-    const pagamentoChaves = (pagamentosResp.pagamentos ?? []).map((p) =>
-      this.buildChavePagamento(dto.unidade, p),
-    );
-    const pagamentoMap = await this.carregarMapaPagamentos(pagamentoChaves);
-
-    const itensStats = await this.upsertItens(
-      itensResp.itens ?? [],
-      dto.unidade,
+    const segmentos = dividirPeriodoEmSegmentosMensais(
       dto.dataInicio,
       dto.dataFim,
-      pagamentoMap,
-      true,
     );
+    if (segmentos.length === 0) {
+      throw new BadRequestException('Período de importação inválido.');
+    }
 
-    const requisicoesStats = await this.upsertRequisicoes(
-      requisicoesResp.requisicoes ?? [],
-      dto.unidade,
-      true,
-    );
+    if (segmentos.length > 1) {
+      this.logger.log(
+        `Importação fatiada em ${segmentos.length} segmento(s) mensais para evitar timeout do agente.`,
+      );
+    }
+
+    let pagamentosStats: UpsertStats = { importados: 0, atualizados: 0 };
+    let itensStats: UpsertStats = { importados: 0, atualizados: 0 };
+    let requisicoesStats: UpsertStats = { importados: 0, atualizados: 0 };
+
+    for (const segmento of segmentos) {
+      const statsSegmento = await this.importarSegmentoCaixaErp(
+        agente,
+        dto.unidade,
+        segmento.inicio,
+        segmento.fim,
+      );
+      pagamentosStats = this.somarUpsertStats(
+        pagamentosStats,
+        statsSegmento.pagamentosStats,
+      );
+      itensStats = this.somarUpsertStats(itensStats, statsSegmento.itensStats);
+      requisicoesStats = this.somarUpsertStats(
+        requisicoesStats,
+        statsSegmento.requisicoesStats,
+      );
+    }
 
     const totaisPorForma = await this.obterTotaisPorForma(
       dto.unidade,
@@ -250,7 +250,91 @@ export class FechamentoCaixaService {
       );
     }
 
+    if (dto.reimportacaoHistorica) {
+      const permissoes = getUsuarioPermissoes(usuario);
+      if (!permissoes.includes(Permission.CONFIGURACAO_ACCESS)) {
+        throw new ForbiddenException(
+          'Reimportação histórica de caixa ERP exige permissão de configuração.',
+        );
+      }
+      return;
+    }
+
     await this.assertPodeAlterarDataCaixa(dto.unidade, dto.dataInicio);
+  }
+
+  private async importarSegmentoCaixaErp(
+    agente: AgenteConfig,
+    unidade: Unidade,
+    dataInicio: string,
+    dataFim: string,
+  ): Promise<{
+    pagamentosStats: UpsertStats;
+    itensStats: UpsertStats;
+    requisicoesStats: UpsertStats;
+  }> {
+    const body = {
+      unit: agente.unit,
+      start: dataInicio,
+      end: dataFim,
+    };
+
+    this.logger.log(
+      `Importando segmento caixa ERP: ${dataInicio}..${dataFim}`,
+    );
+
+    const pagamentosResp = await this.chamarAgente<{
+      pagamentos: AgenteCaixaPagamentoRow[];
+    }>(agente, '/api/v1/caixa/pagamentos', body, 'pagamentos');
+
+    const itensResp = await this.chamarAgente<{ itens: AgenteCaixaItemRow[] }>(
+      agente,
+      '/api/v1/caixa/itens',
+      body,
+      'itens',
+    );
+
+    const requisicoesResp = await this.chamarAgente<{
+      requisicoes: AgenteCaixaRequisicaoRow[];
+    }>(agente, '/api/v1/caixa/requisicoes-pagas', body, 'requisicoes-pagas');
+
+    const pagamentosStats = await this.upsertPagamentos(
+      pagamentosResp.pagamentos ?? [],
+      unidade,
+      true,
+    );
+
+    const pagamentoChaves = (pagamentosResp.pagamentos ?? []).map((p) =>
+      this.buildChavePagamento(unidade, p),
+    );
+    const pagamentoMap = await this.carregarMapaPagamentos(pagamentoChaves);
+
+    const itensStats = await this.upsertItens(
+      itensResp.itens ?? [],
+      unidade,
+      dataInicio,
+      dataFim,
+      pagamentoMap,
+      true,
+    );
+
+    const requisicoesStats = await this.upsertRequisicoes(
+      requisicoesResp.requisicoes ?? [],
+      unidade,
+      true,
+    );
+
+    return { pagamentosStats, itensStats, requisicoesStats };
+  }
+
+  private somarUpsertStats(
+    acumulado: UpsertStats,
+    parcial: UpsertStats,
+  ): UpsertStats {
+    return {
+      importados: acumulado.importados + parcial.importados,
+      atualizados: acumulado.atualizados + parcial.atualizados,
+    };
   }
 
   async assertPodeAlterarDataCaixa(
@@ -307,9 +391,12 @@ export class FechamentoCaixaService {
     agente: AgenteConfig,
     path: string,
     body: Record<string, unknown>,
+    rotulo = 'caixa',
   ): Promise<T> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    const timeoutMs = FechamentoCaixaService.CAIXA_AGENTE_TIMEOUT_MS;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const inicio = Date.now();
 
     try {
       const response = await fetch(`${agente.url}${path}`, {
@@ -325,18 +412,23 @@ export class FechamentoCaixaService {
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Erro desconhecido');
         throw new ServiceUnavailableException(
-          `Erro ao consultar agente (${response.status}): ${errorText}`,
+          `Erro ao consultar agente (${response.status}) em ${rotulo}: ${errorText}`,
         );
       }
 
-      return (await response.json()) as T;
+      const resultado = (await response.json()) as T;
+      this.logger.log(
+        `Agente ${rotulo} respondeu em ${Date.now() - inicio}ms (${path}, ${String(body.start)}..${String(body.end)})`,
+      );
+      return resultado;
     } catch (error: unknown) {
       if (error instanceof ServiceUnavailableException) {
         throw error;
       }
+      const timeoutSegundos = Math.round(timeoutMs / 1000);
       const message =
         error instanceof Error && error.name === 'AbortError'
-          ? 'Timeout ao consultar agente de caixa (120s).'
+          ? `Timeout ao consultar agente de caixa (${timeoutSegundos}s) em ${rotulo}.`
           : error instanceof Error
             ? error.message
             : 'Erro desconhecido ao consultar agente.';
@@ -608,6 +700,17 @@ export class FechamentoCaixaService {
         nomeVendedor: row.vendedor
           ? padronizarNomeDeSistemaLegado(row.vendedor)
           : null,
+        nomeMedico: row.nome_medico
+          ? padronizarNomeDeSistemaLegado(row.nome_medico)
+          : null,
+        crmMedico:
+          row.crm_medico != null && String(row.crm_medico).trim()
+            ? String(row.crm_medico).trim()
+            : null,
+        ufCrmMedico:
+          row.uf_crm_medico != null && String(row.uf_crm_medico).trim()
+            ? String(row.uf_crm_medico).trim()
+            : null,
         orcamentoId:
           row.nr_orcamento != null
             ? orcamentoPorNr.get(row.nr_orcamento) ?? null

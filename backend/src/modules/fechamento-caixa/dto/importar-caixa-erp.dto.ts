@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsEnum } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsDateString, IsEnum, IsOptional } from 'class-validator';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
 export class ImportarCaixaErpDto {
@@ -24,4 +24,13 @@ export class ImportarCaixaErpDto {
   })
   @IsDateString({}, { message: 'dataFim deve estar no formato YYYY-MM-DD' })
   dataFim: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Reimportação histórica pela Configuração: ignora bloqueio do último fechamento confirmado. Exige permissão configuracao:access.',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  reimportacaoHistorica?: boolean;
 }

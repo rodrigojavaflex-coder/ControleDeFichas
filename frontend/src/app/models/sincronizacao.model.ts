@@ -4,6 +4,8 @@ export interface SincronizacaoConfig {
   ultimaDataCliente?: string;
   ultimaDataPrescritor?: string;
   ultimaModificacaoOrcamento?: string;
+  painelContratoRepresentantes?: string;
+  ultimaModificacaoProducaoEtapas?: string;
   intervaloMinutos: number;
   ativo: boolean;
   criadoEm: string;
@@ -15,6 +17,8 @@ export interface CreateSincronizacaoConfigDto {
   ultimaDataCliente?: string;
   ultimaDataPrescritor?: string;
   ultimaModificacaoOrcamento?: string;
+  painelContratoRepresentantes?: string;
+  ultimaModificacaoProducaoEtapas?: string;
   intervaloMinutos?: number;
   ativo?: boolean;
 }
@@ -32,6 +36,14 @@ export interface SincronizacaoResult {
   orcamentosProcessados: number;
   orcamentosCriados: number;
   orcamentosAtualizados: number;
+  painelProcessados: number;
+  painelCriados: number;
+  painelAtualizados: number;
+  painelRemovidos: number;
+  painelHistoricoGravados: number;
+  producaoEtapasProcessados: number;
+  producaoEtapasCriados: number;
+  producaoEtapasAtualizados: number;
   erros: string[];
 }
 
@@ -41,6 +53,8 @@ export type SincronizacaoProgressEtapa =
   | 'clientes'
   | 'prescritores'
   | 'orcamentos'
+  | 'painel'
+  | 'producao_etapas'
   | 'finalizando'
   | 'concluido';
 
@@ -55,6 +69,8 @@ export interface SincronizacaoProgress {
   clientesProcessados: number;
   prescritoresProcessados: number;
   orcamentosProcessados: number;
+  painelProcessados: number;
+  producaoEtapasProcessados: number;
   clientesAtual: number;
   clientesTotal: number;
   percentualClientes: number;
@@ -64,10 +80,44 @@ export interface SincronizacaoProgress {
   orcamentosAtual: number;
   orcamentosTotal: number;
   percentualOrcamentos: number;
+  painelAtual: number;
+  painelTotal: number;
+  percentualPainel: number;
+  producaoEtapasAtual: number;
+  producaoEtapasTotal: number;
+  percentualProducaoEtapas: number;
   erros: number;
 }
 
 export interface SincronizacaoStatus {
   emExecucao: boolean;
   progresso: SincronizacaoProgress | null;
+}
+
+export interface ImportarProducaoEtapasDto {
+  unidade: string;
+  dataInicio: string;
+  dataFim: string;
+}
+
+export interface ImportarProducaoEtapasResponse {
+  unidade: string;
+  processados: number;
+  criados: number;
+  atualizados: number;
+  erros: string[];
+}
+
+export interface ImportarOrcamentosDto {
+  unidade: string;
+  dataInicio: string;
+  dataFim: string;
+}
+
+export interface ImportarOrcamentosResponse {
+  unidade: string;
+  processados: number;
+  criados: number;
+  atualizados: number;
+  erros: string[];
 }

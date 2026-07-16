@@ -9,7 +9,12 @@ import {
   OrcamentoRow,
   ValorCompraRow,
 } from './database.types';
-import { converterObjetoFirebird } from '../common/encoding.util';
+import {
+  converterObjetoFirebird,
+  converterTextoFirebird,
+  corrigirPadroesGravadosErrados,
+  precisaCorrecaoEncoding,
+} from '../common/encoding.util';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const Firebird = require('node-firebird');
@@ -114,6 +119,8 @@ export class DatabaseService {
       password: dbConfig.password,
       role: dbConfig.role,
       lowercase_keys: true,
+      // LIST() e outros TEXT BLOB precisam vir como string (node-firebird #353)
+      blobAsText: true,
     };
 
     if (charset && charset.toUpperCase() !== 'NONE') {
@@ -447,6 +454,109 @@ export class DatabaseService {
     });
   }
 
+  async buscarOrcamentosPorPeriodo(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<OrcamentoRow[]> {
+    const { sql, params } = this.buildOrcamentosPeriodoQuery(unit, start, end);
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    return new Promise<OrcamentoRow[]>((resolve, reject) => {
+      Firebird.attach(options, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          this.logger.error('Erro ao conectar ao banco', attachErr);
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        this.logger.log(
+          `Executando query de orçamentos por período com ${params.length} parâmetros...`,
+        );
+
+        db.query(sql, params, (queryErr: Error, result: any[]) => {
+          db.detach();
+
+          if (queryErr) {
+            this.logger.error(
+              `Erro ao executar consulta de orçamentos por período: ${queryErr.message}`,
+              queryErr,
+            );
+            this.logger.error(`SQL: ${sql.trim()}`);
+            this.logger.error(`Parâmetros: ${JSON.stringify(params)}`);
+            return reject(
+              new InternalServerErrorException('Erro ao consultar orçamentos.'),
+            );
+          }
+
+          const rows = (result ?? []).map((row) =>
+            this.mapOrcamentoRow(converterObjetoFirebird(row, charset)),
+          );
+          this.logger.log(
+            `Orçamentos por período: ${rows.length} registros (${start} a ${end})`,
+          );
+          resolve(rows);
+        });
+      });
+    });
+  }
+
+  private buildOrcamentosPeriodoQuery(
+    unit: number,
+    start: string,
+    end: string,
+  ): { sql: string; params: Array<string | number> } {
+    const sql = `
+      SELECT
+        o.dtmodificacao AS ultima_modificacao,
+        o.cdfil AS filial,
+        o.dtentr AS data_orcamento,
+        o.nrorc AS nrorc,
+        o.serieo AS serieo,
+        o.nrorc || '-' || o.serieo AS nr_orcamento,
+        CASE
+          WHEN COALESCE(o.qtaprov, 0) = 0 THEN 'REJEITADO'
+          ELSE 'APROVADO'
+        END AS status_orcamento,
+        CAST(o.prcobr - COALESCE(o.vrdsc, 0) AS NUMERIC(15, 2)) AS preco_venda,
+        o.prcobr AS preco_cobrado,
+        COALESCE(o.vrdsc, 0) AS desconto_formula,
+        COALESCE(o.cdcli, cap.cdcli) AS codigo_cliente,
+        o.cdfunre AS codigo_vendedor,
+        TRIM(v.nomefun) AS nome_vendedor,
+        TRIM(cap.nomepa) AS nome_cliente,
+        CAST(o.NRCRM AS VARCHAR(20)) AS crm_medico,
+        TRIM(o.UFCRM) AS ufcrm_medico,
+        TRIM(med.NOMEMED) AS nome_medico
+      FROM fc15100 o
+      JOIN fc15000 cap
+        ON cap.cdfil = o.cdfil
+       AND cap.nrorc = o.nrorc
+      JOIN fc08000 v
+        ON v.cdfun = o.cdfunre
+       AND v.cdcon = o.cdconre
+      LEFT JOIN fc04000 med
+        ON med.pfcrm = o.pfcrm
+       AND med.ufcrm = o.ufcrm
+       AND med.nrcrm = o.nrcrm
+      WHERE o.cdfil = ?
+        AND o.dtentr >= ?
+        AND o.dtentr <= ?
+      ORDER BY o.dtentr ASC, o.nrorc ASC, o.serieo ASC
+    `;
+
+    const params: Array<string | number> = [unit, start, end];
+
+    this.logger.log(`Query SQL de orçamentos por período:`);
+    this.logger.log(
+      `  Parâmetros: cdfil=${unit}, dtentr entre ${start} e ${end}`,
+    );
+
+    return { sql, params };
+  }
+
   private buildOrcamentosQuery(
     dataMinimaModificacao: string,
     unit: number,
@@ -618,8 +728,11 @@ export class DatabaseService {
       end,
       filtrarFlagBaixa,
     );
-    return this.executarConsultaCaixa(sql, params, (row) =>
-      this.mapCaixaPagamentoRow(row),
+    return this.executarConsultaCaixa(
+      sql,
+      params,
+      (row) => this.mapCaixaPagamentoRow(row),
+      'pagamentos',
     );
   }
 
@@ -635,8 +748,11 @@ export class DatabaseService {
       end,
       filtrarFlagBaixa,
     );
-    return this.executarConsultaCaixa(sql, params, (row) =>
-      this.mapCaixaItemRow(row),
+    return this.executarConsultaCaixa(
+      sql,
+      params,
+      (row) => this.mapCaixaItemRow(row),
+      'itens',
     );
   }
 
@@ -650,8 +766,11 @@ export class DatabaseService {
       start,
       end,
     );
-    return this.executarConsultaCaixa(sql, params, (row) =>
-      this.mapCaixaRequisicaoPagaRow(row),
+    return this.executarConsultaCaixa(
+      sql,
+      params,
+      (row) => this.mapCaixaRequisicaoPagaRow(row),
+      'requisicoes-pagas',
     );
   }
 
@@ -676,9 +795,11 @@ export class DatabaseService {
     sql: string,
     params: Array<string | number>,
     mapper: (row: Record<string, unknown>) => T,
+    rotulo = 'caixa',
   ): Promise<T[]> {
     const options = this.getConnectOptions();
     const charset = this.getDbCharset();
+    const inicio = Date.now();
 
     return new Promise<T[]>((resolve, reject) => {
       Firebird.attach(options, (attachErr: Error, db: any) => {
@@ -693,7 +814,7 @@ export class DatabaseService {
           db.detach();
 
           if (queryErr) {
-            this.logger.error('Erro ao executar consulta caixa', queryErr);
+            this.logger.error(`Erro ao executar consulta caixa (${rotulo})`, queryErr);
             return reject(
               new InternalServerErrorException('Erro ao consultar banco.'),
             );
@@ -701,6 +822,9 @@ export class DatabaseService {
 
           const rows = (result ?? []).map((row) =>
             mapper(converterObjetoFirebird(row, charset) as Record<string, unknown>),
+          );
+          this.logger.log(
+            `Consulta caixa ${rotulo}: ${rows.length} registro(s) em ${Date.now() - inicio}ms`,
           );
           resolve(rows);
         });
@@ -795,15 +919,7 @@ export class DatabaseService {
         item.vrtot AS valor_item_bruto,
         item.vrliq AS valor_item_liquido,
         item.vrdsc AS desconto_item,
-        COALESCE((
-          SELECT SUM(p.vrpag - COALESCE(p.vrtrc, 0))
-          FROM fc31600 p
-          WHERE p.cdfil = capa.cdfil
-            AND p.cdtml = capa.cdtml
-            AND p.dtope = capa.dtope
-            AND p.operid = capa.operid
-            AND p.nrcpm = capa.nrcpm
-        ), 0) AS pagamento_cupom
+        COALESCE(pag_cupom.pagamento_cupom, 0) AS pagamento_cupom
       FROM fc31100 capa
       JOIN fc31110 item
         ON item.cdfil = capa.cdfil
@@ -811,6 +927,24 @@ export class DatabaseService {
        AND item.dtope = capa.dtope
        AND item.operid = capa.operid
        AND item.nrcpm = capa.nrcpm
+      LEFT JOIN (
+        SELECT
+          p.cdfil,
+          p.cdtml,
+          p.dtope,
+          p.operid,
+          p.nrcpm,
+          SUM(p.vrpag - COALESCE(p.vrtrc, 0)) AS pagamento_cupom
+        FROM fc31600 p
+        WHERE p.cdfil = ?
+          AND p.dtope BETWEEN ? AND ?
+        GROUP BY p.cdfil, p.cdtml, p.dtope, p.operid, p.nrcpm
+      ) pag_cupom
+        ON pag_cupom.cdfil = capa.cdfil
+       AND pag_cupom.cdtml = capa.cdtml
+       AND pag_cupom.dtope = capa.dtope
+       AND pag_cupom.operid = capa.operid
+       AND pag_cupom.nrcpm = capa.nrcpm
       LEFT JOIN fc31200 req
         ON req.cdfil = item.cdfil
        AND req.cdtml = item.cdtml
@@ -825,7 +959,7 @@ export class DatabaseService {
       ORDER BY capa.dtope, capa.nrcpm, item.itemid
     `;
 
-    return { sql, params: [unit, start, end] };
+    return { sql, params: [unit, start, end, unit, start, end] };
   }
 
   private buildCaixaRequisicoesPagasQuery(
@@ -840,31 +974,79 @@ export class DatabaseService {
         r.nrrqu AS requisicao,
         r.nrcpm AS cupom,
         form.nrorc AS nr_orcamento,
-        orc.qtd_formulas AS qtd_formulas,
-        orc.valor_orcamento AS valor_orcamento,
+        (SELECT COUNT(*)
+         FROM fc15100 o
+         WHERE o.cdfil = form.cdfil
+           AND o.nrorc = form.nrorc
+           AND COALESCE(form.nrorc, 0) > 0) AS qtd_formulas,
+        (SELECT SUM(o.prcobr - COALESCE(o.vrdsc, 0))
+         FROM fc15100 o
+         WHERE o.cdfil = form.cdfil
+           AND o.nrorc = form.nrorc
+           AND COALESCE(form.nrorc, 0) > 0) AS valor_orcamento,
         r.vrrqu AS valor_requisicao_bruto,
         r.vrdsc AS desconto_requisicao,
         r.vrliq AS valor_pago_requisicao,
         r.vrrqu - r.vrdsc - r.vrliq AS diferenca_calculo,
-        orc.valor_orcamento - r.vrliq AS gap_orcamento_vs_pago,
+        (SELECT SUM(o.prcobr - COALESCE(o.vrdsc, 0))
+         FROM fc15100 o
+         WHERE o.cdfil = form.cdfil
+           AND o.nrorc = form.nrorc
+           AND COALESCE(form.nrorc, 0) > 0) - r.vrliq AS gap_orcamento_vs_pago,
         vend.cdfun AS codigo_vendedor,
-        fun.nomefun AS vendedor
+        fun.nomefun AS vendedor,
+        CAST(form.nrcrm AS VARCHAR(20)) AS crm_medico,
+        TRIM(form.ufcrm) AS uf_crm_medico,
+        TRIM(m.nomemed) AS nome_medico
       FROM fc17000 r
-      LEFT JOIN fc12100 form
-        ON form.cdfil = r.cdfil
-       AND form.nrrqu = r.nrrqu
-       AND form.serier = '0'
       LEFT JOIN (
         SELECT
-          o.cdfil,
-          o.nrorc,
-          COUNT(*) AS qtd_formulas,
-          SUM(o.prcobr - COALESCE(o.vrdsc, 0)) AS valor_orcamento
-        FROM fc15100 o
-        GROUP BY o.cdfil, o.nrorc
-      ) orc
-        ON orc.cdfil = form.cdfil
-       AND orc.nrorc = form.nrorc
+          direct.cdfil,
+          direct.nrrqu,
+          COALESCE(
+            MAX(CASE WHEN TRIM(direct.serier) = '0' AND COALESCE(direct.nrorc, 0) > 0 THEN direct.nrorc END),
+            MIN(CASE WHEN COALESCE(direct.nrorc, 0) > 0 THEN direct.nrorc END),
+            MAX(CASE WHEN COALESCE(direct.nrorc, 0) > 0 THEN direct.nrorc END),
+            MIN(CASE WHEN COALESCE(fonte.nrorc, 0) > 0 THEN fonte.nrorc END)
+          ) AS nrorc,
+          COALESCE(
+            MAX(CASE WHEN TRIM(direct.serier) = '0' AND COALESCE(direct.nrcrm, 0) > 0 THEN direct.pfcrm END),
+            MAX(CASE WHEN COALESCE(direct.nrcrm, 0) > 0 THEN direct.pfcrm END),
+            MAX(CASE WHEN COALESCE(fonte.nrcrm, 0) > 0 THEN fonte.pfcrm END)
+          ) AS pfcrm,
+          COALESCE(
+            MAX(CASE WHEN TRIM(direct.serier) = '0' AND COALESCE(direct.nrcrm, 0) > 0 THEN direct.ufcrm END),
+            MAX(CASE WHEN COALESCE(direct.nrcrm, 0) > 0 THEN direct.ufcrm END),
+            MAX(CASE WHEN COALESCE(fonte.nrcrm, 0) > 0 THEN fonte.ufcrm END)
+          ) AS ufcrm,
+          COALESCE(
+            MAX(CASE WHEN TRIM(direct.serier) = '0' AND COALESCE(direct.nrcrm, 0) > 0 THEN direct.nrcrm END),
+            MIN(CASE WHEN COALESCE(direct.nrcrm, 0) > 0 THEN direct.nrcrm END),
+            MIN(CASE WHEN COALESCE(fonte.nrcrm, 0) > 0 THEN fonte.nrcrm END)
+          ) AS nrcrm
+        FROM fc12100 direct
+        LEFT JOIN fc12100 fonte
+          ON fonte.cdfil = direct.cdfil
+         AND fonte.nrrqu = direct.nrrqufon
+         AND fonte.serier = direct.serierfon
+         AND COALESCE(direct.nrrqufon, 0) > 0
+        WHERE direct.cdfil = ?
+          AND EXISTS (
+            SELECT 1
+            FROM fc17000 r0
+            WHERE r0.cdfil = direct.cdfil
+              AND r0.nrrqu = direct.nrrqu
+              AND r0.dtefe BETWEEN ? AND ?
+              AND COALESCE(r0.vrliq, 0) <> 0
+          )
+        GROUP BY direct.cdfil, direct.nrrqu
+      ) form
+        ON form.cdfil = r.cdfil
+       AND form.nrrqu = r.nrrqu
+      LEFT JOIN fc04000 m
+        ON m.pfcrm = form.pfcrm
+       AND m.ufcrm = form.ufcrm
+       AND m.nrcrm = form.nrcrm
       LEFT JOIN fc17200 vend
         ON vend.cdfil = r.cdfil
        AND vend.nrrqu = r.nrrqu
@@ -878,7 +1060,7 @@ export class DatabaseService {
       ORDER BY r.dtefe, r.nrcpm, r.nrrqu
     `;
 
-    return { sql, params: [unit, start, end] };
+    return { sql, params: [unit, start, end, unit, start, end] };
   }
 
   private buildCaixaFechamentoDiaQuery(
@@ -1011,30 +1193,54 @@ export class DatabaseService {
     const requisicao = Number(get('requisicao') ?? 0);
     const cupom = Number(get('cupom') ?? 0);
 
+    const nrOrcamento = this.parseNrOrcamentoPositivo(get('nr_orcamento'));
+
     return {
       filial,
       data_pagamento: dataPagamento,
       requisicao,
       cupom,
-      nr_orcamento:
-        get('nr_orcamento') != null ? Number(get('nr_orcamento')) : null,
+      nr_orcamento: nrOrcamento,
       qtd_formulas:
-        get('qtd_formulas') != null ? Number(get('qtd_formulas')) : null,
+        nrOrcamento != null && get('qtd_formulas') != null
+          ? Number(get('qtd_formulas'))
+          : null,
       valor_orcamento:
-        get('valor_orcamento') != null ? Number(get('valor_orcamento')) : null,
+        nrOrcamento != null && get('valor_orcamento') != null
+          ? Number(get('valor_orcamento'))
+          : null,
       valor_requisicao_bruto: Number(get('valor_requisicao_bruto') ?? 0),
       desconto_requisicao: Number(get('desconto_requisicao') ?? 0),
       valor_pago_requisicao: Number(get('valor_pago_requisicao') ?? 0),
       diferenca_calculo: Number(get('diferenca_calculo') ?? 0),
       gap_orcamento_vs_pago:
-        get('gap_orcamento_vs_pago') != null
+        nrOrcamento != null && get('gap_orcamento_vs_pago') != null
           ? Number(get('gap_orcamento_vs_pago'))
           : null,
       codigo_vendedor:
         get('codigo_vendedor') != null ? Number(get('codigo_vendedor')) : null,
       vendedor: get('vendedor') ? String(get('vendedor')).trim() : null,
+      crm_medico:
+        get('crm_medico') != null && String(get('crm_medico')).trim()
+          ? String(get('crm_medico')).trim()
+          : null,
+      uf_crm_medico:
+        get('uf_crm_medico') != null && String(get('uf_crm_medico')).trim()
+          ? String(get('uf_crm_medico')).trim()
+          : null,
+      nome_medico: get('nome_medico')
+        ? String(get('nome_medico')).trim()
+        : null,
       chave_erp: `${filial}-${requisicao}-${cupom}-${dataPagamento}`,
     };
+  }
+
+  private parseNrOrcamentoPositivo(value: unknown): number | null {
+    if (value == null || value === '') {
+      return null;
+    }
+    const numero = Number(value);
+    return Number.isFinite(numero) && numero > 0 ? numero : null;
   }
 
   private mapCaixaFechamentoDiaRow(
@@ -1050,5 +1256,508 @@ export class DatabaseService {
       total_troco: Number(get('total_troco') ?? 0),
       total_liquido: Number(get('total_liquido') ?? 0),
     };
+  }
+
+  async buscarMedicosRepresentantes(
+    cdcon: number,
+    cdfun: number[],
+  ): Promise<import('./database.types').PainelMedicoRepresentanteRow[]> {
+    if (!cdfun.length) {
+      return [];
+    }
+
+    const { sql, params } = this.buildMedicosRepresentantesQuery(cdcon, cdfun);
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    this.logger.log(
+      `Consultando painel médicos: cdcon=${cdcon}, cdfun=[${cdfun.join(',')}]`,
+    );
+
+    return new Promise((resolve, reject) => {
+      Firebird.attach(options, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          this.logger.error('Erro ao conectar ao banco', attachErr);
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        db.query(sql, params, (queryErr: Error, result: any[]) => {
+          db.detach();
+
+          if (queryErr) {
+            this.logger.error(
+              'Erro ao executar consulta de painel médicos',
+              queryErr,
+            );
+            return reject(
+              new InternalServerErrorException('Erro ao consultar banco.'),
+            );
+          }
+
+          const rows = (result ?? []).map((row) =>
+            this.mapPainelMedicoRepresentanteRow(
+              converterObjetoFirebird(row, charset),
+            ),
+          );
+          this.logger.log(`Painel médicos: ${rows.length} registros`);
+          resolve(rows);
+        });
+      });
+    });
+  }
+
+  private buildMedicosRepresentantesQuery(
+    cdcon: number,
+    cdfun: number[],
+  ): { sql: string; params: Array<string | number> } {
+    const placeholders = cdfun.map(() => '?').join(',');
+    const sql = `
+      SELECT
+        TRIM(m.nomemed)                 AS nome_medico,
+        TRIM(m.ufcrm)                   AS uf_crm_medico,
+        CAST(m.nrcrm AS VARCHAR(20))    AS crm_medico,
+        v.cdcon                         AS contrato_representante,
+        v.cdfun                         AS codigo_representante,
+        TRIM(f.nomefun)                 AS nome_representante
+      FROM fc04200 v
+      INNER JOIN fc04000 m
+        ON m.pfcrm = v.pfcrm
+       AND m.ufcrm = v.ufcrm
+       AND m.nrcrm = v.nrcrm
+      LEFT JOIN fc08000 f
+        ON f.cdfun = v.cdfun
+       AND f.cdcon = v.cdcon
+      WHERE v.cdcon = ?
+        AND v.cdfun IN (${placeholders})
+      ORDER BY f.nomefun, m.nomemed
+    `;
+
+    return { sql, params: [cdcon, ...cdfun] };
+  }
+
+  private mapPainelMedicoRepresentanteRow(
+    row: Record<string, unknown>,
+  ): import('./database.types').PainelMedicoRepresentanteRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+
+    return {
+      nome_medico: String(get('nome_medico') ?? '').trim(),
+      uf_crm_medico: String(get('uf_crm_medico') ?? '').trim(),
+      crm_medico: String(get('crm_medico') ?? '').trim(),
+      contrato_representante: Number(get('contrato_representante') ?? 0),
+      codigo_representante: Number(get('codigo_representante') ?? 0),
+      nome_representante: String(get('nome_representante') ?? '').trim(),
+    };
+  }
+
+  async buscarProducaoEtapasResumo(
+    unit: number,
+    options: {
+      start?: string;
+      end?: string;
+      dataMinimaMovimento?: string;
+    },
+  ): Promise<import('./database.types').ProducaoEtapaResumoRow[]> {
+    const { sql, params } = this.buildProducaoEtapasResumoQuery(unit, options);
+    const connectOptions = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    this.logger.log(
+      `Consultando etapas produção: unit=${unit}, modo=${
+        options.dataMinimaMovimento ? 'incremental' : 'periodo'
+      }`,
+    );
+
+    return new Promise((resolve, reject) => {
+      Firebird.attach(connectOptions, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          this.logger.error('Erro ao conectar ao banco', attachErr);
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        db.query(sql, params, (queryErr: Error, result: any[]) => {
+          db.detach();
+
+          if (queryErr) {
+            this.logger.error(
+              `Erro ao executar consulta de etapas produção: ${queryErr.message}`,
+              queryErr,
+            );
+            return reject(
+              new InternalServerErrorException('Erro ao consultar banco.'),
+            );
+          }
+
+          const rows = (result ?? []).map((row) =>
+            this.mapProducaoEtapaResumoRow(
+              converterObjetoFirebird(row, charset),
+            ),
+          );
+          this.logger.log(`Etapas produção: ${rows.length} registros`);
+          resolve(rows);
+        });
+      });
+    });
+  }
+
+  private buildProducaoEtapasResumoQuery(
+    unit: number,
+    options: {
+      start?: string;
+      end?: string;
+      dataMinimaMovimento?: string;
+    },
+  ): { sql: string; params: Array<string | number> } {
+    const params: Array<string | number> = [unit, unit, unit];
+    let filtroMovimento = 'AND p.data BETWEEN ? AND ?';
+
+    if (options.dataMinimaMovimento) {
+      const { data, hora } = this.parseDataHoraMinima(options.dataMinimaMovimento);
+      filtroMovimento = `
+        AND EXISTS (
+          SELECT 1
+          FROM fc12500 p_evt
+          WHERE p_evt.cdfil = p.cdfil
+            AND p_evt.nrrqu = p.nrrqu
+            AND p_evt.serier = p.serier
+            AND (
+              p_evt.data > CAST(? AS DATE)
+              OR (p_evt.data = CAST(? AS DATE) AND p_evt.hora > CAST(? AS TIME))
+            )
+        )
+      `;
+      params.push(data, data, hora);
+    } else {
+      params.push(options.start ?? '', options.end ?? '');
+    }
+
+    const sql = `
+      SELECT
+        p.cdfil                                                 AS filial,
+        p.nrrqu                                                 AS requisicao,
+        TRIM(p.serier)                                          AS formula,
+        TRIM(p.cdetapa)                                         AS cod_etapa,
+        TRIM(e.descricao)                                       AS etapa,
+        e.posicao                                               AS posicao_etapa,
+        MIN(CASE WHEN p.cdopera = '01' THEN p.cdfun END)        AS cod_func_entrada,
+        MIN(CASE WHEN p.cdopera = '01' THEN TRIM(f.nomefun) END) AS func_entrada,
+        MIN(CASE WHEN p.cdopera = '02' THEN p.cdfun END)        AS cod_func_saida,
+        MIN(CASE WHEN p.cdopera = '02' THEN TRIM(f.nomefun) END) AS func_saida,
+        MIN(CASE WHEN p.cdopera = '01' THEN p.data END)         AS data_entrada,
+        MIN(CASE WHEN p.cdopera = '01' THEN p.hora END)         AS hora_entrada,
+        MAX(CASE WHEN p.cdopera = '02' THEN p.data END)         AS data_saida,
+        MAX(CASE WHEN p.cdopera = '02' THEN p.hora END)         AS hora_saida,
+        CASE
+          WHEN MIN(CASE WHEN p.cdopera = '01' THEN p.data END) IS NOT NULL
+           AND MAX(CASE WHEN p.cdopera = '02' THEN p.data END) IS NOT NULL
+           AND MIN(CASE WHEN p.cdopera = '01' THEN p.hora END) IS NOT NULL
+           AND MAX(CASE WHEN p.cdopera = '02' THEN p.hora END) IS NOT NULL
+          THEN DATEDIFF(
+            MINUTE FROM
+            DATEADD(
+              MINUTE,
+              EXTRACT(HOUR FROM MIN(CASE WHEN p.cdopera = '01' THEN p.hora END)) * 60
+              + EXTRACT(MINUTE FROM MIN(CASE WHEN p.cdopera = '01' THEN p.hora END)),
+              CAST(MIN(CASE WHEN p.cdopera = '01' THEN p.data END) AS TIMESTAMP)
+            )
+            TO
+            DATEADD(
+              MINUTE,
+              EXTRACT(HOUR FROM MAX(CASE WHEN p.cdopera = '02' THEN p.hora END)) * 60
+              + EXTRACT(MINUTE FROM MAX(CASE WHEN p.cdopera = '02' THEN p.hora END)),
+              CAST(MAX(CASE WHEN p.cdopera = '02' THEN p.data END) AS TIMESTAMP)
+            )
+          )
+          ELSE NULL
+        END                                                     AS tempo_etapa,
+        TRIM(ff.forma_farmaceutica)                             AS forma_farmaceutica,
+        req.volume                                              AS quantidade,
+        TRIM(req.univol)                                        AS unidade_medida,
+        lab.descrlab                                            AS laboratorio,
+        TRIM(cap.descricao)                                     AS tipo_formula,
+        COALESCE(pa.qtd_principios_ativos, 0)                   AS qtd_principios_ativos,
+        pa.principios_ativos                                    AS principios_ativos,
+        TRIM(emb.descrprd)                                      AS embalagem,
+        TRIM(req.nomepa)                                        AS paciente,
+        CASE
+          WHEN COALESCE(req.cdcli, req_cli.cdcli_fallback, 0) > 0
+          THEN COALESCE(req.cdcli, req_cli.cdcli_fallback)
+          ELSE NULL
+        END                                                     AS codigo_cliente,
+        TRIM(COALESCE(
+          MAX(CASE WHEN c_cli.cdfil = p.cdfil THEN c_cli.nomecli END),
+          MAX(c_cli.nomecli)
+        ))                                                      AS cliente,
+        CAST(COALESCE(req.nrcrm, req_presc.nrcrm_fallback) AS VARCHAR(20)) AS crf,
+        TRIM(COALESCE(req.ufcrm, req_presc.ufcrm_fallback))     AS uf_crf,
+        TRIM(m.nomemed)                                         AS nome_prescritor,
+        req.dtentr                                              AS data_retirada,
+        req.hrret                                               AS hora_retirada
+      FROM fc12500 p
+      INNER JOIN fc12100 req
+        ON req.cdfil  = p.cdfil
+       AND req.nrrqu  = p.nrrqu
+       AND req.serier = p.serier
+      LEFT JOIN (
+        SELECT
+          cdfil,
+          nrrqu,
+          MIN(cdcli) AS cdcli_fallback
+        FROM fc12100
+        WHERE cdfil = ?
+          AND COALESCE(cdcli, 0) > 0
+        GROUP BY cdfil, nrrqu
+      ) req_cli
+        ON req_cli.cdfil = req.cdfil
+       AND req_cli.nrrqu = req.nrrqu
+      LEFT JOIN fc07000 c_cli
+        ON c_cli.cdcli = COALESCE(req.cdcli, req_cli.cdcli_fallback)
+       AND COALESCE(req.cdcli, req_cli.cdcli_fallback, 0) > 0
+      LEFT JOIN fc12540 e
+        ON e.cdetapa = p.cdetapa
+       AND e.tppcp   = p.tppcp
+      LEFT JOIN fc08000 f
+        ON f.cdfun = p.cdfun
+       AND f.cdcon = p.cdcon
+      LEFT JOIN fc0h000 cap
+        ON cap.tpcapsula = req.tpcap
+      LEFT JOIN fc03000 emb
+        ON emb.cdpro = req.cdemb
+      LEFT JOIN (
+        SELECT
+          cdfil,
+          nrrqu,
+          COALESCE(
+            MAX(CASE WHEN TRIM(serier) = '0' AND nrcrm IS NOT NULL THEN pfcrm END),
+            MAX(CASE WHEN nrcrm IS NOT NULL THEN pfcrm END)
+          ) AS pfcrm_fallback,
+          COALESCE(
+            MAX(CASE WHEN TRIM(serier) = '0' AND nrcrm IS NOT NULL THEN ufcrm END),
+            MAX(CASE WHEN nrcrm IS NOT NULL THEN ufcrm END)
+          ) AS ufcrm_fallback,
+          COALESCE(
+            MAX(CASE WHEN TRIM(serier) = '0' AND nrcrm IS NOT NULL THEN nrcrm END),
+            MIN(CASE WHEN nrcrm IS NOT NULL THEN nrcrm END)
+          ) AS nrcrm_fallback
+        FROM fc12100
+        WHERE cdfil = ?
+        GROUP BY cdfil, nrrqu
+      ) req_presc
+        ON req_presc.cdfil = req.cdfil
+       AND req_presc.nrrqu = req.nrrqu
+      LEFT JOIN fc04000 m
+        ON m.pfcrm = COALESCE(req.pfcrm, req_presc.pfcrm_fallback)
+       AND m.ufcrm = COALESCE(req.ufcrm, req_presc.ufcrm_fallback)
+       AND m.nrcrm = COALESCE(req.nrcrm, req_presc.nrcrm_fallback)
+      LEFT JOIN fc12004 ff
+        ON ff.codigo = req.tpformafarma
+      LEFT JOIN (
+        SELECT
+          d.tpformafarma,
+          MIN(TRIM(lab.descrlab)) AS descrlab
+        FROM fc0d100 d
+        INNER JOIN fc0d000 lab
+          ON lab.tplab = d.tplab
+        GROUP BY d.tpformafarma
+      ) lab
+        ON lab.tpformafarma = req.tpformafarma
+      LEFT JOIN (
+        SELECT
+          base.cdfil,
+          base.nrrqu,
+          base.serier,
+          COUNT(*) AS qtd_principios_ativos,
+          (
+            SELECT LIST(x.descr, ', ')
+            FROM (
+              SELECT TRIM(i.descr) AS descr
+              FROM fc12110 i
+              WHERE i.cdfil  = base.cdfil
+                AND i.nrrqu  = base.nrrqu
+                AND i.serier = base.serier
+                AND TRIM(i.tpcmp) = 'C'
+              ORDER BY i.itemid
+            ) x
+          ) AS principios_ativos
+        FROM fc12110 base
+        WHERE TRIM(base.tpcmp) = 'C'
+        GROUP BY base.cdfil, base.nrrqu, base.serier
+      ) pa
+        ON pa.cdfil  = req.cdfil
+       AND pa.nrrqu  = req.nrrqu
+       AND pa.serier = req.serier
+      WHERE p.cdfil = ?
+        ${filtroMovimento}
+      GROUP BY
+        p.cdfil,
+        p.nrrqu,
+        p.serier,
+        p.cdetapa,
+        e.descricao,
+        e.posicao,
+        ff.forma_farmaceutica,
+        req.volume,
+        req.univol,
+        lab.descrlab,
+        cap.descricao,
+        pa.qtd_principios_ativos,
+        pa.principios_ativos,
+        emb.descrprd,
+        req.nomepa,
+        req.cdcli,
+        req_cli.cdcli_fallback,
+        req.nrcrm,
+        req.ufcrm,
+        req_presc.pfcrm_fallback,
+        req_presc.ufcrm_fallback,
+        req_presc.nrcrm_fallback,
+        m.nomemed,
+        req.dtentr,
+        req.hrret
+      HAVING
+        MIN(CASE WHEN p.cdopera = '01' THEN p.data END) IS NOT NULL
+      ORDER BY
+        p.nrrqu,
+        p.serier,
+        e.posicao,
+        p.cdetapa
+    `;
+
+    return { sql, params };
+  }
+
+  private parseDataHoraMinima(value: string): { data: string; hora: string } {
+    const normalizada = value.trim().replace(' ', 'T');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(normalizada)) {
+      return { data: normalizada, hora: '00:00:00' };
+    }
+    const [data, horaRaw] = normalizada.split('T');
+    const hora = horaRaw?.length === 5 ? `${horaRaw}:00` : (horaRaw ?? '00:00:00');
+    return { data, hora: hora.slice(0, 8) };
+  }
+
+  private mapProducaoEtapaResumoRow(
+    row: Record<string, unknown>,
+  ): import('./database.types').ProducaoEtapaResumoRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+
+    const codFuncEntrada = get('cod_func_entrada');
+    const codFuncSaida = get('cod_func_saida');
+    const quantidade = get('quantidade');
+    const tempoEtapa = get('tempo_etapa');
+
+    return {
+      filial: Number(get('filial') ?? 0),
+      requisicao: Number(get('requisicao') ?? 0),
+      formula: String(get('formula') ?? '').trim(),
+      cod_etapa: String(get('cod_etapa') ?? '').trim(),
+      etapa: this.normalizarCampoTextoFirebird(get('etapa')) ?? '',
+      posicao_etapa: Number(get('posicao_etapa') ?? 0),
+      cod_func_entrada:
+        codFuncEntrada != null && codFuncEntrada !== ''
+          ? Number(codFuncEntrada)
+          : null,
+      func_entrada: this.normalizarCampoTextoFirebird(get('func_entrada')),
+      cod_func_saida:
+        codFuncSaida != null && codFuncSaida !== ''
+          ? Number(codFuncSaida)
+          : null,
+      func_saida: this.normalizarCampoTextoFirebird(get('func_saida')),
+      data_entrada: get('data_entrada')
+        ? this.formatDateField(get('data_entrada'))
+        : null,
+      hora_entrada: get('hora_entrada')
+        ? this.formatTimeField(get('hora_entrada'))
+        : null,
+      data_saida: get('data_saida')
+        ? this.formatDateField(get('data_saida'))
+        : null,
+      hora_saida: get('hora_saida')
+        ? this.formatTimeField(get('hora_saida'))
+        : null,
+      tempo_etapa:
+        tempoEtapa != null && tempoEtapa !== '' ? Number(tempoEtapa) : null,
+      forma_farmaceutica: this.normalizarCampoTextoFirebird(
+        get('forma_farmaceutica'),
+      ),
+      quantidade:
+        quantidade != null && quantidade !== '' ? Number(quantidade) : null,
+      unidade_medida: this.normalizarCampoTextoFirebird(get('unidade_medida')),
+      laboratorio: this.normalizarCampoTextoFirebird(get('laboratorio')),
+      tipo_formula: this.normalizarCampoTextoFirebird(get('tipo_formula')),
+      qtd_principios_ativos: Number(get('qtd_principios_ativos') ?? 0),
+      principios_ativos: this.normalizarCampoTextoFirebird(get('principios_ativos')),
+      embalagem: this.normalizarCampoTextoFirebird(get('embalagem')),
+      paciente: this.normalizarCampoTextoFirebird(get('paciente')),
+      codigo_cliente:
+        get('codigo_cliente') != null && get('codigo_cliente') !== ''
+          ? Number(get('codigo_cliente'))
+          : null,
+      cliente: this.normalizarCampoTextoFirebird(get('cliente')),
+      crf:
+        get('crf') != null && String(get('crf')).trim()
+          ? String(get('crf')).trim()
+          : null,
+      uf_crf:
+        get('uf_crf') != null && String(get('uf_crf')).trim()
+          ? String(get('uf_crf')).trim()
+          : null,
+      nome_prescritor: this.normalizarCampoTextoFirebird(get('nome_prescritor')),
+      data_retirada: get('data_retirada')
+        ? this.formatDateField(get('data_retirada'))
+        : null,
+      hora_retirada: get('hora_retirada')
+        ? this.formatTimeField(get('hora_retirada'))
+        : null,
+    };
+  }
+
+  private normalizarCampoTextoFirebird(value: unknown): string | null {
+    if (value == null || value === '') {
+      return null;
+    }
+    if (typeof value === 'function') {
+      return null;
+    }
+
+    const charset = this.getDbCharset();
+    let texto: string;
+
+    if (Buffer.isBuffer(value)) {
+      texto = converterTextoFirebird(value, charset);
+    } else if (typeof value === 'string') {
+      const trimmed = value.trim();
+      texto = precisaCorrecaoEncoding(trimmed)
+        ? converterTextoFirebird(trimmed, charset)
+        : corrigirPadroesGravadosErrados(trimmed);
+    } else {
+      return null;
+    }
+
+    return texto.trim() || null;
+  }
+
+  private formatTimeField(value: unknown): string {
+    if (!value) return '';
+    if (value instanceof Date) {
+      const hours = String(value.getHours()).padStart(2, '0');
+      const minutes = String(value.getMinutes()).padStart(2, '0');
+      const seconds = String(value.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+    const timeStr = String(value).trim();
+    if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) {
+      return timeStr;
+    }
+    if (/^\d{2}:\d{2}$/.test(timeStr)) {
+      return `${timeStr}:00`;
+    }
+    return timeStr.slice(0, 8);
   }
 }

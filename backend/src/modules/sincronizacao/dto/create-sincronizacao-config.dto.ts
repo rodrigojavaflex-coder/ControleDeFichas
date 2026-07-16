@@ -52,6 +52,31 @@ export class CreateSincronizacaoConfigDto {
   ultimaModificacaoOrcamento?: string;
 
   @ApiProperty({
+    description: 'Configuração do painel (contrato + representantes)',
+    example: '9999 1,2',
+    required: false,
+  })
+  @IsOptional()
+  @Matches(/^(\d+)\s+([\d,\s]+)$/, {
+    message:
+      'painelContratoRepresentantes deve estar no formato "9999 1,2"',
+  })
+  painelContratoRepresentantes?: string;
+
+  @ApiProperty({
+    description:
+      'Última data/hora de busca de etapas de produção (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)',
+    example: '2026-01-01T00:00:00',
+    required: false,
+  })
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/, {
+    message:
+      'ultimaModificacaoProducaoEtapas deve estar no formato YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss',
+  })
+  ultimaModificacaoProducaoEtapas?: string;
+
+  @ApiProperty({
     description: 'Intervalo em minutos entre sincronizações',
     example: 60,
     default: 60,

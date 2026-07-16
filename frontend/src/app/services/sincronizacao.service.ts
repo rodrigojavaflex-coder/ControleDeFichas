@@ -8,6 +8,10 @@ import {
   SincronizacaoResult,
   SincronizacaoProgress,
   SincronizacaoStatus,
+  ImportarProducaoEtapasDto,
+  ImportarProducaoEtapasResponse,
+  ImportarOrcamentosDto,
+  ImportarOrcamentosResponse,
 } from '../models/sincronizacao.model';
 import { environment } from '../../environments/environment';
 
@@ -62,6 +66,24 @@ export class SincronizacaoService {
     return this.http.post<SincronizacaoResult[]>(
       `${this.syncApiUrl}/orcamentos`,
       {},
+    );
+  }
+
+  importarProducaoEtapas(
+    data: ImportarProducaoEtapasDto,
+  ): Observable<ImportarProducaoEtapasResponse> {
+    return this.http.post<ImportarProducaoEtapasResponse>(
+      `${this.syncApiUrl}/producao-etapas/importar`,
+      data,
+    );
+  }
+
+  importarOrcamentos(
+    data: ImportarOrcamentosDto,
+  ): Observable<ImportarOrcamentosResponse> {
+    return this.http.post<ImportarOrcamentosResponse>(
+      `${this.syncApiUrl}/orcamentos/importar`,
+      data,
     );
   }
 }

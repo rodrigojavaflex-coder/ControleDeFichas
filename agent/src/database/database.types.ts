@@ -57,6 +57,9 @@ export interface CaixaRequisicaoPagaRow {
   gap_orcamento_vs_pago: number | null;
   codigo_vendedor: number | null;
   vendedor: string | null;
+  crm_medico: string | null;
+  uf_crm_medico: string | null;
+  nome_medico: string | null;
   chave_erp: string;
 }
 
@@ -66,6 +69,49 @@ export interface CaixaFechamentoDiaRow {
   total_bruto: number;
   total_troco: number;
   total_liquido: number;
+}
+
+export interface PainelMedicoRepresentanteRow {
+  nome_medico: string;
+  uf_crm_medico: string;
+  crm_medico: string;
+  contrato_representante: number;
+  codigo_representante: number;
+  nome_representante: string;
+}
+
+export interface ProducaoEtapaResumoRow {
+  filial: number;
+  requisicao: number;
+  formula: string;
+  cod_etapa: string;
+  etapa: string;
+  posicao_etapa: number;
+  cod_func_entrada?: number | null;
+  func_entrada?: string | null;
+  cod_func_saida?: number | null;
+  func_saida?: string | null;
+  data_entrada?: string | null;
+  hora_entrada?: string | null;
+  data_saida?: string | null;
+  hora_saida?: string | null;
+  tempo_etapa?: number | null;
+  forma_farmaceutica?: string | null;
+  quantidade?: number | null;
+  unidade_medida?: string | null;
+  laboratorio?: string | null;
+  tipo_formula?: string | null;
+  qtd_principios_ativos: number;
+  principios_ativos?: string | null;
+  embalagem?: string | null;
+  paciente?: string | null;
+  codigo_cliente?: number | null;
+  cliente?: string | null;
+  crf?: string | null;
+  uf_crf?: string | null;
+  nome_prescritor?: string | null;
+  data_retirada?: string | null;
+  hora_retirada?: string | null;
 }
 
 export interface OrcamentoRow {

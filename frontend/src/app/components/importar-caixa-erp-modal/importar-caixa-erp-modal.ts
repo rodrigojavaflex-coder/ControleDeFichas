@@ -20,6 +20,7 @@ export interface ImportarCaixaErpModalOptions {
   dataFim?: string;
   unidade?: Unidade | '';
   modoPeriodo?: boolean;
+  reimportacaoHistorica?: boolean;
 }
 
 @Component({
@@ -40,6 +41,7 @@ export class ImportarCaixaErpModalComponent {
   loading = false;
   error = '';
   modoPeriodo = false;
+  reimportacaoHistorica = false;
   data = '';
   dataInicio = '';
   dataFim = '';
@@ -54,6 +56,7 @@ export class ImportarCaixaErpModalComponent {
     this.result = null;
     this.previewRows = [];
     this.modoPeriodo = options?.modoPeriodo ?? false;
+    this.reimportacaoHistorica = options?.reimportacaoHistorica ?? false;
 
     const unidadeUsuario = this.obterUnidadeUsuarioLogado();
     this.unidadeBloqueada = !!unidadeUsuario;
@@ -139,6 +142,9 @@ export class ImportarCaixaErpModalComponent {
         unidade: this.unidade,
         dataInicio: inicio,
         dataFim: fim,
+        ...(this.reimportacaoHistorica
+          ? { reimportacaoHistorica: true }
+          : {}),
       })
       .subscribe({
         next: (importResult) => {

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Get, UseGuards, Req, Body } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import {
@@ -10,6 +10,14 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
 import { Usuario } from '../usuarios/entities/usuario.entity';
+import {
+  ImportarProducaoEtapasDto,
+  ImportarProducaoEtapasResponseDto,
+} from './dto/importar-producao-etapas.dto';
+import {
+  ImportarOrcamentosDto,
+  ImportarOrcamentosResponseDto,
+} from './dto/importar-orcamentos.dto';
 
 @ApiTags('sincronizacao')
 @Controller('sincronizacao')
@@ -64,5 +72,33 @@ export class SincronizacaoController {
       emExecucao: this.sincronizacaoService.estaEmExecucao(),
       progresso: this.sincronizacaoService.getProgress(),
     };
+  }
+
+  @Post('producao-etapas/importar')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary: 'Importar etapas de produção por período (não altera watermark automático)',
+  })
+  @ApiResponse({ status: 200, description: 'Importação manual executada' })
+  async importarProducaoEtapas(
+    @Body() dto: ImportarProducaoEtapasDto,
+  ): Promise<ImportarProducaoEtapasResponseDto> {
+    return this.sincronizacaoService.importarProducaoEtapasManual(dto);
+  }
+
+  @Post('orcamentos/importar')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary: 'Importar orçamentos por período (não altera watermark automático)',
+  })
+  @ApiResponse({ status: 200, description: 'Importação manual executada' })
+  async importarOrcamentos(
+    @Body() dto: ImportarOrcamentosDto,
+  ): Promise<ImportarOrcamentosResponseDto> {
+    return this.sincronizacaoService.importarOrcamentosManual(dto);
   }
 }

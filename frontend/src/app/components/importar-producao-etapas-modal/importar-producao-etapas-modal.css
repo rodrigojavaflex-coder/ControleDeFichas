@@ -1,0 +1,99 @@
+.modal-importacao-periodo {
+  max-width: 720px;
+  width: min(96vw, 720px);
+}
+
+.importacao-periodo-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.importacao-periodo-form-grid.importacao-periodo-form-periodo {
+  grid-template-columns: 1fr;
+}
+
+.filter-group-periodo {
+  grid-column: 1 / -1;
+}
+
+.filter-group-periodo app-date-range-filter {
+  display: block;
+  width: 100%;
+}
+
+@media (max-width: 560px) {
+  .importacao-periodo-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.importacao-periodo-erro {
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}
+
+.importacao-periodo-loading {
+  margin: 0.75rem 0;
+}
+
+.importacao-periodo-resultado h4 {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.importacao-periodo-stats {
+  margin: 0 0 0.75rem;
+  padding-left: 1.1rem;
+  color: var(--text-secondary, #475569);
+  font-size: 0.875rem;
+}
+
+.importacao-periodo-preview-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.importacao-periodo-erros-lista {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.8125rem;
+}
+
+.importacao-periodo-erros-lista ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+}
+
+:host-context(body.theme-dark) .importacao-periodo-stats,
+:host-context(body.theme-dark) .importacao-periodo-preview-hint {
+  color: #cbd5e1;
+}
+
+:host-context(body.theme-dark) .importacao-periodo-erro {
+  background: #450a0a;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+:host-context(body.theme-dark) .importacao-periodo-resultado h4 {
+  color: #f1f5f9;
+}
+
+:host-context(body.theme-dark) .importacao-periodo-erros-lista {
+  background: #422006;
+  border-color: #854d0e;
+  color: #fde68a;
+}

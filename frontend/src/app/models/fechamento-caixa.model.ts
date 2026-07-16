@@ -20,6 +20,8 @@ export interface ImportarCaixaErpDto {
   unidade: Unidade;
   dataInicio: string;
   dataFim: string;
+  /** Configuração → importação por período; ignora bloqueio do último fechamento. */
+  reimportacaoHistorica?: boolean;
 }
 
 export interface ImportarCaixaErpResponse {

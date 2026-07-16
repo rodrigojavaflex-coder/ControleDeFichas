@@ -94,6 +94,48 @@ export class SincronizacaoConfig extends BaseEntity {
   ultimaModificacaoOrcamento?: string | null;
 
   @ApiProperty({
+    description:
+      'Configuração do painel: contrato + representantes (ex.: 9999 1,2)',
+    example: '9999 1,2',
+    required: false,
+  })
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  painelContratoRepresentantes?: string | null;
+
+  @ApiProperty({
+    description:
+      'Última data/hora de busca de etapas de produção (watermark de movimentos PCP)',
+    example: '2026-01-01T00:00:00',
+    required: false,
+  })
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    transformer: {
+      from: (value: string | Date | null) => {
+        if (value == null) return null;
+        if (typeof value === 'string') {
+          return value.trim().replace(' ', 'T').slice(0, 19);
+        }
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+      },
+      to: (value: string | Date | null | undefined) => {
+        if (!value) return null;
+        if (typeof value === 'string') {
+          return value.replace('T', ' ').slice(0, 19);
+        }
+        if (value instanceof Date) {
+          const pad = (n: number) => String(n).padStart(2, '0');
+          return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
+        }
+        return null;
+      },
+    },
+  })
+  ultimaModificacaoProducaoEtapas?: string | null;
+
+  @ApiProperty({
     description: 'Intervalo em minutos entre sincronizações',
     example: 60,
     default: 60,

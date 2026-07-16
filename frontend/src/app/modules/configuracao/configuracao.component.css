@@ -1,12 +1,16 @@
 .configuracao-container {
-  max-width: 1200px;
   width: 100%;
-  margin: 2rem auto;
+  max-width: none;
+  min-height: calc((100vh - 64px) / var(--app-zoom-factor, 1));
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
   background: var(--bg-primary, #fff);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-  padding: 2.5rem;
-  transition: all 0.3s ease;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 1.25rem 1.5rem 1.5rem;
+  transition: background-color 0.3s ease;
 }
 
 .form-group {
@@ -94,12 +98,13 @@
 }
 
 .form-title {
-  text-align: center;
-  margin-bottom: 2rem;
+  text-align: left;
+  margin-bottom: 1.25rem;
   color: var(--text-primary, #333);
   font-size: 1.5rem;
   font-weight: 700;
   transition: color 0.3s ease;
+  flex-shrink: 0;
 }
 
 /* Alertas */
@@ -199,8 +204,10 @@
 .tabs {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   border-bottom: 2px solid var(--border-color, #e5e7eb);
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .tab-button {
@@ -227,7 +234,10 @@
 
 /* Seção de Migração */
 .migracao-section {
-  padding: 1.5rem 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .migracao-item {
@@ -488,6 +498,21 @@
   background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
 }
 
+.progress-fill-painel {
+  background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+.progress-fill-etapas {
+  background: linear-gradient(90deg, #ec4899 0%, #db2777 100%);
+}
+
+.sincronizacao-header .header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 /* Estilos para seção de remoção de campos texto (operação irreversível) */
 .migracao-item-warning {
   border: 2px solid #f59e0b;
@@ -543,7 +568,12 @@
 
 /* Seção de Sincronização */
 .sincronizacao-section {
-  padding: 1.5rem 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .sincronizacao-actions {
@@ -579,9 +609,7 @@
 /* Responsividade */
 @media (max-width: 1024px) {
   .configuracao-container {
-    max-width: 95%;
-    margin: 1rem auto;
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .sincronizacao-form .form-grid {
@@ -595,8 +623,7 @@
   }
 
   .configuracao-container {
-    margin: 1rem;
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .tabs {
@@ -621,8 +648,9 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
   gap: 1.5rem;
+  flex-shrink: 0;
 }
 
 .sincronizacao-header > div {
@@ -630,7 +658,10 @@
 }
 
 .saldo-caixa-section {
-  padding: 1.5rem 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .saldo-caixa-grid {
@@ -689,7 +720,23 @@
 }
 
 .importacao-section {
-  padding: 1.5rem 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+}
+
+.importacao-card {
+  padding: 1.25rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f8f9fa);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .importacao-header {
@@ -699,7 +746,8 @@
   gap: 1.5rem;
 }
 
-.btn-importacao-caixa {
+.btn-importacao-caixa,
+.btn-importacao-etapas {
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -710,13 +758,16 @@
     align-items: stretch;
   }
 
-  .btn-importacao-caixa {
+  .btn-importacao-caixa,
+  .btn-importacao-etapas {
     width: 100%;
   }
 }
 
 .sincronizacao-grid-container {
-  overflow-x: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   background: var(--bg-primary, #fff);
   border-radius: 8px;
   border: 1px solid var(--border-color, #e5e7eb);
@@ -819,6 +870,14 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.form-input-inline-painel-contrato {
+  max-width: 110px;
+}
+
+.form-input-inline-painel-reps {
+  max-width: 140px;
+}
+
 .actions-cell {
   white-space: nowrap;
 }
@@ -884,6 +943,6 @@
   }
 
   .sincronizacao-table {
-    min-width: 800px;
+    min-width: 920px;
   }
 }

@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { SincronizacaoConfig } from './entities/sincronizacao-config.entity';
 import { CreateSincronizacaoConfigDto } from './dto/create-sincronizacao-config.dto';
 import { UpdateSincronizacaoConfigDto } from './dto/update-sincronizacao-config.dto';
+import { PainelMedicosService } from '../painel-medicos/painel-medicos.service';
 
 @Injectable()
 export class SincronizacaoConfigService {
   constructor(
     @InjectRepository(SincronizacaoConfig)
     private readonly configRepository: Repository<SincronizacaoConfig>,
+    private readonly painelMedicosService: PainelMedicosService,
   ) {}
 
   async create(dto: CreateSincronizacaoConfigDto): Promise<SincronizacaoConfig> {
@@ -26,10 +28,12 @@ export class SincronizacaoConfigService {
 
     const config = this.configRepository.create({
       ...dto,
-      // Manter como string YYYY-MM-DD, o transformer cuidará da conversão
       ultimaDataCliente: dto.ultimaDataCliente || undefined,
       ultimaDataPrescritor: dto.ultimaDataPrescritor || undefined,
       ultimaModificacaoOrcamento: dto.ultimaModificacaoOrcamento || undefined,
+      painelContratoRepresentantes: dto.painelContratoRepresentantes || undefined,
+      ultimaModificacaoProducaoEtapas:
+        dto.ultimaModificacaoProducaoEtapas || undefined,
     });
 
     return this.configRepository.save(config);
@@ -61,6 +65,17 @@ export class SincronizacaoConfigService {
   ): Promise<SincronizacaoConfig> {
     const config = await this.findOne(id);
 
+    if (
+      dto.painelContratoRepresentantes !== undefined &&
+      dto.painelContratoRepresentantes !== config.painelContratoRepresentantes
+    ) {
+      await this.painelMedicosService.limparForaDoEscopoConfig(
+        config.agente,
+        config.painelContratoRepresentantes,
+        dto.painelContratoRepresentantes || null,
+      );
+    }
+
     // Se está tentando mudar o agente, verificar se não existe outro com o mesmo nome
     if (dto.agente && dto.agente !== config.agente) {
       const existing = await this.configRepository.findOne({
@@ -86,6 +101,14 @@ export class SincronizacaoConfigService {
         dto.ultimaModificacaoOrcamento !== undefined
           ? dto.ultimaModificacaoOrcamento || null
           : config.ultimaModificacaoOrcamento,
+      painelContratoRepresentantes:
+        dto.painelContratoRepresentantes !== undefined
+          ? dto.painelContratoRepresentantes || null
+          : config.painelContratoRepresentantes,
+      ultimaModificacaoProducaoEtapas:
+        dto.ultimaModificacaoProducaoEtapas !== undefined
+          ? dto.ultimaModificacaoProducaoEtapas || null
+          : config.ultimaModificacaoProducaoEtapas,
     });
 
     return this.configRepository.save(config);

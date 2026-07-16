@@ -1,6 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { OrcamentosService } from './orcamentos.service';
 import { OrcamentoRow } from '../database/database.types';
+import { OrcamentosPeriodoDto } from './dto/orcamentos-periodo.dto';
 
 @Controller('v1/orcamentos')
 export class OrcamentosController {
@@ -22,6 +23,18 @@ export class OrcamentosController {
       unitNum,
     );
 
+    return { orcamentos };
+  }
+
+  @Post('periodo')
+  async buscarOrcamentosPorPeriodo(
+    @Body() body: OrcamentosPeriodoDto,
+  ): Promise<{ orcamentos: OrcamentoRow[] }> {
+    const orcamentos = await this.orcamentosService.buscarOrcamentosPorPeriodo(
+      body.unit,
+      body.start,
+      body.end,
+    );
     return { orcamentos };
   }
 }

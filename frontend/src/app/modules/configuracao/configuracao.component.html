@@ -21,7 +21,7 @@
       (click)="activeTab = 'sincronizacao'">
       Sincronização
     </button>
-    @if (canImportarCaixaErp()) {
+    @if (canAcessarAbaImportacao()) {
       <button
         class="tab-button"
         [class.active]="activeTab === 'importacao'"
@@ -320,20 +320,22 @@
         <div>
           <h3 class="section-title">Sincronização Automática de Cadastros</h3>
           <p class="section-description">
-            Configure a sincronização automática de clientes, prescritores e orçamentos dos agentes Firebird.
+            Configure a sincronização automática de clientes, prescritores, orçamentos, painel e etapas de produção dos agentes Firebird.
           </p>
         </div>
-        <button 
-          type="button" 
-          class="btn-migracao" 
-          (click)="executarSincronizacao()"
-          [disabled]="sincronizacaoExecutando">
-          @if (sincronizacaoExecutando) {
-            <i class="fas fa-spinner fa-spin"></i> Sincronizando...
-          } @else {
-            <i class="fas fa-sync"></i> Executar Sincronização Manual
-          }
-        </button>
+        <div class="header-actions">
+          <button 
+            type="button" 
+            class="btn-migracao" 
+            (click)="executarSincronizacao()"
+            [disabled]="sincronizacaoExecutando">
+            @if (sincronizacaoExecutando) {
+              <i class="fas fa-spinner fa-spin"></i> Sincronizando...
+            } @else {
+              <i class="fas fa-sync"></i> Executar Sincronização Manual
+            }
+          </button>
+        </div>
       </div>
 
       @if (sincronizacaoProgress && sincronizacaoExecutando) {
@@ -398,6 +400,32 @@
                 </div>
               </div>
             </div>
+
+            <div class="progress-block progress-block-sub" [class.active]="isSincronizacaoEtapaAtiva('painel')">
+              <div class="progress-sub-header">
+                <span class="progress-sub-label">Painel</span>
+                <span class="progress-sub-value">{{ getSincronizacaoSubProgressLabel('painel') }}</span>
+              </div>
+              <div class="progress-bar progress-bar-sub">
+                <div
+                  class="progress-fill progress-fill-painel"
+                  [style.width.%]="getSincronizacaoSubProgressPercent('painel')">
+                </div>
+              </div>
+            </div>
+
+            <div class="progress-block progress-block-sub" [class.active]="isSincronizacaoEtapaAtiva('producao_etapas')">
+              <div class="progress-sub-header">
+                <span class="progress-sub-label">Etapas produção</span>
+                <span class="progress-sub-value">{{ getSincronizacaoSubProgressLabel('producao_etapas') }}</span>
+              </div>
+              <div class="progress-bar progress-bar-sub">
+                <div
+                  class="progress-fill progress-fill-etapas"
+                  [style.width.%]="getSincronizacaoSubProgressPercent('producao_etapas')">
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       }
@@ -412,6 +440,8 @@
                 <li>Clientes processados: {{ resultado.clientesProcessados }} ({{ resultado.clientesCriados }} criados, {{ resultado.clientesAtualizados }} atualizados)</li>
                 <li>Prescritores processados: {{ resultado.prescritoresProcessados }} ({{ resultado.prescritoresCriados }} criados, {{ resultado.prescritoresAtualizados }} atualizados)</li>
                 <li>Orçamentos processados: {{ resultado.orcamentosProcessados }} ({{ resultado.orcamentosCriados }} criados, {{ resultado.orcamentosAtualizados }} atualizados)</li>
+                <li>Painel processados: {{ resultado.painelProcessados }} ({{ resultado.painelCriados }} criados, {{ resultado.painelAtualizados }} atualizados, {{ resultado.painelRemovidos }} removidos, {{ resultado.painelHistoricoGravados }} histórico)</li>
+                <li>Etapas produção: {{ resultado.producaoEtapasProcessados }} ({{ resultado.producaoEtapasCriados }} criados, {{ resultado.producaoEtapasAtualizados }} atualizados)</li>
                 @if (resultado.erros.length > 0) {
                   <li class="error">Erros: {{ resultado.erros.length }}</li>
                   <details>
@@ -442,6 +472,9 @@
                 <th>Última Data Clientes</th>
                 <th>Última Data Prescritores</th>
                 <th>Última Mod. Orçamentos</th>
+                <th>Filial do Painel</th>
+                <th>Representantes do Painel (ex 1,2)</th>
+                <th>Última Mod. Etapas</th>
                 <th>Intervalo (min)</th>
                 <th>Ações</th>
               </tr>
@@ -501,6 +534,39 @@
                   </td>
                   <td>
                     @if (editando) {
+                      <input
+                        type="number"
+                        min="1"
+                        [(ngModel)]="formSincronizacao[agente.value].painelContrato"
+                        class="form-input-inline form-input-inline-painel-contrato"
+                        placeholder="9999" />
+                    } @else {
+                      {{ formatarPainelContrato(config?.painelContratoRepresentantes) }}
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
+                      <input
+                        type="text"
+                        [(ngModel)]="formSincronizacao[agente.value].painelRepresentantes"
+                        class="form-input-inline form-input-inline-painel-reps"
+                        placeholder="1,2" />
+                    } @else {
+                      {{ formatarPainelRepresentantes(config?.painelContratoRepresentantes) }}
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
+                      <input
+                        type="datetime-local"
+                        [(ngModel)]="formSincronizacao[agente.value].ultimaModificacaoProducaoEtapas"
+                        class="form-input-inline" />
+                    } @else {
+                      {{ formatarDateTime(config?.ultimaModificacaoProducaoEtapas) }}
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
                       <input 
                         type="number" 
                         [(ngModel)]="formSincronizacao[agente.value].intervaloMinutos"
@@ -546,23 +612,63 @@
     </div>
   }
 
-  <!-- Tab: Importação caixa ERP -->
-  @if (activeTab === 'importacao' && canImportarCaixaErp()) {
+  <!-- Tab: Importação -->
+  @if (activeTab === 'importacao' && canAcessarAbaImportacao()) {
     <div class="importacao-section">
-      <div class="importacao-header">
-        <div>
-          <h3 class="section-title">Importação de caixa ERP</h3>
-          <p class="section-description">
-            Busque pagamentos e requisições do Firebird por unidade e período para alimentar o fechamento de caixa.
-          </p>
+      @if (canImportarCaixaErp()) {
+        <div class="importacao-card">
+          <div class="importacao-header">
+            <div>
+              <h3 class="section-title">Importação de caixa ERP</h3>
+              <p class="section-description">
+                Busque pagamentos e requisições do Firebird por unidade e período para alimentar o fechamento de caixa.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="btn-migracao btn-importacao-caixa"
+              (click)="abrirModalImportarCaixaErp()">
+              <i class="fas fa-cloud-download-alt"></i>
+              Buscar caixa ERP por período
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          class="btn-migracao btn-importacao-caixa"
-          (click)="abrirModalImportarCaixaErp()">
-          <i class="fas fa-cloud-download-alt"></i>
-          Buscar caixa ERP por período
-        </button>
+      }
+
+      <div class="importacao-card">
+        <div class="importacao-header">
+          <div>
+            <h3 class="section-title">Orçamentos</h3>
+            <p class="section-description">
+              Importe orçamentos do Firebird por unidade e período (data do orçamento). Não altera o watermark da sincronização automática.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-migracao btn-importacao-orcamentos"
+            (click)="abrirModalImportarOrcamentos()">
+            <i class="fas fa-file-invoice-dollar"></i>
+            Buscar orçamentos por período
+          </button>
+        </div>
+      </div>
+
+      <div class="importacao-card">
+        <div class="importacao-header">
+          <div>
+            <h3 class="section-title">Etapas de produção</h3>
+            <p class="section-description">
+              Importe etapas de produção (SLA) do Firebird por unidade e período. Não altera o watermark da sincronização automática.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-migracao btn-importacao-etapas"
+            (click)="abrirModalImportarProducaoEtapas()">
+            <i class="fas fa-industry"></i>
+            Buscar etapas por período
+          </button>
+        </div>
       </div>
     </div>
   }
@@ -644,3 +750,13 @@
   #caixaErpModal
   (importacaoConcluida)="onImportacaoCaixaConcluida()">
 </app-importar-caixa-erp-modal>
+
+<app-importar-producao-etapas-modal
+  #etapasModal
+  (importacaoConcluida)="onImportacaoEtapasConcluida()">
+</app-importar-producao-etapas-modal>
+
+<app-importar-orcamentos-modal
+  #orcamentosModal
+  (importacaoConcluida)="onImportacaoOrcamentosConcluida()">
+</app-importar-orcamentos-modal>
