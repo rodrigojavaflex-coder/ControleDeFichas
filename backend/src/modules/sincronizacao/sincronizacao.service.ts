@@ -25,6 +25,7 @@ import {
   ImportarOrcamentosDto,
   ImportarOrcamentosResponseDto,
 } from './dto/importar-orcamentos.dto';
+import { ImportacaoManualProgressService } from '../../common/importacao-manual/importacao-manual-progress.service';
 
 interface AgenteCliente {
   cdcli: number;
@@ -177,6 +178,7 @@ export class SincronizacaoService {
     private readonly configService: ConfigService,
     private readonly painelMedicosService: PainelMedicosService,
     private readonly producaoEtapasService: ProducaoEtapasService,
+    private readonly importacaoProgressService: ImportacaoManualProgressService,
   ) {}
 
   private criarResultadoVazio(agente: string, erros: string[] = []): SincronizacaoResult {
@@ -1174,10 +1176,24 @@ export class SincronizacaoService {
       );
     }
 
+    this.importacaoProgressService.iniciar({
+      tipo: 'producao_etapas',
+      unidade: dto.unidade,
+      agente,
+      message: `Preparando importação de etapas (${dto.dataInicio} a ${dto.dataFim})...`,
+    });
+
     const unit = this.agenteCdfilMap[agente];
     const erros: string[] = [];
 
     try {
+      this.importacaoProgressService.atualizar({
+        fase: 'consultando_agente',
+        message: `Consultando agente ${agente} (Firebird)...`,
+        agente,
+        percentual: 5,
+      });
+
       const etapas = await this.producaoEtapasService.buscarPeriodoDoAgente(
         agenteConfig.url,
         agenteConfig.token,
@@ -1187,10 +1203,36 @@ export class SincronizacaoService {
         agente,
       );
 
+      const total = etapas.length;
+      this.importacaoProgressService.atualizar({
+        fase: 'gravando_postgres',
+        message:
+          total > 0
+            ? `Agente retornou ${total} etapas. Gravando no PostgreSQL...`
+            : 'Agente não retornou etapas para o período.',
+        total,
+        atual: 0,
+        percentual: total > 0 ? 10 : 100,
+      });
+
       const lote = await this.producaoEtapasService.processarLote(
         etapas,
         dto.unidade,
+        (stats) => {
+          this.importacaoProgressService.registrarProcessamento({
+            atual: stats.processados,
+            total: stats.total,
+            criados: stats.criados,
+            atualizados: stats.atualizados,
+            erros: erros.length,
+            fase: 'gravando_postgres',
+            message: `Gravando etapas ${stats.processados}/${stats.total} no PostgreSQL...`,
+          });
+        },
       );
+
+      const mensagemFinal = `Importação concluída: ${lote.processados} processados (${lote.criados} criados, ${lote.atualizados} atualizados).`;
+      this.importacaoProgressService.finalizar('completed', mensagemFinal);
 
       return {
         unidade: dto.unidade,
@@ -1200,7 +1242,12 @@ export class SincronizacaoService {
         erros,
       };
     } catch (error: any) {
-      erros.push(error.message || 'Erro desconhecido');
+      const msg = error.message || 'Erro desconhecido';
+      erros.push(msg);
+      this.importacaoProgressService.atualizar({
+        erros: erros.length,
+      });
+      this.importacaoProgressService.finalizar('error', msg);
       return {
         unidade: dto.unidade,
         processados: 0,
@@ -1229,6 +1276,13 @@ export class SincronizacaoService {
       );
     }
 
+    this.importacaoProgressService.iniciar({
+      tipo: 'orcamentos',
+      unidade: dto.unidade,
+      agente,
+      message: `Preparando importação de orçamentos (${dto.dataInicio} a ${dto.dataFim})...`,
+    });
+
     const unit = this.agenteCdfilMap[agente];
     const erros: string[] = [];
     let processados = 0;
@@ -1236,6 +1290,13 @@ export class SincronizacaoService {
     let atualizados = 0;
 
     try {
+      this.importacaoProgressService.atualizar({
+        fase: 'consultando_agente',
+        message: `Consultando agente ${agente} (Firebird)...`,
+        agente,
+        percentual: 5,
+      });
+
       const orcamentos = await this.buscarOrcamentosPeriodoDoAgente(
         agenteConfig.url,
         agenteConfig.token,
@@ -1244,6 +1305,18 @@ export class SincronizacaoService {
         dto.dataFim,
         agente,
       );
+
+      const total = orcamentos.length;
+      this.importacaoProgressService.atualizar({
+        fase: 'gravando_postgres',
+        message:
+          total > 0
+            ? `Agente retornou ${total} orçamentos. Gravando no PostgreSQL...`
+            : 'Agente não retornou orçamentos para o período.',
+        total,
+        atual: 0,
+        percentual: total > 0 ? 10 : 100,
+      });
 
       for (const orcamentoAgente of orcamentos) {
         processados++;
@@ -1262,7 +1335,26 @@ export class SincronizacaoService {
             `Orçamento ${orcamentoAgente.nr_orcamento}: ${error.message || 'Erro desconhecido'}`,
           );
         }
+
+        if (
+          processados === 1 ||
+          processados === total ||
+          processados % 50 === 0
+        ) {
+          this.importacaoProgressService.registrarProcessamento({
+            atual: processados,
+            total,
+            criados,
+            atualizados,
+            erros: erros.length,
+            fase: 'gravando_postgres',
+            message: `Gravando orçamentos ${processados}/${total} no PostgreSQL...`,
+          });
+        }
       }
+
+      const mensagemFinal = `Importação concluída: ${processados} processados (${criados} criados, ${atualizados} atualizados).`;
+      this.importacaoProgressService.finalizar('completed', mensagemFinal);
 
       return {
         unidade: dto.unidade,
@@ -1272,7 +1364,10 @@ export class SincronizacaoService {
         erros,
       };
     } catch (error: any) {
-      erros.push(error.message || 'Erro desconhecido');
+      const msg = error.message || 'Erro desconhecido';
+      erros.push(msg);
+      this.importacaoProgressService.atualizar({ erros: erros.length });
+      this.importacaoProgressService.finalizar('error', msg);
       return {
         unidade: dto.unidade,
         processados,

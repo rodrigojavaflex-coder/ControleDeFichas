@@ -1,18 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output, inject, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { Unidade } from '../../models/usuario.model';
 import { FechamentoCaixaService } from '../../services/fechamento-caixa.service';
+import { ImportacaoManualProgressService } from '../../services/importacao-manual-progress.service';
 import { ErrorModalService } from '../../services/error-modal.service';
 import { AuthService } from '../../services/auth.service';
 import {
   CaixaPreviewRow,
   ImportarCaixaErpResponse,
 } from '../../models/fechamento-caixa.model';
+import { ImportacaoManualProgress } from '../../models/importacao-manual-progress.model';
 import {
   DateRangeFilterComponent,
   DateRangeValue,
 } from '../date-range-filter/date-range-filter';
+import { ImportacaoManualProgressPanelComponent } from '../importacao-manual-progress-panel/importacao-manual-progress-panel';
 
 export interface ImportarCaixaErpModalOptions {
   data?: string;
@@ -26,14 +30,21 @@ export interface ImportarCaixaErpModalOptions {
 @Component({
   selector: 'app-importar-caixa-erp-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateRangeFilterComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DateRangeFilterComponent,
+    ImportacaoManualProgressPanelComponent,
+  ],
   templateUrl: './importar-caixa-erp-modal.html',
   styleUrls: ['./importar-caixa-erp-modal.css'],
 })
-export class ImportarCaixaErpModalComponent {
+export class ImportarCaixaErpModalComponent implements OnDestroy {
   private readonly fechamentoCaixaService = inject(FechamentoCaixaService);
+  private readonly importacaoProgressService = inject(ImportacaoManualProgressService);
   private readonly errorModalService = inject(ErrorModalService);
   private readonly authService = inject(AuthService);
+  private progressSubscription?: Subscription;
 
   unidades = Object.values(Unidade);
 
@@ -50,11 +61,17 @@ export class ImportarCaixaErpModalComponent {
   @Output() importacaoConcluida = new EventEmitter<void>();
   result: ImportarCaixaErpResponse | null = null;
   previewRows: CaixaPreviewRow[] = [];
+  importacaoProgress: ImportacaoManualProgress | null = null;
+
+  ngOnDestroy(): void {
+    this.pararPollingProgresso();
+  }
 
   abrir(options?: ImportarCaixaErpModalOptions): void {
     this.error = '';
     this.result = null;
     this.previewRows = [];
+    this.importacaoProgress = null;
     this.modoPeriodo = options?.modoPeriodo ?? false;
     this.reimportacaoHistorica = options?.reimportacaoHistorica ?? false;
 
@@ -136,6 +153,8 @@ export class ImportarCaixaErpModalComponent {
     this.error = '';
     this.result = null;
     this.previewRows = [];
+    this.importacaoProgress = null;
+    this.iniciarPollingProgresso();
 
     this.fechamentoCaixaService
       .importarCaixaErp({
@@ -155,10 +174,12 @@ export class ImportarCaixaErpModalComponent {
             this.visible = false;
           }
           this.loading = false;
+          this.pararPollingProgresso(true);
           this.importacaoConcluida.emit();
         },
         error: (err) => {
           this.loading = false;
+          this.pararPollingProgresso(true);
           const msg =
             err?.error?.message ||
             (Array.isArray(err?.error?.message)
@@ -204,6 +225,34 @@ export class ImportarCaixaErpModalComponent {
       style: 'currency',
       currency: 'BRL',
     }).format(value ?? 0);
+  }
+
+  private iniciarPollingProgresso(): void {
+    this.pararPollingProgresso();
+    this.progressSubscription = this.importacaoProgressService.iniciarPolling(
+      (progress) => {
+        if (progress) {
+          this.importacaoProgress = progress;
+        }
+      },
+    );
+  }
+
+  private pararPollingProgresso(finalFetch = false): void {
+    if (this.progressSubscription) {
+      this.progressSubscription.unsubscribe();
+      this.progressSubscription = undefined;
+    }
+
+    if (finalFetch) {
+      this.importacaoProgressService.getProgresso().subscribe({
+        next: (progress) => {
+          if (progress) {
+            this.importacaoProgress = progress;
+          }
+        },
+      });
+    }
   }
 
   private obterUnidadeUsuarioLogado(): Unidade | null {

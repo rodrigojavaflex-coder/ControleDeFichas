@@ -49,6 +49,10 @@ export interface ProducaoEtapasSyncResult {
   atualizados: number;
 }
 
+export type ProducaoEtapasProgressCallback = (
+  stats: ProducaoEtapasSyncResult & { total: number },
+) => void;
+
 @Injectable()
 export class ProducaoEtapasService {
   private readonly logger = new Logger(ProducaoEtapasService.name);
@@ -161,12 +165,14 @@ export class ProducaoEtapasService {
   async processarLote(
     registros: AgenteProducaoEtapa[],
     unidade: Unidade,
+    onProgress?: ProducaoEtapasProgressCallback,
   ): Promise<ProducaoEtapasSyncResult> {
     const resultado: ProducaoEtapasSyncResult = {
       processados: 0,
       criados: 0,
       atualizados: 0,
     };
+    const total = registros.length;
 
     for (const registro of registros) {
       resultado.processados++;
@@ -176,6 +182,19 @@ export class ProducaoEtapasService {
       } else {
         resultado.atualizados++;
       }
+
+      if (
+        onProgress &&
+        (resultado.processados === 1 ||
+          resultado.processados === total ||
+          resultado.processados % 50 === 0)
+      ) {
+        onProgress({ ...resultado, total });
+      }
+    }
+
+    if (onProgress && total > 0) {
+      onProgress({ ...resultado, total });
     }
 
     return resultado;

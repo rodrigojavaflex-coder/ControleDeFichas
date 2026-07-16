@@ -63,9 +63,13 @@
 
       <div class="caixa-erp-erro" *ngIf="error">{{ error }}</div>
 
-      <div class="inline-loading caixa-erp-loading" *ngIf="loading">
+      <app-importacao-manual-progress-panel
+        *ngIf="loading"
+        [progress]="importacaoProgress" />
+
+      <div class="inline-loading caixa-erp-loading" *ngIf="loading && !importacaoProgress">
         <div class="spinner"></div>
-        <span>Consultando agente e gravando no PostgreSQL...</span>
+        <span>Iniciando importação...</span>
       </div>
 
       @if (modoPeriodo && result && !loading) {

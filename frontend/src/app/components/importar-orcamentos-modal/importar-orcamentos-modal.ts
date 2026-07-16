@@ -1,15 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output, inject, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { Unidade } from '../../models/usuario.model';
 import { ImportarOrcamentosResponse } from '../../models/sincronizacao.model';
+import { ImportacaoManualProgress } from '../../models/importacao-manual-progress.model';
 import { SincronizacaoService } from '../../services/sincronizacao.service';
+import { ImportacaoManualProgressService } from '../../services/importacao-manual-progress.service';
 import { ErrorModalService } from '../../services/error-modal.service';
 import { AuthService } from '../../services/auth.service';
 import {
   DateRangeFilterComponent,
   DateRangeValue,
 } from '../date-range-filter/date-range-filter';
+import { ImportacaoManualProgressPanelComponent } from '../importacao-manual-progress-panel/importacao-manual-progress-panel';
 
 export interface ImportarOrcamentosModalOptions {
   dataInicio?: string;
@@ -20,14 +24,21 @@ export interface ImportarOrcamentosModalOptions {
 @Component({
   selector: 'app-importar-orcamentos-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateRangeFilterComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    DateRangeFilterComponent,
+    ImportacaoManualProgressPanelComponent,
+  ],
   templateUrl: './importar-orcamentos-modal.html',
   styleUrls: ['./importar-orcamentos-modal.css'],
 })
-export class ImportarOrcamentosModalComponent {
+export class ImportarOrcamentosModalComponent implements OnDestroy {
   private readonly sincronizacaoService = inject(SincronizacaoService);
+  private readonly importacaoProgressService = inject(ImportacaoManualProgressService);
   private readonly errorModalService = inject(ErrorModalService);
   private readonly authService = inject(AuthService);
+  private progressSubscription?: Subscription;
 
   unidades = Object.values(Unidade);
 
@@ -39,12 +50,18 @@ export class ImportarOrcamentosModalComponent {
   unidade: Unidade | '' = '';
   unidadeBloqueada = false;
   result: ImportarOrcamentosResponse | null = null;
+  importacaoProgress: ImportacaoManualProgress | null = null;
 
   @Output() importacaoConcluida = new EventEmitter<void>();
+
+  ngOnDestroy(): void {
+    this.pararPollingProgresso();
+  }
 
   abrir(options?: ImportarOrcamentosModalOptions): void {
     this.error = '';
     this.result = null;
+    this.importacaoProgress = null;
 
     const unidadeUsuario = this.obterUnidadeUsuarioLogado();
     this.unidadeBloqueada = !!unidadeUsuario;
@@ -105,6 +122,8 @@ export class ImportarOrcamentosModalComponent {
     this.loading = true;
     this.error = '';
     this.result = null;
+    this.importacaoProgress = null;
+    this.iniciarPollingProgresso();
 
     this.sincronizacaoService
       .importarOrcamentos({
@@ -116,10 +135,12 @@ export class ImportarOrcamentosModalComponent {
         next: (importResult) => {
           this.result = importResult;
           this.loading = false;
+          this.pararPollingProgresso(true);
           this.importacaoConcluida.emit();
         },
         error: (err) => {
           this.loading = false;
+          this.pararPollingProgresso(true);
           const msg =
             err?.error?.message ||
             (Array.isArray(err?.error?.message)
@@ -151,6 +172,34 @@ export class ImportarOrcamentosModalComponent {
       return value;
     }
     return `${day}/${month}/${year}`;
+  }
+
+  private iniciarPollingProgresso(): void {
+    this.pararPollingProgresso();
+    this.progressSubscription = this.importacaoProgressService.iniciarPolling(
+      (progress) => {
+        if (progress) {
+          this.importacaoProgress = progress;
+        }
+      },
+    );
+  }
+
+  private pararPollingProgresso(finalFetch = false): void {
+    if (this.progressSubscription) {
+      this.progressSubscription.unsubscribe();
+      this.progressSubscription = undefined;
+    }
+
+    if (finalFetch) {
+      this.importacaoProgressService.getProgresso().subscribe({
+        next: (progress) => {
+          if (progress) {
+            this.importacaoProgress = progress;
+          }
+        },
+      });
+    }
   }
 
   private obterUnidadeUsuarioLogado(): Unidade | null {

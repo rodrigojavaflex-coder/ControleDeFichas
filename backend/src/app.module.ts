@@ -22,6 +22,7 @@ import { SincronizacaoModule } from './modules/sincronizacao/sincronizacao.modul
 import { OrcamentosModule } from './modules/orcamentos/orcamentos.module';
 import { FolhaModule } from './modules/folha/folha.module';
 import { FechamentoCaixaModule } from './modules/fechamento-caixa/fechamento-caixa.module';
+import { ImportacaoManualProgressModule } from './common/importacao-manual/importacao-manual-progress.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
 import agentesConfig from './config/agentes.config';
@@ -35,6 +36,7 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
       load: [databaseConfig, appConfig, agentesConfig, legacyDatabasesConfig],
       envFilePath: '.env',
     }),
+    ImportacaoManualProgressModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({

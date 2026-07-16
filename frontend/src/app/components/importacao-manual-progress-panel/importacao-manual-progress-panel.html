@@ -1,0 +1,52 @@
+@if (progress) {
+  <section class="importacao-progress-panel" aria-live="polite">
+    <div class="importacao-progress-header">
+      <div class="importacao-progress-title">
+        <i class="fas fa-sync-alt fa-spin" aria-hidden="true"></i>
+        <span>{{ progress.message }}</span>
+      </div>
+      <span class="importacao-progress-badge">{{ percentual }}%</span>
+    </div>
+
+    <div class="importacao-progress-bar" role="progressbar" [attr.aria-valuenow]="percentual" aria-valuemin="0" aria-valuemax="100">
+      <div class="importacao-progress-fill" [style.width.%]="percentual"></div>
+    </div>
+
+    <div class="importacao-progress-meta">
+      <span class="importacao-progress-fase">Fase: {{ faseLabel }}</span>
+      @if (progress.agente) {
+        <span>Agente: {{ progress.agente }}</span>
+      }
+      @if (contadorLabel) {
+        <span>{{ contadorLabel }}</span>
+      }
+      @if (progress.criados || progress.atualizados) {
+        <span>Criados: {{ progress.criados }} · Atualizados: {{ progress.atualizados }}</span>
+      }
+      @if (progress.erros > 0) {
+        <span class="importacao-progress-erro">Erros: {{ progress.erros }}</span>
+      }
+    </div>
+
+    @if (possivelTravamento) {
+      <div class="importacao-progress-stuck">
+        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+        Sem atualização há {{ segundosSemAtualizacao }}s — verifique agente, backend e logs.
+      </div>
+    }
+
+    @if (progress.logs.length) {
+      <div class="importacao-progress-log">
+        <strong>Atividade recente</strong>
+        <ul>
+          @for (entry of progress.logs; track entry.timestamp + entry.message) {
+            <li>
+              <span class="importacao-progress-log-time">{{ formatLogTime(entry.timestamp) }}</span>
+              {{ entry.message }}
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </section>
+}

@@ -47,6 +47,7 @@ import {
   normalizarFormaTerceiro,
   formaBlocoFechamento,
 } from './utils/caixa-forma.util';
+import { ImportacaoManualProgressService } from '../../common/importacao-manual/importacao-manual-progress.service';
 
 interface AgenteConfig {
   url: string;
@@ -119,6 +120,7 @@ export class FechamentoCaixaService {
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly importacaoProgressService: ImportacaoManualProgressService,
     @InjectRepository(CaixaPagamentoErp)
     private readonly pagamentoRepo: Repository<CaixaPagamentoErp>,
     @InjectRepository(CaixaItemErp)
@@ -160,6 +162,14 @@ export class FechamentoCaixaService {
       throw new BadRequestException('Período de importação inválido.');
     }
 
+    this.importacaoProgressService.iniciar({
+      tipo: 'caixa_erp',
+      unidade: dto.unidade,
+      agente: this.getAgenteNomePorUnidade(dto.unidade),
+      message: `Preparando importação de caixa (${dto.dataInicio} a ${dto.dataFim})...`,
+      segmentosTotal: segmentos.length,
+    });
+
     if (segmentos.length > 1) {
       this.logger.log(
         `Importação fatiada em ${segmentos.length} segmento(s) mensais para evitar timeout do agente.`,
@@ -170,22 +180,45 @@ export class FechamentoCaixaService {
     let itensStats: UpsertStats = { importados: 0, atualizados: 0 };
     let requisicoesStats: UpsertStats = { importados: 0, atualizados: 0 };
 
-    for (const segmento of segmentos) {
-      const statsSegmento = await this.importarSegmentoCaixaErp(
-        agente,
-        dto.unidade,
-        segmento.inicio,
-        segmento.fim,
-      );
-      pagamentosStats = this.somarUpsertStats(
-        pagamentosStats,
-        statsSegmento.pagamentosStats,
-      );
-      itensStats = this.somarUpsertStats(itensStats, statsSegmento.itensStats);
-      requisicoesStats = this.somarUpsertStats(
-        requisicoesStats,
-        statsSegmento.requisicoesStats,
-      );
+    try {
+      for (let i = 0; i < segmentos.length; i++) {
+        const segmento = segmentos[i];
+        this.importacaoProgressService.atualizar({
+          segmentoAtual: i + 1,
+          segmentosTotal: segmentos.length,
+          fase: 'consultando_agente',
+          message: `Segmento ${i + 1}/${segmentos.length}: consultando agente (${segmento.inicio} a ${segmento.fim})...`,
+          percentual: Math.round((i / segmentos.length) * 100),
+        });
+
+        const statsSegmento = await this.importarSegmentoCaixaErp(
+          agente,
+          dto.unidade,
+          segmento.inicio,
+          segmento.fim,
+          i + 1,
+          segmentos.length,
+        );
+        pagamentosStats = this.somarUpsertStats(
+          pagamentosStats,
+          statsSegmento.pagamentosStats,
+        );
+        itensStats = this.somarUpsertStats(itensStats, statsSegmento.itensStats);
+        requisicoesStats = this.somarUpsertStats(
+          requisicoesStats,
+          statsSegmento.requisicoesStats,
+        );
+      }
+
+      this.importacaoProgressService.atualizar({
+        fase: 'finalizando',
+        message: 'Calculando totais consolidados...',
+        percentual: 95,
+      });
+    } catch (error: any) {
+      const msg = error?.message || 'Erro ao importar caixa ERP';
+      this.importacaoProgressService.finalizar('error', msg);
+      throw error;
     }
 
     const totaisPorForma = await this.obterTotaisPorForma(
@@ -210,6 +243,11 @@ export class FechamentoCaixaService {
     const totalLiquido = this.somarLiquido(totaisPorForma);
     const totalLiquidoTerceiro = this.somarLiquido(totaisTerceiro);
     const totalConsolidado = this.somarLiquido(totaisConsolidados);
+
+    this.importacaoProgressService.finalizar(
+      'completed',
+      `Importação concluída: ${pagamentosStats.importados + pagamentosStats.atualizados} pagamentos, ${itensStats.importados + itensStats.atualizados} itens, ${requisicoesStats.importados + requisicoesStats.atualizados} requisições.`,
+    );
 
     return {
       dataInicio: dto.dataInicio,
@@ -268,6 +306,8 @@ export class FechamentoCaixaService {
     unidade: Unidade,
     dataInicio: string,
     dataFim: string,
+    segmentoAtual: number,
+    segmentosTotal: number,
   ): Promise<{
     pagamentosStats: UpsertStats;
     itensStats: UpsertStats;
@@ -283,9 +323,24 @@ export class FechamentoCaixaService {
       `Importando segmento caixa ERP: ${dataInicio}..${dataFim}`,
     );
 
+    const pctBase = Math.round(((segmentoAtual - 1) / segmentosTotal) * 100);
+    const pctSlice = Math.round(100 / segmentosTotal);
+
+    this.importacaoProgressService.atualizar({
+      fase: 'consultando_agente',
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: buscando pagamentos no agente...`,
+      percentual: pctBase,
+    });
+
     const pagamentosResp = await this.chamarAgente<{
       pagamentos: AgenteCaixaPagamentoRow[];
     }>(agente, '/api/v1/caixa/pagamentos', body, 'pagamentos');
+
+    this.importacaoProgressService.atualizar({
+      fase: 'consultando_agente',
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: buscando itens no agente...`,
+      percentual: pctBase + Math.round(pctSlice * 0.15),
+    });
 
     const itensResp = await this.chamarAgente<{ itens: AgenteCaixaItemRow[] }>(
       agente,
@@ -294,9 +349,25 @@ export class FechamentoCaixaService {
       'itens',
     );
 
+    this.importacaoProgressService.atualizar({
+      fase: 'consultando_agente',
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: buscando requisições pagas no agente...`,
+      percentual: pctBase + Math.round(pctSlice * 0.3),
+    });
+
     const requisicoesResp = await this.chamarAgente<{
       requisicoes: AgenteCaixaRequisicaoRow[];
     }>(agente, '/api/v1/caixa/requisicoes-pagas', body, 'requisicoes-pagas');
+
+    const qtdPagamentos = pagamentosResp.pagamentos?.length ?? 0;
+    const qtdItens = itensResp.itens?.length ?? 0;
+    const qtdRequisicoes = requisicoesResp.requisicoes?.length ?? 0;
+
+    this.importacaoProgressService.atualizar({
+      fase: 'gravando_postgres',
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdPagamentos} pagamentos no PostgreSQL...`,
+      percentual: pctBase + Math.round(pctSlice * 0.45),
+    });
 
     const pagamentosStats = await this.upsertPagamentos(
       pagamentosResp.pagamentos ?? [],
@@ -309,6 +380,12 @@ export class FechamentoCaixaService {
     );
     const pagamentoMap = await this.carregarMapaPagamentos(pagamentoChaves);
 
+    this.importacaoProgressService.atualizar({
+      fase: 'gravando_postgres',
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdItens} itens no PostgreSQL...`,
+      percentual: pctBase + Math.round(pctSlice * 0.65),
+    });
+
     const itensStats = await this.upsertItens(
       itensResp.itens ?? [],
       unidade,
@@ -318,11 +395,23 @@ export class FechamentoCaixaService {
       true,
     );
 
+    this.importacaoProgressService.atualizar({
+      fase: 'gravando_postgres',
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdRequisicoes} requisições no PostgreSQL...`,
+      percentual: pctBase + Math.round(pctSlice * 0.85),
+    });
+
     const requisicoesStats = await this.upsertRequisicoes(
       requisicoesResp.requisicoes ?? [],
       unidade,
       true,
     );
+
+    this.importacaoProgressService.atualizar({
+      fase: 'gravando_postgres',
+      message: `Segmento ${segmentoAtual}/${segmentosTotal} concluído (${qtdPagamentos} pag., ${qtdItens} itens, ${qtdRequisicoes} req.).`,
+      percentual: pctBase + pctSlice,
+    });
 
     return { pagamentosStats, itensStats, requisicoesStats };
   }
@@ -435,6 +524,19 @@ export class FechamentoCaixaService {
       throw new ServiceUnavailableException(message);
     } finally {
       clearTimeout(timeoutId);
+    }
+  }
+
+  private getAgenteNomePorUnidade(unidade: Unidade): string {
+    switch (unidade) {
+      case Unidade.INHUMAS:
+        return 'inhumas';
+      case Unidade.UBERABA:
+        return 'uberaba';
+      case Unidade.NERÓPOLIS:
+        return 'neropolis';
+      default:
+        return unidade;
     }
   }
 
