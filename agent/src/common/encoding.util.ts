@@ -210,3 +210,23 @@ export function corrigirEncodingLegadoNullable(
   const normalized = converterTextoFirebird(String(str).trim(), sourceCharset);
   return normalized || null;
 }
+
+/** Descrições do ERP (ex.: etapas PCP) — encoding + maiúsculas pt-BR. */
+export function padronizarDescricaoLegado(
+  str: string | null | undefined,
+  sourceCharset: string = 'NONE',
+): string {
+  if (!str || !String(str).trim()) return '';
+
+  let normalized = precisaCorrecaoEncoding(String(str).trim())
+    ? converterTextoFirebird(str, sourceCharset)
+    : corrigirPadroesGravadosErrados(String(str).trim());
+
+  normalized = normalized.trim().replace(/\s+/g, ' ');
+
+  try {
+    return normalized.toLocaleUpperCase('pt-BR');
+  } catch {
+    return normalized.toUpperCase();
+  }
+}

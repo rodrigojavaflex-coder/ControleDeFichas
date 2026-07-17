@@ -289,9 +289,11 @@
 - Filtro de movimentos: data do evento PCP (`p.data` na FC12500), não `dtentr` (data de retirada é apenas informativa).
 - **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`. Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*).
 - **Importação automática:** integrada à sync geral quando `ultimaModificacaoProducaoEtapas` estiver configurada; filtra movimentos posteriores ao watermark; ao concluir, atualiza watermark com hora do processamento (America/Sao_Paulo), alinhado ao padrão de orçamentos.
-- Registros sem entrada na etapa são excluídos pelo SQL (`HAVING`); etapas só com saída não são importadas.
+- Registros sem entrada na etapa são excluídos pelo SQL (inner join em `evt_ent`); etapas só com saída não são importadas.
+- **Funcionário entrada/saída:** código e nome vêm sempre do **mesmo movimento** na `FC12500`. Entrada (`cdopera = 01`): **primeiro** lançamento cronológico (data/hora). Saída (`cdopera = 02`): **último** lançamento cronológico. Evita misturar `MIN(cdfun)` com `MIN(nomefun)` quando há lançamentos duplicados ou errados no PCP.
+- Campo `etapa` (nome da etapa, `FC12540.descricao`): padronizado em **maiúsculas pt-BR** na importação (ex.: `ENCAPSULAÇÃO`, `SACHÊ INHUMAS`, `ROTULAÇÃO`).
 - Campo `principios_ativos`: texto livre (`TEXT`), lista separada por vírgula.
-- Campo `tempo_etapa`: minutos (inteiro); `NULL` quando entrada/saída incompletas.
+- Campo `tempo_etapa`: minutos (inteiro) entre entrada (primeiro 01) e saída (último 02); `NULL` quando saída incompleta.
 - Campos do prescritor na requisição (`fc12100` + `fc04000`): `nomePrescritor`, `crf`, `ufCrf`; com **fallback** na mesma `nrrqu` quando a fórmula atual não tiver CRM (prioriza série `0`).
 - Campo `codigoCliente` / `cliente`: `req.cdcli` + `FC07000`; com **fallback** do `CDCLI` de outra fórmula da mesma requisição. Nome do cliente: prioriza `FC07000` da **mesma filial** da requisição; se ausente, usa cadastro do mesmo `CDCLI` em **outra filial**.
 - Escopo inicial: importação e persistência; painéis/relatórios são demandas posteriores.

@@ -17,6 +17,7 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PainelMedicosService } from '../painel-medicos/painel-medicos.service';
 import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.service';
 import { parsePainelContratoRepresentantes } from '../../common/utils/painel-config.util';
+import { dividirPeriodoEmSegmentosMensais } from '../../common/utils/data-date.util';
 import {
   ImportarProducaoEtapasDto,
   ImportarProducaoEtapasResponseDto,
@@ -1187,58 +1188,87 @@ export class SincronizacaoService {
     const erros: string[] = [];
 
     try {
-      this.importacaoProgressService.atualizar({
-        fase: 'consultando_agente',
-        message: `Consultando agente ${agente} (Firebird)...`,
-        agente,
-        percentual: 5,
-      });
-
-      const etapas = await this.producaoEtapasService.buscarPeriodoDoAgente(
-        agenteConfig.url,
-        agenteConfig.token,
-        unit,
+      const segmentos = dividirPeriodoEmSegmentosMensais(
         dto.dataInicio,
         dto.dataFim,
-        agente,
       );
+      if (!segmentos.length) {
+        throw new BadRequestException(
+          'Período inválido. Informe dataInicio e dataFim no formato YYYY-MM-DD.',
+        );
+      }
 
-      const total = etapas.length;
-      this.importacaoProgressService.atualizar({
-        fase: 'gravando_postgres',
-        message:
-          total > 0
-            ? `Agente retornou ${total} etapas. Gravando no PostgreSQL...`
-            : 'Agente não retornou etapas para o período.',
-        total,
-        atual: 0,
-        percentual: total > 0 ? 10 : 100,
-      });
+      let processados = 0;
+      let criados = 0;
+      let atualizados = 0;
 
-      const lote = await this.producaoEtapasService.processarLote(
-        etapas,
-        dto.unidade,
-        (stats) => {
-          this.importacaoProgressService.registrarProcessamento({
-            atual: stats.processados,
-            total: stats.total,
-            criados: stats.criados,
-            atualizados: stats.atualizados,
-            erros: erros.length,
-            fase: 'gravando_postgres',
-            message: `Gravando etapas ${stats.processados}/${stats.total} no PostgreSQL...`,
-          });
-        },
-      );
+      for (let i = 0; i < segmentos.length; i++) {
+        const segmento = segmentos[i];
+        const rotuloSegmento = `${segmento.inicio}..${segmento.fim}`;
 
-      const mensagemFinal = `Importação concluída: ${lote.processados} processados (${lote.criados} criados, ${lote.atualizados} atualizados).`;
+        this.importacaoProgressService.atualizar({
+          fase: 'consultando_agente',
+          message: `Consultando etapas ${rotuloSegmento} (${i + 1}/${segmentos.length}) — agente ${agente}...`,
+          agente,
+          percentual: Math.round((i / segmentos.length) * 40) + 5,
+        });
+
+        const etapas = await this.producaoEtapasService.buscarPeriodoDoAgente(
+          agenteConfig.url,
+          agenteConfig.token,
+          unit,
+          segmento.inicio,
+          segmento.fim,
+          agente,
+        );
+
+        if (!etapas.length) {
+          this.logger.log(
+            `[${agente}] Nenhuma etapa no segmento ${rotuloSegmento}`,
+          );
+          continue;
+        }
+
+        this.importacaoProgressService.atualizar({
+          fase: 'gravando_postgres',
+          message: `Segmento ${rotuloSegmento}: gravando ${etapas.length} etapas no PostgreSQL...`,
+          total: processados + etapas.length,
+          atual: processados,
+          percentual: Math.round(((i + 0.5) / segmentos.length) * 90) + 5,
+        });
+
+        const lote = await this.producaoEtapasService.processarLote(
+          etapas,
+          dto.unidade,
+          (stats) => {
+            this.importacaoProgressService.registrarProcessamento({
+              atual: processados + stats.processados,
+              total: processados + stats.total,
+              criados: criados + stats.criados,
+              atualizados: atualizados + stats.atualizados,
+              erros: erros.length,
+              fase: 'gravando_postgres',
+              message: `Gravando etapas ${processados + stats.processados}/${processados + stats.total} (${rotuloSegmento})...`,
+            });
+          },
+        );
+
+        processados += lote.processados;
+        criados += lote.criados;
+        atualizados += lote.atualizados;
+      }
+
+      const mensagemFinal =
+        processados > 0
+          ? `Importação concluída: ${processados} processados (${criados} criados, ${atualizados} atualizados) em ${segmentos.length} segmento(s).`
+          : 'Nenhuma etapa retornada pelo agente para o período informado.';
       this.importacaoProgressService.finalizar('completed', mensagemFinal);
 
       return {
         unidade: dto.unidade,
-        processados: lote.processados,
-        criados: lote.criados,
-        atualizados: lote.atualizados,
+        processados,
+        criados,
+        atualizados,
         erros,
       };
     } catch (error: any) {

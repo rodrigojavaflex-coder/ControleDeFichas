@@ -224,7 +224,7 @@ export class ProducaoEtapasService {
       requisicao: Number(registro.requisicao ?? 0),
       formula,
       codEtapa,
-      etapa: normalizarTextoLegado(registro.etapa) ?? '',
+      etapa: padronizarNomeDeSistemaLegado(registro.etapa || ''),
       posicaoEtapa: Number(registro.posicao_etapa ?? 0),
       codFuncEntrada: registro.cod_func_entrada ?? null,
       funcEntrada: padronizarNomeLegadoNullable(registro.func_entrada),

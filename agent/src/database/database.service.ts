@@ -13,6 +13,7 @@ import {
   converterObjetoFirebird,
   converterTextoFirebird,
   corrigirPadroesGravadosErrados,
+  padronizarDescricaoLegado,
   precisaCorrecaoEncoding,
 } from '../common/encoding.util';
 
@@ -1389,7 +1390,9 @@ export class DatabaseService {
               queryErr,
             );
             return reject(
-              new InternalServerErrorException('Erro ao consultar banco.'),
+              new InternalServerErrorException(
+                `Erro ao consultar banco: ${queryErr.message}`,
+              ),
             );
           }
 
@@ -1413,7 +1416,7 @@ export class DatabaseService {
       dataMinimaMovimento?: string;
     },
   ): { sql: string; params: Array<string | number> } {
-    const params: Array<string | number> = [unit, unit, unit];
+    const params: Array<string | number> = [unit];
     let filtroMovimento = 'AND p.data BETWEEN ? AND ?';
 
     if (options.dataMinimaMovimento) {
@@ -1436,73 +1439,164 @@ export class DatabaseService {
       params.push(options.start ?? '', options.end ?? '');
     }
 
+    params.push(unit, unit, unit, unit);
+
     const sql = `
       SELECT
-        p.cdfil                                                 AS filial,
-        p.nrrqu                                                 AS requisicao,
-        TRIM(p.serier)                                          AS formula,
-        TRIM(p.cdetapa)                                         AS cod_etapa,
-        TRIM(e.descricao)                                       AS etapa,
-        e.posicao                                               AS posicao_etapa,
-        MIN(CASE WHEN p.cdopera = '01' THEN p.cdfun END)        AS cod_func_entrada,
-        MIN(CASE WHEN p.cdopera = '01' THEN TRIM(f.nomefun) END) AS func_entrada,
-        MIN(CASE WHEN p.cdopera = '02' THEN p.cdfun END)        AS cod_func_saida,
-        MIN(CASE WHEN p.cdopera = '02' THEN TRIM(f.nomefun) END) AS func_saida,
-        MIN(CASE WHEN p.cdopera = '01' THEN p.data END)         AS data_entrada,
-        MIN(CASE WHEN p.cdopera = '01' THEN p.hora END)         AS hora_entrada,
-        MAX(CASE WHEN p.cdopera = '02' THEN p.data END)         AS data_saida,
-        MAX(CASE WHEN p.cdopera = '02' THEN p.hora END)         AS hora_saida,
+        stage.cdfil                                               AS filial,
+        stage.nrrqu                                               AS requisicao,
+        TRIM(stage.serier)                                        AS formula,
+        TRIM(stage.cdetapa)                                       AS cod_etapa,
+        TRIM(e.descricao)                                         AS etapa,
+        e.posicao                                                 AS posicao_etapa,
+        evt_ent.cod_func_entrada                                  AS cod_func_entrada,
+        evt_ent.func_entrada                                      AS func_entrada,
+        evt_sai.cod_func_saida                                    AS cod_func_saida,
+        evt_sai.func_saida                                        AS func_saida,
+        evt_ent.data_entrada                                      AS data_entrada,
+        evt_ent.hora_entrada                                      AS hora_entrada,
+        evt_sai.data_saida                                        AS data_saida,
+        evt_sai.hora_saida                                        AS hora_saida,
         CASE
-          WHEN MIN(CASE WHEN p.cdopera = '01' THEN p.data END) IS NOT NULL
-           AND MAX(CASE WHEN p.cdopera = '02' THEN p.data END) IS NOT NULL
-           AND MIN(CASE WHEN p.cdopera = '01' THEN p.hora END) IS NOT NULL
-           AND MAX(CASE WHEN p.cdopera = '02' THEN p.hora END) IS NOT NULL
+          WHEN evt_ent.data_entrada IS NOT NULL
+           AND evt_sai.data_saida IS NOT NULL
+           AND evt_ent.hora_entrada IS NOT NULL
+           AND evt_sai.hora_saida IS NOT NULL
           THEN DATEDIFF(
             MINUTE FROM
             DATEADD(
               MINUTE,
-              EXTRACT(HOUR FROM MIN(CASE WHEN p.cdopera = '01' THEN p.hora END)) * 60
-              + EXTRACT(MINUTE FROM MIN(CASE WHEN p.cdopera = '01' THEN p.hora END)),
-              CAST(MIN(CASE WHEN p.cdopera = '01' THEN p.data END) AS TIMESTAMP)
+              EXTRACT(HOUR FROM evt_ent.hora_entrada) * 60
+              + EXTRACT(MINUTE FROM evt_ent.hora_entrada),
+              CAST(evt_ent.data_entrada AS TIMESTAMP)
             )
             TO
             DATEADD(
               MINUTE,
-              EXTRACT(HOUR FROM MAX(CASE WHEN p.cdopera = '02' THEN p.hora END)) * 60
-              + EXTRACT(MINUTE FROM MAX(CASE WHEN p.cdopera = '02' THEN p.hora END)),
-              CAST(MAX(CASE WHEN p.cdopera = '02' THEN p.data END) AS TIMESTAMP)
+              EXTRACT(HOUR FROM evt_sai.hora_saida) * 60
+              + EXTRACT(MINUTE FROM evt_sai.hora_saida),
+              CAST(evt_sai.data_saida AS TIMESTAMP)
             )
           )
           ELSE NULL
-        END                                                     AS tempo_etapa,
-        TRIM(ff.forma_farmaceutica)                             AS forma_farmaceutica,
-        req.volume                                              AS quantidade,
-        TRIM(req.univol)                                        AS unidade_medida,
-        lab.descrlab                                            AS laboratorio,
-        TRIM(cap.descricao)                                     AS tipo_formula,
-        COALESCE(pa.qtd_principios_ativos, 0)                   AS qtd_principios_ativos,
-        pa.principios_ativos                                    AS principios_ativos,
-        TRIM(emb.descrprd)                                      AS embalagem,
-        TRIM(req.nomepa)                                        AS paciente,
+        END                                                       AS tempo_etapa,
+        TRIM(ff.forma_farmaceutica)                               AS forma_farmaceutica,
+        req.volume                                                AS quantidade,
+        TRIM(req.univol)                                          AS unidade_medida,
+        lab.descrlab                                              AS laboratorio,
+        TRIM(cap.descricao)                                       AS tipo_formula,
+        COALESCE(pa.qtd_principios_ativos, 0)                     AS qtd_principios_ativos,
+        pa.principios_ativos                                      AS principios_ativos,
+        TRIM(emb.descrprd)                                        AS embalagem,
+        TRIM(req.nomepa)                                          AS paciente,
         CASE
           WHEN COALESCE(req.cdcli, req_cli.cdcli_fallback, 0) > 0
           THEN COALESCE(req.cdcli, req_cli.cdcli_fallback)
           ELSE NULL
-        END                                                     AS codigo_cliente,
-        TRIM(COALESCE(
-          MAX(CASE WHEN c_cli.cdfil = p.cdfil THEN c_cli.nomecli END),
-          MAX(c_cli.nomecli)
-        ))                                                      AS cliente,
+        END                                                       AS codigo_cliente,
+        (
+          SELECT TRIM(COALESCE(
+            MAX(CASE WHEN c.cdfil = stage.cdfil THEN c.nomecli END),
+            MAX(c.nomecli)
+          ))
+          FROM fc07000 c
+          WHERE c.cdcli = COALESCE(req.cdcli, req_cli.cdcli_fallback)
+            AND COALESCE(req.cdcli, req_cli.cdcli_fallback, 0) > 0
+        )                                                         AS cliente,
         CAST(COALESCE(req.nrcrm, req_presc.nrcrm_fallback) AS VARCHAR(20)) AS crf,
-        TRIM(COALESCE(req.ufcrm, req_presc.ufcrm_fallback))     AS uf_crf,
-        TRIM(m.nomemed)                                         AS nome_prescritor,
-        req.dtentr                                              AS data_retirada,
-        req.hrret                                               AS hora_retirada
-      FROM fc12500 p
+        TRIM(COALESCE(req.ufcrm, req_presc.ufcrm_fallback))       AS uf_crf,
+        TRIM(m.nomemed)                                           AS nome_prescritor,
+        req.dtentr                                                AS data_retirada,
+        req.hrret                                                 AS hora_retirada
+      FROM (
+        SELECT DISTINCT
+          p.cdfil,
+          p.nrrqu,
+          p.serier,
+          p.cdetapa,
+          p.tppcp
+        FROM fc12500 p
+        WHERE p.cdfil = ?
+          ${filtroMovimento}
+      ) stage
+      INNER JOIN (
+        SELECT
+          p.cdfil,
+          p.nrrqu,
+          p.serier,
+          p.cdetapa,
+          p.tppcp,
+          p.cdfun AS cod_func_entrada,
+          TRIM(f.nomefun) AS func_entrada,
+          p.data AS data_entrada,
+          p.hora AS hora_entrada
+        FROM fc12500 p
+        LEFT JOIN fc08000 f
+          ON f.cdfun = p.cdfun
+         AND f.cdcon = p.cdcon
+        WHERE p.cdopera = '01'
+          AND p.cdfil = ?
+          AND NOT EXISTS (
+            SELECT 1
+            FROM fc12500 p_ant
+            WHERE p_ant.cdfil = p.cdfil
+              AND p_ant.nrrqu = p.nrrqu
+              AND p_ant.serier = p.serier
+              AND p_ant.cdetapa = p.cdetapa
+              AND p_ant.tppcp = p.tppcp
+              AND p_ant.cdopera = '01'
+              AND (
+                p_ant.data < p.data
+                OR (p_ant.data = p.data AND p_ant.hora < p.hora)
+              )
+          )
+      ) evt_ent
+        ON evt_ent.cdfil = stage.cdfil
+       AND evt_ent.nrrqu = stage.nrrqu
+       AND evt_ent.serier = stage.serier
+       AND evt_ent.cdetapa = stage.cdetapa
+       AND evt_ent.tppcp = stage.tppcp
+      LEFT JOIN (
+        SELECT
+          p.cdfil,
+          p.nrrqu,
+          p.serier,
+          p.cdetapa,
+          p.tppcp,
+          p.cdfun AS cod_func_saida,
+          TRIM(f.nomefun) AS func_saida,
+          p.data AS data_saida,
+          p.hora AS hora_saida
+        FROM fc12500 p
+        LEFT JOIN fc08000 f
+          ON f.cdfun = p.cdfun
+         AND f.cdcon = p.cdcon
+        WHERE p.cdopera = '02'
+          AND p.cdfil = ?
+          AND NOT EXISTS (
+            SELECT 1
+            FROM fc12500 p_post
+            WHERE p_post.cdfil = p.cdfil
+              AND p_post.nrrqu = p.nrrqu
+              AND p_post.serier = p.serier
+              AND p_post.cdetapa = p.cdetapa
+              AND p_post.tppcp = p.tppcp
+              AND p_post.cdopera = '02'
+              AND (
+                p_post.data > p.data
+                OR (p_post.data = p.data AND p_post.hora > p.hora)
+              )
+          )
+      ) evt_sai
+        ON evt_sai.cdfil = stage.cdfil
+       AND evt_sai.nrrqu = stage.nrrqu
+       AND evt_sai.serier = stage.serier
+       AND evt_sai.cdetapa = stage.cdetapa
+       AND evt_sai.tppcp = stage.tppcp
       INNER JOIN fc12100 req
-        ON req.cdfil  = p.cdfil
-       AND req.nrrqu  = p.nrrqu
-       AND req.serier = p.serier
+        ON req.cdfil  = stage.cdfil
+       AND req.nrrqu  = stage.nrrqu
+       AND req.serier = stage.serier
       LEFT JOIN (
         SELECT
           cdfil,
@@ -1515,15 +1609,9 @@ export class DatabaseService {
       ) req_cli
         ON req_cli.cdfil = req.cdfil
        AND req_cli.nrrqu = req.nrrqu
-      LEFT JOIN fc07000 c_cli
-        ON c_cli.cdcli = COALESCE(req.cdcli, req_cli.cdcli_fallback)
-       AND COALESCE(req.cdcli, req_cli.cdcli_fallback, 0) > 0
       LEFT JOIN fc12540 e
-        ON e.cdetapa = p.cdetapa
-       AND e.tppcp   = p.tppcp
-      LEFT JOIN fc08000 f
-        ON f.cdfun = p.cdfun
-       AND f.cdcon = p.cdcon
+        ON e.cdetapa = stage.cdetapa
+       AND e.tppcp   = stage.tppcp
       LEFT JOIN fc0h000 cap
         ON cap.tpcapsula = req.tpcap
       LEFT JOIN fc03000 emb
@@ -1591,41 +1679,11 @@ export class DatabaseService {
         ON pa.cdfil  = req.cdfil
        AND pa.nrrqu  = req.nrrqu
        AND pa.serier = req.serier
-      WHERE p.cdfil = ?
-        ${filtroMovimento}
-      GROUP BY
-        p.cdfil,
-        p.nrrqu,
-        p.serier,
-        p.cdetapa,
-        e.descricao,
-        e.posicao,
-        ff.forma_farmaceutica,
-        req.volume,
-        req.univol,
-        lab.descrlab,
-        cap.descricao,
-        pa.qtd_principios_ativos,
-        pa.principios_ativos,
-        emb.descrprd,
-        req.nomepa,
-        req.cdcli,
-        req_cli.cdcli_fallback,
-        req.nrcrm,
-        req.ufcrm,
-        req_presc.pfcrm_fallback,
-        req_presc.ufcrm_fallback,
-        req_presc.nrcrm_fallback,
-        m.nomemed,
-        req.dtentr,
-        req.hrret
-      HAVING
-        MIN(CASE WHEN p.cdopera = '01' THEN p.data END) IS NOT NULL
       ORDER BY
-        p.nrrqu,
-        p.serier,
+        stage.nrrqu,
+        stage.serier,
         e.posicao,
-        p.cdetapa
+        stage.cdetapa
     `;
 
     return { sql, params };
@@ -1657,7 +1715,9 @@ export class DatabaseService {
       requisicao: Number(get('requisicao') ?? 0),
       formula: String(get('formula') ?? '').trim(),
       cod_etapa: String(get('cod_etapa') ?? '').trim(),
-      etapa: this.normalizarCampoTextoFirebird(get('etapa')) ?? '',
+      etapa: padronizarDescricaoLegado(
+        this.normalizarCampoTextoFirebird(get('etapa')),
+      ),
       posicao_etapa: Number(get('posicao_etapa') ?? 0),
       cod_func_entrada:
         codFuncEntrada != null && codFuncEntrada !== ''
