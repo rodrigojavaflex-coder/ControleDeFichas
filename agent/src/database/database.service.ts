@@ -1715,9 +1715,7 @@ export class DatabaseService {
       requisicao: Number(get('requisicao') ?? 0),
       formula: String(get('formula') ?? '').trim(),
       cod_etapa: String(get('cod_etapa') ?? '').trim(),
-      etapa: padronizarDescricaoLegado(
-        this.normalizarCampoTextoFirebird(get('etapa')),
-      ),
+      etapa: padronizarDescricaoLegado(String(get('etapa') ?? '').trim()),
       posicao_etapa: Number(get('posicao_etapa') ?? 0),
       cod_func_entrada:
         codFuncEntrada != null && codFuncEntrada !== ''

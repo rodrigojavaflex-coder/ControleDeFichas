@@ -135,6 +135,8 @@ function fixCorruptedChars(str: string): string {
     .replace(/([A-ZÀ-Ú])ý(?=[A-ZÀ-Ú])/g, '$1É')
     .replace(/([GNRL])ý([AO])/gi, '$1Ç$2')
     .replace(/Çý/gi, 'Çã')
+    .replace(/([BCDFGHJKLMNPQRSTVWXZ])ý(?=[\s,.;!?\-]|$)/gi, '$1Ê')
+    .replace(/([BCDFGHJKLMNPQRSTVWXZ])Ý(?=[\s,.;!?\-]|$)/gi, '$1Ê')
     .replace(/ý/g, 'Ç')
     .replace(/Ý/g, 'Ç')
     .replace(/Ã§/g, 'ç')
@@ -192,6 +194,7 @@ function fixCorruptedChars(str: string): string {
 
 export function corrigirPadroesGravadosErrados(str: string): string {
   return str
+    .replace(/\bSACHÇ\b/gi, 'SACHÊ')
     .replace(/\bCÇpsulas?\b/gi, (match) => match.replace(/CÇ/i, 'Cá'))
     .replace(/\b(\w+)ÇÇo\b/gi, (_, prefix: string) => `${prefix}ção`)
     .replace(/\bJÇ([A-ZÀ-Ú])/g, 'JÉ$1')

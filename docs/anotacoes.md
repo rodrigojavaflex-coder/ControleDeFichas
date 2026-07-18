@@ -1,6 +1,6 @@
 # Anotações / Demandas
 
-> Última revisão: 2026-07-17
+> Última revisão: 2026-07-18
 
 ## Pendente
 
@@ -18,6 +18,7 @@
 - [ ] **Agente WhatsApp (respostas automáticas)** — criar agente de respostas; definir permissões por número (ex.: folha, produção, metas, orçamento).
 - [ ] **Controle de produção (capacidade)** — gerenciar capacidade com base em quantidade de funcionários e fórmulas em produção; ao incluir requisição, calcular tempo de entrega ao cliente.
 - [ ] **Configuração de cálculo por etapas de produção** — valor por etapa concluída; funcionário com etapas que recebe; local para fechamento do período.
+- [ ] **Notas fiscais não transmitidas** — pesquisar na base informações sobre NF-e/NFC-e não transmitidas e criar tela de alerta.
 
 ## Concluído
 

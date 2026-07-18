@@ -138,6 +138,7 @@ export function corrigirEncodingLegado(
 /** Corrige nomes já persistidos/gravados com substituição errada (sem ý). */
 export function corrigirPadroesGravadosErrados(str: string): string {
   return str
+    .replace(/\bSACHÇ\b/gi, 'SACHÊ')
     .replace(/\bCÇpsulas?\b/gi, (match) => match.replace(/CÇ/i, 'Cá'))
     .replace(/\b(\w+)ÇÇo\b/gi, (_, prefix: string) => `${prefix}ção`)
     .replace(/\bJÇ([A-ZÀ-Ú])/g, 'JÉ$1')
@@ -160,6 +161,8 @@ function fixCorruptedChars(str: string): string {
     .replace(/([A-ZÀ-Ú])ý(?=[A-ZÀ-Ú])/g, '$1É')
     .replace(/([GNRL])ý([AO])/gi, '$1Ç$2')
     .replace(/Çý/gi, 'Çã')
+    .replace(/([BCDFGHJKLMNPQRSTVWXZ])ý(?=[\s,.;!?\-]|$)/gi, '$1Ê')
+    .replace(/([BCDFGHJKLMNPQRSTVWXZ])Ý(?=[\s,.;!?\-]|$)/gi, '$1Ê')
     .replace(/ý/g, 'Ç')
     .replace(/Ý/g, 'Ç')
     .replace(/Ã§/g, 'ç')
@@ -251,6 +254,26 @@ export function padronizarNomeLegadoNullable(
 ): string | null {
   if (!nome || !String(nome).trim()) return null;
   return padronizarNomeDeSistemaLegado(nome, sourceCharset);
+}
+
+/** Descrições curtas do ERP (ex.: etapas PCP) — evita re-conversão agressiva no JSON do agente. */
+export function padronizarDescricaoLegado(
+  str: string | null | undefined,
+  sourceCharset: string = 'NONE',
+): string {
+  if (!str || !String(str).trim()) return '';
+
+  let normalized = precisaCorrecaoEncoding(String(str).trim())
+    ? converterTextoFirebird(str, sourceCharset)
+    : corrigirPadroesGravadosErrados(String(str).trim());
+
+  normalized = normalized.trim().replace(/\s+/g, ' ');
+
+  try {
+    return normalized.toLocaleUpperCase('pt-BR');
+  } catch {
+    return normalized.toUpperCase();
+  }
 }
 
 export function normalizarTextoLegado(

@@ -5,7 +5,7 @@ import { ProducaoEtapaResumo } from './entities/producao-etapa-resumo.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import {
   normalizarTextoLegado,
-  padronizarNomeDeSistemaLegado,
+  padronizarDescricaoLegado,
   padronizarNomeLegadoNullable,
 } from '../../common/utils/encoding-legado.util';
 
@@ -224,7 +224,7 @@ export class ProducaoEtapasService {
       requisicao: Number(registro.requisicao ?? 0),
       formula,
       codEtapa,
-      etapa: padronizarNomeDeSistemaLegado(registro.etapa || ''),
+      etapa: padronizarDescricaoLegado(registro.etapa || ''),
       posicaoEtapa: Number(registro.posicao_etapa ?? 0),
       codFuncEntrada: registro.cod_func_entrada ?? null,
       funcEntrada: padronizarNomeLegadoNullable(registro.func_entrada),
