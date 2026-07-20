@@ -22,6 +22,8 @@ import { SincronizacaoModule } from './modules/sincronizacao/sincronizacao.modul
 import { OrcamentosModule } from './modules/orcamentos/orcamentos.module';
 import { FolhaModule } from './modules/folha/folha.module';
 import { FechamentoCaixaModule } from './modules/fechamento-caixa/fechamento-caixa.module';
+import { ProducaoConfigModule } from './modules/producao-config/producao-config.module';
+import { ProducaoProdutividadeModule } from './modules/producao-produtividade/producao-produtividade.module';
 import { ImportacaoManualProgressModule } from './common/importacao-manual/importacao-manual-progress.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
@@ -60,6 +62,8 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     OrcamentosModule,
     FolhaModule,
   FechamentoCaixaModule,
+  ProducaoConfigModule,
+  ProducaoProdutividadeModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],

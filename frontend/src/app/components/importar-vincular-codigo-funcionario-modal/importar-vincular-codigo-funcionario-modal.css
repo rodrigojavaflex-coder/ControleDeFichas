@@ -1,0 +1,229 @@
+.modal-vinculo-funcionario {
+  max-width: 860px;
+  width: min(96vw, 860px);
+}
+
+.vinculo-funcionario-descricao {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--cor-texto-secundario);
+  line-height: 1.45;
+}
+
+.vinculo-funcionario-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.vinculo-funcionario-erro {
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: var(--cor-perigo-clara);
+  border: 1px solid var(--cor-perigo);
+  color: var(--cor-perigo-texto);
+  font-size: 0.875rem;
+}
+
+.vinculo-funcionario-loading {
+  margin: 0.75rem 0;
+}
+
+.vinculo-funcionario-resultado h4,
+.vinculo-funcionario-preview h4 {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--cor-texto-primario);
+}
+
+.vinculo-funcionario-preview-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--cor-texto-secundario);
+}
+
+.vinculo-funcionario-stats {
+  margin: 0 0 0.75rem;
+  padding-left: 1.1rem;
+  color: var(--cor-texto-secundario);
+  font-size: 0.875rem;
+}
+
+.vinculo-funcionario-filtro {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.vinculo-funcionario-filtro .label-campo {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.campo-sm {
+  min-width: 11rem;
+  max-width: 14rem;
+}
+
+.vinculo-funcionario-table-wrap {
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  overflow: auto;
+  max-height: min(360px, 45vh);
+  background: var(--cor-superficie);
+}
+
+.vinculo-funcionario-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  background: var(--cor-superficie);
+}
+
+.vinculo-funcionario-table th,
+.vinculo-funcionario-table td {
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+.vinculo-funcionario-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.vinculo-funcionario-table th {
+  position: sticky;
+  top: 0;
+  background: var(--cor-fundo-alt);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--cor-texto-secundario);
+  z-index: 1;
+}
+
+.vinculo-funcionario-table th.col-atualizar,
+.vinculo-funcionario-table td.col-atualizar {
+  width: 5.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.vinculo-th-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--cor-texto-secundario);
+}
+
+.vinculo-th-check input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.vinculo-row-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  cursor: pointer;
+}
+
+.vinculo-row-check input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.vinculo-funcionario-table tbody tr:hover {
+  background: var(--cor-superficie-hover);
+}
+
+.vinculo-funcionario-table tr.row-selecionada {
+  background: var(--cor-primaria-clara);
+}
+
+.vinculo-funcionario-table tr.row-atualizavel {
+  background: color-mix(in srgb, var(--cor-primaria) 8%, var(--cor-superficie));
+}
+
+.vinculo-funcionario-table tr.row-atualizavel.row-selecionada {
+  background: color-mix(in srgb, var(--cor-primaria) 14%, var(--cor-superficie));
+}
+
+.vinculo-situacao-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vinculo-situacao-badge.situacao-preencher {
+  background: var(--cor-primaria-clara);
+  color: var(--cor-primaria);
+}
+
+.vinculo-situacao-badge.situacao-ok {
+  background: var(--cor-sucesso-clara);
+  color: var(--cor-sucesso);
+}
+
+.vinculo-situacao-badge.situacao-conflito,
+.vinculo-situacao-badge.situacao-ambiguo {
+  background: var(--cor-alerta-clara);
+  color: var(--cor-alerta-texto);
+}
+
+.vinculo-funcionario-vazio {
+  margin: 0.5rem 0;
+  padding: 1rem;
+  text-align: center;
+  color: var(--cor-texto-secundario);
+  border: 1px dashed var(--cor-borda);
+  border-radius: 8px;
+  background: var(--cor-fundo-alt);
+}
+
+.vinculo-funcionario-sem-cadastro {
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--cor-texto-secundario);
+}
+
+.vinculo-funcionario-sem-cadastro summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--cor-alerta-texto);
+}
+
+.vinculo-funcionario-sem-cadastro ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.vinculo-funcionario-confirm-help {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--cor-texto-secundario);
+}
+
+.modal-vinculo-funcionario .modal-rodape-fechar {
+  margin-right: auto;
+}

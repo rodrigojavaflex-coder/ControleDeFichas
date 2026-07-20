@@ -62,9 +62,14 @@ export class FolhaFuncionariosService {
   ): Promise<Funcionario> {
     assertUnidadeFolha(usuario, dto.unidade);
     await this.assertCargoSetorIds(dto.cargoId, dto.setorId);
+    await this.assertCodigoFuncionarioErpUnico(
+      dto.unidade,
+      dto.codigoFuncionarioErp ?? null,
+    );
     const payload: Partial<Funcionario> = {
       nome: dto.nome,
       unidade: dto.unidade,
+      codigoFuncionarioErp: dto.codigoFuncionarioErp ?? null,
       cpf: dto.cpf?.trim() ? dto.cpf.trim() : undefined,
       telefone: dto.telefone?.trim() || null,
       endereco: dto.endereco?.trim() || null,
@@ -337,6 +342,15 @@ export class FolhaFuncionariosService {
     if (dto.cpf !== undefined) {
       entity.cpf = dto.cpf?.trim() ? dto.cpf.trim() : null;
     }
+    if (dto.codigoFuncionarioErp !== undefined) {
+      const unidadeAlvo = (dto.unidade ?? entity.unidade) as Unidade;
+      await this.assertCodigoFuncionarioErpUnico(
+        unidadeAlvo,
+        dto.codigoFuncionarioErp ?? null,
+        id,
+      );
+      entity.codigoFuncionarioErp = dto.codigoFuncionarioErp ?? null;
+    }
 
     if (patchCargoId !== undefined) {
       await this.assertCargoSetorIds(
@@ -559,6 +573,27 @@ export class FolhaFuncionariosService {
       }
       default:
         throw new BadRequestException('Tipo de chave Pix inválido.');
+    }
+  }
+
+  private async assertCodigoFuncionarioErpUnico(
+    unidade: Unidade,
+    codigo: number | null | undefined,
+    ignorarFuncionarioId?: string,
+  ): Promise<void> {
+    if (codigo == null) return;
+    const qb = this.funcionarioRepo
+      .createQueryBuilder('f')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere('f.codigoFuncionarioErp = :codigo', { codigo });
+    if (ignorarFuncionarioId) {
+      qb.andWhere('f.id != :id', { id: ignorarFuncionarioId });
+    }
+    const existente = await qb.getOne();
+    if (existente) {
+      throw new BadRequestException(
+        `Já existe funcionário «${existente.nome}» com o código ERP ${codigo} nesta unidade.`,
+      );
     }
   }
 }

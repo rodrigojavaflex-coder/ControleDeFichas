@@ -1,0 +1,472 @@
+<div class="vendas-page producao-produtividade-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar produtividade (producao-produtividade:read).
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="filters-panel-top">
+        <div class="filters-inline producao-prod-filters producao-prod-filters-compact">
+          @if (unidadeDisabled) {
+            <div class="filter-field filter-field-unidade-fixa">
+              <label class="form-label" for="pp-unidade-fixa">Unidade</label>
+              <select
+                id="pp-unidade-fixa"
+                class="form-control"
+                [ngModel]="unidadeFixa"
+                disabled>
+                @if (unidadeFixa; as u) {
+                  <option [ngValue]="u">{{ u }}</option>
+                }
+              </select>
+            </div>
+          } @else {
+            <div
+              class="filter-field filter-field-unidades"
+              role="button"
+              tabindex="0"
+              title="Clique para marcar/desmarcar todas as unidades"
+              (click)="onUnidadesContainerClick($event)"
+              (keydown.enter)="toggleTodasUnidades()"
+              (keydown.space)="toggleTodasUnidades(); $event.preventDefault()">
+              <div class="filter-section-header">
+                <label>
+                  <i class="fas fa-map-marker-alt filter-title-icon"></i>
+                  Unidades
+                </label>
+                <div class="filter-section-actions">
+                  <button
+                    type="button"
+                    class="btn-filter-action btn-filter-muted btn-filter-icon-only"
+                    title="Remove todas as unidades selecionadas"
+                    aria-label="Limpar unidades"
+                    (click)="limparUnidades(); $event.stopPropagation()">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="unidades-grid">
+                @for (u of unidades; track u) {
+                  <label
+                    class="unidade-item"
+                    [class.is-selected]="selectedUnidades.has(u)">
+                    <input
+                      type="checkbox"
+                      [checked]="selectedUnidades.has(u)"
+                      (change)="toggleUnidade(u, $any($event.target).checked)" />
+                    <span>{{ u }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="filter-field filter-field-competencia">
+            <label class="form-label" for="pp-mes">Competência</label>
+            <div class="producao-prod-competencia-nav">
+              <button
+                type="button"
+                class="btn-filter-action btn-filter-icon-only producao-prod-nav-mes"
+                title="Mês anterior"
+                aria-label="Mês anterior"
+                [disabled]="carregando"
+                (click)="navegarMesAnterior()">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <div class="producao-prod-competencia-combo">
+                <select
+                  id="pp-mes"
+                  class="form-control"
+                  [(ngModel)]="mes"
+                  (ngModelChange)="onCompetenciaChange()"
+                  [disabled]="carregando"
+                  aria-label="Mês da competência">
+                  @for (m of MESES_PT; track m.numero) {
+                    <option [ngValue]="m.numero">{{ m.nome }}</option>
+                  }
+                </select>
+                <select
+                  id="pp-ano"
+                  class="form-control"
+                  [(ngModel)]="ano"
+                  (ngModelChange)="onCompetenciaChange()"
+                  [disabled]="carregando"
+                  aria-label="Ano da competência">
+                  @for (y of anosOpcoes; track y) {
+                    <option [ngValue]="y">{{ y }}</option>
+                  }
+                </select>
+              </div>
+              <button
+                type="button"
+                class="btn-filter-action btn-filter-icon-only producao-prod-nav-mes"
+                title="Próximo mês"
+                aria-label="Próximo mês"
+                [disabled]="carregando"
+                (click)="navegarMesProximo()">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+
+          @if (resultado) {
+            <div class="filter-field filter-field-acao">
+              <label class="form-label">Relatório</label>
+              <button
+                type="button"
+                class="btn btn-imprimir producao-prod-btn-relatorio"
+                title="Gerar relatório da produtividade"
+                aria-label="Abrir configurações de relatório"
+                [disabled]="carregando || gerandoRelatorio"
+                (click)="abrirModalRelatorio()">
+                <i class="fas fa-print" aria-hidden="true"></i>
+                Relatório
+              </button>
+            </div>
+          }
+
+          @if (resultado && temAvisos()) {
+            <div class="filter-field filter-field-acao">
+              <label class="form-label">Alertas</label>
+              <button
+                type="button"
+                class="btn btn-avisos-produtividade producao-prod-btn-visualizar-alertas"
+                title="Ver alertas da consulta ({{ totalLinhasAvisos() }} etapa(s) não contabilizada(s))"
+                aria-label="Visualizar alertas da consulta"
+                (click)="abrirModalAvisos()">
+                <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                Visualizar Alertas
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+
+      @if (carregando) {
+        <div class="loading-message">Consultando produtividade…</div>
+      } @else if (!resultado) {
+        <div class="loading-message">
+          @if (podeSelecionarMultiplasUnidades()) {
+            Selecione uma ou mais unidades para consultar a produtividade.
+          } @else {
+            Ajuste a competência para consultar a produtividade.
+          }
+        </div>
+      } @else {
+        <section class="producao-prod-resumo">
+          <div class="producao-prod-resumo-item">
+            <span class="label">Competência</span>
+            <span class="valor">{{ formatarPeriodo() }}</span>
+          </div>
+          <div class="producao-prod-resumo-item">
+            <span class="label">Unidade(s)</span>
+            <span class="valor">{{ formatarUnidadesResumo() }}</span>
+          </div>
+          <div class="producao-prod-resumo-item">
+            <span class="label">Funcionários</span>
+            <span class="valor">{{ resultado.resumo.totalFuncionarios }}</span>
+          </div>
+          <div class="producao-prod-resumo-item">
+            <span class="label">Etapas contabilizadas</span>
+            <span class="valor">{{ resultado.resumo.totalQuantidade }}</span>
+          </div>
+          <div class="producao-prod-resumo-item destaque">
+            <span class="label">Valor total</span>
+            <span class="valor">{{ formatarMoeda(resultado.resumo.totalValor) }}</span>
+          </div>
+        </section>
+
+        @if (resultado.funcionarios.length === 0) {
+          <div class="no-data-inline">
+            <i class="fas fa-inbox"></i>
+            Nenhuma etapa contabilizada no período para a configuração atual.
+          </div>
+        } @else {
+          <div class="producao-prod-grid-wrap">
+            <table class="producao-prod-grid-table">
+              <thead>
+                <tr>
+                  <th class="col-funcionario">Funcionário</th>
+                  @for (col of colunasEtapas; track col.codEtapa) {
+                    <th class="col-etapa">{{ col.etapa }}</th>
+                  }
+                  <th class="col-total">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of resultado.funcionarios; track chaveFuncionario(f); let i = $index) {
+                  <tr
+                    class="producao-prod-grid-row"
+                    [class.row-even]="i % 2 === 0"
+                    [class.row-odd]="i % 2 !== 0"
+                    [class.is-expanded]="estaExpandido(f)"
+                    tabindex="0"
+                    role="button"
+                    [attr.aria-expanded]="estaExpandido(f)"
+                    (click)="aoClicarLinhaGrid(f)"
+                    (keydown.enter)="aoClicarLinhaGrid(f)"
+                    (keydown.space)="aoClicarLinhaGrid(f); $event.preventDefault()">
+                    <td class="col-funcionario">{{ f.nome }}</td>
+                    @for (col of colunasEtapas; track col.codEtapa) {
+                      <td class="col-etapa col-num">
+                        @if (quantidadeCelula(f, col.codEtapa); as qtd) {
+                          {{ qtd }}
+                        }
+                      </td>
+                    }
+                    <td class="col-total col-num">{{ formatarMoeda(f.totalValor) }}</td>
+                  </tr>
+                  @if (estaExpandido(f)) {
+                    <tr class="producao-prod-grid-detalhe">
+                      <td [attr.colspan]="colspanGridDetalhe()">
+                        <div
+                          class="producao-prod-detalhe-card"
+                          (click)="$event.stopPropagation()">
+                          <header class="producao-prod-detalhe-card-header">
+                            <div class="producao-prod-detalhe-card-titulo">
+                              <h4 class="producao-prod-detalhe-subtitulo">
+                                <i class="fas fa-list-ul" aria-hidden="true"></i>
+                                Detalhamento por etapa
+                                <span class="producao-prod-detalhe-subtitulo-meta">
+                                  · {{ f.totalQuantidade }} etapa(s)
+                                </span>
+                              </h4>
+                              <p class="producao-prod-detalhe-contexto-label">
+                                Contexto do funcionário
+                              </p>
+                              <div class="producao-prod-detalhe-chips">
+                                @if (exibirUnidadeNoCard()) {
+                                  <span class="producao-prod-detalhe-chip">
+                                    <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                                    {{ formatarUnidadesFuncionario(f) }}
+                                  </span>
+                                }
+                                <span class="producao-prod-detalhe-chip">
+                                  <i class="fas fa-building" aria-hidden="true"></i>
+                                  {{ f.setor || '—' }}
+                                </span>
+                                <span class="producao-prod-detalhe-chip">
+                                  <i class="fas fa-id-badge" aria-hidden="true"></i>
+                                  {{ f.cargo || '—' }}
+                                </span>
+                                <span class="producao-prod-detalhe-chip">
+                                  <i class="fas fa-barcode" aria-hidden="true"></i>
+                                  ERP {{ formatarCodigosErp(f) }}
+                                </span>
+                              </div>
+                            </div>
+                          </header>
+                          <div class="producao-prod-detalhe-card-body">
+                            <div class="producao-prod-etapas-table-wrap">
+                              <table class="producao-prod-etapas-table">
+                              <thead>
+                                <tr>
+                                  <th>Etapa</th>
+                                  <th class="col-num">Qtd.</th>
+                                  <th class="col-num">Valor unit.</th>
+                                  <th class="col-num">Valor total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (e of f.etapas; track e.codEtapa) {
+                                  <tr>
+                                    <td>{{ e.etapa }}</td>
+                                    <td class="col-num">{{ e.quantidade }}</td>
+                                    <td class="col-num">{{ formatarMoeda(e.valorUnitario) }}</td>
+                                    <td class="col-num">{{ formatarMoeda(e.valorTotal) }}</td>
+                                  </tr>
+                                }
+                              </tbody>
+                              <tfoot>
+                                <tr>
+                                  <td><strong>Total</strong></td>
+                                  <td class="col-num"><strong>{{ f.totalQuantidade }}</strong></td>
+                                  <td class="col-num"></td>
+                                  <td class="col-num">
+                                    <strong>{{ formatarMoeda(f.totalValor) }}</strong>
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  }
+</div>
+
+@if (modalRelatorioAberto && resultado) {
+  <div class="producao-prod-modal-overlay" (click)="fecharModalRelatorio()">
+    <div
+      class="producao-prod-modal-box producao-prod-modal-relatorio"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="producao-prod-relatorio-modal-titulo"
+      (click)="$event.stopPropagation()">
+      <header class="producao-prod-modal-header">
+        <div class="producao-prod-modal-header-text">
+          <h3 id="producao-prod-relatorio-modal-titulo">Relatório de produtividade</h3>
+          <p class="producao-prod-modal-subtitulo">
+            {{ formatarPeriodo() }} · {{ formatarUnidadesResumo() }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="producao-prod-modal-close"
+          (click)="fecharModalRelatorio()"
+          aria-label="Fechar">
+          ×
+        </button>
+      </header>
+
+      <div class="producao-prod-modal-body">
+        <div class="producao-prod-relatorio-field">
+          <label class="form-label" for="pp-tipo-relatorio">Tipo de relatório</label>
+          <select
+            id="pp-tipo-relatorio"
+            class="form-control"
+            [(ngModel)]="tipoRelatorioSelecionado"
+            [disabled]="gerandoRelatorio">
+            @for (opcao of tiposRelatorio; track opcao.value) {
+              <option [ngValue]="opcao.value">{{ opcao.label }}</option>
+            }
+          </select>
+          <p class="producao-prod-relatorio-dica">
+            @switch (tipoRelatorioSelecionado) {
+              @case ('resumida') {
+                Imprime a grade resumida da tela (primeiro nome do funcionário nas colunas).
+              }
+              @case ('sintetico') {
+                Um bloco por funcionário com detalhamento por etapa, como no card expandido.
+              }
+              @case ('analitico') {
+                Lista cada etapa contabilizada com requisição, fórmula e data de saída.
+              }
+            }
+          </p>
+        </div>
+      </div>
+
+      <footer class="producao-prod-modal-footer">
+        <button
+          type="button"
+          class="btn btn-cancelar"
+          [disabled]="gerandoRelatorio"
+          (click)="fecharModalRelatorio()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn btn-imprimir"
+          [disabled]="gerandoRelatorio"
+          (click)="gerarRelatorio()">
+          @if (gerandoRelatorio) {
+            Gerando…
+          } @else {
+            <i class="fas fa-print" aria-hidden="true"></i>
+            Gerar relatório
+          }
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (modalAvisosAberto && resultado) {
+  <div class="producao-prod-modal-overlay" (click)="fecharModalAvisos()">
+    <div
+      class="producao-prod-modal-box"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="producao-prod-avisos-modal-titulo"
+      (click)="$event.stopPropagation()">
+      <header class="producao-prod-modal-header">
+        <div class="producao-prod-modal-header-text">
+          <h3 id="producao-prod-avisos-modal-titulo">Alertas da consulta</h3>
+          <p class="producao-prod-modal-subtitulo">
+            {{ totalLinhasAvisos() }} etapa(s) não contabilizada(s) no período.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="producao-prod-modal-close"
+          (click)="fecharModalAvisos()"
+          aria-label="Fechar">
+          ×
+        </button>
+      </header>
+
+      <div class="producao-prod-modal-body">
+        @if (temAvisosSemCadastro()) {
+          <section class="producao-prod-avisos producao-prod-avisos-modal">
+            <p class="producao-prod-avisos-titulo">
+              <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+              {{ resultado.avisos.totalLinhasSemCadastro }} etapa(s) — funcionário sem cadastro com código ERP.
+            </p>
+            <p class="producao-prod-avisos-dica">
+              Vincule o código em <strong>Configuração de produção</strong> ou no cadastro de funcionários.
+            </p>
+            <ul class="producao-prod-avisos-lista">
+              @for (item of resultado.avisos.funcionariosSemCadastro; track item.codigoErp) {
+                <li>
+                  <strong>{{ item.nome }}</strong>
+                  · Cód. ERP {{ item.codigoErp }}
+                  · {{ formatarUnidadesAviso(item) }}
+                  · {{ item.totalLinhas }} etapa(s)
+                </li>
+              }
+            </ul>
+            @if (resultado.avisos.funcionariosSemCadastroOcultos > 0) {
+              <p class="producao-prod-avisos-mais">
+                … e mais {{ resultado.avisos.funcionariosSemCadastroOcultos }} funcionário(s) não listado(s).
+              </p>
+            }
+          </section>
+        }
+
+        @if (temAvisosSemEtapaVinculada()) {
+          <section class="producao-prod-avisos producao-prod-avisos-etapa producao-prod-avisos-modal">
+            <p class="producao-prod-avisos-titulo">
+              <i class="fas fa-user-cog" aria-hidden="true"></i>
+              {{ resultado.avisos.totalLinhasSemEtapaVinculada }} etapa(s) — funcionário sem etapa vinculada na configuração.
+            </p>
+            <p class="producao-prod-avisos-dica">
+              Revise em <strong>Configuração de produção</strong> → etapas do funcionário.
+            </p>
+            <ul class="producao-prod-avisos-lista">
+              @for (item of resultado.avisos.funcionariosSemEtapaVinculada; track item.codigoErp) {
+                <li>
+                  <strong>{{ item.nome }}</strong>
+                  · Cód. ERP {{ item.codigoErp }}
+                  · {{ formatarUnidadesAviso(item) }}
+                  · {{ item.totalLinhas }} etapa(s)
+                  · {{ formatarEtapasSemVinculo(item) }}
+                </li>
+              }
+            </ul>
+            @if (resultado.avisos.funcionariosSemEtapaVinculadaOcultos > 0) {
+              <p class="producao-prod-avisos-mais">
+                … e mais {{ resultado.avisos.funcionariosSemEtapaVinculadaOcultos }} funcionário(s) não listado(s).
+              </p>
+            }
+          </section>
+        }
+      </div>
+
+      <footer class="producao-prod-modal-footer">
+        <button type="button" class="btn btn-cancelar" (click)="fecharModalAvisos()">
+          Fechar
+        </button>
+      </footer>
+    </div>
+  </div>
+}

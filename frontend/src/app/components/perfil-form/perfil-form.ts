@@ -93,8 +93,12 @@ export class PerfilFormComponent implements OnInit {
   public onPermissionFilterChange(filter: string): void {
     this.permissionFilter = filter;
     this.filteredPermissionGroups = {};
+    const term = filter.trim().toLowerCase();
     Object.entries(this.permissionGroups).forEach(([group, perms]) => {
-      const filtered = perms.filter(item => item.label.toLowerCase().includes(filter.toLowerCase()));
+      const groupMatches = this.formatGroupName(group).toLowerCase().includes(term);
+      const filtered = groupMatches
+        ? perms
+        : perms.filter((item) => item.label.toLowerCase().includes(term));
       if (filtered.length) {
         this.filteredPermissionGroups[group] = filtered;
       }

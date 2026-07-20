@@ -670,6 +670,27 @@
           </button>
         </div>
       </div>
+
+      @if (canVincularCodigoFuncionario()) {
+        <div class="importacao-card">
+          <div class="importacao-header">
+            <div>
+              <h3 class="section-title">Vincular código funcionário</h3>
+              <p class="section-description">
+                Cruza nomes de <strong>funcSaida</strong> (etapas importadas) com o cadastro de funcionários
+                e preenche <strong>codigoFuncionarioErp</strong> quando o match por nome é único.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="btn-migracao btn-importacao-vinculo-func"
+              (click)="abrirModalVincularCodigoFuncionario()">
+              <i class="fas fa-link"></i>
+              Vincular código funcionário
+            </button>
+          </div>
+        </div>
+      }
     </div>
   }
 
@@ -760,3 +781,8 @@
   #orcamentosModal
   (importacaoConcluida)="onImportacaoOrcamentosConcluida()">
 </app-importar-orcamentos-modal>
+
+<app-importar-vincular-codigo-funcionario-modal
+  #vinculoFuncModal
+  (importacaoConcluida)="onVinculoCodigoFuncionarioConcluido($event)">
+</app-importar-vincular-codigo-funcionario-modal>

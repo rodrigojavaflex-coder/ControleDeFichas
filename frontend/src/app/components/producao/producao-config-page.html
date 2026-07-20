@@ -1,0 +1,421 @@
+<div class="vendas-page producao-config-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar a configuração de produção (producao-config:read).
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="filters-panel-top">
+        <div class="filters-inline producao-filters-unidade-row">
+          <div class="filter-field">
+            <label class="form-label" for="pc-unidade">Unidade</label>
+            <select
+              id="pc-unidade"
+              class="form-control"
+              [(ngModel)]="unidadeFiltro"
+              [disabled]="unidadeDisabled"
+              (ngModelChange)="onUnidadeChange()">
+              @if (!unidadeDisabled) {
+                <option value="">Selecione…</option>
+              }
+              @for (u of unidades; track u) {
+                <option [ngValue]="u">{{ u }}</option>
+              }
+            </select>
+          </div>
+          @if (unidadeFiltro) {
+            <button
+              type="button"
+              class="btn btn-imprimir producao-relatorio-btn"
+              [disabled]="!podeImprimirRelatorio()"
+              (click)="imprimirRelatorio()">
+              <i class="fas fa-print" [class.fa-spin]="relatorioCarregando"></i>
+              {{ relatorioCarregando ? 'Gerando…' : 'Relatório' }}
+            </button>
+          }
+        </div>
+      </section>
+
+      @if (!unidadeFiltro) {
+        <div class="loading-message">Selecione uma unidade para carregar a configuração.</div>
+      } @else {
+        <div class="producao-config-split">
+          <!-- Painel etapas -->
+          <section class="producao-config-panel">
+            <header class="producao-panel-top producao-panel-top-etapas">
+              <div class="producao-etapas-titulo-grupo">
+                <h3>Etapas remuneradas</h3>
+                <div class="producao-etapas-busca">
+                  <input
+                    id="pc-filtro-nome-etapa"
+                    type="search"
+                    class="form-control"
+                    [(ngModel)]="filtroNomeEtapa"
+                    placeholder="Filtrar por nome…"
+                    autocomplete="off"
+                    aria-label="Filtrar etapas por nome" />
+                </div>
+              </div>
+              <div class="producao-etapas-filtro">
+                <label class="form-label" for="pc-filtro-etapas">Exibir</label>
+                <select
+                  id="pc-filtro-etapas"
+                  class="form-control"
+                  [(ngModel)]="filtroEtapas">
+                  <option value="todas">Todas</option>
+                  <option value="recebe">Recebe</option>
+                  <option value="nao_recebe">Não recebe</option>
+                </select>
+              </div>
+              @if (podeEditar()) {
+                <button
+                  type="button"
+                  class="btn btn-salvar producao-etapas-salvar"
+                  [disabled]="!etapasDirty || salvandoEtapas || carregandoEtapas"
+                  (click)="salvarEtapas()">
+                  {{ salvandoEtapas ? 'Salvando…' : 'Salvar etapas' }}
+                </button>
+              }
+            </header>
+
+            @if (carregandoEtapas) {
+              <div class="loading-message">Carregando etapas…</div>
+            } @else if (etapas.length === 0) {
+              <div class="no-data-inline">
+                <i class="fas fa-inbox"></i> Nenhuma etapa importada para esta unidade.
+              </div>
+            } @else if (etapasFiltradas().length === 0) {
+              <div class="no-data-inline">
+                <i class="fas fa-filter"></i> Nenhuma etapa para o filtro selecionado.
+              </div>
+            } @else {
+              <div class="producao-etapas-grid" role="list">
+                <div class="producao-etapas-grid-head" aria-hidden="true">
+                  <span class="col-recebe">Recebe</span>
+                  <span class="col-etapa">Etapa</span>
+                  <span class="col-valor">Valor</span>
+                </div>
+                @for (row of etapasFiltradas(); track row.codEtapa) {
+                  <div
+                    class="producao-etapas-grid-row"
+                    role="listitem"
+                    [class.row-dirty]="row.dirty"
+                    [class.row-valor-invalid]="etapaValorInvalido(row)">
+                    <label class="col-recebe producao-etapas-check">
+                      <input
+                        type="checkbox"
+                        [checked]="row.recebe"
+                        [disabled]="!podeEditar()"
+                        (change)="alternarRecebeEtapa(row)"
+                        [attr.aria-label]="'Recebe ' + row.etapa" />
+                    </label>
+                    <span class="col-etapa" [title]="row.etapa">{{ row.etapa }}</span>
+                    <div class="col-valor">
+                      <input
+                        type="text"
+                        class="form-control form-control-inline"
+                        [class.input-invalid]="etapaValorInvalido(row)"
+                        [(ngModel)]="row.valorDisplay"
+                        [disabled]="!podeEditar() || !row.recebe"
+                        [required]="row.recebe"
+                        (input)="onValorEtapaInput(row)"
+                        (blur)="onValorEtapaBlur(row)" />
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+
+          <!-- Painel funcionários -->
+          <section class="producao-config-panel">
+            <header class="producao-panel-top producao-panel-top-compact">
+              <div class="producao-panel-title-row">
+                <h3>Funcionários</h3>
+                @if (podeEditar()) {
+                  <div class="producao-func-acoes">
+                    <button
+                      type="button"
+                      class="btn btn-salvar producao-aplicar-etapas-btn"
+                      [disabled]="!podeAplicarEtapasSelecionados()"
+                      (click)="abrirConfirmacaoAplicarEtapas()"
+                      title="Aplica etapas remuneradas salvas aos funcionários selecionados">
+                      <i class="fas fa-users-cog" [class.fa-spin]="processandoAcaoEtapas && acaoEtapasModal === 'aplicar'"></i>
+                      Aplicar etapas
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-excluir producao-remover-etapas-btn"
+                      [disabled]="!podeAplicarEtapasSelecionados()"
+                      (click)="abrirConfirmacaoRemoverEtapas()"
+                      title="Remove todas as etapas configuradas dos funcionários selecionados">
+                      <i class="fas fa-eraser" [class.fa-spin]="processandoAcaoEtapas && acaoEtapasModal === 'remover'"></i>
+                      Remover etapas
+                    </button>
+                  </div>
+                }
+              </div>
+              <p class="producao-panel-legenda">
+                Somente funcionários com código ERP cadastrado.
+              </p>
+              <div class="producao-func-filtros">
+                <div class="producao-func-filtro-nome">
+                  <input
+                    id="pc-filtro-nome-func"
+                    type="search"
+                    class="form-control"
+                    [(ngModel)]="filtroNomeFuncionario"
+                    placeholder="Filtrar por nome…"
+                    autocomplete="off"
+                    aria-label="Filtrar funcionários por nome" />
+                </div>
+                <div class="producao-func-filtro-select">
+                  <label class="form-label" for="pc-filtro-setor">Setor</label>
+                  <select
+                    id="pc-filtro-setor"
+                    class="form-control"
+                    [(ngModel)]="filtroSetorFuncionario">
+                    <option value="">Todos</option>
+                    @for (s of setoresDisponiveis(); track s) {
+                      <option [value]="s">{{ s }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="producao-func-filtro-select">
+                  <label class="form-label" for="pc-filtro-cargo">Cargo</label>
+                  <select
+                    id="pc-filtro-cargo"
+                    class="form-control"
+                    [(ngModel)]="filtroCargoFuncionario">
+                    <option value="">Todos</option>
+                    @for (c of cargosDisponiveis(); track c) {
+                      <option [value]="c">{{ c }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="producao-func-filtro-select">
+                  <label class="form-label" for="pc-filtro-etapas-func">Etapas</label>
+                  <select
+                    id="pc-filtro-etapas-func"
+                    class="form-control"
+                    [(ngModel)]="filtroEtapasFuncionario">
+                    <option value="todas">Todos</option>
+                    <option value="com_etapas">Com etapas</option>
+                    <option value="sem_etapas">Sem etapas</option>
+                  </select>
+                </div>
+              </div>
+            </header>
+
+            @if (carregandoFuncionarios) {
+              <div class="loading-message">Carregando funcionários…</div>
+            } @else if (funcionarios.length === 0) {
+              <div class="no-data-inline">
+                <i class="fas fa-inbox"></i>
+                Nenhum funcionário com código ERP nesta unidade. Cadastre o código no formulário de funcionários.
+              </div>
+            } @else if (funcionariosFiltrados().length === 0) {
+              <div class="no-data-inline">
+                <i class="fas fa-filter"></i>
+                Nenhum funcionário para o filtro selecionado.
+              </div>
+            } @else {
+              @if (podeEditar()) {
+                <div class="producao-func-selecao-bar">
+                  <label class="producao-func-check-all">
+                    <input
+                      type="checkbox"
+                      [checked]="todosFuncionariosFiltradosSelecionados()"
+                      [indeterminate]="selecaoFuncionariosIndeterminada()"
+                      (change)="toggleSelecionarTodosFuncionarios()"
+                      aria-label="Selecionar todos os funcionários visíveis" />
+                    <span>Selecionar todos</span>
+                  </label>
+                  @if (qtdFuncionariosSelecionados() > 0) {
+                    <span class="producao-func-selecao-count">
+                      {{ qtdFuncionariosSelecionados() }} selecionado(s)
+                    </span>
+                  }
+                </div>
+              }
+              <ul class="producao-func-list" role="list">
+                @for (f of funcionariosFiltrados(); track f.id) {
+                  <li
+                    class="producao-func-row"
+                    [class.is-selected]="isFuncionarioSelecionado(f.id)">
+                    @if (podeEditar()) {
+                      <label
+                        class="producao-func-check"
+                        (click)="$event.stopPropagation()"
+                        [attr.aria-label]="'Selecionar ' + f.nome">
+                        <input
+                          type="checkbox"
+                          [checked]="isFuncionarioSelecionado(f.id)"
+                          (change)="toggleSelecaoFuncionario(f.id)" />
+                      </label>
+                    }
+                    <button
+                      type="button"
+                      class="producao-func-item"
+                      [class.is-desligado]="f.desligado"
+                      (click)="abrirModalFuncionario(f)">
+                      <span class="producao-func-nome">{{ f.nome }}</span>
+                      <span class="producao-func-meta">
+                        Setor: {{ f.setor || '—' }}
+                        · Cargo: {{ f.cargo || '—' }}
+                      </span>
+                      <span class="producao-func-meta">
+                        Cód. ERP: {{ f.codigoFuncionarioErp }}
+                        · {{ f.qtdEtapasConfiguradas }} etapa(s)
+                      </span>
+                      @if (f.desligado) {
+                        <span class="producao-badge-desligado">
+                          Desligado em {{ formatarData(f.dataDemissao) }}
+                        </span>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+        </div>
+      }
+    </div>
+  }
+
+  @if (modalAberto && modalFuncionario) {
+    <div class="producao-modal-overlay" (click)="fecharModal()">
+      <div
+        class="producao-modal-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="producao-modal-titulo"
+        (click)="$event.stopPropagation()">
+        <header class="producao-modal-header">
+          <div class="producao-modal-header-text">
+            <h3 id="producao-modal-titulo">Etapas — {{ modalFuncionario.nome }}</h3>
+            @if (modalFuncionario.desligado) {
+              <p class="producao-modal-desligado">
+                Desligado em {{ formatarData(modalFuncionario.dataDemissao) }}
+              </p>
+            }
+          </div>
+          <button type="button" class="producao-modal-close" (click)="fecharModal()" aria-label="Fechar">
+            ×
+          </button>
+        </header>
+
+        <div class="producao-modal-body">
+          @if (modalCarregando) {
+            <div class="loading-message">Carregando…</div>
+          } @else {
+            <p class="producao-modal-help">
+              Marque as etapas que este funcionário recebe na produtividade (somente etapas remuneradas na unidade).
+            </p>
+
+            @if (modalEtapas.length === 0) {
+              <div class="no-data-inline">
+                Nenhuma etapa remunerada configurada na unidade. Configure em «Etapas remuneradas».
+              </div>
+            } @else {
+              <div class="producao-modal-grid" role="list">
+                <div class="producao-modal-grid-head">
+                  <label class="col-recebe producao-modal-check producao-modal-check-head">
+                    <input
+                      type="checkbox"
+                      [checked]="todosModalEtapasRecebem()"
+                      [indeterminate]="algunsModalEtapasRecebem()"
+                      [disabled]="!podeEditar() || modalEtapas.length === 0"
+                      (change)="alternarMarcarTodosModalEtapas()"
+                      aria-label="Marcar ou desmarcar todas as etapas" />
+                  </label>
+                  <span class="col-etapa">Etapa</span>
+                  <span class="col-valor">Valor</span>
+                </div>
+                @for (row of modalEtapas; track row.codEtapa) {
+                  <div class="producao-modal-grid-row" role="listitem">
+                    <label class="col-recebe producao-modal-check">
+                      <input
+                        type="checkbox"
+                        [checked]="row.recebe"
+                        [disabled]="!podeEditar()"
+                        (change)="alternarRecebeModal(row)" />
+                    </label>
+                    <span class="col-etapa" [title]="row.etapa">{{ row.etapa }}</span>
+                    <span class="col-valor">{{ formatarMoeda(row.valor) }}</span>
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+
+        <footer class="producao-modal-footer">
+          <button type="button" class="btn btn-cancelar" (click)="fecharModal()">Cancelar</button>
+          @if (podeEditar()) {
+            <button
+              type="button"
+              class="btn btn-salvar"
+              [disabled]="modalSalvando || modalCarregando"
+              (click)="salvarModalFuncionario()">
+              {{ modalSalvando ? 'Salvando…' : 'Salvar' }}
+            </button>
+          }
+        </footer>
+      </div>
+    </div>
+  }
+</div>
+
+@if (acaoEtapasModal) {
+  <div class="producao-modal-overlay" (click)="cancelarAcaoEtapasModal()">
+    <div
+      class="producao-modal-box producao-modal-box-compact"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="producao-acao-etapas-titulo"
+      (click)="$event.stopPropagation()">
+      <header class="producao-modal-header">
+        <div class="producao-modal-header-text">
+          <h3 id="producao-acao-etapas-titulo">{{ tituloAcaoEtapasModal() }}</h3>
+        </div>
+        <button
+          type="button"
+          class="producao-modal-close"
+          (click)="cancelarAcaoEtapasModal()"
+          [disabled]="processandoAcaoEtapas"
+          aria-label="Fechar">
+          ×
+        </button>
+      </header>
+
+      <div class="producao-modal-body">
+        <p class="producao-modal-help">{{ mensagemAcaoEtapasModal() }}</p>
+      </div>
+
+      <footer class="producao-modal-footer">
+        <button
+          type="button"
+          class="btn btn-cancelar"
+          (click)="cancelarAcaoEtapasModal()"
+          [disabled]="processandoAcaoEtapas">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          [class]="acaoEtapasModal === 'remover' ? 'btn btn-excluir' : 'btn btn-salvar'"
+          (click)="confirmarAcaoEtapasModal()"
+          [disabled]="processandoAcaoEtapas">
+          @if (processandoAcaoEtapas) {
+            Processando…
+          } @else if (acaoEtapasModal === 'remover') {
+            Remover
+          } @else {
+            Aplicar
+          }
+        </button>
+      </footer>
+    </div>
+  </div>
+}

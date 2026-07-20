@@ -290,14 +290,114 @@
 - **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`. Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*).
 - **Importação automática:** integrada à sync geral quando `ultimaModificacaoProducaoEtapas` estiver configurada; filtra movimentos posteriores ao watermark; ao concluir, atualiza watermark com hora do processamento (America/Sao_Paulo), alinhado ao padrão de orçamentos.
 - Registros sem entrada na etapa são excluídos pelo SQL (inner join em `evt_ent`); etapas só com saída não são importadas.
-- **Funcionário entrada/saída:** código e nome vêm sempre do **mesmo movimento** na `FC12500`. Entrada (`cdopera = 01`): **primeiro** lançamento cronológico (data/hora). Saída (`cdopera = 02`): **último** lançamento cronológico. Evita misturar `MIN(cdfun)` com `MIN(nomefun)` quando há lançamentos duplicados ou errados no PCP.
+- **Funcionário entrada/saída:** código e nome vêm sempre do **mesmo movimento** na `FC12500`. Entrada (`cdopera = 01`): **primeiro** lançamento cronológico (data/hora e funcionário). Saída (`cdopera = 02`): **primeiro** lançamento cronológico (data/hora e funcionário). Evita misturar `MIN(cdfun)` com `MIN(nomefun)` quando há lançamentos duplicados ou errados no PCP. Nome em `FC08000`: join por `cdfun + cdcon` do movimento; se ausente (ex.: `cdcon` null no PCP), **fallback** por `cdfun` (prioriza `cdcon` igual quando informado).
+- **Correções PCP (retorno, relançamento, «LANÇAMENTO ERRADO»):** persistem apenas na **primeira** conclusão da etapa (1º `02`); lançamentos posteriores na mesma fórmula+etapa **não** geram linha adicional em `producao_etapas_resumo`. Divergências em relação ao relatório de produtividade do ERP são esperadas — ver **RN-PCP-004**.
 - Campo `etapa` (nome da etapa, `FC12540.descricao`): padronizado em **maiúsculas pt-BR** na importação (ex.: `ENCAPSULAÇÃO`, `SACHÊ INHUMAS`, `ROTULAÇÃO`).
 - Campo `principios_ativos`: texto livre (`TEXT`), lista separada por vírgula.
-- Campo `tempo_etapa`: minutos (inteiro) entre entrada (primeiro 01) e saída (último 02); `NULL` quando saída incompleta.
+- Campo `tempo_etapa`: minutos (inteiro) entre entrada (primeiro 01) e saída (primeiro 02); `NULL` quando saída incompleta.
 - Campos do prescritor na requisição (`fc12100` + `fc04000`): `nomePrescritor`, `crf`, `ufCrf`; com **fallback** na mesma `nrrqu` quando a fórmula atual não tiver CRM (prioriza série `0`).
 - Campo `codigoCliente` / `cliente`: `req.cdcli` + `FC07000`; com **fallback** do `CDCLI` de outra fórmula da mesma requisição. Nome do cliente: prioriza `FC07000` da **mesma filial** da requisição; se ausente, usa cadastro do mesmo `CDCLI` em **outra filial**.
 - Escopo inicial: importação e persistência; painéis/relatórios são demandas posteriores.
 - Permissão importação manual: **`configuracao:access`**.
+
+### RN-PCP-002 — Remuneração por etapa (config permanente)
+
+- Tela **`/producao/config`**: lista etapas distintas do histórico (`producao_etapas_resumo`) por unidade, ordenadas por `posicaoEtapa`.
+- Persistência: `producao_etapa_remuneracao`; chave `unidade + cod_etapa`.
+- Campos: `recebe` (boolean) e `valor` (unitário por etapa concluída). Se `recebe = false`, valor deve ser zero. Se `recebe = true`, **valor obrigatório e maior que zero**.
+- Filtro na UI: exibir **Todas**, **Recebe** ou **Não recebe**.
+- Configuração **sem período**; etapas antigas permanecem na lista (não excluir).
+- Permissões: **`producao-config:read`** / **`producao-config:update`**.
+
+### RN-PCP-003 — Etapas por funcionário (config permanente)
+
+- Mesma tela: lista funcionários do cadastro folha da unidade **com `codigoFuncionarioErp` preenchido**; modal marca etapas que o funcionário recebe.
+- Persistência: `producao_funcionario_etapa`; chave `funcionario_id + cod_etapa`.
+- Só é permitido marcar etapas com `recebe = true` na config global da unidade (RN-PCP-002).
+- Modal exibe **apenas** etapas remuneradas na unidade; etapas sem «Recebe» global não aparecem.
+- Funcionário com **`dataDemissao`** preenchida exibe badge **Desligado** + data na listagem (config ainda editável).
+- Vínculo ERP: campo **`codigoFuncionarioErp`** no cadastro de funcionário (`funcionarios`), único por unidade; usado no fechamento futuro para cruzar `codFuncSaida` do PCP.
+- **Importação — Vincular código funcionário** (Configuração → aba Importação, abaixo de «Etapas de produção»): cruza `producao_etapas_resumo.funcSaida` com `funcionarios.nome` na mesma unidade; exibe prévia com situação (preencher, já correto, conflito, ambíguo); o usuário **seleciona** quais linhas elegíveis atualizar (coluna «Atualizar», com marcar todos); confirmação grava **somente** os selecionados entre matches únicos com `codigoFuncionarioErp` ainda NULL. Permissões: prévia e confirmar **`producao-config:read`/`update`** ou **`configuracao:access`** (importação manual).
+- **Relatório** (barra superior da tela): imprime etapas remuneradas (nome + valor) e, em seguida, funcionários com código ERP e etapas configuradas de cada um (`GET /producao/config/relatorio`).
+- **Aplicar / remover etapas** (card Funcionários): seleção por **checkbox** na lista (com «Selecionar todos» nos funcionários visíveis no filtro); botões **Aplicar etapas** e **Remover etapas**; modal de confirmação exibe apenas a **quantidade** selecionada. Aplica etapas com `recebe = true` já **salvas** (`POST /producao/config/funcionarios/aplicar-etapas-remuneradas` com `funcionarioIds[]`); remove todas as etapas configuradas (`POST /producao/config/funcionarios/remover-etapas`). Requer **`producao-config:update`**.
+
+### RN-PCP-005 — Consulta de produtividade (contabilização)
+
+- Tela **`/producao/produtividade`**: consulta por **uma ou mais unidades** (usuário **sem** `usuario.unidade` no cadastro) e **período** (`dataSaida` em `producao_etapas_resumo`). Usuário **com** `usuario.unidade` consulta apenas a própria (filtro bloqueado). Vínculo de **vendedor** não restringe produtividade.
+- Contabiliza linha do resumo quando:
+  1. `codFuncSaida` corresponde a `funcionarios.codigoFuncionarioErp` em **qualquer unidade selecionada** na consulta (ex.: cadastro em INHUMAS contabiliza saída em NERÓPOLIS com o mesmo código ERP);
+  2. `codEtapa` está remunerada na **unidade da linha** (`producao_etapa_remuneracao.recebe = true`);
+  3. etapa está configurada para o funcionário no **cadastro onde ele foi encontrado** (`producao_funcionario_etapa.recebe = true`).
+- Valor: `quantidade × valor` da etapa remunerada **da unidade da linha**; agrupamento por `codigoFuncionarioErp` e etapa (fechamento unificado quando há várias unidades).
+- Linhas ignoradas (sem cadastro ERP): exibidas na consulta com **nome** e **código ERP** agrupados (até 50 funcionários distintos).
+- Linhas ignoradas (cadastro ERP ok, etapa remunerada na unidade, mas **sem vínculo** em `producao_funcionario_etapa`): exibidas com **nome**, **código ERP**, unidades e **etapas** do resumo não vinculadas (até 50 funcionários distintos), para apoio ao fechamento.
+- Demais etapas não remuneradas na unidade **não** geram alerta na tela (volume alto, baixa ação imediata).
+- API: `GET /producao/produtividade?unidades=&dataInicio=&dataFim=` (parâmetro `unidades` repetido por unidade); permissão **`producao-produtividade:read`** (independente de `producao-config:read`).
+- Menu **Produção**: Configuração de produção (`producao-config:read`/`update`) e Produtividade (`producao-produtividade:read`) — permissões independentes no perfil.
+
+### RN-PCP-004 — Reconciliação ERP × fechamento de produtividade (decisão com gestão)
+
+**Status:** critério de fechamento oficial **pendente de alinhamento com gestão** (2026-07). Implementação atual em **RN-PCP-001** permanece até decisão formal.
+
+#### Como o sistema trata correções de etapa (implementação atual)
+
+| Aspecto | Regra em `producao_etapas_resumo` |
+|---------|-----------------------------------|
+| Entrada | 1º movimento `01` (data, hora, funcionário) |
+| Saída | 1º movimento `02` (data, hora, funcionário — mesmo lançamento) |
+| Granularidade | **1 linha** por `unidade + filial + requisicao + formula + cod_etapa` |
+| 2º/3º `02` (correção, relançamento) | **Ignorados** no resumo; histórico completo permanece no Firebird/ERP |
+| Filtro típico de fechamento mensal | `dataSaida` + `funcSaida` no período |
+
+**Interpretação:** produtividade por **fórmula concluída na etapa** (primeira conclusão no PCP), **não** por cada saída lançada no mês.
+
+#### Como o relatório ERP trata (observado na validação jun/2026)
+
+| Aspecto | Comportamento ERP |
+|---------|-------------------|
+| Contagem | **Cada saída (`02`)** no período, com data e funcionário **daquele movimento** |
+| Mesma fórmula + etapa com 2+ saídas no mês | **Soma cada saída** (possível “duplicidade” no fechamento) |
+| Correção PCP | Não há regra única documentada; varia por caso (1ª saída, pós-correção ou movimento no mês) |
+
+#### Dois tipos de divergência (validação jun/2026)
+
+1. **Saídas repetidas** — ERP > PG quando há 2+ saídas do mesmo funcionário na mesma fórmula+etapa no mês (ex.: INGRIDHY ROT: PG 1312 fórmulas × ERP 1318 movimentos = +6 relançamentos).
+2. **Atribuição data/funcionário** — ERP credita movimento no mês; PG credita **1ª saída** (ex.: JESSICA PESO: 1ª saída em maio com outro func.; movimento dela em 01/06 no ERP; PG 1 × ERP 11).
+
+#### Casos de referência documentados
+
+| Requisição | Etapa | Padrão | PG vs ERP |
+|------------|-------|--------|-----------|
+| 96771 / fórmula 0 | FORMULA ESPECIAL | Data 1ª saída (30/06); correção em jul | Alinhado após ajuste de data |
+| 96252 / fórmula 3 | ENCAPS INHUMAS | 1ª saída INGRIDHY; 2ª NATAN (correção) | Alinhado (1ª saída) |
+| 96172 / fórmula 0 | PESO MEDIO | 1ª saída NATAN (137); 2ª INGRIDHY (correção) | ERP credita INGRIDHY; PG credita NATAN |
+| 26197, 96690, etc. | ROT INHUMAS | Múltiplas saídas INGRIDHY no mês | ERP +1 por saída extra |
+
+#### Perguntas para fechamento com gestão (decisão pendente)
+
+Responder formalmente antes de alterar importação ou fechamento oficial:
+
+1. **Remuneração:** paga por **fórmula concluída na etapa** ou por **cada saída lançada no mês**?
+2. **Correção PCP:** o 2º lançamento é **ajuste de erro** (não remunerar de novo) ou **trabalho novo** (remunerar)?
+3. **Relatório oficial:** o fechamento continuará pelo **ERP** por um período ou migrará para o **sistema novo**?
+
+#### Caminhos conforme resposta da gestão
+
+| Resposta da gestão | Ação técnica |
+|--------------------|--------------|
+| **Ajuste de erro; uma conclusão por fórmula** | Manter **RN-PCP-001**; reconciliar totais com ERP via documentação de exceções; **não** “corrigir” importação para igualar ERP. |
+| **Igualar totais ao ERP** | Nova camada: relatório/tabela de **movimentos de saída no período** (1 linha por `02` no mês) ou regra híbrida; `producao_etapas_resumo` permanece para SLA. |
+| **Híbrido** | Resumo para SLA + relatório de fechamento espelhando ERP até migração oficial. |
+
+#### Reconciliação operacional
+
+- Scripts SQL de conferência: `docs/sql/producao_etapas_conferencia_erp.sql` (filiais INHUMAS `cdfil=2` + NERÓPOLIS `cdfil=4`; comparar movimentos × fórmulas × PostgreSQL).
+- Diferença pequena e **100% explicada** (lista de requisições + motivo) → aceitável na validação do administrador.
+- Diferença grande **sem** motivo mapeado → investigar importação (não assumir bug por divergir do ERP).
+
+#### Posicionamento sugerido para apresentação
+
+> O sistema registra **quando a etapa foi concluída pela primeira vez** (uma linha por fórmula), evitando remunerar duas vezes a mesma produção por relançamento PCP. O ERP soma **cada saída do mês**; divergências em meses com correções são **esperadas** até a gestão definir o critério oficial de fechamento.
 
 ---
 

@@ -288,6 +288,28 @@ export class NavigationComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      label: 'Produção',
+      icon: 'feather-layers',
+      requiredPermissions: [],
+      children: [
+        {
+          label: 'Configuração de produção',
+          route: '/producao/config',
+          icon: 'feather-settings',
+          requiredPermissions: [
+            Permission.PRODUCAO_CONFIG_READ,
+            Permission.PRODUCAO_CONFIG_UPDATE,
+          ],
+        },
+        {
+          label: 'Produtividade',
+          route: '/producao/produtividade',
+          icon: 'feather-bar-chart-2',
+          requiredPermissions: [Permission.PRODUCAO_PRODUTIVIDADE_READ],
+        },
+      ],
+    },
+    {
       label: 'Relatórios',
       icon: 'feather-bar-chart-2',
       requiredPermissions: [],

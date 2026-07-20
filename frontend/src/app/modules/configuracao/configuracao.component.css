@@ -747,7 +747,9 @@
 }
 
 .btn-importacao-caixa,
-.btn-importacao-etapas {
+.btn-importacao-etapas,
+.btn-importacao-orcamentos,
+.btn-importacao-vinculo-func {
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -759,7 +761,9 @@
   }
 
   .btn-importacao-caixa,
-  .btn-importacao-etapas {
+  .btn-importacao-etapas,
+  .btn-importacao-orcamentos,
+  .btn-importacao-vinculo-func {
     width: 100%;
   }
 }

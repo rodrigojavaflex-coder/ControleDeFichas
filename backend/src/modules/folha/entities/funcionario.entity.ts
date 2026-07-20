@@ -21,6 +21,14 @@ export class Funcionario extends BaseEntity {
   @Column({ type: 'varchar', length: 32 })
   unidade: Unidade;
 
+  @ApiProperty({
+    required: false,
+    description: 'Código do funcionário no ERP/PCP (cdfun) para produtividade.',
+    example: 42,
+  })
+  @Column({ type: 'integer', nullable: true })
+  codigoFuncionarioErp?: number | null;
+
   @ApiProperty({ required: false })
   @Column({ type: 'varchar', length: 14, nullable: true })
   cpf?: string | null;

@@ -1527,7 +1527,21 @@ export class DatabaseService {
           p.cdetapa,
           p.tppcp,
           p.cdfun AS cod_func_entrada,
-          TRIM(f.nomefun) AS func_entrada,
+          COALESCE(
+            TRIM(f.nomefun),
+            (
+              SELECT FIRST 1 TRIM(fb.nomefun)
+              FROM fc08000 fb
+              WHERE fb.cdfun = p.cdfun
+                AND COALESCE(p.cdfun, 0) > 0
+              ORDER BY
+                CASE
+                  WHEN COALESCE(p.cdcon, 0) > 0 AND fb.cdcon = p.cdcon THEN 0
+                  ELSE 1
+                END,
+                fb.cdcon
+            )
+          ) AS func_entrada,
           p.data AS data_entrada,
           p.hora AS hora_entrada
         FROM fc12500 p
@@ -1564,7 +1578,21 @@ export class DatabaseService {
           p.cdetapa,
           p.tppcp,
           p.cdfun AS cod_func_saida,
-          TRIM(f.nomefun) AS func_saida,
+          COALESCE(
+            TRIM(f.nomefun),
+            (
+              SELECT FIRST 1 TRIM(fb.nomefun)
+              FROM fc08000 fb
+              WHERE fb.cdfun = p.cdfun
+                AND COALESCE(p.cdfun, 0) > 0
+              ORDER BY
+                CASE
+                  WHEN COALESCE(p.cdcon, 0) > 0 AND fb.cdcon = p.cdcon THEN 0
+                  ELSE 1
+                END,
+                fb.cdcon
+            )
+          ) AS func_saida,
           p.data AS data_saida,
           p.hora AS hora_saida
         FROM fc12500 p
@@ -1575,16 +1603,16 @@ export class DatabaseService {
           AND p.cdfil = ?
           AND NOT EXISTS (
             SELECT 1
-            FROM fc12500 p_post
-            WHERE p_post.cdfil = p.cdfil
-              AND p_post.nrrqu = p.nrrqu
-              AND p_post.serier = p.serier
-              AND p_post.cdetapa = p.cdetapa
-              AND p_post.tppcp = p.tppcp
-              AND p_post.cdopera = '02'
+            FROM fc12500 p_ant
+            WHERE p_ant.cdfil = p.cdfil
+              AND p_ant.nrrqu = p.nrrqu
+              AND p_ant.serier = p.serier
+              AND p_ant.cdetapa = p.cdetapa
+              AND p_ant.tppcp = p.tppcp
+              AND p_ant.cdopera = '02'
               AND (
-                p_post.data > p.data
-                OR (p_post.data = p.data AND p_post.hora > p.hora)
+                p_ant.data < p.data
+                OR (p_ant.data = p.data AND p_ant.hora < p.hora)
               )
           )
       ) evt_sai

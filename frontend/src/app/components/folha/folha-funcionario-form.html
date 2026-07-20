@@ -180,6 +180,22 @@
             <input id="ff-dem" type="date" class="form-control" formControlName="dataDemissao" />
           </div>
           <div class="form-group">
+            <label class="form-label" for="ff-cod-erp">Código funcionário ERP</label>
+            <input
+              id="ff-cod-erp"
+              type="number"
+              min="1"
+              step="1"
+              class="form-control"
+              formControlName="codigoFuncionarioErp"
+              placeholder="Ex.: 42"
+            />
+            <div class="form-help">Código no ERP/PCP (cdfun) para produtividade do laboratório.</div>
+            @if (form.get('codigoFuncionarioErp')?.invalid && form.get('codigoFuncionarioErp')?.touched) {
+              <div class="error-message">Informe um código inteiro maior que zero.</div>
+            }
+          </div>
+          <div class="form-group">
             <label class="form-label" for="ff-ativo">Ativo</label>
             <select id="ff-ativo" class="form-control" formControlName="ativo">
               <option [ngValue]="true">Sim</option>

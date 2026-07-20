@@ -37,6 +37,7 @@ interface FolhaFuncFormValue {
   setorId: string | null;
   dataAdmissao: string;
   dataDemissao: string;
+  codigoFuncionarioErp: string | number;
   ativo: boolean;
   naoReceberReciboWhatsapp: boolean;
   tipoPix: TipoChavePixFolha | null;
@@ -129,6 +130,21 @@ export class FolhaFuncionarioFormComponent implements OnInit {
         setorId: [null as string | null],
         dataAdmissao: ['', [Validators.required]],
         dataDemissao: [''],
+        codigoFuncionarioErp: [
+          '',
+          [
+            Validators.min(1),
+            (c: AbstractControl): ValidationErrors | null => {
+              const v = c.value;
+              if (v === '' || v == null) return null;
+              const n = Number(v);
+              if (!Number.isInteger(n) || n < 1) {
+                return { codigoErpInvalido: true };
+              }
+              return null;
+            },
+          ],
+        ],
         ativo: [true],
         naoReceberReciboWhatsapp: [false],
         cpf: ['', [Validators.maxLength(14)]],
@@ -732,6 +748,8 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           dataNascimento: this.patchDateField(f.dataNascimento),
           dataAdmissao: this.patchDateField(f.dataAdmissao),
           dataDemissao: this.patchDateField(f.dataDemissao),
+          codigoFuncionarioErp:
+            f.codigoFuncionarioErp != null ? String(f.codigoFuncionarioErp) : '',
           cargoId: f.cargo?.id ?? f.cargoId ?? null,
           setorId: f.setor?.id ?? f.setorId ?? null,
           ativo: f.ativo ?? true,
@@ -783,6 +801,17 @@ export class FolhaFuncionarioFormComponent implements OnInit {
 
     const dd = (v.dataDemissao || '').trim();
     if (dd) payload['dataDemissao'] = dd;
+
+    const codErp =
+      v.codigoFuncionarioErp != null && v.codigoFuncionarioErp !== ''
+        ? String(v.codigoFuncionarioErp).trim()
+        : '';
+    if (codErp) {
+      payload['codigoFuncionarioErp'] = Number(codErp);
+    } else if (this.isEditMode) {
+      payload['codigoFuncionarioErp'] = null;
+    }
+
     const cid = v.cargoId != null ? String(v.cargoId).trim() : '';
     payload['cargoId'] = cid || null;
 

@@ -1,0 +1,211 @@
+<div class="modal-overlay" *ngIf="visible">
+  <div class="modal-conteudo modal-vinculo-funcionario">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Vincular código funcionário</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="busy"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <p class="vinculo-funcionario-descricao">
+        Cruza <strong>producao_etapas_resumo.funcSaida</strong> com o cadastro de funcionários
+        e preenche <strong>codigoFuncionarioErp</strong> (codFuncSaida) quando o match por nome é único.
+      </p>
+
+      @if (!podePreview()) {
+        <div class="vinculo-funcionario-erro">
+          Permissão necessária: <code>producao-config:read</code>.
+        </div>
+      } @else {
+        <div class="vinculo-funcionario-form-grid">
+          <div class="filter-group">
+            <label for="vinculoUnidade" class="label-campo">Unidade</label>
+            @if (unidadeBloqueada) {
+              <input
+                id="vinculoUnidade"
+                type="text"
+                class="campo"
+                [value]="unidade"
+                disabled
+                readonly />
+            } @else {
+              <select
+                id="vinculoUnidade"
+                class="campo"
+                [(ngModel)]="unidade"
+                [disabled]="busy"
+                (ngModelChange)="onUnidadeChange()">
+                <option value="">Selecione...</option>
+                <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+              </select>
+            }
+          </div>
+        </div>
+
+        <div class="vinculo-funcionario-erro" *ngIf="error">{{ error }}</div>
+
+        <div class="inline-loading vinculo-funcionario-loading" *ngIf="carregandoPreview">
+          <div class="spinner"></div>
+          <span>Analisando vínculos...</span>
+        </div>
+
+        @if (ultimosAtualizados !== null && !busy) {
+          <section class="vinculo-funcionario-resultado">
+            <h4>Atualização concluída</h4>
+            <p class="vinculo-funcionario-preview-hint">
+              {{ ultimosAtualizados }} funcionário(s) atualizado(s) com código ERP.
+            </p>
+          </section>
+        }
+
+        @if (preview && !carregandoPreview) {
+          <section class="vinculo-funcionario-preview">
+            <h4>Prévia dos vínculos</h4>
+            <p class="vinculo-funcionario-preview-hint">Unidade: {{ unidade }}</p>
+
+            <ul class="vinculo-funcionario-stats">
+              <li>{{ preview.resumo.totalErp }} funcionário(s) no ERP</li>
+              <li>{{ preview.resumo.totalPreencher }} a preencher</li>
+              <li>{{ preview.resumo.totalOk }} já corretos</li>
+              @if (preview.resumo.totalConflitos > 0) {
+                <li>{{ preview.resumo.totalConflitos }} conflito(s)</li>
+              }
+              @if (preview.resumo.totalAmbiguos > 0) {
+                <li>{{ preview.resumo.totalAmbiguos }} ambíguo(s)</li>
+              }
+              @if (preview.resumo.totalErpSemFuncionario > 0) {
+                <li>{{ preview.resumo.totalErpSemFuncionario }} sem cadastro</li>
+              }
+            </ul>
+
+            <div class="vinculo-funcionario-filtro">
+              <label for="vinculoFiltro" class="label-campo">Exibir</label>
+              <select id="vinculoFiltro" class="campo campo-sm" [(ngModel)]="filtroSituacao">
+                <option value="atualizaveis">Somente a preencher</option>
+                <option value="todos">Todos os matches</option>
+              </select>
+            </div>
+
+            @if (itensVisiveis().length === 0) {
+              <p class="vinculo-funcionario-vazio">
+                <i class="fas fa-inbox"></i>
+                Nenhum funcionário na lista para o filtro selecionado.
+              </p>
+            } @else {
+              <div class="vinculo-funcionario-table-wrap">
+                <table class="vinculo-funcionario-table">
+                  <thead>
+                    <tr>
+                      <th class="col-atualizar">
+                        <label class="vinculo-th-check">
+                          <input
+                            type="checkbox"
+                            [checked]="todosAtualizaveisVisiveisSelecionados()"
+                            [indeterminate]="algunsAtualizaveisVisiveisSelecionados()"
+                            [disabled]="busy || itensAtualizaveisVisiveis().length === 0"
+                            (change)="alternarMarcarTodosVisiveis()"
+                            aria-label="Marcar todos os elegíveis visíveis" />
+                          <span>Atualizar</span>
+                        </label>
+                      </th>
+                      <th>Funcionário</th>
+                      <th>Nome ERP</th>
+                      <th>Cód. ERP</th>
+                      <th>Cód. atual</th>
+                      <th>Situação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of itensVisiveis(); track row.funcionarioId + '-' + row.codigoErp) {
+                      <tr
+                        [class.row-atualizavel]="row.atualizavel"
+                        [class.row-selecionada]="estaSelecionado(row.funcionarioId)">
+                        <td class="col-atualizar">
+                          @if (row.atualizavel) {
+                            <label class="vinculo-row-check">
+                              <input
+                                type="checkbox"
+                                [checked]="estaSelecionado(row.funcionarioId)"
+                                [disabled]="busy"
+                                (change)="alternarSelecao(row)"
+                                [attr.aria-label]="'Atualizar ' + row.funcionarioNome" />
+                            </label>
+                          }
+                        </td>
+                        <td>{{ row.funcionarioNome }}</td>
+                        <td>{{ row.funcSaidaErp }}</td>
+                        <td>{{ row.codigoErp }}</td>
+                        <td>{{ row.codigoAtual ?? '—' }}</td>
+                        <td>
+                          <span class="vinculo-situacao-badge" [ngClass]="classeSituacao(row.situacao)">
+                            {{ rotuloSituacao(row.situacao) }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+
+            @if (preview.erpSemFuncionario.length > 0 && filtroSituacao === 'todos') {
+              <details class="vinculo-funcionario-sem-cadastro">
+                <summary>
+                  {{ preview.erpSemFuncionario.length }} nome(s) no ERP sem funcionário no cadastro
+                </summary>
+                <ul>
+                  @for (nome of preview.erpSemFuncionario; track nome) {
+                    <li>{{ nome }}</li>
+                  }
+                </ul>
+              </details>
+            }
+
+            @if (podeConfirmar() && preview.resumo.totalPreencher > 0) {
+              <p class="vinculo-funcionario-confirm-help">
+                <strong>{{ qtdSelecionados() }}</strong> de
+                {{ preview.resumo.totalPreencher }} funcionário(s) elegível(is) selecionado(s)
+                para atualização.
+              </p>
+            }
+          </section>
+        }
+      }
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma modal-rodape-fechar"
+        (click)="fechar()"
+        [disabled]="busy">
+        Fechar
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario botao-analisar-vinculo"
+        (click)="carregarPreview()"
+        [disabled]="!podeAnalisar()">
+        <i class="fas fa-search" [class.fa-spin]="carregandoPreview"></i>
+        {{ preview ? 'Analisar novamente' : 'Analisar vínculos' }}
+      </button>
+      @if (preview && qtdSelecionados() > 0) {
+        <button
+          type="button"
+          class="botao botao-sucesso botao-confirmar-vinculo"
+          (click)="confirmar()"
+          [disabled]="!podeConfirmarAtualizacao()"
+          [title]="podeConfirmar() ? '' : 'Permissão necessária: producao-config:update ou configuracao:access'">
+          <i class="fas fa-check" [class.fa-spin]="confirmando"></i>
+          {{ confirmando ? 'Atualizando…' : 'Confirmar (' + qtdSelecionados() + ')' }}
+        </button>
+      }
+    </div>
+  </div>
+</div>

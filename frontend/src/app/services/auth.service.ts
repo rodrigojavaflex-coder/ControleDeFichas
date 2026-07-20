@@ -198,6 +198,14 @@ export class AuthService {
     );
   }
 
+  /** Atualiza cache local com dados frescos do backend (unidade, vendedor, etc.). */
+  async refreshCurrentUserProfile(): Promise<void> {
+    const profile = await this.getProfile();
+    const user = this.mapAuthResponseToUsuario(profile);
+    this.currentUserSubject.next(user);
+    this.persistUserInLocalStorage(user);
+  }
+
   /**
    * Verifica se usuário tem determinada permissão
    */

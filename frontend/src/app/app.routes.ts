@@ -122,6 +122,11 @@ const PERMS = {
     Permission.ORCAMENTO_MOTIVO_UPDATE,
     Permission.ORCAMENTO_MOTIVO_DELETE,
   ],
+  producaoConfig: [
+    Permission.PRODUCAO_CONFIG_READ,
+    Permission.PRODUCAO_CONFIG_UPDATE,
+  ],
+  producaoProdutividade: [Permission.PRODUCAO_PRODUTIVIDADE_READ],
 } as const;
 
 /** Guards padrão: autenticado + permissão da rota (`data.permissions`). */
@@ -483,6 +488,24 @@ export const routes: Routes = [
       ),
     canActivate: guarded,
     data: { permissions: [...PERMS.folhaWhatsapp] },
+  },
+  {
+    path: 'producao/config',
+    loadComponent: () =>
+      import('./components/producao/producao-config-page').then(
+        (m) => m.ProducaoConfigPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.producaoConfig] },
+  },
+  {
+    path: 'producao/produtividade',
+    loadComponent: () =>
+      import('./components/producao/producao-produtividade-page').then(
+        (m) => m.ProducaoProdutividadePage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.producaoProdutividade] },
   },
   {
     path: 'orcamentos/dashboard',

@@ -149,6 +149,10 @@ export enum Permission {
 
   ORCAMENTO_DASHBOARD_READ = 'orcamento-dashboard:read',
   ORCAMENTO_DASHBOARD_VIEW_VALORES = 'orcamento-dashboard:view-valores',
+
+  PRODUCAO_CONFIG_READ = 'producao-config:read',
+  PRODUCAO_CONFIG_UPDATE = 'producao-config:update',
+  PRODUCAO_PRODUTIVIDADE_READ = 'producao-produtividade:read',
 }
 
 export interface PermissionGroup {

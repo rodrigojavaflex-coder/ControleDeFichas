@@ -10,6 +10,8 @@ import {
   ValidateIf,
   IsArray,
   ValidateNested,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -29,6 +31,16 @@ export class CreateFuncionarioFolhaDto {
   @ApiProperty({ enum: Unidade })
   @IsEnum(Unidade)
   unidade: Unidade;
+
+  @ApiPropertyOptional({
+    description: 'Código do funcionário no ERP/PCP (cdfun) para produtividade.',
+    example: 42,
+  })
+  @IsOptional()
+  @ValidateIf((_o, v) => v != null && v !== '')
+  @IsInt({ message: 'Código funcionário ERP deve ser um número inteiro.' })
+  @Min(1, { message: 'Código funcionário ERP deve ser maior que zero.' })
+  codigoFuncionarioErp?: number | null;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -6,6 +6,37 @@ import { usuarioTemAdminFull } from '../../../common/utils/usuario-permissoes.ut
 export type ListaFechamentoEscopo = Unidade | 'ALL';
 
 /**
+ * Escopo de unidade única para **produtividade**: apenas `usuario.unidade`.
+ * Não usa fallback de `vendedor.unidade` — usuário sem unidade no cadastro pode fechar várias unidades.
+ */
+export function unidadeEscopoUsuarioProducao(
+  usuario: Usuario,
+): Unidade | undefined {
+  const u = usuario.unidade;
+  if (u !== undefined && u !== null && String(u).trim() !== '') {
+    return u;
+  }
+  return undefined;
+}
+
+/** Produtividade: admin ou sem `usuario.unidade` pode consultar qualquer unidade informada. */
+export function assertUnidadeProducao(
+  usuario: Usuario,
+  unidade: Unidade,
+): void {
+  if (usuarioTemAdminFull(usuario)) {
+    return;
+  }
+  const escopo = unidadeEscopoUsuarioProducao(usuario);
+  if (!escopo) {
+    return;
+  }
+  if (escopo !== unidade) {
+    throw new ForbiddenException('Acesso negado para a unidade informada.');
+  }
+}
+
+/**
  * Unidade de escopo para folha quando há vínculo único (`usuario.unidade`; se vazio, usa
  * `vendedor.unidade` quando existir). Ausência ⇒ escopo liberado conforme permissões/RN-007.
  */

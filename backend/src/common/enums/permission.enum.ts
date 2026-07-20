@@ -158,6 +158,12 @@ export enum Permission {
   ORCAMENTO_DASHBOARD_READ = 'orcamento-dashboard:read',
   /** Orçamentos — visualização de valores monetários no dashboard. */
   ORCAMENTO_DASHBOARD_VIEW_VALORES = 'orcamento-dashboard:view-valores',
+
+  /** Produção — configuração de etapas remuneradas e vínculo por funcionário. */
+  PRODUCAO_CONFIG_READ = 'producao-config:read',
+  PRODUCAO_CONFIG_UPDATE = 'producao-config:update',
+  /** Produção — consulta de produtividade (contabilização por etapas). */
+  PRODUCAO_PRODUTIVIDADE_READ = 'producao-produtividade:read',
 }
 
 export const PERMISSION_GROUPS = {
@@ -372,6 +378,22 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.ORCAMENTO_DASHBOARD_VIEW_VALORES,
       label: 'Visualizar valores monetários no painel de orçamentos',
+    },
+  ],
+  'Produção — Configuração': [
+    {
+      key: Permission.PRODUCAO_CONFIG_READ,
+      label: 'Visualizar configuração de produção (etapas remuneradas)',
+    },
+    {
+      key: Permission.PRODUCAO_CONFIG_UPDATE,
+      label: 'Editar configuração de produção (etapas remuneradas)',
+    },
+  ],
+  'Produção — Produtividade': [
+    {
+      key: Permission.PRODUCAO_PRODUTIVIDADE_READ,
+      label: 'Visualizar produtividade de produção',
     },
   ],
 };

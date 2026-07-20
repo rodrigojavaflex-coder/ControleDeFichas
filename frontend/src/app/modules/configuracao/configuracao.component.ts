@@ -16,6 +16,7 @@ import { CaixaSaldoInicialUnidade } from '../../models/fechamento-caixa.model';
 import { ImportarCaixaErpModalComponent } from '../../components/importar-caixa-erp-modal/importar-caixa-erp-modal';
 import { ImportarProducaoEtapasModalComponent } from '../../components/importar-producao-etapas-modal/importar-producao-etapas-modal';
 import { ImportarOrcamentosModalComponent } from '../../components/importar-orcamentos-modal/importar-orcamentos-modal';
+import { ImportarVincularCodigoFuncionarioModalComponent } from '../../components/importar-vincular-codigo-funcionario-modal/importar-vincular-codigo-funcionario-modal';
 import { Permission, Unidade } from '../../models/usuario.model';
 
 type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
@@ -25,7 +26,7 @@ type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
 @Component({
   selector: 'app-configuracao',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, ImportarCaixaErpModalComponent, ImportarProducaoEtapasModalComponent, ImportarOrcamentosModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ImportarCaixaErpModalComponent, ImportarProducaoEtapasModalComponent, ImportarOrcamentosModalComponent, ImportarVincularCodigoFuncionarioModalComponent],
   templateUrl: './configuracao.component.html',
   styleUrls: ['./configuracao.component.css']
 })
@@ -40,6 +41,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   @ViewChild('caixaErpModal') caixaErpModal?: ImportarCaixaErpModalComponent;
   @ViewChild('etapasModal') etapasModal?: ImportarProducaoEtapasModalComponent;
   @ViewChild('orcamentosModal') orcamentosModal?: ImportarOrcamentosModalComponent;
+  @ViewChild('vinculoFuncModal') vinculoFuncModal?: ImportarVincularCodigoFuncionarioModalComponent;
   private progressSubscription?: Subscription;
   private cadastrosProgressSubscription?: Subscription;
   private sincronizacaoProgressSubscription?: Subscription;
@@ -235,6 +237,22 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
 
   canAcessarAbaImportacao(): boolean {
     return this.authService.hasPermission(Permission.CONFIGURACAO_ACCESS);
+  }
+
+  canVincularCodigoFuncionario(): boolean {
+    return (
+      this.authService.hasPermission(Permission.PRODUCAO_CONFIG_READ) ||
+      this.authService.hasPermission(Permission.CONFIGURACAO_ACCESS)
+    );
+  }
+
+  onVinculoCodigoFuncionarioConcluido(atualizados: number): void {
+    this.success = `${atualizados} funcionário(s) atualizado(s) com código ERP.`;
+    this.error = null;
+  }
+
+  abrirModalVincularCodigoFuncionario(): void {
+    this.vinculoFuncModal?.abrir();
   }
 
   abrirModalImportarCaixaErp(): void {

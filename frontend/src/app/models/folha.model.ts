@@ -33,6 +33,7 @@ export interface FuncionarioFolha {
   dataNascimento?: string | null;
   dataAdmissao?: string | null;
   dataDemissao?: string | null;
+  codigoFuncionarioErp?: number | null;
   cargoId?: string | null;
   setorId?: string | null;
   cargo?: FolhaCadastroSimples | null;
