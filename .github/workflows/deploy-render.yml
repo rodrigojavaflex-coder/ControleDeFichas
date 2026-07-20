@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   deploy-render:
@@ -17,8 +18,8 @@ jobs:
         run: |
           if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
             echo "RENDER_DEPLOY_HOOK_URL não configurado."
-            echo "No Render: Settings → Build & Deploy → Auto-Deploy = On Commit (recomendado)."
-            exit 0
+            echo "Configure o secret no GitHub OU ative Auto-Deploy no Render (Settings → Build & Deploy)."
+            exit 1
           fi
           curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL"
           echo "Deploy solicitado no Render."
