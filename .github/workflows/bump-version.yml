@@ -55,16 +55,3 @@ jobs:
           NEW_VERSION=$(node -p "require('./frontend/package.json').version")
           git commit -m "chore(release): bump frontend para v${NEW_VERSION} [skip ci]"
           git push origin HEAD:master
-
-      - name: Disparar deploy no Render (opcional)
-        continue-on-error: true
-        env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
-            echo "RENDER_DEPLOY_HOOK_URL não configurado."
-            echo "No Render: Settings → Build & Deploy → Auto-Deploy = On Commit (recomendado)."
-            exit 0
-          fi
-          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL"
-          echo "Deploy solicitado no Render."
