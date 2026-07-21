@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, FindUsuariosDto, PaginatedResponse, PermissionGroup, ChangePasswordDto, Perfil } from '../models/usuario.model';
+import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, FindUsuariosDto, PaginatedResponse, PermissionCatalog, ChangePasswordDto, Perfil } from '../models/usuario.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -85,10 +85,15 @@ export class UserService {
   }
 
   /**
-   * Buscar permissões disponíveis
+   * Catálogo hierárquico de permissões (módulos → grupos → permissões).
    */
-  getPermissions(): Observable<PermissionGroup> {
-    return this.http.get<PermissionGroup>(`${this.apiUrl}/permissions`);
+  getPermissionCatalog(): Observable<PermissionCatalog> {
+    return this.http.get<PermissionCatalog>(`${this.apiUrl}/permissions`);
+  }
+
+  /** @deprecated Use getPermissionCatalog() */
+  getPermissions(): Observable<PermissionCatalog> {
+    return this.getPermissionCatalog();
   }
   /**
    * Buscar perfis disponíveis

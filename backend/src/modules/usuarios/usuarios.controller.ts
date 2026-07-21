@@ -30,10 +30,10 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateAtalhosHomeDto } from './dto/update-atalhos-home.dto';
 import { Usuario } from './entities/usuario.entity';
 import type { Request } from 'express';
+import { Permission } from '../../common/enums/permission.enum';
 import {
-  PERMISSION_GROUPS,
-  Permission,
-} from '../../common/enums/permission.enum';
+  buildPermissionCatalog,
+} from '../../common/utils/permission-catalog.util';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Perfil } from '../perfil/entities/perfil.entity';
@@ -66,13 +66,13 @@ export class UsuariosController {
   }
 
   @Get('permissions')
-  @ApiOperation({ summary: 'Listar todas as permissões disponíveis' })
+  @ApiOperation({ summary: 'Catálogo hierárquico de permissões (módulos → grupos)' })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Lista de permissões agrupadas por categoria',
+    description: 'Catálogo de permissões para cadastro de perfil',
   })
   getPermissions() {
-    return PERMISSION_GROUPS;
+    return buildPermissionCatalog();
   }
   
   @Get('profiles')

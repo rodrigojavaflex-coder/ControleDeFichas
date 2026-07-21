@@ -1,11 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PERMISSION_GROUPS, Permission } from '../../common/enums/permission.enum';
+import { Permission } from '../../common/enums/permission.enum';
+import { buildPermissionCatalog } from '../../common/utils/permission-catalog.util';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Perfil } from './entities/perfil.entity';
 import { CreatePerfilDto } from './dto/create-perfil.dto';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
+
+export type PerfilUsuarioVinculado = {
+  id: string;
+  nome: string;
+  unidade: Usuario['unidade'] | null;
+};
+
+export type PerfilComEstatisticas = Perfil & {
+  totalUsuarios: number;
+  usuariosVinculados: PerfilUsuarioVinculado[];
+};
 
 @Injectable()
 export class PerfilService {
@@ -21,8 +33,26 @@ export class PerfilService {
     return this.perfilRepository.save(perfil);
   }
 
-  findAll(): Promise<Perfil[]> {
-    return this.perfilRepository.find();
+  async findAll(): Promise<PerfilComEstatisticas[]> {
+    const perfis = await this.perfilRepository.find({
+      order: { nomePerfil: 'ASC' },
+      relations: ['usuarios'],
+    });
+
+    return perfis.map(({ usuarios, ...perfil }) => {
+      const usuariosVinculados = (usuarios ?? [])
+        .map((u) => ({
+          id: u.id,
+          nome: u.nome,
+          unidade: u.unidade ?? null,
+        }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      return {
+        ...perfil,
+        totalUsuarios: usuariosVinculados.length,
+        usuariosVinculados,
+      };
+    });
   }
 
   async findOne(id: string): Promise<Perfil> {
@@ -43,9 +73,9 @@ export class PerfilService {
     const perfil = await this.findOne(id);
     await this.perfilRepository.remove(perfil);
   }
-  
+
   /**
-   * Gera dados formatados para impressão de perfil
+   * Gera dados formatados para impressão de perfil (agrupados por módulo).
    */
   async getPrintData(id: string): Promise<{
     nomePerfil: string;
@@ -54,14 +84,20 @@ export class PerfilService {
     groups: { group: string; permissions: string[] }[];
   }> {
     const perfil = await this.findOne(id);
-    // Formatar grupos de permissões
-    const groups = Object.entries(PERMISSION_GROUPS).map(([group, items]) => {
-      const labels = items
-        .filter(item => perfil.permissoes.includes(item.key as unknown as Permission))
-        .map(item => item.label);
-      return { group, permissions: labels };
-    }).filter(g => g.permissions.length > 0);
-    // Listar usuários vinculados ao perfil
+    const catalog = buildPermissionCatalog();
+    const selected = new Set<Permission>(perfil.permissoes);
+
+    const groups = catalog.modules.flatMap((mod) =>
+      mod.groups
+        .map((group) => ({
+          group: `${mod.label} — ${group.label}`,
+          permissions: group.permissions
+            .filter((item) => selected.has(item.key))
+            .map((item) => item.label),
+        }))
+        .filter((g) => g.permissions.length > 0),
+    );
+
     const usuarios = await this.usuarioRepository
       .createQueryBuilder('usuario')
       .innerJoin('usuario.perfis', 'perfil', 'perfil.id = :perfilId', {
@@ -69,7 +105,7 @@ export class PerfilService {
       })
       .select(['usuario.nome'])
       .getMany();
-    const users = usuarios.map(u => u.nome);
+    const users = usuarios.map((u) => u.nome);
 
     return {
       nomePerfil: perfil.nomePerfil,

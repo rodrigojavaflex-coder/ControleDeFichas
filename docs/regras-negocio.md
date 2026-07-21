@@ -85,7 +85,7 @@
 - O registro de abertura usa **`POST …/folha/fechamento/abertura`** (**permissão `folha-fechamento:registrar-abertura`**).
 - Sem **linha em `folha_fechamento`** para aquela quadrupla, os lançamentos (`folha_capa` / `folha_item`) **não podem ser criados nem alterados** — a UI orienta usar **Controle das competências** antes do **Lançamento de folha**.
 - **`GET …/folha/fechamento/status`** expõe se a competência está **registrada** (`registrada`), **fechada** (`fechado`) e dados de auditoria quando aplicável.
-- **`GET …/folha/fechamento/competencias-registradas`:** **`ano`** obrigatório; **`unidade`**, **`mes`** e **`folhaTipoId`** opcionais; retorna competências **já em `folha_fechamento`**, incluindo **`abertaEm`** (data e hora da abertura vigente na API: primeira abertura ou instante da última **`reabrir`**). Omitindo **`unidade`**, o escopo depende do perfil (**`admin:full`** ou usuário **sem vínculo de unidade**): lista **todas** as unidades; com vínculo a uma única unidade atua só nela — não monta grade cartesiana mês×tipo.
+- **`GET …/folha/fechamento/competencias-registradas`:** **`ano`** obrigatório; **`unidade`**, **`mes`** e **`folhaTipoId`** opcionais; retorna competências **já em `folha_fechamento`**, incluindo **`abertaEm`** (data e hora da abertura vigente na API: primeira abertura ou instante da última **`reabrir`**). Omitindo **`unidade`**, o escopo depende do vínculo de unidade do usuário (**sem vínculo** lista **todas** as unidades; com vínculo a uma única unidade atua só nela — não monta grade cartesiana mês×tipo).
 - **`POST …/folha/fechamento/fechar`** fecha o lote da competência (**`folha-fechamento:fechar`**). **`POST …/folha/fechamento/reabrir`** volta **`fechado = false`**, limpa `fechadoEm` / `fechadoPor` (**`folha-fechamento:reabrir`**).
 - Com lote **fechado** (`fechado = true`), **não** é permitido criar, alterar ou excluir `folha_capa` nem `folha_item` daquele lote.
 - **Mensagens ao usuário:** orientação para registrar abertura; erro se lote fechado ao editar; confirmação em modal ao fechar ou reabrir lote na tela de controle.
@@ -110,7 +110,7 @@
 
 ### RN-007 — Permissões e unidade
 
-- Acesso aos dados da folha considera **`admin:full`** (qualquer unidade), **usuário com vínculo a uma única unidade** — **`usuario.unidade`** quando preenchido; se estiver **vazio**/nulo mas houver **`vendedor` vinculado**, usa-se **`usuario.vendedor.unidade`** como escopo único — (apenas registros dessa unidade) ou **usuário sem esses vínculos**, que também pode informar/atuar em **qualquer** unidade mediante as permissões de folha (**não** exige vínculo na entidade usuário neste caso).
+- Acesso aos dados da folha considera **usuário com vínculo a uma única unidade** — **`usuario.unidade`** quando preenchido; se estiver **vazio**/nulo mas houver **`vendedor` vinculado**, usa-se **`usuario.vendedor.unidade`** como escopo único — (apenas registros dessa unidade) ou **usuário sem esses vínculos**, que também pode informar/atuar em **qualquer** unidade mediante as permissões de folha (**não** exige vínculo na entidade usuário neste caso).
 - Na tela **Controle das competências**, o filtro de unidade segue o mesmo critério da lista de **Vendas**: fica **fixo e bloqueado** somente quando **`usuario.unidade`** existe e não é string vazia; perfis sem essa coluna preenchida mantêm o seletor liberado (incluindo opção “Todas”), alinhado ao comportamento da API para o escopo efetivo de quem tem só `vendedor.unidade`.
 - **`GET …/folha/funcionarios` (lista paginada):** query **`unidade`** opcional — omitir lista **todas** as unidades do escopo (RN-007); com **`todos=true`** retorna lista completa (impressão); **`comEventosFixos=true`** inclui eventos fixos.
 - **`POST …/folha/capas`:** aceita **`funcionarioId`**; a unidade do body deve **coincidir** com `funcionarios.unidade` desse funcionário (e com o escopo do usuário).
@@ -119,10 +119,18 @@
 ### RN-008 — Usuário com múltiplos perfis
 
 - Cada usuário pode ter **um ou mais perfis** (`usuarios_perfis`); cadastro/edição exige **`perfilIds`** com ao menos um UUID válido.
-- **Permissões efetivas** = **união** das permissões de todos os perfis vinculados (OR). Se **qualquer** perfil tiver `admin:full`, o usuário tem escopo administrativo global nas checagens da API.
+- **Permissões efetivas** = **união** das permissões de todos os perfis vinculados (OR). Cada ação exige a permissão explícita correspondente — não há bypass global.
 - **`usuario.unidade`** e **`vendedor`** continuam no cadastro do usuário (não vêm do perfil).
 - **API:** create/update de usuário usam `perfilIds[]`; login e `/auth/profile` retornam `perfis` e `permissions` (lista unificada).
 - **Mensagem ao usuário:** «Um ou mais perfis informados não foram encontrados»; «perfilIds deve ter ao menos um perfil».
+
+### RN-PERM — Checagem de permissões na API
+
+- **`GET /auditoria`** e **`GET /auditoria/:id`:** exigem **`audit:view`**.
+- **`GET /auditoria/undoable`** e **`POST /auditoria/:id/undo`:** exigem **`audit:manage`**.
+- **`GET /auditoria/entity/:entidade/:id`:** exige permissão **`*:audit`** da entidade correspondente (ou **`folha-lancamento:read`** / **`audit:view`** para `folha_item`).
+- Leituras de **vendas** (`GET /vendas`, `GET /vendas/:id`, `GET /vendas/acompanhar`): **`valorCompra`** retorna **null** sem **`venda:view-valor-compra`**.
+- Permissões **removidas** do catálogo por não possuírem tela/API: `reports:view`, `reports:export`, `system:config`, `system:logs`, **`admin:full`** (substituído por permissões explícitas por módulo + escopo por unidade conforme RN-007).
 
 ### RN-014 — Atalhos da tela inicial (home)
 
@@ -154,7 +162,7 @@
 - **Autenticação webhook:** verify token (GET) + assinatura HMAC `X-Hub-Signature-256` (POST); sem JWT.
 - **Persistência:** conversas (`whatsapp_conversa`) e mensagens (`whatsapp_mensagem`); idempotência por **wamid** único.
 - **Identificação:** match `from` ↔ `funcionario.telefone` (E.164); sem match ⇒ **não identificado**.
-- **Escopo inbox (RN-007):** usuário com unidade vê conversas **identificadas** da unidade + **todas não identificadas** (fila global); sem unidade ou `admin:full` vê todas.
+- **Escopo inbox (RN-007):** usuário com unidade vê conversas **identificadas** da unidade + **todas não identificadas** (fila global); **sem vínculo de unidade** vê todas as identificadas.
 - **Permissões:** `folha-whatsapp:read` (inbox/thread/marcar lida/baixar mídia); `folha-whatsapp:reply` (enviar texto e anexos); `reply` exige `read`.
 - **Resposta manual:** somente na **janela 24h** após última mensagem **inbound** do funcionário; backend e UI bloqueiam fora da janela.
 - **Mídia (janela 24h):** envio e recebimento de **imagem** (JPEG/PNG), **áudio** (gravação no navegador, conversão automática no servidor) e **documento** (PDF, DOCX, XLSX); limite **16 MB** por arquivo; binário em **`whatsapp_mensagem.arquivoConteudo`** (bytea) com retenção configurável (`WHATSAPP_MEDIA_RETENCAO_DIAS`, padrão 30 dias) e purge diário; metadados da mensagem permanecem após expiração.
@@ -166,13 +174,13 @@
 - Tela **`/orcamentos`** lista orçamentos **aprovados** e/ou **rejeitados**, conforme permissões e filtro de tipo.
 - Rota legada **`/orcamentos/rejeitados`** redireciona para **`/orcamentos`**.
 - API: **`GET /orcamentos`** com `status=APROVADO|REJEITADO|TODOS` (padrão conforme permissões do usuário).
-- Escopo por unidade conforme **RN-007** (`usuario.unidade`; admin global vê todas; filtro de unidade na query respeita o escopo).
+- Escopo por unidade conforme **RN-007** (`usuario.unidade`; usuário **sem vínculo** vê todas; filtro de unidade na query respeita o escopo).
 - Com unidade vinculada, o filtro é aplicado automaticamente, o campo fica desabilitado e a unidade aparece nos chips de filtros aplicados (como na lista de vendas).
 - **Filtro padrão de data** ao abrir a tela: **segunda-feira** → orçamentos com `dataOrcamento` **maior que** D-2; **demais dias** → **maior que** D-1 (data local do navegador).
 - Usuário com **ambas** permissões de leitura vê abas/filtro **Todos | Aprovados | Rejeitados**; com apenas uma, o tipo fica fixo.
 - Permissões de leitura: **`orcamento-rejeitado:read`** (rejeitados) e **`orcamento-aprovado:read`** (aprovados).
-- Coluna **Valor** e totais monetários na listagem/relatório exigem **`orcamento:view-valores`**.
-- Impressão exige **`orcamento:print`**.
+- Coluna **Valor** e totais monetários na listagem/relatório exigem **`orcamento:view-valores`** — a API mascara `precoCobrado`, `precoVenda` e `descontoFormula` (zero) quando o usuário não possui a permissão.
+- Impressão exige **`orcamento:print`** — requisições com query **`relatorio=true`** em **`GET /orcamentos`** retornam **403** sem essa permissão.
 
 ### RN-ORC-002 — Registro de motivo em rejeitados
 
@@ -219,7 +227,7 @@
 - Permissão exclusiva: **`orcamento-dashboard:read`** (independente de `orcamento-rejeitado:read`).
 - Visualização de valores monetários no painel exige a permissão **`orcamento-dashboard:view-valores`**.
 - Sem a permissão de valores, o painel deve exibir apenas **quantidades** e **percentuais**, ocultando campos monetários.
-- Escopo por unidade conforme **RN-007** (usuário com unidade vê apenas a própria; admin global vê todas).
+- Escopo por unidade conforme **RN-007** (usuário com unidade vê apenas a própria; **sem vínculo** vê todas).
 - Métrica monetária: **`precoVenda`**. Eixo temporal: **`dataOrcamento`** (`YYYY-MM-DD`).
 - Agrupamento de vendedor e médico: **por nome** (`nomeVendedor`, `nomeMedico`).
 - Rejeitados sem `motivoRejeicaoId` classificam-se como **`Sem motivo`** na análise de perdas (Pareto).

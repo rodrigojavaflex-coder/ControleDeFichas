@@ -9,9 +9,11 @@ import { Cliente } from '../../models/cliente.model';
 import { Vendedor } from '../../models/vendedor.model';
 import { Prescritor } from '../../models/prescritor.model';
 import { AuthService } from '../../services/auth.service';
-import { Unidade, Permission } from '../../models/usuario.model';
+import { UserService } from '../../services/user.service';
+import { Unidade, Permission, Usuario } from '../../models/usuario.model';
 
-export type AutocompleteType = 'cliente' | 'vendedor' | 'prescritor';
+export type AutocompleteType = 'cliente' | 'vendedor' | 'prescritor' | 'usuario';
+export type AutocompleteItem = Cliente | Vendedor | Prescritor | Usuario;
 
 @Component({
   selector: 'app-autocomplete',
@@ -34,7 +36,7 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
   @Input() required: boolean = false;
   @Input() disabled: boolean = false;
   @Input() limit: number = 20;
-  @Output() selected = new EventEmitter<Cliente | Vendedor | Prescritor | null>();
+  @Output() selected = new EventEmitter<AutocompleteItem | null>();
   @Output() createNew = new EventEmitter<string>();
 
   @ViewChild('inputElement', { static: false }) inputElement?: ElementRef<HTMLInputElement>;
@@ -44,9 +46,9 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
   private destroy$ = new Subject<void>();
 
   searchText: string = '';
-  results: (Cliente | Vendedor | Prescritor)[] = [];
+  results: AutocompleteItem[] = [];
   showDropdown: boolean = false;
-  selectedItem: Cliente | Vendedor | Prescritor | null = null;
+  selectedItem: AutocompleteItem | null = null;
   loading: boolean = false;
   error: string | null = null;
   highlightedIndex: number = -1;
@@ -58,6 +60,7 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
     private clientesService: ClientesService,
     private vendedoresService: VendedoresService,
     private prescritoresService: PrescritoresService,
+    private userService: UserService,
     private authService: AuthService,
     private elementRef: ElementRef
   ) {}
@@ -102,7 +105,7 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
     this.searchSubject.complete();
   }
 
-  private async performSearch(searchText: string): Promise<(Cliente | Vendedor | Prescritor)[]> {
+  private async performSearch(searchText: string): Promise<AutocompleteItem[]> {
     const currentUser = this.authService.getCurrentUser();
     const unidade = currentUser?.unidade;
 
@@ -114,6 +117,16 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
           return await firstValueFrom(this.vendedoresService.search(searchText, this.limit));
         case 'prescritor':
           return await firstValueFrom(this.prescritoresService.search(searchText, this.limit));
+        case 'usuario': {
+          const response = await firstValueFrom(
+            this.userService.getUsers({
+              nome: searchText,
+              limit: this.limit,
+              page: 1,
+            }),
+          );
+          return response.data;
+        }
         default:
           return [];
       }
@@ -270,7 +283,7 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
     }
   }
 
-  selectItem(item: Cliente | Vendedor | Prescritor): void {
+  selectItem(item: AutocompleteItem): void {
     this.selectedItem = item;
     this.searchText = item.nome;
     this.showDropdown = false;
@@ -294,7 +307,7 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
     }
   }
 
-  getDisplayText(item: Cliente | Vendedor | Prescritor): string {
+  getDisplayText(item: AutocompleteItem): string {
     if (this.type === 'prescritor') {
       const prescritor = item as Prescritor;
       if (prescritor.numeroCRM && prescritor.UFCRM) {
@@ -304,7 +317,7 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
     return item.nome;
   }
 
-  getSecondaryText(item: Cliente | Vendedor | Prescritor): string | null {
+  getSecondaryText(item: AutocompleteItem): string | null {
     if (this.type === 'cliente') {
       const cliente = item as Cliente;
       // Mostrar apenas a unidade (CPF só aparece no cadastro)
@@ -317,6 +330,11 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
       if (vendedor.unidade) {
         return `Unidade: ${vendedor.unidade}`;
       }
+    }
+    if (this.type === 'usuario') {
+      const usuario = item as Usuario;
+      const unidade = usuario.unidade ?? 'Todas';
+      return usuario.email ? `${usuario.email} · ${unidade}` : unidade;
     }
     return null;
   }
@@ -358,7 +376,7 @@ export class AutocompleteComponent implements ControlValueAccessor, OnInit, OnDe
   }
 
   // Método público para inicializar com um item já selecionado
-  setSelectedItem(item: Cliente | Vendedor | Prescritor | null): void {
+  setSelectedItem(item: AutocompleteItem | null): void {
     if (item) {
       this.selectedItem = item;
       this.searchText = item.nome;

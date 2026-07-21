@@ -55,7 +55,7 @@ export class NavigationComponent implements OnInit, OnDestroy {
           label: 'Auditoria',
           route: '/auditoria',
           icon: 'feather-eye',
-          requiredPermissions: [Permission.AUDIT_VIEW, Permission.AUDIT_MANAGE]
+          requiredPermissions: [Permission.AUDIT_VIEW]
         },
         {
           label: 'Usuários',

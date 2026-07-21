@@ -23,17 +23,6 @@ export enum Permission {
   FICHA_TECNICA_DELETE = 'ficha-tecnica:delete',
   FICHA_TECNICA_AUDIT = 'ficha-tecnica:audit',
 
-  // Administração
-  ADMIN_FULL = 'admin:full',
-
-  // Sistema
-  SYSTEM_CONFIG = 'system:config',
-  SYSTEM_LOGS = 'system:logs',
-
-  // Relatórios
-  REPORTS_VIEW = 'reports:view',
-  REPORTS_EXPORT = 'reports:export',
-
   // Auditoria
   AUDIT_VIEW = 'audit:view',
   AUDIT_MANAGE = 'audit:manage',
@@ -162,10 +151,40 @@ export interface PermissionGroup {
   }[];
 }
 
+export interface PermissionCatalogItem {
+  key: Permission;
+  label: string;
+}
+
+export interface PermissionCatalogGroup {
+  key: string;
+  label: string;
+  permissions: PermissionCatalogItem[];
+}
+
+export interface PermissionCatalogModule {
+  key: string;
+  label: string;
+  groups: PermissionCatalogGroup[];
+}
+
+export interface PermissionCatalog {
+  modules: PermissionCatalogModule[];
+  totalPermissions: number;
+}
+
+export interface PerfilUsuarioVinculado {
+  id: string;
+  nome: string;
+  unidade?: Unidade | null;
+}
+
 export interface Perfil {
   id: string;
   nomePerfil: string;
   permissoes: Permission[];
+  totalUsuarios?: number;
+  usuariosVinculados?: PerfilUsuarioVinculado[];
 }
 
 export interface Usuario {

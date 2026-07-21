@@ -51,6 +51,10 @@ export class OrcamentosService {
     dto: FindOrcamentosDto,
     usuario: Usuario,
   ): Promise<PaginatedResponseDto<Orcamento>> {
+    if (dto.relatorio) {
+      this.assertPermissaoRelatorio(usuario);
+    }
+
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 10;
     const statusList = this.resolverStatusLista(dto.status, usuario);
@@ -135,8 +139,10 @@ export class OrcamentosService {
       .take(limit)
       .getManyAndCount();
 
+    const visualizarValores = this.usuarioPodeVisualizarValores(usuario);
+
     return new PaginatedResponseDto(
-      data,
+      data.map((item) => this.mascararValoresOrcamento(item, visualizarValores)),
       new PaginationMetaDto(page, limit, total),
     );
   }
@@ -321,5 +327,36 @@ export class OrcamentosService {
 
     await this.orcamentoRepo.save(elegiveis);
     return { atualizados: elegiveis.length };
+  }
+
+  private assertPermissaoRelatorio(usuario: Usuario): void {
+    if (
+      !getUsuarioPermissoes(usuario).includes(Permission.ORCAMENTO_PRINT)
+    ) {
+      throw new ForbiddenException(
+        'Acesso negado. Permissão necessária: orcamento:print',
+      );
+    }
+  }
+
+  private usuarioPodeVisualizarValores(usuario: Usuario): boolean {
+    return getUsuarioPermissoes(usuario).includes(
+      Permission.ORCAMENTO_VIEW_VALORES,
+    );
+  }
+
+  private mascararValoresOrcamento(
+    orcamento: Orcamento,
+    visualizarValores: boolean,
+  ): Orcamento {
+    if (visualizarValores) {
+      return orcamento;
+    }
+    return {
+      ...orcamento,
+      precoCobrado: 0,
+      precoVenda: 0,
+      descontoFormula: 0,
+    };
   }
 }

@@ -213,9 +213,6 @@ export class AuthService {
     const user = this.currentUserSubject.value;
     if (!user) return false;
     const perms = this.getUsuarioPermissoesEfetivas(user);
-    if (perms.includes(Permission.ADMIN_FULL)) {
-      return true;
-    }
     return perms.includes(permission);
   }
 

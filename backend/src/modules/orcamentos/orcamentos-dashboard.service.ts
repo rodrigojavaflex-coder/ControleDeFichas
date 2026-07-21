@@ -21,7 +21,6 @@ import {
 } from '../folha/utils/folha-unidade-scope.util';
 import {
   getUsuarioPermissoes,
-  usuarioTemAdminFull,
 } from '../../common/utils/usuario-permissoes.util';
 import { Permission } from '../../common/enums/permission.enum';
 
@@ -207,17 +206,11 @@ export class OrcamentosDashboardService {
   }
 
   private resolverEscopoFixo(usuario: Usuario): Unidade | 'ALL' {
-    if (usuarioTemAdminFull(usuario)) {
-      return 'ALL';
-    }
     const escopo = unidadeEscopoUsuarioFolha(usuario);
     return escopo ?? 'ALL';
   }
 
   private usuarioPodeVisualizarValores(usuario: Usuario): boolean {
-    if (usuarioTemAdminFull(usuario)) {
-      return true;
-    }
     return getUsuarioPermissoes(usuario).includes(
       Permission.ORCAMENTO_DASHBOARD_VIEW_VALORES,
     );

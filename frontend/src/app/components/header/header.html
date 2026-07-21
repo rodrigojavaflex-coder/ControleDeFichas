@@ -41,7 +41,8 @@
               </div>
               <div class="user-app-version" *ngIf="appVersionLabel">
                 Versão: {{ appVersionLabel }}
-                <span class="user-app-build" *ngIf="appBuildLabel">· build {{ appBuildLabel }}</span>
+                <span class="user-app-meta" *ngIf="appVersionDateLabel">· {{ appVersionDateLabel }}</span>
+                <span class="user-app-meta" *ngIf="appBuildLabel">· build {{ appBuildLabel }}</span>
               </div>
             </div>
           </div>

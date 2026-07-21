@@ -17,10 +17,7 @@ import { WhatsappService } from './whatsapp.service';
 import { WhatsappMediaStorageService } from './whatsapp-media-storage.service';
 import { WhatsappAudioConvertService } from './whatsapp-audio-convert.service';
 import { Usuario } from '../usuarios/entities/usuario.entity';
-import {
-  getUsuarioPermissoes,
-  usuarioTemAdminFull,
-} from '../../common/utils/usuario-permissoes.util';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import { Permission } from '../../common/enums/permission.enum';
 import { unidadeEscopoUsuarioFolha } from '../folha/utils/folha-unidade-scope.util';
 import { Unidade } from '../../common/enums/unidade.enum';
@@ -133,7 +130,6 @@ export class FolhaWhatsappAtendimentoService {
     texto: string,
   ): Promise<WhatsappMensagemDto> {
     if (
-      !usuarioTemAdminFull(usuario) &&
       !getUsuarioPermissoes(usuario).includes(Permission.FOLHA_WHATSAPP_READ)
     ) {
       throw new ForbiddenException(
@@ -321,7 +317,6 @@ export class FolhaWhatsappAtendimentoService {
 
   private exigirPermissaoReply(usuario: Usuario): void {
     if (
-      !usuarioTemAdminFull(usuario) &&
       !getUsuarioPermissoes(usuario).includes(Permission.FOLHA_WHATSAPP_REPLY)
     ) {
       throw new ForbiddenException(
@@ -339,9 +334,6 @@ export class FolhaWhatsappAtendimentoService {
     usuario: Usuario,
     qb: ReturnType<Repository<WhatsappConversa>['createQueryBuilder']>,
   ): void {
-    if (usuarioTemAdminFull(usuario)) {
-      return;
-    }
     const escopo = unidadeEscopoUsuarioFolha(usuario);
     if (!escopo) {
       return;

@@ -12,6 +12,13 @@ import { CommonModule } from '@angular/common';
         </div>
         <div class="modal-body">
           <p>{{ message }}</p>
+          @if (detailLines?.length) {
+            <ul class="modal-detail-list">
+              @for (line of detailLines; track line) {
+                <li>{{ line }}</li>
+              }
+            </ul>
+          }
         </div>
         <div class="modal-footer">
           @if (cancelText) {
@@ -38,6 +45,8 @@ export class ConfirmationModalComponent {
   @Input() isVisible = false;
   @Input() title = 'Confirmação';
   @Input() message = 'Tem certeza que deseja continuar?';
+  /** Linhas extras (ex.: usuários vinculados) exibidas abaixo da mensagem. */
+  @Input() detailLines: string[] | null = null;
   @Input() confirmText = 'Sim';
   @Input() cancelText = 'Cancelar';
   /** Quando há `cancelText`, o botão de confirmação é vermelho por padrão; use `primary` para ações não destrutivas. */

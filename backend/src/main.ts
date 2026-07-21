@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { Request, Response } from 'express';
 import { AppDataSource } from './data-source';
+import { assertPermissionCatalogIntegrity } from './common/utils/permission-catalog.util';
 
 /**
  * Executa migrations pendentes antes de iniciar a aplicação
@@ -59,6 +60,9 @@ async function bootstrap() {
   if (nodeEnv === 'production' || !databaseSynchronize) {
     await runMigrations();
   }
+
+  assertPermissionCatalogIntegrity();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });

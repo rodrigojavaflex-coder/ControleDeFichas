@@ -104,4 +104,17 @@ export class FindOrcamentosDto extends PaginationDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc';
+
+  @ApiPropertyOptional({
+    description:
+      'true = exportação/impressão em massa (exige permissão orcamento:print)',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined;
+  })
+  @IsBoolean()
+  relatorio?: boolean;
 }

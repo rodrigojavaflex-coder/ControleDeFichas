@@ -24,10 +24,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Configuracao } from '../configuracao/entities/configuracao.entity';
 import { Auditoria } from './entities/auditoria.entity';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { Permission } from '../../common/enums/permission.enum';
+import { assertPermissaoHistoricoEntidade } from '../../common/utils/audit-entity-permission.util';
 
 @ApiTags('auditoria')
 @Controller('auditoria')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), PermissionsGuard)
 @ApiBearerAuth()
 export class AuditoriaController {
   constructor(
@@ -80,6 +84,7 @@ export class AuditoriaController {
   }
 
   @Get()
+  @Permissions(Permission.AUDIT_VIEW)
   @ApiOperation({
     summary: 'Buscar logs de auditoria',
     description:
@@ -107,6 +112,7 @@ export class AuditoriaController {
    * Rotas literais antes de `:id`; caso contrário `undoable` e `entity` seriam tratados como UUID em `findOne`.
    */
   @Get('undoable')
+  @Permissions(Permission.AUDIT_MANAGE)
   @ApiOperation({
     summary: 'Listar alterações que podem ser desfeitas',
     description:
@@ -121,6 +127,20 @@ export class AuditoriaController {
   }
 
   @Get('entity/:entidade/:entidadeId')
+  @Permissions(
+    Permission.AUDIT_VIEW,
+    Permission.USER_AUDIT,
+    Permission.VENDA_AUDIT,
+    Permission.CLIENTE_AUDIT,
+    Permission.VENDEDOR_AUDIT,
+    Permission.PRESCRITOR_AUDIT,
+    Permission.FICHA_TECNICA_AUDIT,
+    Permission.CERTIFICADO_AUDIT,
+    Permission.FOLHA_CARGO_AUDIT,
+    Permission.FOLHA_SETOR_AUDIT,
+    Permission.FOLHA_VERBA_AUDIT,
+    Permission.FOLHA_LANCAMENTO_READ,
+  )
   @ApiOperation({
     summary: 'Buscar histórico de auditoria por entidade',
     description:
@@ -135,6 +155,8 @@ export class AuditoriaController {
     @Param('entidadeId') entidadeId: string,
     @Req() req: Request & { user: Usuario },
   ): Promise<any> {
+    assertPermissaoHistoricoEntidade(req.user, entidade);
+
     if (await this.shouldAuditAction(AuditAction.READ)) {
       await this.auditoriaService.createLog({
         acao: AuditAction.READ,
@@ -148,6 +170,7 @@ export class AuditoriaController {
   }
 
   @Get(':id')
+  @Permissions(Permission.AUDIT_VIEW)
   @ApiOperation({
     summary: 'Buscar log de auditoria por ID',
     description:
@@ -172,6 +195,7 @@ export class AuditoriaController {
   }
 
   @Post(':id/undo')
+  @Permissions(Permission.AUDIT_MANAGE)
   @ApiOperation({
     summary: 'Desfazer uma alteração',
     description:

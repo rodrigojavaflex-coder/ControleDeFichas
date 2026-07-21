@@ -4,6 +4,7 @@
     <h1 class="title">Logs de Auditoria</h1>
     <div class="header-actions">
       <button 
+        *ngIf="podeGerenciarAuditoria"
         class="btn btn-outline" 
         (click)="toggleUndoablePanel()"
         [class.active]="showUndoablePanel">
@@ -21,7 +22,7 @@
   </div>
 
   <!-- Painel de alterações desfaíveis -->
-  <div class="undoable-panel" [class.show]="showUndoablePanel">
+  <div class="undoable-panel" *ngIf="podeGerenciarAuditoria" [class.show]="showUndoablePanel">
     <div class="panel-header">
       <h3>Alterações que podem ser desfeitas</h3>
       <span class="panel-subtitle">Últimas 24 horas - Máximo 10 alterações</span>

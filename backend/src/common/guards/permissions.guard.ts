@@ -13,10 +13,7 @@ import { Repository } from 'typeorm';
 import { Permission } from '../enums/permission.enum';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { Usuario } from '../../modules/usuarios/entities/usuario.entity';
-import {
-  getUsuarioPermissoes,
-  usuarioTemAdminFull,
-} from '../utils/usuario-permissoes.util';
+import { getUsuarioPermissoes } from '../utils/usuario-permissoes.util';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -69,11 +66,6 @@ export class PermissionsGuard implements CanActivate {
       // Verificar se o usuário tem pelo menos uma das permissões necessárias
       // Verificar se o perfil do usuário possui as permissões necessárias
       const userPermissions = getUsuarioPermissoes(user);
-
-      if (usuarioTemAdminFull(user)) {
-        request.user = user;
-        return true;
-      }
 
       const hasPermission = requiredPermissions.some((permission) =>
         userPermissions.includes(permission),

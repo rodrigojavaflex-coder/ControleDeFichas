@@ -1,13 +1,24 @@
-<div class="perfil-page">
-  <header class="page-header">
-    <div class="header-content">
+<div class="perfil-page vendas-page">
+  <section class="results-card">
+    <div class="results-header">
       <div>
         <p class="page-subtitle">Administração</p>
         <h1>Perfis</h1>
+        <p class="results-count">
+          @if (!loading && !error) {
+            @if (hasActiveFilters) {
+              Exibindo {{ displayedItems.length }} de {{ allItems.length }} perfis
+            } @else {
+              Exibindo {{ allItems.length }}
+              {{ allItems.length === 1 ? 'perfil' : 'perfis' }}
+            }
+          }
+        </p>
       </div>
       <div class="header-actions">
         @if (authService.hasPermission(Permission.PROFILE_CREATE)) {
           <a routerLink="/perfil/new" class="btn btn-novo">
+            <i class="fas fa-plus"></i>
             Novo Perfil
           </a>
         }
@@ -17,68 +28,192 @@
         </button>
       </div>
     </div>
-  </header>
 
-  @if (loading) {
-    <section class="state-card">
-      <div class="spinner"></div>
-      <p>Carregando perfis...</p>
-    </section>
-  }
+    @if (loading) {
+      <section class="state-inline">
+        <div class="spinner"></div>
+        <p>Carregando perfis...</p>
+      </section>
+    }
 
-  @if (error) {
-    <section class="state-card error">
-      <div class="error-message">
-        <i class="fas fa-exclamation-circle"></i>
+    @if (error) {
+      <section class="state-inline error">
         <p>{{ error }}</p>
-      </div>
-      <button class="btn btn-primario" (click)="loadItems()">Tentar novamente</button>
-    </section>
-  }
+        <button class="btn btn-primario" (click)="loadItems()">Tentar novamente</button>
+      </section>
+    }
 
-  @if (!loading && !error) {
-    <section class="results-card">
-      <div class="results-header">
-        <div>
-          <h2>Perfis cadastrados</h2>
-          <p class="results-count">
-            Exibindo {{ items.length }} {{ items.length === 1 ? 'perfil' : 'perfis' }}
-          </p>
+    @if (!loading && !error) {
+      <div class="filters-inline">
+        <div class="filters-panel-top perfil-filters">
+          <div class="filter-field filter-field-nome">
+            <label for="filtroNomePerfil">Nome do perfil</label>
+            <input
+              id="filtroNomePerfil"
+              type="text"
+              class="form-control"
+              [(ngModel)]="filtroNome"
+              placeholder="Buscar por nome"
+            />
+          </div>
+          <div class="filter-field">
+            <label for="filtroModuloPerfil">Módulo</label>
+            <select
+              id="filtroModuloPerfil"
+              class="form-control"
+              [(ngModel)]="filtroModuloKey"
+            >
+              <option value="">Todos os módulos</option>
+              @if (permissionCatalog) {
+                @for (mod of permissionCatalog.modules; track mod.key) {
+                  <option [value]="mod.key">{{ mod.label }}</option>
+                }
+              }
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="filtroVinculoPerfil">Vínculo</label>
+            <select
+              id="filtroVinculoPerfil"
+              class="form-control"
+              [(ngModel)]="filtroVinculo"
+            >
+              <option value="todos">Todos</option>
+              <option value="com">Com usuários vinculados</option>
+              <option value="sem">Sem usuários vinculados</option>
+            </select>
+          </div>
+          <div class="filter-field filter-field-usuario">
+            <label for="filtroUsuarioPerfil">Usuários</label>
+            <app-autocomplete
+              #usuarioAutocomplete
+              id="filtroUsuarioPerfil"
+              type="usuario"
+              [(ngModel)]="filtroUsuarioId"
+              placeholder="Buscar usuário..."
+              (selected)="onUsuarioFiltroSelected($event)"
+            ></app-autocomplete>
+          </div>
+          @if (hasActiveFilters) {
+            <button type="button" class="btn btn-limpar" (click)="limparFiltros()">
+              Limpar filtros
+            </button>
+          }
         </div>
+
+        @if (hasActiveFilters) {
+          <div class="filters-applied">
+            <span class="filters-count">
+              {{ displayedItems.length }}
+              {{ displayedItems.length === 1 ? 'resultado' : 'resultados' }}
+            </span>
+            @if (filtroNome.trim()) {
+              <button type="button" class="filter-chip" (click)="filtroNome = ''">
+                Nome: {{ filtroNome.trim() }}
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            }
+            @if (filtroModuloKey) {
+              <button type="button" class="filter-chip" (click)="filtroModuloKey = ''">
+                Módulo: {{ getModuloLabel(filtroModuloKey) }}
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            }
+            @if (filtroVinculo !== 'todos') {
+              <button
+                type="button"
+                class="filter-chip"
+                (click)="filtroVinculo = 'todos'"
+              >
+                Vínculo: {{ getVinculoFiltroLabel() }}
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            }
+            @if (filtroUsuarioId) {
+              <button
+                type="button"
+                class="filter-chip"
+                (click)="limparFiltroUsuario()"
+              >
+                Usuários: {{ filtroUsuarioLabel }}
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            }
+          </div>
+        }
       </div>
 
       <div class="table-wrapper">
-        <table class="data-table">
+        <table class="vendas-table data-table">
           <thead>
             <tr>
               <th class="acoes-col">Ações</th>
-              <th>Nome do Perfil</th>
-              <th>Permissões</th>
+              <th class="sortable" (click)="toggleSortNome()">
+                Nome do Perfil
+                <i
+                  class="fas sort-icon"
+                  [class.fa-sort-up]="sortNome === 'asc'"
+                  [class.fa-sort-down]="sortNome === 'desc'"
+                  aria-hidden="true"
+                ></i>
+              </th>
+              <th class="col-usuarios">Usuários</th>
+              <th>Permissões por módulo</th>
             </tr>
           </thead>
           <tbody>
-            @if (items.length === 0) {
-              <tr>
-                <td colspan="3" class="empty-state">
+            @if (allItems.length === 0) {
+              <tr class="no-data">
+                <td colspan="4">
+                  <i class="fas fa-inbox"></i>
                   Nenhum perfil cadastrado.
                 </td>
               </tr>
+            } @else if (displayedItems.length === 0) {
+              <tr class="no-data">
+                <td colspan="4">
+                  <i class="fas fa-filter"></i>
+                  Nenhum perfil encontrado para os filtros aplicados.
+                </td>
+              </tr>
             }
-            @for (perfil of items; track perfil.id) {
+            @for (perfil of displayedItems; track perfil.id) {
               <tr>
                 <td class="actions-cell">
                   @if (authService.hasPermission(Permission.PROFILE_UPDATE)) {
-                    <button type="button" class="btn btn-sm btn-editar" (click)="editPerfil(perfil)">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-editar"
+                      (click)="editPerfil(perfil)"
+                    >
                       Editar
                     </button>
                   }
+                  @if (authService.hasPermission(Permission.PROFILE_CREATE)) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-secondary"
+                      (click)="duplicatePerfil(perfil)"
+                      title="Duplicar perfil"
+                    >
+                      Duplicar
+                    </button>
+                  }
                   @if (authService.hasPermission(Permission.PROFILE_READ)) {
-                    <button type="button" class="btn btn-sm btn-imprimir" (click)="printPerfil(perfil)">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-imprimir"
+                      (click)="printPerfil(perfil)"
+                    >
                       Imprimir
                     </button>
                   }
                   @if (authService.hasPermission(Permission.PROFILE_DELETE)) {
-                    <button type="button" class="btn btn-sm btn-excluir" (click)="deletePerfil(perfil)">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-excluir"
+                      (click)="deletePerfil(perfil)"
+                    >
                       Excluir
                     </button>
                   }
@@ -86,28 +221,73 @@
                 <td>
                   <div class="perfil-name">
                     <strong>{{ perfil.nomePerfil }}</strong>
-                    <small>ID: {{ perfil.id }}</small>
+                    <small>{{ perfil.permissoes.length }} permissões</small>
+                  </div>
+                </td>
+                <td class="col-usuarios">
+                  <div class="usuarios-cell">
+                    <span class="usuario-count">{{ getUsuarioCount(perfil) }}</span>
+                    @if (getUsuariosVinculados(perfil).length) {
+                      <ul class="usuarios-lista">
+                        @for (
+                          usuario of getUsuariosVinculados(perfil);
+                          track usuario.id
+                        ) {
+                          <li>
+                            <span class="usuario-nome">{{ usuario.nome }}</span>
+                            <span class="usuario-unidade">{{
+                              formatUnidadeUsuario(usuario.unidade)
+                            }}</span>
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      <span class="usuarios-vazio">Nenhum usuário vinculado</span>
+                    }
                   </div>
                 </td>
                 <td class="permissoes-cell">
-                  {{ formattedPermissoes[perfil.id] || 'Sem permissões' }}
+                  <div class="module-chips">
+                    @for (chip of getVisibleChips(perfil); track chip.moduleKey) {
+                      <span class="filter-chip module-chip">
+                        <app-menu-icon
+                          [iconKey]="getModuleIconKey(chip.moduleKey)"
+                          size="sm"
+                        ></app-menu-icon>
+                        {{ chip.moduleLabel }}: {{ chip.selected }}
+                      </span>
+                    }
+                    @if (getHiddenModulesCount(perfil) > 0) {
+                      <span class="filter-chip module-chip module-chip-more">
+                        +{{ getHiddenModulesCount(perfil) }} módulos
+                      </span>
+                    }
+                    @if (getVisibleChips(perfil).length === 0) {
+                      <span class="empty-perms">Sem permissões</span>
+                    }
+                    @if (getUncatalogedCount(perfil) > 0) {
+                      <span class="filter-chip module-chip module-chip-warn" title="Permissões legadas fora do catálogo">
+                        {{ getUncatalogedCount(perfil) }} legadas
+                      </span>
+                    }
+                  </div>
                 </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
-    </section>
-  }
+    }
+  </section>
 </div>
 
-  <!-- Modal de confirmação de exclusão de perfil -->
-  <app-confirmation-modal
-    [isVisible]="showDeleteModal"
-    [title]="deleteModalTitle"
-    [message]="deleteModalMessage"
-    confirmText="Excluir"
-    cancelText="Cancelar"
-    (confirmed)="onDeleteConfirmed()"
-    (cancelled)="onDeleteCancelled()"
-  ></app-confirmation-modal>
+<app-confirmation-modal
+  [isVisible]="showDeleteModal"
+  [title]="deleteModalTitle"
+  [message]="deleteModalMessage"
+  [detailLines]="deleteModalUsuarios"
+  confirmText="Excluir"
+  cancelText="Cancelar"
+  (confirmed)="onDeleteConfirmed()"
+  (cancelled)="onDeleteCancelled()"
+></app-confirmation-modal>

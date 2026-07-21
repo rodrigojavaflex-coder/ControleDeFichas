@@ -29,6 +29,7 @@ import { Permission } from '../../common/enums/permission.enum';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { Usuario } from '../usuarios/entities/usuario.entity';
 import { FecharVendasEmMassaDto } from './dto/fechar-vendas-em-massa.dto';
 import { CancelarFechamentosEmMassaDto } from './dto/cancelar-fechamentos-em-massa.dto';
 import { RegistrarEnvioDto } from './dto/registrar-envio.dto';
@@ -145,8 +146,11 @@ export class VendasController {
   @ApiQuery({ name: 'dataFinalEnvio', required: false, type: String })
   @ApiQuery({ name: 'unidade', required: false, type: String })
   @ApiQuery({ name: 'ativo', required: false, type: String })
-  findAll(@Query() findVendasDto: FindVendasDto): Promise<PaginatedResponseDto<Venda>> {
-    return this.vendasService.findAll(findVendasDto);
+  findAll(
+    @Query() findVendasDto: FindVendasDto,
+    @Req() req: { user: Usuario },
+  ): Promise<PaginatedResponseDto<Venda>> {
+    return this.vendasService.findAll(findVendasDto, req.user);
   }
 
   @Get('acompanhar')
@@ -194,8 +198,11 @@ export class VendasController {
     status: HttpStatus.NOT_FOUND,
     description: 'Venda não encontrada',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Venda> {
-    return this.vendasService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: { user: Usuario },
+  ): Promise<Venda> {
+    return this.vendasService.findOne(id, req.user);
   }
 
   @Patch(':id')

@@ -33,6 +33,13 @@ export class OrcamentosService {
     );
   }
 
+  /** Listagem para impressão/relatório (exige orcamento:print na API). */
+  listarOrcamentosRelatorio(
+    filters?: FindOrcamentosDto,
+  ): Observable<OrcamentosRejeitadosPaginatedResponse> {
+    return this.listarOrcamentos({ ...filters, relatorio: true });
+  }
+
   /** @deprecated Use listarOrcamentos */
   listarRejeitados(
     filters?: FindOrcamentosRejeitadosDto,

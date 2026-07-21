@@ -15,17 +15,6 @@ export enum Permission {
   FICHA_TECNICA_DELETE = 'ficha-tecnica:delete',
   FICHA_TECNICA_AUDIT = 'ficha-tecnica:audit',
 
-  // Administração
-  ADMIN_FULL = 'admin:full',
-
-  // Sistema
-  SYSTEM_CONFIG = 'system:config',
-  SYSTEM_LOGS = 'system:logs',
-
-  // Relatórios
-  REPORTS_VIEW = 'reports:view',
-  REPORTS_EXPORT = 'reports:export',
-
   // Auditoria
   AUDIT_VIEW = 'audit:view',
   AUDIT_MANAGE = 'audit:manage',
@@ -187,17 +176,6 @@ export const PERMISSION_GROUPS = {
     { key: Permission.FICHA_TECNICA_UPDATE, label: 'Editar fichas técnicas' },
     { key: Permission.FICHA_TECNICA_DELETE, label: 'Excluir fichas técnicas' },
     { key: Permission.FICHA_TECNICA_AUDIT, label: 'Visualizar auditoria' },
-  ],
-  Administração: [
-    { key: Permission.ADMIN_FULL, label: 'Administração completa' },
-  ],
-  Sistema: [
-    { key: Permission.SYSTEM_CONFIG, label: 'Configurações do sistema' },
-    { key: Permission.SYSTEM_LOGS, label: 'Visualizar logs do sistema' },
-  ],
-  Relatórios: [
-    { key: Permission.REPORTS_VIEW, label: 'Visualizar relatórios' },
-    { key: Permission.REPORTS_EXPORT, label: 'Exportar relatórios' },
   ],
   Auditoria: [
     { key: Permission.AUDIT_VIEW, label: 'Visualizar logs de auditoria' },

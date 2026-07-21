@@ -234,20 +234,17 @@ export class FolhaLancamentosPage implements OnInit {
     u: boolean;
     d: boolean;
   } {
-    const admin = this.auth.hasPermission(Permission.ADMIN_FULL);
     return {
-      r: admin || this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_READ),
-      c: admin || this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_CREATE),
-      u: admin || this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_UPDATE),
-      d: admin || this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_DELETE),
+      r: this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_READ),
+      c: this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_CREATE),
+      u: this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_UPDATE),
+      d: this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_DELETE),
     };
   }
 
   /** Histórico de alterações por `folha_item` (alinha auditoria gravada como `folha_item` na API). */
   podeAuditarLinhaEvento(): boolean {
-    const admin = this.auth.hasPermission(Permission.ADMIN_FULL);
     return (
-      admin ||
       this.auth.hasPermission(Permission.AUDIT_VIEW) ||
       this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_READ)
     );
@@ -261,9 +258,9 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   podeExcluirCapa(): boolean {
-    const podePerm =
-      this.auth.hasPermission(Permission.ADMIN_FULL) ||
-      this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_DELETE_CAPA);
+    const podePerm = this.auth.hasPermission(
+      Permission.FOLHA_LANCAMENTO_DELETE_CAPA,
+    );
     return (
       podePerm &&
       this.podeEditarLoteNaCompetencia() &&
@@ -275,9 +272,9 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   podeCongelarCapa(): boolean {
-    const podePerm =
-      this.auth.hasPermission(Permission.ADMIN_FULL) ||
-      this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_CONGELAR_CAPA);
+    const podePerm = this.auth.hasPermission(
+      Permission.FOLHA_LANCAMENTO_CONGELAR_CAPA,
+    );
     return (
       podePerm &&
       this.podeEditarLoteNaCompetencia() &&
@@ -289,9 +286,9 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   podeLiberarCapa(): boolean {
-    const podePerm =
-      this.auth.hasPermission(Permission.ADMIN_FULL) ||
-      this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_LIBERAR_CAPA);
+    const podePerm = this.auth.hasPermission(
+      Permission.FOLHA_LANCAMENTO_LIBERAR_CAPA,
+    );
     return (
       podePerm &&
       this.podeEditarLoteNaCompetencia() &&
@@ -1790,7 +1787,6 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   temPermissaoEnviarReciboWhatsappIndividual(): boolean {
-    if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
     return this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP);
   }
 

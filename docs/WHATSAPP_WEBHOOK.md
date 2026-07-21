@@ -35,7 +35,7 @@ Portanto, para **receber respostas** dos funcionários que respondem ao número 
 | **Canal de atendimento** | Chat manual no sistema via **webhook** (número da API). Foco em quem **responde ao recibo** neste número. |
 | **Template Meta (fase atual)** | Manter variáveis `WHATSAPP_CONTATO_DUVIDAS_*` no corpo. Quando chat estiver estável, revisar copy na Meta (ex.: “responda esta mensagem”). |
 | **Permissões** | `folha-whatsapp:read` (ver inbox) + `folha-whatsapp:reply` (enviar texto). **Separadas** de enviar recibo. |
-| **Escopo por unidade (RN-007)** | Usuário **com** `usuario.unidade` (ou `vendedor.unidade`): vê conversas **identificadas** da **mesma unidade**. Usuário **sem** vínculo ou `admin:full`: vê **todas** as identificadas. |
+| **Escopo por unidade (RN-007)** | Usuário **com** `usuario.unidade` (ou `vendedor.unidade`): vê conversas **identificadas** da **mesma unidade**. Usuário **sem** vínculo de unidade: vê **todas** as identificadas. |
 | **Não identificados** | Telefone sem match em `funcionario` → **fila global**: **todos** com `folha-whatsapp:read` veem, **independente** da unidade do usuário. |
 | **Janela 24h** | Fora da janela: **só bloquear** envio (UI + backend). Sem template lembrete na fase 1. |
 | **IA / auto-resposta** | Fora do MVP. |

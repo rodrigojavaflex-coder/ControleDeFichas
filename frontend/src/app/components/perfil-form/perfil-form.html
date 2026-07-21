@@ -1,11 +1,31 @@
 <div class="perfil-form-page">
   <form [formGroup]="perfilForm" (ngSubmit)="onSubmit()" class="perfil-form-card">
-    <header class="page-header">
-      <div class="header-content">
-        <div>
-          <p class="page-subtitle">Administração</p>
+    <header class="page-header sticky-header">
+      <p class="page-subtitle">Administração</p>
+      <div class="header-main">
+        <div class="header-title-block">
           <h2>{{ isEditMode ? 'Editar Perfil' : 'Novo Perfil' }}</h2>
+          @if (permissionCatalog) {
+            <p class="selection-summary">
+              {{ totalSelected }} de {{ totalPermissions }} permissões selecionadas
+            </p>
+          }
         </div>
+
+        <div class="header-nome-field">
+          <label for="nomePerfil">Nome do Perfil</label>
+          <input
+            id="nomePerfil"
+            type="text"
+            formControlName="nomePerfil"
+            class="form-control"
+            placeholder="Informe um nome descritivo"
+          />
+          @if (perfilForm.get('nomePerfil')?.invalid && perfilForm.get('nomePerfil')?.touched) {
+            <div class="error-message">Nome do perfil é obrigatório.</div>
+          }
+        </div>
+
         <div class="header-actions">
           <button type="button" class="btn btn-cancelar" (click)="router.navigate(['/perfil'])">
             Cancelar
@@ -17,98 +37,291 @@
       </div>
     </header>
 
-    <section *ngIf="loading" class="state-card">
-      <div class="spinner"></div>
-      <p>Carregando informações do perfil...</p>
-    </section>
+    @if (loading && !permissionCatalog) {
+      <section class="state-card">
+        <div class="spinner"></div>
+        <p>Carregando informações do perfil...</p>
+      </section>
+    }
 
-    <section *ngIf="error" class="state-card error">
-      <p>{{ error }}</p>
-      <button class="btn btn-primario" type="button" (click)="router.navigate(['/perfil'])">
-        Voltar para lista
-      </button>
-    </section>
+    @if (error) {
+      <section class="state-card error">
+        <p>{{ error }}</p>
+        <button class="btn btn-primario" type="button" (click)="router.navigate(['/perfil'])">
+          Voltar para lista
+        </button>
+      </section>
+    }
 
-    <div *ngIf="!loading" class="form-content">
-      <div class="form-group">
-        <label for="nomePerfil">Nome do Perfil</label>
-        <input
-          id="nomePerfil"
-          type="text"
-          formControlName="nomePerfil"
-          class="form-input"
-          placeholder="Informe um nome descritivo"
-        />
-        <div *ngIf="perfilForm.get('nomePerfil')?.invalid && perfilForm.get('nomePerfil')?.touched" class="error-message">
-          Nome do perfil é obrigatório.
-        </div>
-      </div>
-
-      <div class="permissions-section">
-        <div class="permissions-header">
-          <h3>Permissões</h3>
-        </div>
-
-        <div class="permissions-toolbar">
-          <div class="search-group">
-            <label for="permSearch">Buscar Permissões</label>
-            <input
-              id="permSearch"
-              name="permissionFilter"
-              type="text"
-              [(ngModel)]="permissionFilter"
-              (ngModelChange)="onPermissionFilterChange($event)"
-              [ngModelOptions]="{ standalone: true }"
-              placeholder="Digite para filtrar por nome ou grupo"
-              class="form-input perm-search"
-            />
-          </div>
-          <div class="permissions-actions">
-            <button
-              type="button"
-              class="btn btn-sm btn-primary"
-              (click)="selectAllFiltered()"
-              [disabled]="allFilteredSelected"
-            >
-              Marcar todos
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm btn-secondary"
-              (click)="deselectAllFiltered()"
-              [disabled]="!anyFilteredSelected"
-            >
-              Desmarcar
-            </button>
-          </div>
-        </div>
-
-        <div class="permissions-grid" *ngIf="filteredPermissionGroups | keyvalue as groups">
-          <div *ngFor="let group of groups" class="permission-group">
-            <div class="permission-group-header">
-              <input
-                type="checkbox"
-                [id]="group.key + '_select_all'"
-                [checked]="isGroupSelected(group.key)"
-                (change)="toggleSelectGroup(group.key, $event.target.checked)"
-              />
-              <label [for]="group.key + '_select_all'">{{ formatGroupName(group.key) }}</label>
-            </div>
-            <div *ngFor="let perm of group.value" class="permission-item">
-              <input
-                type="checkbox"
-                [id]="perm.key"
-                [checked]="perfilForm.value.permissoes.includes(perm.key)"
-                (change)="onPermissionChange(perm.key, $event.target.checked)"
-              />
-              <label [for]="perm.key">{{ perm.label }}</label>
+    @if (permissionCatalog) {
+      <div class="form-content">
+        <section class="permissions-section">
+          <div class="permissions-header">
+            <div>
+              <h3>Permissões</h3>
+              <p>Organizadas por módulo, alinhadas ao menu do sistema.</p>
             </div>
           </div>
-          <p *ngIf="groups.length === 0" class="empty-permissions">
-            Nenhuma permissão encontrada para o filtro informado.
-          </p>
-        </div>
+
+          <div class="permissions-toolbar filters-inline">
+            <div class="perm-toolbar-main">
+              <div class="filter-combo">
+                <label for="filterModule">Módulo</label>
+                <select
+                  id="filterModule"
+                  class="form-control"
+                  [(ngModel)]="filterModuleKey"
+                  (ngModelChange)="onFilterModuleChange($event)"
+                  [ngModelOptions]="{ standalone: true }"
+                >
+                  <option value="">Todos os módulos</option>
+                  @for (mod of moduleFilterOptions; track mod.key) {
+                    <option [value]="mod.key">{{ mod.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="filter-combo">
+                <label for="filterGroup">Tela / grupo</label>
+                <select
+                  id="filterGroup"
+                  class="form-control"
+                  [(ngModel)]="filterGroupKey"
+                  (ngModelChange)="onFilterGroupChange($event)"
+                  [disabled]="!filterModuleKey"
+                  [ngModelOptions]="{ standalone: true }"
+                >
+                  <option value="">Todas as telas</option>
+                  @for (group of groupFilterOptions; track group.key) {
+                    <option [value]="group.key">{{ group.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="search-group">
+                <label for="permSearch">Buscar permissões</label>
+                <div class="search-input-wrap">
+                  <i class="fas fa-search search-icon" aria-hidden="true"></i>
+                  <input
+                    id="permSearch"
+                    name="permissionFilter"
+                    type="text"
+                    [(ngModel)]="permissionFilter"
+                    (ngModelChange)="onPermissionFilterChange($event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Nome da permissão"
+                    class="form-control perm-search"
+                  />
+                </div>
+              </div>
+
+              <div class="filter-segment">
+                <span class="filter-label">Exibir</span>
+                <div class="segment-buttons" role="group" aria-label="Filtro de seleção">
+                  <button
+                    type="button"
+                    class="segment-btn"
+                    [class.active]="selectionFilter === 'all'"
+                    (click)="setSelectionFilter('all')"
+                  >
+                    Todas
+                  </button>
+                  <button
+                    type="button"
+                    class="segment-btn"
+                    [class.active]="selectionFilter === 'selected'"
+                    (click)="setSelectionFilter('selected')"
+                  >
+                    Selecionadas
+                  </button>
+                  <button
+                    type="button"
+                    class="segment-btn"
+                    [class.active]="selectionFilter === 'unselected'"
+                    (click)="setSelectionFilter('unselected')"
+                  >
+                    Não selecionadas
+                  </button>
+                </div>
+              </div>
+
+              @if (hasActiveLocationFilter) {
+                <button
+                  type="button"
+                  class="btn btn-sm btn-ghost filter-clear-btn"
+                  (click)="clearLocationFilters()"
+                  title="Limpar módulo e tela"
+                >
+                  <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+              }
+            </div>
+
+            <div class="perm-toolbar-actions">
+              <div class="toolbar-action-group">
+                <span class="filter-label">Módulos</span>
+                <div class="segment-buttons" role="group" aria-label="Expandir ou recolher módulos">
+                  <button
+                    type="button"
+                    class="segment-btn segment-action-btn"
+                    (click)="expandAllModules()"
+                  >
+                    <i class="fas fa-expand-alt" aria-hidden="true"></i>
+                    Expandir
+                  </button>
+                  <button
+                    type="button"
+                    class="segment-btn segment-action-btn"
+                    (click)="collapseAllModules()"
+                  >
+                    <i class="fas fa-compress-alt" aria-hidden="true"></i>
+                    Recolher
+                  </button>
+                </div>
+              </div>
+
+              <div class="toolbar-action-group">
+                <span class="filter-label">
+                  Seleção
+                  @if (filteredPermissionsCount > 0) {
+                    <span class="toolbar-action-hint">
+                      ({{ filteredPermissionsCount }} filtradas)
+                    </span>
+                  }
+                </span>
+                <div
+                  class="segment-buttons"
+                  role="group"
+                  aria-label="Marcar ou desmarcar permissões filtradas"
+                >
+                  <button
+                    type="button"
+                    class="segment-btn segment-action-btn"
+                    (click)="selectAllFiltered()"
+                    [disabled]="allFilteredSelected || filteredPermissionsCount === 0"
+                  >
+                    <i class="fas fa-check-square" aria-hidden="true"></i>
+                    Marcar
+                    @if (filteredUnselectedCount > 0) {
+                      ({{ filteredUnselectedCount }})
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="segment-btn segment-action-btn"
+                    (click)="deselectAllFiltered()"
+                    [disabled]="!anyFilteredSelected || filteredPermissionsCount === 0"
+                  >
+                    <i class="far fa-square" aria-hidden="true"></i>
+                    Desmarcar
+                    @if (filteredSelectedCount > 0) {
+                      ({{ filteredSelectedCount }})
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modules-list">
+            @for (mod of filteredModules; track mod.key) {
+              <article class="module-accordion" [class.expanded]="isModuleExpanded(mod.key)">
+                <header class="module-header">
+                  <button
+                    type="button"
+                    class="module-toggle"
+                    (click)="toggleModuleExpanded(mod.key)"
+                    [attr.aria-expanded]="isModuleExpanded(mod.key)"
+                  >
+                    <i
+                      class="fas"
+                      [class.fa-chevron-down]="isModuleExpanded(mod.key)"
+                      [class.fa-chevron-right]="!isModuleExpanded(mod.key)"
+                    ></i>
+                    <span class="module-title">
+                      <app-menu-icon
+                        [iconKey]="getModuleIconKey(mod.key)"
+                        size="sm"
+                      ></app-menu-icon>
+                      {{ mod.label }}
+                    </span>
+                  </button>
+                  <span class="module-count">
+                    {{ countSelectedInModule(mod) }}/{{ countTotalInModule(mod) }}
+                  </span>
+                  <div
+                    class="segment-buttons module-segment-buttons"
+                    role="group"
+                    [attr.aria-label]="'Seleção do módulo ' + mod.label"
+                  >
+                    <button
+                      type="button"
+                      class="segment-btn segment-action-btn"
+                      (click)="selectModuleAll(mod)"
+                      [disabled]="countUnselectedInModule(mod) === 0"
+                    >
+                      <i class="fas fa-check-square" aria-hidden="true"></i>
+                      Marcar ({{ countUnselectedInModule(mod) }})
+                    </button>
+                    <button
+                      type="button"
+                      class="segment-btn segment-action-btn"
+                      (click)="deselectModuleAll(mod)"
+                      [disabled]="countSelectedInModule(mod) === 0"
+                    >
+                      <i class="far fa-square" aria-hidden="true"></i>
+                      Desmarcar ({{ countSelectedInModule(mod) }})
+                    </button>
+                  </div>
+                </header>
+
+                @if (isModuleExpanded(mod.key)) {
+                  <div class="module-body">
+                    @for (group of mod.groups; track group.key) {
+                      <div class="permission-group">
+                        <div class="permission-group-header">
+                          <input
+                            type="checkbox"
+                            [id]="mod.key + '_' + group.key + '_all'"
+                            [checked]="isGroupSelected(group)"
+                            [indeterminate]="isGroupIndeterminate(group)"
+                            (change)="toggleSelectGroup(group, $any($event.target).checked)"
+                          />
+                          <label [for]="mod.key + '_' + group.key + '_all'">
+                            <app-menu-icon
+                              [iconKey]="getGroupIconKey(group.key)"
+                              size="sm"
+                            ></app-menu-icon>
+                            {{ group.label }}
+                          </label>
+                        </div>
+                        <div class="permission-items">
+                          @for (perm of group.permissions; track perm.key) {
+                            <label class="permission-item">
+                              <input
+                                type="checkbox"
+                                [checked]="isPermissionChecked(perm.key)"
+                                (change)="onPermissionChange(perm.key, $any($event.target).checked)"
+                              />
+                              <span>{{ perm.label }}</span>
+                            </label>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </article>
+            }
+
+            @if (filteredModules.length === 0) {
+              <p class="empty-permissions">
+                Nenhuma permissão encontrada para os filtros informados.
+              </p>
+            }
+          </div>
+        </section>
       </div>
-    </div>
+    }
   </form>
 </div>

@@ -11,7 +11,7 @@ import {
   assertUnidadeProducao,
   unidadeEscopoUsuarioProducao,
 } from '../folha/utils/folha-unidade-scope.util';
-import { usuarioTemAdminFull } from '../../common/utils/usuario-permissoes.util';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import {
   ProdutividadeAnaliticoLinhaDto,
   ProdutividadeAnaliticoResponseDto,
@@ -127,7 +127,7 @@ export class ProducaoProdutividadeService {
           : [];
 
     const escopo = unidadeEscopoUsuarioProducao(usuario);
-    if (escopo && !usuarioTemAdminFull(usuario)) {
+    if (escopo) {
       return [escopo];
     }
 

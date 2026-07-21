@@ -126,7 +126,6 @@ export class FolhaFechamentoPage implements OnInit, OnDestroy {
   }
 
   podeVisualizarPagina(): boolean {
-    if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
     return (
       this.auth.hasPermission(Permission.FOLHA_FECHAMENTO_READ) ||
       this.auth.hasPermission(Permission.FOLHA_FECHAMENTO_REGISTRAR_ABERTURA) ||
@@ -136,22 +135,18 @@ export class FolhaFechamentoPage implements OnInit, OnDestroy {
   }
 
   podePermRegistrarAbertura(): boolean {
-    if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
     return this.auth.hasPermission(Permission.FOLHA_FECHAMENTO_REGISTRAR_ABERTURA);
   }
 
   podePermFecharLote(): boolean {
-    if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
     return this.auth.hasPermission(Permission.FOLHA_FECHAMENTO_FECHAR);
   }
 
   podePermReabrirLote(): boolean {
-    if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
     return this.auth.hasPermission(Permission.FOLHA_FECHAMENTO_REABRIR);
   }
 
   podePermEnviarRecibosWhatsappMassa(): boolean {
-    if (this.auth.hasPermission(Permission.ADMIN_FULL)) return true;
     return this.auth.hasPermission(
       Permission.FOLHA_FECHAMENTO_ENVIAR_RECIBOS_WHATSAPP,
     );

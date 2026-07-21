@@ -1,13 +1,13 @@
 # Anotações / Demandas
 
-> Última revisão: 2026-07-19
+> Última revisão: 2026-07-20
 
 ## Pendente
 
 - [ ] **Configurar envio de e-mail** — recuperação de senha e notificações (pendências de fechamento, pendências de vendas, resumo de folha, etc.).
 - [ ] **Orçamentos aprovados em aberto** — com os dados importados, trabalhar informações de orçamentos aprovados não recebidos; avaliar se em relatório ou painel.
 - [ ] **Painel de folha de pagamento** — gastos por unidade, setor, função e cargo.
-- [ ] **Menu e tela de permissões** — melhorar organização, separando permissões por módulos.
+- [x] **Menu e tela de permissões** — catálogo `PERMISSION_MODULES`, formulário com accordions por módulo, chips na lista, duplicar perfil. (2026-07-20)
 - [ ] **Fechamento individual de venda** — registrar fechamento pelo form de venda; busca rápida por protocolo no form para vendas que não atualizam automaticamente.
 - [ ] **Filtros na lista de funcionários** — adicionar filtros por cargo e setor.
 - [ ] **Cadastro de unidade** — reestruturar o sistema (hoje unidade é enum); centralizar no cadastro configurações de sincronização e WhatsApp (hoje no `.env`).

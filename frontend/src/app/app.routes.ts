@@ -13,7 +13,7 @@ import { PerfilFormComponent } from './components/perfil-form/perfil-form';
 import { Permission } from './models/usuario.model';
 
 const PERMS = {
-  auditoria: [Permission.AUDIT_VIEW, Permission.AUDIT_MANAGE],
+  auditoria: [Permission.AUDIT_VIEW],
   users: [
     Permission.USER_CREATE,
     Permission.USER_READ,

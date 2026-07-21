@@ -67,6 +67,8 @@ export interface FindOrcamentosDto {
   dataFinal?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  /** Exportação/impressão em massa (exige orcamento:print na API). */
+  relatorio?: boolean;
 }
 
 /** @deprecated Use FindOrcamentosDto */

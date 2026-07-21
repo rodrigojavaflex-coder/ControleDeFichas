@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { AuditoriaService, UserService } from '../../services';
+import { AuthService } from '../../services/auth.service';
 import { 
   Auditoria, 
   AuditLogFilters, 
@@ -15,7 +16,7 @@ import {
   UndoableChange,
   getEntityDisplayName
 } from '../../models/auditoria.model';
-import { Usuario } from '../../models/usuario.model';
+import { Permission, Usuario } from '../../models/usuario.model';
 
 @Component({
   selector: 'app-auditoria',
@@ -75,6 +76,7 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   constructor(
     private auditoriaService: AuditoriaService,
     private userService: UserService,
+    private authService: AuthService,
     private router: Router
   ) {
     // Configurar busca com debounce
@@ -93,6 +95,10 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadUsers();
     this.loadAuditLogs();
+  }
+
+  get podeGerenciarAuditoria(): boolean {
+    return this.authService.hasPermission(Permission.AUDIT_MANAGE);
   }
 
   ngOnDestroy(): void {
@@ -324,6 +330,9 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
    * Mostrar painel de alterações desfaíveis
    */
   toggleUndoablePanel(): void {
+    if (!this.podeGerenciarAuditoria) {
+      return;
+    }
     this.showUndoablePanel = !this.showUndoablePanel;
     if (this.showUndoablePanel) {
       this.loadUndoableChanges();
@@ -334,6 +343,9 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
    * Confirmar undo de uma alteração
    */
   confirmUndo(log: Auditoria | UndoableChange): void {
+    if (!this.podeGerenciarAuditoria) {
+      return;
+    }
     this.logToUndo = log;
     this.showUndoConfirm = true;
   }
@@ -393,7 +405,10 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
    * Verificar se um log pode ser desfeito (baseado na lista de alterações desfaíveis)
    */
   isUndoable(log: Auditoria): boolean {
-    return this.undoableChanges.some(change => change.id === log.id);
+    return (
+      this.podeGerenciarAuditoria &&
+      this.undoableChanges.some((change) => change.id === log.id)
+    );
   }
 
   /**

@@ -11,7 +11,3 @@ export function getUsuarioPermissoes(usuario: Usuario): Permission[] {
     ),
   );
 }
-
-export function usuarioTemAdminFull(usuario: Usuario): boolean {
-  return getUsuarioPermissoes(usuario).includes(Permission.ADMIN_FULL);
-}

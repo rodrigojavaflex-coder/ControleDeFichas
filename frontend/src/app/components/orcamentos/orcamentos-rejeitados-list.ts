@@ -563,6 +563,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     page: number,
     limit: number,
     statusOverride?: OrcamentoListaStatusFiltro,
+    relatorio = false,
   ): FindOrcamentosDto {
     const filters: FindOrcamentosDto = {
       page,
@@ -571,6 +572,9 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
       sortOrder: this.sortDirection,
       status: statusOverride ?? this.statusFilter,
     };
+    if (relatorio) {
+      filters.relatorio = true;
+    }
 
     if (this.unidadeFilter) filters.unidade = this.unidadeFilter;
     if (this.nrOrcamentoFilter.trim()) {
@@ -1118,7 +1122,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     const limit = 200;
     const printStatus = this.resolvePrintStatusFiltro();
     this.orcamentosService
-      .listarOrcamentos(this.buildOrcamentosFilters(1, limit, printStatus))
+      .listarOrcamentosRelatorio(this.buildOrcamentosFilters(1, limit, printStatus, true))
       .subscribe({
         next: (first) => {
           const all = [...first.data];
@@ -1131,8 +1135,8 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
           const requests = [];
           for (let page = 2; page <= totalPages; page++) {
             requests.push(
-              this.orcamentosService.listarOrcamentos(
-                this.buildOrcamentosFilters(page, limit, printStatus),
+              this.orcamentosService.listarOrcamentosRelatorio(
+                this.buildOrcamentosFilters(page, limit, printStatus, true),
               ),
             );
           }

@@ -47,6 +47,7 @@ export class HeaderComponent {
   sessionExpirationLabel = '';
   sessionNearExpiry = false;
   appVersionLabel = '';
+  appVersionDateLabel = '';
   appBuildLabel = '';
   private loginTimestamp: number | null = null;
   private tokenExpiration: number | null = null;
@@ -132,6 +133,7 @@ export class HeaderComponent {
   private async carregarVersaoAplicacao(): Promise<void> {
     const info = await this.appVersionService.getCurrentVersion();
     this.appVersionLabel = this.appVersionService.formatVersionLabel(info);
+    this.appVersionDateLabel = this.appVersionService.formatVersionDateLabel(info);
     this.appBuildLabel = this.appVersionService.formatBuildLabel(info);
   }
 

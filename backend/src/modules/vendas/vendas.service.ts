@@ -26,6 +26,10 @@ import { AtualizarValorCompraDto } from './dto/atualizar-valor-compra.dto';
 import { Cliente } from '../clientes/entities/cliente.entity';
 import { Vendedor } from '../vendedores/entities/vendedor.entity';
 import { Prescritor } from '../prescritores/entities/prescritor.entity';
+import { Permission } from '../../common/enums/permission.enum';
+import {
+  getUsuarioPermissoes,
+} from '../../common/utils/usuario-permissoes.util';
 
 interface FecharVendaFalha {
   id: string;
@@ -124,7 +128,7 @@ export class VendasService {
       const savedVenda = await this.vendaRepository.save(venda);
 
       // Retornar venda com relacionamentos carregados
-      return await this.findOne(savedVenda.id);
+      return await this.findOne(savedVenda.id, usuario);
     } catch (error) {
       this.logger.error('Error creating venda:', error);
       if (error instanceof NotFoundException || error instanceof BadRequestException) {
@@ -260,8 +264,11 @@ export class VendasService {
     return { sucesso, falhas };
   }
 
-  async findAll(findVendasDto: FindVendasDto): Promise<PaginatedResponseDto<Venda>> {
-    return this.executeListQuery(findVendasDto);
+  async findAll(
+    findVendasDto: FindVendasDto,
+    usuario?: Usuario | null,
+  ): Promise<PaginatedResponseDto<Venda>> {
+    return this.executeListQuery(findVendasDto, usuario);
   }
 
   async findAcompanhar(
@@ -275,11 +282,12 @@ export class VendasService {
       filters.origem = origem;
     }
 
-    return this.executeListQuery(filters);
+    return this.executeListQuery(filters, usuario);
   }
 
   private async executeListQuery(
     findVendasDto: FindVendasDto,
+    usuario?: Usuario | null,
   ): Promise<PaginatedResponseDto<Venda>> {
     const queryBuilder = this.vendaRepository.createQueryBuilder('venda');
 
@@ -307,12 +315,12 @@ export class VendasService {
     const meta = new PaginationMetaDto(page, limit, total);
 
     return {
-      data: vendas,
+      data: this.mascararValorCompraLista(vendas, usuario),
       meta,
     };
   }
 
-  async findOne(id: string): Promise<Venda> {
+  async findOne(id: string, usuario?: Usuario | null): Promise<Venda> {
     const venda = await this.vendaRepository.findOne({
       where: { id },
       relations: ['cliente', 'vendedor', 'prescritor'],
@@ -322,7 +330,7 @@ export class VendasService {
       throw new NotFoundException(`Venda com ID ${id} não encontrada`);
     }
 
-    return venda;
+    return this.mascararValorCompraVenda(venda, usuario);
   }
 
   async update(id: string, updateVendaDto: UpdateVendaDto, usuario?: Usuario | null): Promise<Venda> {
@@ -333,13 +341,13 @@ export class VendasService {
         this.assertApenasObservacaoEmVendaFechada(venda, updateVendaDto);
 
         if (updateVendaDto.observacao === undefined) {
-          return venda;
+          return this.findOne(id, usuario);
         }
 
         await this.vendaRepository.update(id, {
           observacao: updateVendaDto.observacao ?? null,
         });
-        return this.findOne(id);
+        return this.findOne(id, usuario);
       }
 
       // Validar e buscar os objetos relacionados (se estiverem sendo atualizados)
@@ -423,7 +431,7 @@ export class VendasService {
       await this.updateVendaStatusBasedOnBaixas(id);
 
       // Buscar e retornar a venda atualizada com status recalculado
-      const updatedVenda = await this.findOne(id);
+      const updatedVenda = await this.findOne(id, usuario);
 
       return updatedVenda;
     } catch (error) {
@@ -1054,5 +1062,34 @@ export class VendasService {
     }
 
     return config;
+  }
+
+  private usuarioPodeVerValorCompra(usuario?: Usuario | null): boolean {
+    if (!usuario) {
+      return true;
+    }
+    return getUsuarioPermissoes(usuario).includes(
+      Permission.VENDA_VIEW_VALOR_COMPRA,
+    );
+  }
+
+  private mascararValorCompraVenda(
+    venda: Venda,
+    usuario?: Usuario | null,
+  ): Venda {
+    if (this.usuarioPodeVerValorCompra(usuario)) {
+      return venda;
+    }
+    return { ...venda, valorCompra: null };
+  }
+
+  private mascararValorCompraLista(
+    vendas: Venda[],
+    usuario?: Usuario | null,
+  ): Venda[] {
+    if (this.usuarioPodeVerValorCompra(usuario)) {
+      return vendas;
+    }
+    return vendas.map((venda) => ({ ...venda, valorCompra: null }));
   }
 }

@@ -27,7 +27,7 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     route: '/auditoria',
     icon: 'feather-eye',
     category: 'Sistema',
-    requiredPermissions: [Permission.AUDIT_VIEW, Permission.AUDIT_MANAGE],
+    requiredPermissions: [Permission.AUDIT_VIEW],
   },
   {
     id: 'users',
