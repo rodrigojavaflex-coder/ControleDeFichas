@@ -247,28 +247,41 @@
                   </div>
                 </td>
                 <td class="permissoes-cell">
-                  <div class="module-chips">
-                    @for (chip of getVisibleChips(perfil); track chip.moduleKey) {
-                      <span class="filter-chip module-chip">
-                        <app-menu-icon
-                          [iconKey]="getModuleIconKey(chip.moduleKey)"
-                          size="sm"
-                        ></app-menu-icon>
-                        {{ chip.moduleLabel }}: {{ chip.selected }}
-                      </span>
-                    }
-                    @if (getHiddenModulesCount(perfil) > 0) {
-                      <span class="filter-chip module-chip module-chip-more">
-                        +{{ getHiddenModulesCount(perfil) }} módulos
-                      </span>
-                    }
-                    @if (getVisibleChips(perfil).length === 0) {
-                      <span class="empty-perms">Sem permissões</span>
-                    }
-                    @if (getUncatalogedCount(perfil) > 0) {
-                      <span class="filter-chip module-chip module-chip-warn" title="Permissões legadas fora do catálogo">
-                        {{ getUncatalogedCount(perfil) }} legadas
-                      </span>
+                  <div class="modulos-cell">
+                    <span class="modulo-count">{{
+                      getModulosComPermissoesCount(perfil)
+                    }}</span>
+                    @if (getModulosComPermissoes(perfil).length) {
+                      <ul class="modulos-lista">
+                        @for (
+                          chip of getModulosComPermissoes(perfil);
+                          track chip.moduleKey
+                        ) {
+                          <li>
+                            <app-menu-icon
+                              [iconKey]="getModuleIconKey(chip.moduleKey)"
+                              size="sm"
+                            ></app-menu-icon>
+                            <span class="modulo-nome">{{ chip.moduleLabel }}</span>
+                            <span class="modulo-qtd"
+                              >{{ chip.selected }}/{{ chip.total }}</span
+                            >
+                          </li>
+                        }
+                        @if (getUncatalogedCount(perfil) > 0) {
+                          <li class="modulo-legado" title="Permissões legadas fora do catálogo">
+                            <span class="modulo-nome">{{ getUncatalogedCount(perfil) }} legadas</span>
+                          </li>
+                        }
+                      </ul>
+                    } @else if (getUncatalogedCount(perfil) > 0) {
+                      <ul class="modulos-lista">
+                        <li class="modulo-legado" title="Permissões legadas fora do catálogo">
+                          <span class="modulo-nome">{{ getUncatalogedCount(perfil) }} legadas</span>
+                        </li>
+                      </ul>
+                    } @else {
+                      <span class="modulos-vazio">Sem permissões</span>
                     }
                   </div>
                 </td>

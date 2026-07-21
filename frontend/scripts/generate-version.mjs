@@ -46,12 +46,22 @@ function resolveBuildId() {
   }
 }
 
+/** Data do build em YYYY-MM-DD (fuso America/Sao_Paulo, sem deslocamento de dia). */
+function getBuildDateString(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
 const buildId = `${resolveBuildId()}-${Date.now()}`;
 const version = resolveAppVersion();
 const payload = {
   version,
   buildId,
-  generatedAt: new Date().toISOString(),
+  generatedAt: getBuildDateString(),
 };
 
 const publicDir = dirname(outPath);

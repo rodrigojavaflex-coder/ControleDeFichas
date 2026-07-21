@@ -315,15 +315,12 @@ export class PerfilListComponent
     return this.moduleChipsByPerfil[perfil.id] ?? [];
   }
 
-  getHiddenModulesCount(perfil: Perfil): number {
-    const withSelection = this.getChips(perfil).filter((c) => c.selected > 0);
-    return Math.max(0, withSelection.length - 3);
+  getModulosComPermissoes(perfil: Perfil): PerfilModuleChip[] {
+    return this.getChips(perfil).filter((c) => c.selected > 0);
   }
 
-  getVisibleChips(perfil: Perfil): PerfilModuleChip[] {
-    return this.getChips(perfil)
-      .filter((c) => c.selected > 0)
-      .slice(0, 3);
+  getModulosComPermissoesCount(perfil: Perfil): number {
+    return this.getModulosComPermissoes(perfil).length;
   }
 
   getUncatalogedCount(perfil: Perfil): number {

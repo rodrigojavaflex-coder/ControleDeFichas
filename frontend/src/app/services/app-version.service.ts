@@ -66,12 +66,19 @@ export class AppVersionService {
     if (!info?.generatedAt) {
       return '';
     }
-    const match = info.generatedAt.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (!match) {
+    const raw = info.generatedAt.trim();
+    const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnly) {
+      const [, year, month, day] = dateOnly;
+      return `${day}/${month}/${year}`;
+    }
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
       return '';
     }
-    const [, year, month, day] = match;
-    return `${day}/${month}/${year}`;
+    return parsed.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+    });
   }
 
   formatBuildLabel(info: AppVersionInfo | null): string {

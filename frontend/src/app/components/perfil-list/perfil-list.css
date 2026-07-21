@@ -242,35 +242,69 @@ th.sortable .sort-icon {
 }
 
 .permissoes-cell {
-  min-width: 280px;
+  min-width: 220px;
+  max-width: 320px;
 }
 
-.module-chips {
+.modulos-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.modulo-count {
+  display: inline-flex;
+  flex-shrink: 0;
+  min-width: 1.75rem;
+  justify-content: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+  font-weight: 600;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  margin-top: 0.1rem;
+}
+
+.modulos-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.modulos-lista li {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
   align-items: center;
+  gap: 0.35rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--text-primary, #0f172a);
+  word-break: break-word;
 }
 
-.module-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.78rem;
+.modulo-nome {
+  font-weight: 500;
 }
 
-.module-chip-more {
-  opacity: 0.85;
+.modulo-qtd {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
 }
 
-.module-chip-warn {
-  border-color: var(--cor-aviso, #f59e0b);
+.modulo-legado .modulo-nome {
   color: var(--cor-aviso-texto, #92400e);
 }
 
-.empty-perms {
+.modulos-vazio {
+  font-size: 0.8125rem;
   color: var(--text-secondary, #94a3b8);
-  font-size: 0.875rem;
+  font-style: italic;
 }
 
 .actions-cell {
