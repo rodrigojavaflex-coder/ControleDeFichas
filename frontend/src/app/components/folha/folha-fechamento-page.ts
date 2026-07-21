@@ -20,7 +20,6 @@ import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-m
   standalone: true,
   imports: [CommonModule, FormsModule, ConfirmationModalComponent],
   templateUrl: './folha-fechamento-page.html',
-  styleUrls: ['./folha-pages.shared.css'],
 })
 export class FolhaFechamentoPage implements OnInit, OnDestroy {
   private folha = inject(FolhaService);

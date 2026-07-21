@@ -14,7 +14,6 @@ import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-au
   standalone: true,
   imports: [CommonModule, HistoricoAuditoriaComponent],
   templateUrl: './folha-cargos-page.html',
-  styleUrls: ['./folha-pages.shared.css'],
 })
 export class FolhaCargosPage implements OnInit {
   private folha = inject(FolhaService);

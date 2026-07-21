@@ -29,7 +29,8 @@
             ],
             "styles": [
               "src/styles/design-system.css",
-              "src/styles.css"
+              "src/styles.css",
+              "src/app/components/folha/folha-pages.shared.css"
             ],
             "allowedCommonJsDependencies": [
               "exceljs"

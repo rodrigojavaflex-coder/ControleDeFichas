@@ -13,7 +13,6 @@ import { Permission } from '../../models/usuario.model';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './orcamentos-motivos-page.html',
-  styleUrls: ['../folha/folha-pages.shared.css'],
 })
 export class OrcamentosMotivosPage implements OnInit {
   private orcamentos = inject(OrcamentosService);

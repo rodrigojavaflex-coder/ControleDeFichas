@@ -14,7 +14,6 @@ import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-au
   standalone: true,
   imports: [CommonModule, HistoricoAuditoriaComponent],
   templateUrl: './folha-verbas-page.html',
-  styleUrls: ['./folha-pages.shared.css'],
 })
 export class FolhaVerbasPage implements OnInit {
   private folha = inject(FolhaService);

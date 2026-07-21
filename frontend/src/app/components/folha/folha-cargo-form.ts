@@ -18,7 +18,7 @@ import { Permission } from '../../models/usuario.model';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './folha-cargo-form.html',
-  styleUrls: ['./folha-entity-form.css', './folha-pages.shared.css'],
+  styleUrls: ['./folha-entity-form.css'],
 })
 export class FolhaCargoFormComponent implements OnInit {
   private fb = inject(FormBuilder);

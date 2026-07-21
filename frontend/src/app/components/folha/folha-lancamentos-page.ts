@@ -32,7 +32,6 @@ import { environment } from '../../../environments/environment';
     ConfirmationModalComponent,
   ],
   templateUrl: './folha-lancamentos-page.html',
-  styleUrls: ['./folha-pages.shared.css'],
 })
 export class FolhaLancamentosPage implements OnInit {
   private folha = inject(FolhaService);

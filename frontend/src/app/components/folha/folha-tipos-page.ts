@@ -13,7 +13,6 @@ import { Permission } from '../../models/usuario.model';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './folha-tipos-page.html',
-  styleUrls: ['./folha-pages.shared.css'],
 })
 export class FolhaTiposPage implements OnInit {
   private folha = inject(FolhaService);

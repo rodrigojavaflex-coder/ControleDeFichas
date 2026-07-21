@@ -34,7 +34,7 @@ const UPLOAD_MAX_BYTES = 16 * 1024 * 1024;
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './folha-whatsapp-atendimento-page.html',
-  styleUrls: ['./folha-whatsapp-atendimento-page.css', './folha-pages.shared.css'],
+  styleUrls: ['./folha-whatsapp-atendimento-page.css'],
 })
 export class FolhaWhatsappAtendimentoPage implements OnInit, OnDestroy {
   private folha = inject(FolhaService);

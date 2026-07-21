@@ -18,7 +18,7 @@ import { Permission } from '../../models/usuario.model';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './orcamento-motivo-form.html',
-  styleUrls: ['../folha/folha-entity-form.css', '../folha/folha-pages.shared.css'],
+  styleUrls: ['../folha/folha-entity-form.css'],
 })
 export class OrcamentoMotivoFormComponent implements OnInit {
   private fb = inject(FormBuilder);

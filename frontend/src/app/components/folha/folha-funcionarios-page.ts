@@ -23,7 +23,6 @@ import { formatarTelefoneBrExibicao } from './folha-telefone.util';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './folha-funcionarios-page.html',
-  styleUrls: ['./folha-pages.shared.css'],
 })
 export class FolhaFuncionariosPage implements OnInit {
   private folha = inject(FolhaService);

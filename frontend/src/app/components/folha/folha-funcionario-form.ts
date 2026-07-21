@@ -54,7 +54,7 @@ interface FolhaFuncFormValue {
     ConfirmationModalComponent,
   ],
   templateUrl: './folha-funcionario-form.html',
-  styleUrls: ['./folha-entity-form.css', './folha-pages.shared.css'],
+  styleUrls: ['./folha-entity-form.css'],
 })
 export class FolhaFuncionarioFormComponent implements OnInit {
   private fb = inject(FormBuilder);
