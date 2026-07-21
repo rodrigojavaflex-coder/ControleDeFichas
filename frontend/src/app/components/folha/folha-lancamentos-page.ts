@@ -728,9 +728,26 @@ export class FolhaLancamentosPage implements OnInit {
       return a.setorNome.localeCompare(b.setorNome, 'pt-BR');
     });
 
+    type ResumoSetor = {
+      setorNome: string;
+      qtdFuncionarios: number;
+      receitas: number;
+      despesas: number;
+      liquido: number;
+    };
+
+    const resumosSetor: ResumoSetor[] = [];
+    let totGeralQtd = 0;
     let totGeralR = 0;
     let totGeralD = 0;
     let totGeralL = 0;
+
+    const colGroupDetalheSetor = `<colgroup>
+      <col class="col-funcionario" />
+      <col class="col-num" />
+      <col class="col-num" />
+      <col class="col-num" />
+    </colgroup>`;
 
     const htmlBlocoSetor = (bloco: BlocoSetor): string => {
       const linOrd = [...bloco.linhas].sort((a, b) =>
@@ -745,31 +762,85 @@ export class FolhaLancamentosPage implements OnInit {
           totD += ln.despesas;
           totL += ln.liquido;
           return `<tr>
-            <td>${this.escapeHtml(ln.nome)}</td>
+            <td class="col-funcionario">${this.escapeHtml(ln.nome)}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.receitas))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.despesas))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.liquido))}</td>
           </tr>`;
         })
         .join('');
+
+      const qtd = linOrd.length;
+      resumosSetor.push({
+        setorNome: bloco.setorNome,
+        qtdFuncionarios: qtd,
+        receitas: totR,
+        despesas: totD,
+        liquido: totL,
+      });
+      totGeralQtd += qtd;
       totGeralR += totR;
       totGeralD += totD;
       totGeralL += totL;
+
       return `<div class="section setor-rep-block">
         <div class="secao-macro-titulo">${this.escapeHtml(bloco.setorNome)}</div>
-        <table class="tbl-rep" aria-label="${this.escapeHtml(bloco.setorNome)}">
+        <table class="tbl-rep tbl-rep-folha-setor" aria-label="${this.escapeHtml(bloco.setorNome)}">
+          ${colGroupDetalheSetor}
           <thead><tr>
-            <th>Funcionário</th>
+            <th class="col-funcionario">Funcionário</th>
             <th class="num">Receitas</th>
             <th class="num">Despesas</th>
             <th class="num">Líquido</th>
           </tr></thead>
           <tbody>${trs}</tbody>
           <tfoot><tr class="totais">
-            <td>Total do setor</td>
+            <td class="col-funcionario">Total do setor</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(totR))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(totD))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(totL))}</td>
+          </tr></tfoot>
+        </table>
+      </div>`;
+    };
+
+    const montarResumoPorSetor = (): string => {
+      const linhasResumo = resumosSetor
+        .map(
+          (r) => `<tr>
+            <td class="col-funcionario">${this.escapeHtml(r.setorNome)}</td>
+            <td class="num">${this.escapeHtml(String(r.qtdFuncionarios))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(r.receitas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(r.despesas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(r.liquido))}</td>
+          </tr>`,
+        )
+        .join('');
+
+      return `<div class="section setor-resumo-final">
+        <div class="secao-macro-titulo">Resumo por setor</div>
+        <table class="tbl-rep tbl-rep-folha-setor tbl-rep-resumo-setor" aria-label="Resumo por setor">
+          <colgroup>
+            <col class="col-funcionario" />
+            <col class="col-num" />
+            <col class="col-num" />
+            <col class="col-num" />
+            <col class="col-num" />
+          </colgroup>
+          <thead><tr>
+            <th class="col-funcionario">Setor</th>
+            <th class="num">Qtd. funcionários</th>
+            <th class="num">Receitas</th>
+            <th class="num">Despesas</th>
+            <th class="num">Líquido</th>
+          </tr></thead>
+          <tbody>${linhasResumo}</tbody>
+          <tfoot><tr class="totais">
+            <td class="col-funcionario">Total geral</td>
+            <td class="num">${this.escapeHtml(String(totGeralQtd))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralR))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralD))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralL))}</td>
           </tr></tfoot>
         </table>
       </div>`;
@@ -781,15 +852,7 @@ export class FolhaLancamentosPage implements OnInit {
     const corpo =
       blocos.length === 0
         ? '<p class="vazio-relatorio-evento">Nenhuma folha encontrada para os filtros.</p>'
-        : `${blocos.map((b) => htmlBlocoSetor(b)).join('')}
-          <table class="tbl-rep tbl-rep-total-geral" aria-label="Totais gerais">
-            <tbody><tr class="totais">
-              <td>Total geral</td>
-              <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralR))}</td>
-              <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralD))}</td>
-              <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralL))}</td>
-            </tr></tbody>
-          </table>`;
+        : `${blocos.map((b) => htmlBlocoSetor(b)).join('')}${montarResumoPorSetor()}`;
 
     return this.montarHtmlDocumentoPadraoFicha({
       documentTitle: 'relatorio-folha-por-setor',
@@ -974,8 +1037,13 @@ export class FolhaLancamentosPage implements OnInit {
     .tbl-rep tfoot .totais td { border-top: 2px solid #999; }
     .evento-det-block { margin-bottom: 14px; page-break-inside: avoid; }
     .setor-rep-block { margin-bottom: 16px; page-break-inside: avoid; }
-    .tbl-rep-total-geral { margin-top: 8px; }
-    .tbl-rep-total-geral td { font-weight: bold; background: #fff8e6; border-top: 2px solid #999; }
+    .setor-resumo-final { margin-top: 20px; page-break-inside: avoid; }
+    .tbl-rep-folha-setor { table-layout: fixed; width: 100%; }
+    .tbl-rep-folha-setor col.col-funcionario { width: 42%; }
+    .tbl-rep-folha-setor col.col-num { width: 19.33%; }
+    .tbl-rep-folha-setor .col-funcionario { word-wrap: break-word; overflow-wrap: anywhere; }
+    .tbl-rep-resumo-setor col.col-funcionario { width: 42%; }
+    .tbl-rep-resumo-setor col.col-num { width: 14.5%; }
     .evento-det-titulo { font-weight: 700; font-size: 12px; margin: 10px 0 6px; color: #1e293b; }
     .evento-det-block table { margin-top: 4px; }
     @media print {
