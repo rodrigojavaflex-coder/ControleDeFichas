@@ -374,6 +374,18 @@ export class FolhaLancamentosPage implements OnInit {
     });
   }
 
+  imprimirRelatorioFolhaPorSetor(): void {
+    if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
+    if (this.gerandoRelatorioFolhaGeral) return;
+    const un = this.unidadeApi();
+    if (!un) return;
+    this.gerandoRelatorioFolhaGeral = true;
+    this.configuracaoService.getConfiguracao().subscribe({
+      next: (cfg) => this.executarRelatorioFolhaPorSetor(un, cfg ?? null),
+      error: () => this.executarRelatorioFolhaPorSetor(un, null),
+    });
+  }
+
   abrirModalFiltroRelatorioPorEvento(): void {
     if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
     if (this.gerandoRelatorioFolhaGeral) return;
@@ -541,6 +553,32 @@ export class FolhaLancamentosPage implements OnInit {
       });
   }
 
+  private executarRelatorioFolhaPorSetor(un: Unidade, cfg: Configuracao | null): void {
+    this.folha
+      .listarCapasComDetalhe({
+        unidade: un,
+        ano: this.ano,
+        mes: this.mes,
+        folhaTipoId: this.tipoId,
+      })
+      .subscribe({
+        next: (rows) => {
+          const tipoDesc =
+            this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
+          const html = this.montarHtmlRelatorioFolhaPorSetorDocumento(rows, cfg, un, tipoDesc);
+          this.abrirPopupRelatorioHtml(html, 'folha-por-setor');
+          this.gerandoRelatorioFolhaGeral = false;
+        },
+        error: () => {
+          this.errors.show(
+            'Não foi possível carregar as folhas para o relatório por setor. Tente novamente.',
+            'Folha',
+          );
+          this.gerandoRelatorioFolhaGeral = false;
+        },
+      });
+  }
+
   private executarRelatorioFolhaPorEvento(
     un: Unidade,
     cfg: Configuracao | null,
@@ -638,6 +676,124 @@ export class FolhaLancamentosPage implements OnInit {
     return this.montarHtmlDocumentoPadraoFicha({
       documentTitle: 'relatorio-folha-geral',
       tituloPrincipal: 'RELATÓRIO DE FOLHA GERAL',
+      linhasCabecalhoCentral: linCab,
+      corpo,
+      config,
+    });
+  }
+
+  private descricaoSetorParaRelatorio(
+    row: FolhaCapaDetalheResponse,
+  ): string {
+    return (row.capa.funcionario?.setor?.descricao ?? '').trim() || 'Sem setor';
+  }
+
+  private montarHtmlRelatorioFolhaPorSetorDocumento(
+    rows: FolhaCapaDetalheResponse[],
+    config: Configuracao | null,
+    unidade: Unidade,
+    tipoFolhaDescricao: string,
+  ): string {
+    type LinhaFuncionario = {
+      nome: string;
+      receitas: number;
+      despesas: number;
+      liquido: number;
+    };
+    type BlocoSetor = {
+      setorNome: string;
+      linhas: LinhaFuncionario[];
+    };
+
+    const map = new Map<string, BlocoSetor>();
+
+    for (const row of rows) {
+      const setorNome = this.descricaoSetorParaRelatorio(row);
+      let bloco = map.get(setorNome);
+      if (!bloco) {
+        bloco = { setorNome, linhas: [] };
+        map.set(setorNome, bloco);
+      }
+      bloco.linhas.push({
+        nome: (row.capa.funcionario?.nome ?? '—').trim() || '—',
+        receitas: Number(row.totalReceitas) || 0,
+        despesas: Number(row.totalDespesas) || 0,
+        liquido: Number(row.liquido) || 0,
+      });
+    }
+
+    const blocos = [...map.values()].sort((a, b) => {
+      if (a.setorNome === 'Sem setor') return 1;
+      if (b.setorNome === 'Sem setor') return -1;
+      return a.setorNome.localeCompare(b.setorNome, 'pt-BR');
+    });
+
+    let totGeralR = 0;
+    let totGeralD = 0;
+    let totGeralL = 0;
+
+    const htmlBlocoSetor = (bloco: BlocoSetor): string => {
+      const linOrd = [...bloco.linhas].sort((a, b) =>
+        a.nome.localeCompare(b.nome, 'pt-BR'),
+      );
+      let totR = 0;
+      let totD = 0;
+      let totL = 0;
+      const trs = linOrd
+        .map((ln) => {
+          totR += ln.receitas;
+          totD += ln.despesas;
+          totL += ln.liquido;
+          return `<tr>
+            <td>${this.escapeHtml(ln.nome)}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.receitas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.despesas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.liquido))}</td>
+          </tr>`;
+        })
+        .join('');
+      totGeralR += totR;
+      totGeralD += totD;
+      totGeralL += totL;
+      return `<div class="section setor-rep-block">
+        <div class="secao-macro-titulo">${this.escapeHtml(bloco.setorNome)}</div>
+        <table class="tbl-rep" aria-label="${this.escapeHtml(bloco.setorNome)}">
+          <thead><tr>
+            <th>Funcionário</th>
+            <th class="num">Receitas</th>
+            <th class="num">Despesas</th>
+            <th class="num">Líquido</th>
+          </tr></thead>
+          <tbody>${trs}</tbody>
+          <tfoot><tr class="totais">
+            <td>Total do setor</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(totR))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(totD))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(totL))}</td>
+          </tr></tfoot>
+        </table>
+      </div>`;
+    };
+
+    const comp = `${this.nomeMesPt(this.mes)} / ${this.ano}`;
+    const linCab: string[] = [String(unidade), comp, tipoFolhaDescricao];
+
+    const corpo =
+      blocos.length === 0
+        ? '<p class="vazio-relatorio-evento">Nenhuma folha encontrada para os filtros.</p>'
+        : `${blocos.map((b) => htmlBlocoSetor(b)).join('')}
+          <table class="tbl-rep tbl-rep-total-geral" aria-label="Totais gerais">
+            <tbody><tr class="totais">
+              <td>Total geral</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralR))}</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralD))}</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralL))}</td>
+            </tr></tbody>
+          </table>`;
+
+    return this.montarHtmlDocumentoPadraoFicha({
+      documentTitle: 'relatorio-folha-por-setor',
+      tituloPrincipal: 'RELATÓRIO DE FOLHA POR SETOR',
       linhasCabecalhoCentral: linCab,
       corpo,
       config,
@@ -817,6 +973,9 @@ export class FolhaLancamentosPage implements OnInit {
     .tbl-rep .totais td { font-weight: bold; background: #fff8e6; }
     .tbl-rep tfoot .totais td { border-top: 2px solid #999; }
     .evento-det-block { margin-bottom: 14px; page-break-inside: avoid; }
+    .setor-rep-block { margin-bottom: 16px; page-break-inside: avoid; }
+    .tbl-rep-total-geral { margin-top: 8px; }
+    .tbl-rep-total-geral td { font-weight: bold; background: #fff8e6; border-top: 2px solid #999; }
     .evento-det-titulo { font-weight: 700; font-size: 12px; margin: 10px 0 6px; color: #1e293b; }
     .evento-det-block table { margin-top: 4px; }
     @media print {

@@ -1750,6 +1750,11 @@ body.theme-dark .folha-data-table select.form-control.folha-lancamentos-func-sel
   outline-offset: 2px;
 }
 
+.folha-lancamentos-toolbar-filters .folha-lancamentos-btn-relatorio-setor:focus-visible {
+  outline: 2px solid var(--cor-sucesso, var(--success-color, #28a745));
+  outline-offset: 2px;
+}
+
 .folha-lancamentos-toolbar-filters .folha-lancamentos-btn-recibo-geral:focus-visible {
   outline: 2px solid var(--cor-sucesso, var(--success-color, #28a745));
   outline-offset: 2px;

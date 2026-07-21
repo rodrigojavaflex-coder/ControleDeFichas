@@ -89,6 +89,15 @@
         </button>
         <button
           type="button"
+          class="btn btn-success folha-lancamentos-btn-relatorio-setor"
+          [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
+          (click)="imprimirRelatorioFolhaPorSetor()"
+          title="Relatório de Folha por Setor — impressão ou PDF (exige unidade e tipo de folha)"
+        >
+          Folha por Setor
+        </button>
+        <button
+          type="button"
           class="btn btn-success folha-lancamentos-btn-recibo-geral"
           [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
           (click)="imprimirReciboGeralTodasCapas()"
