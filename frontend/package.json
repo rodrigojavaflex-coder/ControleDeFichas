@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "scripts": {
     "prebuild": "node ./scripts/ensure-prod-env.mjs && node ./scripts/generate-version.mjs",
     "prestart": "node ./scripts/generate-version.mjs",
