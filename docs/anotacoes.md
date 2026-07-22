@@ -1,6 +1,16 @@
 # Anotações / Demandas
 
-> Última revisão: 2026-07-20
+> Última revisão: 2026-07-22
+
+## Decisões operacionais
+
+### Node.js e agente nas filiais (2026-07-22)
+
+- **Dev (máquina local):** Node **24** LTS — validado (backend, frontend, agent build, sync, folha/recibo).
+- **Filiais (servidor do agente Firebird):** permanecem em Node **22**; **não** atualizar Node só por alinhamento de versão.
+- **Redeploy do agente** (`agent/scripts/deploy.ps1` → `atualiza-agente.ps1` em cada filial): **somente** quando houver mudança no código/sync do `agent/` (SQL, endpoints, encoding, etc.).
+- Subir Node na filial no futuro: fazer **junto** com deploy de sync; após trocar Node no servidor, `npm ci --omit=dev` em `C:\agente` — **não** exige regerar pacote na dev só por causa da versão do Node.
+- Referência deploy: `agent/scripts/deploy.ps1`, `agent/scripts/atualiza-agente.ps1`, `agent/README.md`.
 
 ## Pendente
 
@@ -19,6 +29,8 @@
 - [ ] **Controle de produção (capacidade)** — gerenciar capacidade com base em quantidade de funcionários e fórmulas em produção; ao incluir requisição, calcular tempo de entrega ao cliente.
 - [ ] **Decisão gestão — fechamento produtividade (RN-PCP-004)** — alinhar com responsáveis: remunerar por fórmula concluída (atual) vs cada saída ERP; critério para correções PCP; relatório oficial ERP vs sistema novo. Ver `docs/regras-negocio.md` RN-PCP-004 e `docs/sql/producao_etapas_conferencia_erp.sql`.
 - [ ] **Notas fiscais não transmitidas** — pesquisar na base informações sobre NF-e/NFC-e não transmitidas e criar tela de alerta.
+- [ ] **Fechamento de caixa por WhatsApp** — no fechamento de caixa, enviar imagem do fechamento via WhatsApp; se possível, enviar ao grupo.
+- [ ] **Unificação vendedor × funcionário** — cadastro de vendedor duplicado com funcionário (cargo vendedor); unificar no sistema e eliminar cadastro de vendedor.
 
 ## Concluído
 
