@@ -27,9 +27,20 @@ import {
 } from './dto/remover-etapas-funcionarios.dto';
 import {
   AplicarEtapasRemuneradasResponseDto,
+  ProducaoConfigRelatorioFuncionarioEtapaDto,
   ProducaoConfigRelatorioResponseDto,
 } from './dto/producao-config-relatorio.dto';
 import { normalizarNomeComparacao } from './utils/normalizar-nome-comparacao.util';
+import {
+  PRODUCAO_COD_ETAPA_GESTAO,
+  PRODUCAO_NOME_ETAPA_GESTAO,
+  ProducaoEtapaTipoCalculo,
+  isCodEtapaGestao,
+} from '../../common/constants/producao-gestao.constants';
+import {
+  ProducaoFuncionarioEtapasResponseDto,
+  ProducaoFuncionarioGestaoConfigDto,
+} from './dto/producao-funcionario-etapas-response.dto';
 
 export interface ProducaoEtapaRemuneracaoRow {
   codEtapa: string;
@@ -37,6 +48,7 @@ export interface ProducaoEtapaRemuneracaoRow {
   posicaoEtapa: number;
   recebe: boolean;
   valor: number;
+  tipoCalculo: ProducaoEtapaTipoCalculo;
 }
 
 export interface ProducaoFuncionarioConfigRow {
@@ -107,16 +119,19 @@ export class ProducaoConfigService {
     }
 
     for (const cfg of configs) {
-      if (!codigosVistos.has(cfg.codEtapa)) {
+      if (!codigosVistos.has(cfg.codEtapa) && !isCodEtapaGestao(cfg.codEtapa)) {
         rows.push({
           codEtapa: cfg.codEtapa,
           etapa: cfg.etapa,
           posicaoEtapa: cfg.posicaoEtapa,
           recebe: cfg.recebe,
           valor: Number(cfg.valor),
+          tipoCalculo: cfg.tipoCalculo ?? ProducaoEtapaTipoCalculo.ERP,
         });
       }
     }
+
+    this.ensureGestaoRow(rows, configMap.get(PRODUCAO_COD_ETAPA_GESTAO));
 
     rows.sort(
       (a, b) =>
@@ -143,6 +158,9 @@ export class ProducaoConfigService {
     for (const item of dto.itens) {
       const recebe = item.recebe === true;
       const valor = recebe ? Math.max(0, Number(item.valor) || 0) : 0;
+      const isGestao =
+        isCodEtapaGestao(item.codEtapa) ||
+        item.tipoCalculo === ProducaoEtapaTipoCalculo.GESTAO;
       if (recebe && valor <= 0) {
         throw new BadRequestException(
           `Informe valor maior que zero para a etapa «${item.etapa.trim()}» marcada como Recebe.`,
@@ -154,13 +172,20 @@ export class ProducaoConfigService {
         if (!entity) {
           entity = repo.create({
             unidade: dto.unidade,
-            codEtapa: item.codEtapa,
+            codEtapa: isGestao ? PRODUCAO_COD_ETAPA_GESTAO : item.codEtapa,
           });
         }
-        entity.etapa = item.etapa.trim();
-        entity.posicaoEtapa = Number(item.posicaoEtapa) || 0;
+        entity.etapa = isGestao
+          ? PRODUCAO_NOME_ETAPA_GESTAO
+          : item.etapa.trim();
+        entity.posicaoEtapa = isGestao
+          ? 99999
+          : Number(item.posicaoEtapa) || 0;
         entity.recebe = recebe;
         entity.valor = String(valor);
+        entity.tipoCalculo = isGestao
+          ? ProducaoEtapaTipoCalculo.GESTAO
+          : ProducaoEtapaTipoCalculo.ERP;
         await repo.save(entity);
       }
     });
@@ -190,6 +215,10 @@ export class ProducaoConfigService {
       .addSelect('COUNT(*)', 'total')
       .where('fe.unidade = :unidade', { unidade })
       .andWhere('fe.recebe = true')
+      .andWhere(
+        `(fe.codEtapa != :gestao OR (fe.codEtapa = :gestao AND fe.codEtapaReferencia IS NOT NULL))`,
+        { gestao: PRODUCAO_COD_ETAPA_GESTAO },
+      )
       .groupBy('fe.funcionarioId')
       .getRawMany<{ funcionarioId: string; total: string }>();
 
@@ -213,7 +242,7 @@ export class ProducaoConfigService {
     usuario: Usuario,
     unidade: Unidade,
     funcionarioId: string,
-  ): Promise<ProducaoFuncionarioEtapaModalRow[]> {
+  ): Promise<ProducaoFuncionarioEtapasResponseDto> {
     assertUnidadeFolha(usuario, unidade);
 
     const funcionario = await this.funcionarioRepo.findOne({
@@ -229,8 +258,8 @@ export class ProducaoConfigService {
     });
     const funcMap = new Map(configsFunc.map((c) => [c.codEtapa, c]));
 
-    return etapas
-      .filter((e) => e.recebe)
+    const etapasErp = etapas
+      .filter((e) => e.recebe && !isCodEtapaGestao(e.codEtapa))
       .map((e) => ({
         codEtapa: e.codEtapa,
         etapa: e.etapa,
@@ -239,13 +268,17 @@ export class ProducaoConfigService {
         valor: e.valor,
         recebe: funcMap.get(e.codEtapa)?.recebe ?? false,
       }));
+
+    const gestao = this.montarGestaoConfigFuncionario(etapas, funcMap);
+
+    return { etapas: etapasErp, gestao };
   }
 
   async salvarEtapasFuncionario(
     usuario: Usuario,
     funcionarioId: string,
     dto: BulkSaveProducaoFuncionarioEtapasDto,
-  ): Promise<ProducaoFuncionarioEtapaModalRow[]> {
+  ): Promise<ProducaoFuncionarioEtapasResponseDto> {
     assertUnidadeFolha(usuario, dto.unidade);
 
     const funcionario = await this.funcionarioRepo.findOne({
@@ -256,8 +289,12 @@ export class ProducaoConfigService {
     }
 
     const etapasRemuneradas = await this.listarEtapas(usuario, dto.unidade);
-    const remuneradasSet = new Set(
-      etapasRemuneradas.filter((e) => e.recebe).map((e) => e.codEtapa),
+    const remuneradasErp = etapasRemuneradas.filter(
+      (e) => e.recebe && !isCodEtapaGestao(e.codEtapa),
+    );
+    const remuneradasSet = new Set(remuneradasErp.map((e) => e.codEtapa));
+    const gestaoRemunerada = etapasRemuneradas.find(
+      (e) => isCodEtapaGestao(e.codEtapa) && e.recebe,
     );
 
     const codigos = dto.itens.map((i) => i.codEtapa);
@@ -266,9 +303,33 @@ export class ProducaoConfigService {
     }
 
     for (const item of dto.itens) {
+      if (isCodEtapaGestao(item.codEtapa)) {
+        throw new BadRequestException(
+          'Use o bloco Gestão para configurar a etapa GESTÃO.',
+        );
+      }
       if (item.recebe && !remuneradasSet.has(item.codEtapa)) {
         throw new BadRequestException(
           `A etapa «${item.codEtapa}» não está remunerada na unidade.`,
+        );
+      }
+    }
+
+    if (dto.gestao?.recebe) {
+      if (!gestaoRemunerada) {
+        throw new BadRequestException(
+          'A etapa Gestão não está remunerada na unidade.',
+        );
+      }
+      const ref = dto.gestao.codEtapaReferencia?.trim();
+      if (!ref) {
+        throw new BadRequestException(
+          'Selecione a etapa base para o cálculo de Gestão.',
+        );
+      }
+      if (!remuneradasSet.has(ref)) {
+        throw new BadRequestException(
+          'A etapa base da Gestão deve ser uma etapa ERP remunerada.',
         );
       }
     }
@@ -285,8 +346,21 @@ export class ProducaoConfigService {
             funcionario: { id: funcionarioId } as Funcionario,
             codEtapa: i.codEtapa,
             recebe: true,
+            codEtapaReferencia: null,
           }),
         );
+
+      if (dto.gestao?.recebe && gestaoRemunerada) {
+        toSave.push(
+          repo.create({
+            unidade: dto.unidade,
+            funcionario: { id: funcionarioId } as Funcionario,
+            codEtapa: PRODUCAO_COD_ETAPA_GESTAO,
+            recebe: true,
+            codEtapaReferencia: dto.gestao.codEtapaReferencia!.trim(),
+          }),
+        );
+      }
 
       if (toSave.length > 0) {
         await repo.save(toSave);
@@ -327,17 +401,28 @@ export class ProducaoConfigService {
 
     const etapasPorFuncionario = new Map<
       string,
-      { codEtapa: string; etapa: string }[]
+      ProducaoConfigRelatorioFuncionarioEtapaDto[]
     >();
 
     for (const cfg of configsFunc) {
       const funcId = cfg.funcionario?.id;
       if (!funcId) continue;
       const lista = etapasPorFuncionario.get(funcId) ?? [];
-      lista.push({
-        codEtapa: cfg.codEtapa,
-        etapa: etapaNomeMap.get(cfg.codEtapa) ?? cfg.codEtapa,
-      });
+      if (isCodEtapaGestao(cfg.codEtapa)) {
+        if (!cfg.codEtapaReferencia) continue;
+        const baseNome =
+          etapaNomeMap.get(cfg.codEtapaReferencia) ?? cfg.codEtapaReferencia;
+        lista.push({
+          codEtapa: cfg.codEtapa,
+          etapa: `Gestão → ${baseNome}`,
+          gestaoBaseEtapa: baseNome,
+        });
+      } else {
+        lista.push({
+          codEtapa: cfg.codEtapa,
+          etapa: etapaNomeMap.get(cfg.codEtapa) ?? cfg.codEtapa,
+        });
+      }
       etapasPorFuncionario.set(funcId, lista);
     }
 
@@ -369,7 +454,7 @@ export class ProducaoConfigService {
     assertUnidadeFolha(usuario, dto.unidade);
 
     const etapasRemuneradas = (await this.listarEtapas(usuario, dto.unidade)).filter(
-      (e) => e.recebe,
+      (e) => e.recebe && !isCodEtapaGestao(e.codEtapa),
     );
     if (etapasRemuneradas.length === 0) {
       throw new BadRequestException(
@@ -394,6 +479,7 @@ export class ProducaoConfigService {
             funcionario: { id: funcionario.id } as Funcionario,
             codEtapa: e.codEtapa,
             recebe: true,
+            codEtapaReferencia: null,
           }),
         );
 
@@ -748,6 +834,53 @@ export class ProducaoConfigService {
       posicaoEtapa: Number(raw.posicaoEtapa) || 0,
       recebe: cfg?.recebe ?? false,
       valor: cfg ? Number(cfg.valor) : 0,
+      tipoCalculo: cfg?.tipoCalculo ?? ProducaoEtapaTipoCalculo.ERP,
+    };
+  }
+
+  private ensureGestaoRow(
+    rows: ProducaoEtapaRemuneracaoRow[],
+    cfg?: ProducaoEtapaRemuneracao,
+  ): void {
+    if (rows.some((r) => isCodEtapaGestao(r.codEtapa))) {
+      return;
+    }
+    rows.push({
+      codEtapa: PRODUCAO_COD_ETAPA_GESTAO,
+      etapa: PRODUCAO_NOME_ETAPA_GESTAO,
+      posicaoEtapa: 99999,
+      recebe: cfg?.recebe ?? false,
+      valor: cfg ? Number(cfg.valor) : 0,
+      tipoCalculo: ProducaoEtapaTipoCalculo.GESTAO,
+    });
+  }
+
+  private montarGestaoConfigFuncionario(
+    etapas: ProducaoEtapaRemuneracaoRow[],
+    funcMap: Map<string, ProducaoFuncionarioEtapa>,
+  ): ProducaoFuncionarioGestaoConfigDto | null {
+    const gestaoEtapa = etapas.find((e) => isCodEtapaGestao(e.codEtapa));
+    if (!gestaoEtapa) {
+      return null;
+    }
+
+    const opcoesBase = etapas
+      .filter((e) => e.recebe && !isCodEtapaGestao(e.codEtapa))
+      .map((e) => ({ codEtapa: e.codEtapa, etapa: e.etapa }));
+
+    const cfgGestao = funcMap.get(PRODUCAO_COD_ETAPA_GESTAO);
+    const ref = cfgGestao?.codEtapaReferencia ?? null;
+    const etapaReferencia = ref
+      ? (opcoesBase.find((o) => o.codEtapa === ref)?.etapa ?? ref)
+      : null;
+
+    return {
+      disponivel: gestaoEtapa.recebe,
+      recebe: cfgGestao?.recebe ?? false,
+      codEtapaReferencia: ref,
+      etapaReferencia,
+      valor: gestaoEtapa.valor,
+      opcoesBase,
     };
   }
 }

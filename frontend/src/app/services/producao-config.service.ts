@@ -9,6 +9,8 @@ import {
   ProducaoEtapaRemuneracaoRow,
   ProducaoFuncionarioConfigRow,
   ProducaoFuncionarioEtapaModalRow,
+  ProducaoFuncionarioEtapasResponse,
+  ProducaoFuncionarioGestaoConfig,
   ConfirmarVinculoCodigoFuncionarioDto,
   VinculoCodigoFuncionarioConfirmResponse,
   VinculoCodigoFuncionarioPreviewResponse,
@@ -54,9 +56,9 @@ export class ProducaoConfigService {
   listarEtapasFuncionario(
     unidade: Unidade,
     funcionarioId: string,
-  ): Observable<ProducaoFuncionarioEtapaModalRow[]> {
+  ): Observable<ProducaoFuncionarioEtapasResponse> {
     const params = new HttpParams().set('unidade', unidade);
-    return this.http.get<ProducaoFuncionarioEtapaModalRow[]>(
+    return this.http.get<ProducaoFuncionarioEtapasResponse>(
       `${base}/funcionarios/${funcionarioId}/etapas`,
       { params },
     );
@@ -65,8 +67,8 @@ export class ProducaoConfigService {
   salvarEtapasFuncionario(
     funcionarioId: string,
     dto: BulkSaveProducaoFuncionarioEtapasDto,
-  ): Observable<ProducaoFuncionarioEtapaModalRow[]> {
-    return this.http.put<ProducaoFuncionarioEtapaModalRow[]>(
+  ): Observable<ProducaoFuncionarioEtapasResponse> {
+    return this.http.put<ProducaoFuncionarioEtapasResponse>(
       `${base}/funcionarios/${funcionarioId}/etapas/bulk`,
       dto,
     );

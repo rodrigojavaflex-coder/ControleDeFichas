@@ -45,6 +45,8 @@ export class AuthResponseDto {
     atualizadoEm: Date;
     /** Unidade vinculada ao usuário (`null`/omitido quando sem vínculo = acesso conforme permissões às unidades do sistema). */
     unidade?: Unidade | null;
+    /** Unidades consultáveis na produtividade (escopo ampliado; `null` = só `unidade`). */
+    unidadesProdutividade?: Unidade[] | null;
     vendedor?: {
       id: string;
       nome: string;

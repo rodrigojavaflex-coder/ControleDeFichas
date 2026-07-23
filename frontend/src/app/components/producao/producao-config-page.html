@@ -100,7 +100,8 @@
                     class="producao-etapas-grid-row"
                     role="listitem"
                     [class.row-dirty]="row.dirty"
-                    [class.row-valor-invalid]="etapaValorInvalido(row)">
+                    [class.row-valor-invalid]="etapaValorInvalido(row)"
+                    [class.is-gestao]="isEtapaGestao(row)">
                     <label class="col-recebe producao-etapas-check">
                       <input
                         type="checkbox"
@@ -109,7 +110,12 @@
                         (change)="alternarRecebeEtapa(row)"
                         [attr.aria-label]="'Recebe ' + row.etapa" />
                     </label>
-                    <span class="col-etapa" [title]="row.etapa">{{ row.etapa }}</span>
+                    <span class="col-etapa" [title]="row.etapa">
+                      {{ row.etapa }}
+                      @if (isEtapaGestao(row)) {
+                        <span class="producao-gestao-badge">Manual</span>
+                      }
+                    </span>
                     <div class="col-valor">
                       <input
                         type="text"
@@ -314,39 +320,86 @@
               Marque as etapas que este funcionário recebe na produtividade (somente etapas remuneradas na unidade).
             </p>
 
-            @if (modalEtapas.length === 0) {
+            @if (modalEtapas.length === 0 && !modalGestao?.disponivel) {
               <div class="no-data-inline">
                 Nenhuma etapa remunerada configurada na unidade. Configure em «Etapas remuneradas».
               </div>
             } @else {
-              <div class="producao-modal-grid" role="list">
-                <div class="producao-modal-grid-head">
-                  <label class="col-recebe producao-modal-check producao-modal-check-head">
-                    <input
-                      type="checkbox"
-                      [checked]="todosModalEtapasRecebem()"
-                      [indeterminate]="algunsModalEtapasRecebem()"
-                      [disabled]="!podeEditar() || modalEtapas.length === 0"
-                      (change)="alternarMarcarTodosModalEtapas()"
-                      aria-label="Marcar ou desmarcar todas as etapas" />
-                  </label>
-                  <span class="col-etapa">Etapa</span>
-                  <span class="col-valor">Valor</span>
-                </div>
-                @for (row of modalEtapas; track row.codEtapa) {
-                  <div class="producao-modal-grid-row" role="listitem">
-                    <label class="col-recebe producao-modal-check">
+              @if (modalEtapas.length > 0) {
+                <div class="producao-modal-grid" role="list">
+                  <div class="producao-modal-grid-head">
+                    <label class="col-recebe producao-modal-check producao-modal-check-head">
                       <input
                         type="checkbox"
-                        [checked]="row.recebe"
-                        [disabled]="!podeEditar()"
-                        (change)="alternarRecebeModal(row)" />
+                        [checked]="todosModalEtapasRecebem()"
+                        [indeterminate]="algunsModalEtapasRecebem()"
+                        [disabled]="!podeEditar() || modalEtapas.length === 0"
+                        (change)="alternarMarcarTodosModalEtapas()"
+                        aria-label="Marcar ou desmarcar todas as etapas" />
                     </label>
-                    <span class="col-etapa" [title]="row.etapa">{{ row.etapa }}</span>
-                    <span class="col-valor">{{ formatarMoeda(row.valor) }}</span>
+                    <span class="col-etapa">Etapa</span>
+                    <span class="col-valor">Valor</span>
                   </div>
-                }
-              </div>
+                  @for (row of modalEtapas; track row.codEtapa) {
+                    <div class="producao-modal-grid-row" role="listitem">
+                      <label class="col-recebe producao-modal-check">
+                        <input
+                          type="checkbox"
+                          [checked]="row.recebe"
+                          [disabled]="!podeEditar()"
+                          (change)="alternarRecebeModal(row)" />
+                      </label>
+                      <span class="col-etapa" [title]="row.etapa">{{ row.etapa }}</span>
+                      <span class="col-valor">{{ formatarMoeda(row.valor) }}</span>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (modalGestao?.disponivel) {
+                <section class="producao-modal-gestao" aria-labelledby="producao-modal-gestao-titulo">
+                  <h4 id="producao-modal-gestao-titulo" class="producao-modal-gestao-titulo">
+                    Gestão
+                    <span class="producao-gestao-badge">Manual</span>
+                  </h4>
+                  <p class="producao-modal-gestao-help">
+                    Totaliza conclusões da etapa base no período (todas as unidades da consulta), independente do funcionário que executou.
+                  </p>
+                  <div class="producao-modal-gestao-row">
+                    <label class="producao-modal-gestao-check">
+                      <input
+                        type="checkbox"
+                        [checked]="modalGestao!.recebe"
+                        [disabled]="!podeEditar()"
+                        (change)="alternarGestaoModal($any($event.target).checked)" />
+                      Recebe gestão
+                    </label>
+                    <div class="producao-modal-gestao-ref">
+                      <label class="form-label" for="pc-gestao-ref">Etapa base</label>
+                      <select
+                        id="pc-gestao-ref"
+                        class="form-control"
+                        [disabled]="!podeEditar() || !modalGestao!.recebe"
+                        [class.input-invalid]="modalGestaoInvalido()"
+                        [ngModel]="modalGestao!.codEtapaReferencia ?? ''"
+                        (ngModelChange)="onGestaoReferenciaChange($event)">
+                        <option value="">Selecione…</option>
+                        @for (op of modalGestao!.opcoesBase; track op.codEtapa) {
+                          <option [value]="op.codEtapa">{{ op.etapa }}</option>
+                        }
+                      </select>
+                    </div>
+                    <span class="producao-modal-gestao-valor">
+                      Valor unitário: {{ formatarMoeda(modalGestao!.valor) }}
+                    </span>
+                  </div>
+                  @if (modalGestaoInvalido()) {
+                    <p class="producao-modal-gestao-erro" role="alert">
+                      Selecione a etapa base quando «Recebe gestão» estiver marcado.
+                    </p>
+                  }
+                </section>
+              }
             }
           }
         </div>
@@ -357,7 +410,7 @@
             <button
               type="button"
               class="btn btn-salvar"
-              [disabled]="modalSalvando || modalCarregando"
+              [disabled]="modalSalvando || modalCarregando || modalGestaoInvalido()"
               (click)="salvarModalFuncionario()">
               {{ modalSalvando ? 'Salvando…' : 'Salvar' }}
             </button>

@@ -88,6 +88,23 @@ export class CreateUsuarioDto {
   unidade?: Unidade;
 
   @ApiProperty({
+    description:
+      'Unidades consultáveis na produtividade (requer `unidade`; vazio = só a unidade principal)',
+    example: ['INHUMAS', 'NERÓPOLIS'],
+    required: false,
+    enum: Unidade,
+    isArray: true,
+  })
+  @IsOptional()
+  @IsArray({ message: 'unidadesProdutividade deve ser uma lista' })
+  @IsEnum(Unidade, {
+    each: true,
+    message:
+      'Cada unidade de produtividade deve ser válida (INHUMAS, NERÓPOLIS, UBERABA)',
+  })
+  unidadesProdutividade?: Unidade[];
+
+  @ApiProperty({
     description: 'ID do vendedor associado ao usuário',
     example: '550e8400-e29b-41d4-a716-446655440000',
     required: false,

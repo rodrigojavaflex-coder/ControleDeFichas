@@ -3,6 +3,7 @@ import {
   ConflictException,
   Logger,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -23,6 +24,7 @@ import {
   HOME_SHORTCUT_ID_SET,
   HOME_SHORTCUTS_MAX,
 } from '../../common/constants/home-shortcut-ids';
+import { Unidade } from '../../common/enums/unidade.enum';
 
 @Injectable()
 export class UsuariosService {
@@ -89,6 +91,10 @@ export class UsuariosService {
         ativo: createUsuarioDto.ativo ?? true,
         tema: createUsuarioDto.tema || 'Claro',
         unidade: createUsuarioDto.unidade,
+        unidadesProdutividade: this.sanitizeUnidadesProdutividade(
+          createUsuarioDto.unidade,
+          createUsuarioDto.unidadesProdutividade,
+        ),
         perfis,
         vendedor: vendedor || undefined,
       };
@@ -235,7 +241,26 @@ export class UsuariosService {
       user.perfis = perfis;
     }
     if (updateUsuarioDto.tema !== undefined) user.tema = updateUsuarioDto.tema;
-    if (updateUsuarioDto.unidade !== undefined) user.unidade = updateUsuarioDto.unidade;
+    if (updateUsuarioDto.unidade !== undefined) {
+      user.unidade = updateUsuarioDto.unidade;
+      if (!updateUsuarioDto.unidade) {
+        user.unidadesProdutividade = null;
+      } else if (
+        updateUsuarioDto.unidadesProdutividade === undefined &&
+        user.unidadesProdutividade?.length
+      ) {
+        user.unidadesProdutividade = this.sanitizeUnidadesProdutividade(
+          user.unidade,
+          user.unidadesProdutividade,
+        );
+      }
+    }
+    if (updateUsuarioDto.unidadesProdutividade !== undefined) {
+      user.unidadesProdutividade = this.sanitizeUnidadesProdutividade(
+        user.unidade,
+        updateUsuarioDto.unidadesProdutividade,
+      );
+    }
     
     // Atualizar vendedor se fornecido
     if (updateUsuarioDto.vendedorId !== undefined) {
@@ -427,5 +452,26 @@ export class UsuariosService {
    */
   async getProfiles(): Promise<Perfil[]> {
     return this.perfilRepository.find();
+  }
+
+  private sanitizeUnidadesProdutividade(
+    unidade: Unidade | undefined | null,
+    unidadesProdutividade: Unidade[] | undefined | null,
+  ): Unidade[] | null {
+    if (!unidadesProdutividade?.length) {
+      return null;
+    }
+    if (!unidade) {
+      throw new BadRequestException(
+        'Unidades de produtividade exigem unidade principal do usuário.',
+      );
+    }
+    const unicas = [
+      ...new Set(unidadesProdutividade.filter(Boolean)),
+    ] as Unidade[];
+    if (!unicas.includes(unidade)) {
+      unicas.unshift(unidade);
+    }
+    return unicas.sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }
 }

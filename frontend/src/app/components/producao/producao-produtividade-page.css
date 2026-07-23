@@ -350,9 +350,20 @@ body.theme-dark .producao-produtividade-page .producao-prod-grid-table > thead >
 
 body.theme-dark .producao-produtividade-page .producao-prod-grid-table > thead > tr > th,
 body.theme-dark .producao-produtividade-page .producao-prod-grid-table > tbody > tr > td,
+body.theme-dark .producao-produtividade-page .producao-prod-grid-table > tfoot > tr > td,
 [data-theme='dark'] .producao-produtividade-page .producao-prod-grid-table > thead > tr > th,
-[data-theme='dark'] .producao-produtividade-page .producao-prod-grid-table > tbody > tr > td {
+[data-theme='dark'] .producao-produtividade-page .producao-prod-grid-table > tbody > tr > td,
+[data-theme='dark'] .producao-produtividade-page .producao-prod-grid-table > tfoot > tr > td {
   border-color: var(--border-color, #30363d);
+}
+
+body.theme-dark .producao-produtividade-page .producao-prod-grid-table > tfoot > tr > td,
+body.theme-dark .producao-produtividade-page .producao-prod-grid-table > tfoot > tr > td.col-funcionario,
+[data-theme='dark'] .producao-produtividade-page .producao-prod-grid-table > tfoot > tr > td,
+[data-theme='dark'] .producao-produtividade-page .producao-prod-grid-table > tfoot > tr > td.col-funcionario {
+  background: var(--bg-secondary, #262c36);
+  border-top-color: var(--border-color, #484f58);
+  color: var(--text-primary, #e6edf3);
 }
 
 body.theme-dark .producao-produtividade-page .producao-prod-grid-table tbody tr.row-even,
@@ -571,6 +582,14 @@ body.theme-dark .producao-prod-avisos-etapa,
   line-height: 1.4;
 }
 
+.producao-prod-avisos-amostras {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.92;
+}
+
 .producao-prod-avisos-mais {
   margin-top: 0.45rem !important;
   font-size: 0.78rem;
@@ -667,6 +686,35 @@ body.theme-dark .producao-prod-avisos-etapa,
   text-align: center;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.producao-prod-grid-table > tfoot > tr > td {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border-color, #d1d5db);
+  vertical-align: middle;
+  color: inherit;
+  background: var(--bg-secondary, #f3f4f6);
+  border-top: 2px solid var(--border-color, #94a3b8);
+  font-weight: 600;
+}
+
+.producao-prod-grid-table > tfoot > tr > td.col-funcionario {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg-secondary, #f3f4f6);
+}
+
+.producao-prod-grid-table > tfoot > tr > td.col-etapa.col-num,
+.producao-prod-grid-table > tfoot > tr > td.col-total.col-num {
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.producao-prod-grid-table > tfoot > tr > td.col-total {
+  font-weight: 700;
 }
 
 .producao-prod-grid-table tbody tr.producao-prod-grid-row {

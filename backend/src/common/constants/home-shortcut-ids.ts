@@ -26,6 +26,8 @@ export const HOME_SHORTCUT_IDS = [
   'relatorios-fechamento-caixa',
   'relatorios-acompanhar-vendas',
   'relatorios-analise-valores',
+  'producao-config',
+  'producao-produtividade',
 ] as const;
 
 export type HomeShortcutId = (typeof HOME_SHORTCUT_IDS)[number];

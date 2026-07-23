@@ -40,6 +40,7 @@ export interface ProdutividadeFuncionarioSemCadastro {
   codigoErp: number;
   nome: string;
   unidades: ProdutividadeSemCadastroUnidade[];
+  amostrasRequisicoes: string[];
   totalLinhas: number;
 }
 

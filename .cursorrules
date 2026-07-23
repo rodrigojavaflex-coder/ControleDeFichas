@@ -39,6 +39,7 @@
 - **Data Source**: Use `src/data-source.ts` para configuração do TypeORM em migrações; mantenha consistência com `database.config.ts`.
 - **Verificação de Existência**: Antes de criar tabelas/índices, verifique se já existem para evitar erros em re-execuções.
 - **Campos Removidos**: Se um campo foi removido de uma entidade mas ainda não foi para produção, remova-o diretamente da migração de criação (não crie nova migração de remoção).
+- **Permissões de perfil**: **Não** criar migração que conceda, revogue ou altere permissões em `perfil.permissoes` (sem `UPDATE perfil SET permissoes`, `list.push` de permissões, etc.). Novas permissões entram no enum/catálogo; atribuição é **manual** na tela de Perfis.
 
 # Tratamento de Encoding e Strings
 - **Encoding UTF-8**: Sempre valide e normalize strings recebidas de sistemas externos (Firebird, APIs) usando `garantirUtf8Valido()` antes de processar.

@@ -28,4 +28,17 @@ export class ProducaoFuncionarioEtapa extends BaseEntity {
   @ApiProperty({ default: false })
   @Column({ type: 'boolean', default: false })
   recebe: boolean;
+
+  @ApiProperty({
+    description:
+      'Etapa ERP base para cálculo de Gestão (total no período × valor Gestão)',
+    required: false,
+  })
+  @Column({
+    name: 'cod_etapa_referencia',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  codEtapaReferencia: string | null;
 }

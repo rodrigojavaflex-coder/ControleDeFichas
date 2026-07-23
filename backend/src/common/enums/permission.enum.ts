@@ -153,6 +153,8 @@ export enum Permission {
   PRODUCAO_CONFIG_UPDATE = 'producao-config:update',
   /** Produção — consulta de produtividade (contabilização por etapas). */
   PRODUCAO_PRODUTIVIDADE_READ = 'producao-produtividade:read',
+  /** Produção — visualizar alertas da consulta de produtividade. */
+  PRODUCAO_PRODUTIVIDADE_READ_ALERTAS = 'producao-produtividade:read-alertas',
 }
 
 export const PERMISSION_GROUPS = {
@@ -372,6 +374,10 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.PRODUCAO_PRODUTIVIDADE_READ,
       label: 'Visualizar produtividade de produção',
+    },
+    {
+      key: Permission.PRODUCAO_PRODUTIVIDADE_READ_ALERTAS,
+      label: 'Visualizar alertas da produtividade',
     },
   ],
 };

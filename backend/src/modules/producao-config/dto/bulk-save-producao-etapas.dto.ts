@@ -4,14 +4,16 @@ import {
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   IsString,
   Length,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Unidade } from '../../../common/enums/unidade.enum';
+import { ProducaoEtapaTipoCalculo } from '../../../common/constants/producao-gestao.constants';
 
 export class ProducaoEtapaRemuneracaoItemDto {
   @ApiProperty()
@@ -39,6 +41,11 @@ export class ProducaoEtapaRemuneracaoItemDto {
   @IsNumber()
   @Min(0)
   valor: number;
+
+  @ApiPropertyOptional({ enum: ProducaoEtapaTipoCalculo })
+  @IsOptional()
+  @IsEnum(ProducaoEtapaTipoCalculo)
+  tipoCalculo?: ProducaoEtapaTipoCalculo;
 }
 
 export class BulkSaveProducaoEtapasDto {

@@ -45,6 +45,8 @@ export class HomeShortcutsModalComponent implements OnChanges {
   draftSelectedIds: string[] = [];
   draggingIndex: number | null = null;
   showDiscardConfirm = false;
+  /** Categorias expandidas na lista Disponíveis (vazio = todas recolhidas). */
+  private expandedCategories = new Set<string>();
 
   private snapshotIds: string[] = [];
 
@@ -115,6 +117,31 @@ export class HomeShortcutsModalComponent implements OnChanges {
 
   isSelected(id: string): boolean {
     return this.draftSelectedIds.includes(id);
+  }
+
+  isCategoryExpanded(category: string): boolean {
+    return this.expandedCategories.has(category);
+  }
+
+  toggleCategory(category: string): void {
+    const next = new Set(this.expandedCategories);
+    if (next.has(category)) {
+      next.delete(category);
+    } else {
+      next.add(category);
+    }
+    this.expandedCategories = next;
+  }
+
+  onSearchChange(): void {
+    const term = this.searchTerm.trim();
+    if (!term) {
+      this.expandedCategories = new Set();
+      return;
+    }
+    this.expandedCategories = new Set(
+      this.availableGroups.map((group) => group.category),
+    );
   }
 
   addShortcut(id: string): void {
@@ -209,6 +236,7 @@ export class HomeShortcutsModalComponent implements OnChanges {
 
   private openDraft(): void {
     this.searchTerm = '';
+    this.expandedCategories = new Set();
     this.draftSelectedIds = [...this.initialIds];
     this.snapshotIds = [...this.initialIds];
     this.draggingIndex = null;

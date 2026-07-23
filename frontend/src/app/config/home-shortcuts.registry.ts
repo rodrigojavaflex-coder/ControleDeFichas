@@ -310,6 +310,25 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     category: 'Relatórios',
     requiredPermissions: [Permission.VENDA_ANALISE_VALORES],
   },
+  {
+    id: 'producao-config',
+    label: 'Configuração de produção',
+    route: '/producao/config',
+    icon: 'feather-settings',
+    category: 'Produção',
+    requiredPermissions: [
+      Permission.PRODUCAO_CONFIG_READ,
+      Permission.PRODUCAO_CONFIG_UPDATE,
+    ],
+  },
+  {
+    id: 'producao-produtividade',
+    label: 'Produtividade',
+    route: '/producao/produtividade',
+    icon: 'feather-bar-chart-2',
+    category: 'Produção',
+    requiredPermissions: [Permission.PRODUCAO_PRODUTIVIDADE_READ],
+  },
 ] as const;
 
 const catalogById = new Map(HOME_SHORTCUTS_CATALOG.map((s) => [s.id, s]));

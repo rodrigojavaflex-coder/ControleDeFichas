@@ -331,21 +331,38 @@
 
 ### RN-PCP-005 — Consulta de produtividade (contabilização)
 
-- Tela **`/producao/produtividade`**: consulta por **uma ou mais unidades** (usuário **sem** `usuario.unidade` no cadastro) e **período** (`dataSaida` em `producao_etapas_resumo`). Usuário **com** `usuario.unidade` consulta apenas a própria (filtro bloqueado). Vínculo de **vendedor** não restringe produtividade.
+- Tela **`/producao/produtividade`**: consulta por **uma ou mais unidades** e **período** (`dataSaida` em `producao_etapas_resumo`). Vínculo de **vendedor** não restringe produtividade.
+- **Escopo de unidades na consulta:**
+  - Usuário **sem** `usuario.unidade`: pode selecionar qualquer unidade (conforme permissão).
+  - Usuário **com** `usuario.unidade` e **`unidades_produtividade` vazio/null**: consulta apenas a unidade principal (filtro bloqueado).
+  - Usuário **com** `usuario.unidade` e **`unidades_produtividade` preenchido** (JSON array em `usuarios`): multi-select **limitado** a essa lista na tela e na API; a unidade principal sempre faz parte do escopo efetivo.
 - Contabiliza linha do resumo quando:
   1. `codFuncSaida` corresponde a `funcionarios.codigoFuncionarioErp` em **qualquer unidade selecionada** na consulta (ex.: cadastro em INHUMAS contabiliza saída em NERÓPOLIS com o mesmo código ERP);
   2. `codEtapa` está remunerada na **unidade da linha** (`producao_etapa_remuneracao.recebe = true`);
   3. etapa está configurada para o funcionário no **cadastro onde ele foi encontrado** (`producao_funcionario_etapa.recebe = true`).
 - Valor: `quantidade × valor` da etapa remunerada **da unidade da linha**; agrupamento por `codigoFuncionarioErp` e etapa (fechamento unificado quando há várias unidades).
-- Linhas ignoradas (sem cadastro ERP): exibidas na consulta com **nome** e **código ERP** agrupados (até 50 funcionários distintos).
-- Linhas ignoradas (cadastro ERP ok, etapa remunerada na unidade, mas **sem vínculo** em `producao_funcionario_etapa`): exibidas com **nome**, **código ERP**, unidades e **etapas** do resumo não vinculadas (até 50 funcionários distintos), para apoio ao fechamento.
+- Linhas ignoradas (sem cadastro ERP): exibidas na consulta com **nome** e **código ERP** agrupados (até 50 funcionários distintos), **somente** para usuários com **`producao-produtividade:read-alertas`**.
+- Linhas ignoradas (cadastro ERP ok, etapa remunerada na unidade, mas **sem vínculo** em `producao_funcionario_etapa`): exibidas com **nome**, **código ERP**, unidades e **etapas** do resumo não vinculadas (até 50 funcionários distintos), para apoio ao fechamento, **somente** com **`producao-produtividade:read-alertas`**.
 - Demais etapas não remuneradas na unidade **não** geram alerta na tela (volume alto, baixa ação imediata).
-- API: `GET /producao/produtividade?unidades=&dataInicio=&dataFim=` (parâmetro `unidades` repetido por unidade); permissão **`producao-produtividade:read`** (independente de `producao-config:read`).
-- Menu **Produção**: Configuração de produção (`producao-config:read`/`update`) e Produtividade (`producao-produtividade:read`) — permissões independentes no perfil.
+- API: `GET /producao/produtividade?unidades=&dataInicio=&dataFim=` (parâmetro `unidades` repetido por unidade); permissão **`producao-produtividade:read`** (independente de `producao-config:read`); alertas detalhados exigem **`producao-produtividade:read-alertas`**.
+- Menu **Produção**: Configuração de produção (`producao-config:read`/`update`), Produtividade (`producao-produtividade:read`) e alertas de produtividade (`producao-produtividade:read-alertas`) — permissões independentes no perfil.
+
+### RN-PCP-006 — Cálculo Gestão (etapa manual consolidada)
+
+- **Etapa manual GESTÃO** (`codEtapa = GESTAO`, `tipo_calculo = gestao`): única etapa remunerada fora do ERP; valor unitário configurado em **Etapas remuneradas** da unidade.
+- **Configuração por funcionário (modal):** checkbox «Recebe gestão» + seleção da **etapa ERP base** (`cod_etapa_referencia` em `producao_funcionario_etapa`). Gestão é **independente** das etapas ERP do mesmo funcionário (ex.: pode ter PESAGEM própria e GESTÃO pelo total da base).
+- **Produtividade:** para cada gestor com GESTÃO ativa e etapa base definida:
+  - `quantidade` = soma das conclusões **contabilizadas** (mesmos critérios de **RN-PCP-005**) da **etapa base** no período e unidades da consulta, **consolidando todos os funcionários** (não restringe ao `codFuncSaida` do gestor);
+  - deve coincidir com o **total da coluna** da etapa base na grade de produtividade;
+  - `valor` = `quantidade × valor unitário` da etapa GESTÃO na unidade do cadastro do gestor;
+  - vários gestores podem receber o **mesmo total inteiro** × valor (não rateio).
+- **Aplicar etapas** (ação em lote): replica apenas etapas ERP remuneradas; **não** inclui GESTÃO.
+- **Relatório de configuração:** exibe vínculo como `Gestão → {nome da etapa base}`; tela de produtividade e demais relatórios operacionais mostram apenas a coluna **GESTÃO** com quantidade/valor (sem expor a etapa base).
+- **Contagem** `qtdEtapasConfiguradas`: inclui GESTÃO somente quando `cod_etapa_referencia` estiver preenchido.
 
 ### RN-PCP-004 — Reconciliação ERP × fechamento de produtividade (decisão com gestão)
 
-**Status:** critério de fechamento oficial **pendente de alinhamento com gestão** (2026-07). Implementação atual em **RN-PCP-001** permanece até decisão formal.
+**Status:** critério de fechamento oficial **pendente de alinhamento com gestão** (2026-07). **Reavaliação jul/2026:** caso **97414** expõe limite da regra «sempre 1ª saída» quando o **1º lançamento foi o erro** e a correção PCP só relança uma etapa. Implementação atual em **RN-PCP-001** permanece até decisão formal.
 
 #### Como o sistema trata correções de etapa (implementação atual)
 
@@ -371,6 +388,33 @@
 
 1. **Saídas repetidas** — ERP > PG quando há 2+ saídas do mesmo funcionário na mesma fórmula+etapa no mês (ex.: INGRIDHY ROT: PG 1312 fórmulas × ERP 1318 movimentos = +6 relançamentos).
 2. **Atribuição data/funcionário** — ERP credita movimento no mês; PG credita **1ª saída** (ex.: JESSICA PESO: 1ª saída em maio com outro func.; movimento dela em 01/06 no ERP; PG 1 × ERP 11).
+3. **Correção PCP sem efeito no fechamento ERP** — o relatório de produtividade credita **1ª saída (`02`)** da etapa; correção operacional posterior **não substitui** no fechamento. Ex.: **97414** ENCAPS: 1ª saída LADSON; 2ª BYANCA (correção) **ignorada** no relatório ERP — **PG alinhado** (LADSON × 1 ENCAPS, INGRIDHY × 1 PESO MEDIO).
+
+#### Correção parcial entre etapas (req. 97414 / fórmula 0 — jul/2026)
+
+Sequência observada no PCP (filial 2):
+
+| Hora 17/07 | Evento | Quem |
+|------------|--------|------|
+| 10:41:30 | Entrada ENCAPS INH | BYANCA |
+| **14:57:53** | **Saída ENCAPS INH** + Entrada PESO MEDIO | **LADSON** ← 1º `02` ENCAPS (erro) |
+| 14:58:10 | Entrada ENCAPS + Retorno PESO MEDIO | LADSON |
+| — | **LANÇAMENTO ERRADO P.C.P — Filial/Func.: 2/131** | |
+| **14:58:23** | **Saída ENCAPS INH** + Entrada PESO MEDIO | **BYANCA** ← correção |
+| 16:51:26 | Saída PESO MEDIO / Entrada ROT | INGRIDHY |
+
+**O que o PG grava e o que o ERP credita (RN-PCP-001 — fechamento por `funcSaida`):**
+
+| Etapa | PG (`funcSaida`) | ERP produtividade (jul/2026) | Alinhado? |
+|-------|------------------|------------------------------|-----------|
+| **ENCAPS INHUMAS** | **LADSON** (1ª saída 14:57:53) | **LADSON** × 1 | **Sim** |
+| **PESO MEDIO** | **INGRIDHY** (saída 16:51:26) | **INGRIDHY** × 1 | **Sim** |
+
+A correção PCP (retorno + saída BYANCA 14:58:23) corrige o **fluxo operacional**, mas o fechamento ERP **mantém a 1ª saída** em ENCAPS. Entrada em PESO (LADSON/BYANCA) **não entra** no relatório — só a saída (INGRIDHY).
+
+**Conclusão 97414:** importação e fechamento PG **espelham o ERP** nesta requisição. BYANCA não recebe crédito apesar da correção — comportamento do ERP, não divergência de importação.
+
+**Outros casos:** a regra «1ª saída» falha quando o ERP credita movimento **diferente** da 1ª (ex.: **96172** — ERP INGRIDHY, PG NATAN).
 
 #### Casos de referência documentados
 
@@ -379,6 +423,7 @@
 | 96771 / fórmula 0 | FORMULA ESPECIAL | Data 1ª saída (30/06); correção em jul | Alinhado após ajuste de data |
 | 96252 / fórmula 3 | ENCAPS INHUMAS | 1ª saída INGRIDHY; 2ª NATAN (correção) | Alinhado (1ª saída) |
 | 96172 / fórmula 0 | PESO MEDIO | 1ª saída NATAN (137); 2ª INGRIDHY (correção) | ERP credita INGRIDHY; PG credita NATAN |
+| **97414 / fórmula 0** | **ENCAPS + PESO MEDIO** | Correção PCP BYANCA; fechamento ERP **1ª saída** ENCAPS | **Alinhado:** LADSON × 1 ENCAPS, INGRIDHY × 1 PESO |
 | 26197, 96690, etc. | ROT INHUMAS | Múltiplas saídas INGRIDHY no mês | ERP +1 por saída extra |
 
 #### Perguntas para fechamento com gestão (decisão pendente)
@@ -386,14 +431,16 @@
 Responder formalmente antes de alterar importação ou fechamento oficial:
 
 1. **Remuneração:** paga por **fórmula concluída na etapa** ou por **cada saída lançada no mês**?
-2. **Correção PCP:** o 2º lançamento é **ajuste de erro** (não remunerar de novo) ou **trabalho novo** (remunerar)?
+2. **Correção PCP:** o 2º lançamento é **ajuste de erro** (não remunerar de novo) ou **trabalho novo** (remunerar)? Quando há 2 saídas na mesma etapa em minutos (97414), credita-se o **1º** ou o **último** após correção?
 3. **Relatório oficial:** o fechamento continuará pelo **ERP** por um período ou migrará para o **sistema novo**?
+4. **Correção encadeada:** ao corrigir ENCAPS, deve **reprocessar** etapas seguintes (PESO MEDIO) que foram abertas pelo lançamento errado?
 
 #### Caminhos conforme resposta da gestão
 
 | Resposta da gestão | Ação técnica |
 |--------------------|--------------|
 | **Ajuste de erro; uma conclusão por fórmula** | Manter **RN-PCP-001**; reconciliar totais com ERP via documentação de exceções; **não** “corrigir” importação para igualar ERP. |
+| **Última saída quando houver correção na etapa** | `funcSaida`/`codFuncSaida` = **último** `02`; `dataSaida` = **primeiro** `02` (ou último — definir). Resolve 97414/96172; **quebra** 96252 se último func for NATAN. **Exige critério de detecção de correção.** |
 | **Igualar totais ao ERP** | Nova camada: relatório/tabela de **movimentos de saída no período** (1 linha por `02` no mês) ou regra híbrida; `producao_etapas_resumo` permanece para SLA. |
 | **Híbrido** | Resumo para SLA + relatório de fechamento espelhando ERP até migração oficial. |
 

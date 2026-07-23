@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ViewChild } from '@angular/core';
+import { Component, OnInit, inject, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -32,6 +32,7 @@ export class UserFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private pageContextService = inject(PageContextService);
   private vendedoresService = inject(VendedoresService);
+  private cdr = inject(ChangeDetectorRef);
 
   @ViewChild('vendedorAutocomplete') vendedorAutocomplete?: AutocompleteComponent;
 
@@ -41,6 +42,7 @@ export class UserFormComponent implements OnInit {
   loading = false;
   error: string | null = null;
   isSubmitting = false;
+  temUnidadePrincipal = false;
 
   availableProfiles: Perfil[] = [];
 
@@ -49,6 +51,10 @@ export class UserFormComponent implements OnInit {
       value: p.id,
       label: p.nomePerfil,
     }));
+  }
+
+  get unidadeProdutividadeSelectOptions(): MultiSelectOption[] {
+    return this.unidades.map((u) => ({ value: u, label: u }));
   }
 
   // Unidades
@@ -61,7 +67,22 @@ export class UserFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-  this.loadProfiles();
+    this.loadProfiles();
+    this.userForm.get('unidade')?.valueChanges.subscribe((unidade) => {
+      this.onUnidadeChange(unidade);
+    });
+  }
+
+  onUnidadeSelectChange(): void {
+    this.onUnidadeChange(this.userForm.get('unidade')?.value);
+    this.cdr.detectChanges();
+  }
+
+  private onUnidadeChange(unidade: Unidade | string | null | undefined): void {
+    this.temUnidadePrincipal = !!unidade && String(unidade).trim() !== '';
+    if (!this.temUnidadePrincipal) {
+      this.userForm.patchValue({ unidadesProdutividade: [] }, { emitEvent: false });
+    }
   }
 
   private createForm(): FormGroup {
@@ -72,6 +93,7 @@ export class UserFormComponent implements OnInit {
       isActive: [true],
       perfilIds: [[], Validators.required],
       unidade: [''], // Campo opcional para unidade
+      unidadesProdutividade: [[] as Unidade[]],
       vendedorId: [''] // Campo opcional para vendedor
     });
   }
@@ -135,8 +157,10 @@ export class UserFormComponent implements OnInit {
             user.perfis?.map((p) => p.id) ??
             (user.perfil?.id ? [user.perfil.id] : []),
           unidade: user.unidade || '',
+          unidadesProdutividade: user.unidadesProdutividade ?? [],
           vendedorId: user.vendedor?.id || ''
         });
+        this.onUnidadeChange(user.unidade || '');
 
         // Se o usuário tiver vendedor, definir no autocomplete
         if (user.vendedor) {
@@ -201,6 +225,10 @@ export class UserFormComponent implements OnInit {
       ativo: formValue.isActive,
       perfilIds: formValue.perfilIds ?? [],
       unidade: formValue.unidade || null,
+      unidadesProdutividade: this.normalizarUnidadesProdutividade(
+        formValue.unidade,
+        formValue.unidadesProdutividade,
+      ),
     };
 
     this.userService.createUser(createUsuarioDto).subscribe({
@@ -224,6 +252,10 @@ export class UserFormComponent implements OnInit {
       ativo: formValue.isActive,
       perfilIds: formValue.perfilIds ?? [],
       unidade: formValue.unidade || null,
+      unidadesProdutividade: this.normalizarUnidadesProdutividade(
+        formValue.unidade,
+        formValue.unidadesProdutividade,
+      ),
       vendedorId: vendedorId,
     };
 
@@ -270,11 +302,11 @@ export class UserFormComponent implements OnInit {
   }
 
   // Getters para facilitar acesso aos controles no template
-  get name() { return this.userForm.get('name'); }
-  get email() { return this.userForm.get('email'); }
-  get password() { return this.userForm.get('password'); }
-  get isActive() { return this.userForm.get('isActive'); }
-  get unidade() { return this.userForm.get('unidade'); }
+  get name() { return this.userForm.get('name')!; }
+  get email() { return this.userForm.get('email')!; }
+  get password() { return this.userForm.get('password')!; }
+  get isActive() { return this.userForm.get('isActive')!; }
+  get unidade() { return this.userForm.get('unidade')!; }
 
   // Métodos para verificar erros
   hasError(controlName: string, errorType: string): boolean {
@@ -311,6 +343,24 @@ export class UserFormComponent implements OnInit {
     return 'Campo inválido';
   }
 
+  private normalizarUnidadesProdutividade(
+    unidade: Unidade | string | null | undefined,
+    unidadesProdutividade: Unidade[] | null | undefined,
+  ): Unidade[] | null {
+    if (!unidade || String(unidade).trim() === '') {
+      return null;
+    }
+    const lista = (unidadesProdutividade ?? []).filter(Boolean) as Unidade[];
+    if (!lista.length) {
+      return null;
+    }
+    const unicas = [...new Set(lista)];
+    const u = unidade as Unidade;
+    if (!unicas.includes(u)) {
+      unicas.unshift(u);
+    }
+    return unicas.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
 
   private getFieldName(controlName: string): string {
     const fieldNames: { [key: string]: string } = {

@@ -35,6 +35,7 @@ import {
   AplicarEtapasRemuneradasResponseDto,
   ProducaoConfigRelatorioResponseDto,
 } from './dto/producao-config-relatorio.dto';
+import { ProducaoFuncionarioEtapasResponseDto } from './dto/producao-funcionario-etapas-response.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
@@ -83,7 +84,7 @@ export class ProducaoConfigController {
   @Get('funcionarios/:funcionarioId/etapas')
   @Permissions(Permission.PRODUCAO_CONFIG_READ)
   @ApiOperation({ summary: 'Etapas configuradas para um funcionário' })
-  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 200, type: ProducaoFuncionarioEtapasResponseDto })
   listarEtapasFuncionario(
     @Req() req: { user: Usuario },
     @Param('funcionarioId', ParseUUIDPipe) funcionarioId: string,
@@ -99,7 +100,7 @@ export class ProducaoConfigController {
   @Put('funcionarios/:funcionarioId/etapas/bulk')
   @Permissions(Permission.PRODUCAO_CONFIG_UPDATE)
   @ApiOperation({ summary: 'Salva etapas que o funcionário recebe (bulk)' })
-  @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 200, type: ProducaoFuncionarioEtapasResponseDto })
   salvarEtapasFuncionario(
     @Req() req: { user: Usuario },
     @Param('funcionarioId', ParseUUIDPipe) funcionarioId: string,

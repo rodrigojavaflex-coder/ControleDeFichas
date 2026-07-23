@@ -98,6 +98,7 @@ export class AuthService {
         atualizadoEm: authUser.vendedor.atualizadoEm || new Date(),
       } : null,
       unidade: authUser.unidade ?? undefined,
+      unidadesProdutividade: authUser.unidadesProdutividade ?? null,
       criadoEm: authUser.criadoEm,
       atualizadoEm: authUser.atualizadoEm,
       perfis: this.mapAuthPerfis(authUser),

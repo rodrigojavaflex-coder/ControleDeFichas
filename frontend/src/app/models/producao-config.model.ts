@@ -1,11 +1,16 @@
 import { Unidade } from './usuario.model';
 
+export const PRODUCAO_COD_ETAPA_GESTAO = 'GESTAO';
+
+export type ProducaoEtapaTipoCalculo = 'erp' | 'gestao';
+
 export interface ProducaoEtapaRemuneracaoRow {
   codEtapa: string;
   etapa: string;
   posicaoEtapa: number;
   recebe: boolean;
   valor: number;
+  tipoCalculo?: ProducaoEtapaTipoCalculo;
 }
 
 export interface ProducaoFuncionarioConfigRow {
@@ -19,6 +24,25 @@ export interface ProducaoFuncionarioConfigRow {
   qtdEtapasConfiguradas: number;
 }
 
+export interface ProducaoFuncionarioGestaoBaseOpcao {
+  codEtapa: string;
+  etapa: string;
+}
+
+export interface ProducaoFuncionarioGestaoConfig {
+  disponivel: boolean;
+  recebe: boolean;
+  codEtapaReferencia: string | null;
+  etapaReferencia: string | null;
+  valor: number;
+  opcoesBase: ProducaoFuncionarioGestaoBaseOpcao[];
+}
+
+export interface ProducaoFuncionarioEtapasResponse {
+  etapas: ProducaoFuncionarioEtapaModalRow[];
+  gestao: ProducaoFuncionarioGestaoConfig | null;
+}
+
 export interface ProducaoFuncionarioEtapaModalRow {
   codEtapa: string;
   etapa: string;
@@ -26,6 +50,11 @@ export interface ProducaoFuncionarioEtapaModalRow {
   etapaRemunerada: boolean;
   valor: number;
   recebe: boolean;
+}
+
+export interface ProducaoFuncionarioGestaoSaveDto {
+  recebe: boolean;
+  codEtapaReferencia?: string | null;
 }
 
 export interface BulkSaveProducaoEtapasDto {
@@ -36,6 +65,7 @@ export interface BulkSaveProducaoEtapasDto {
 export interface BulkSaveProducaoFuncionarioEtapasDto {
   unidade: Unidade;
   itens: { codEtapa: string; recebe: boolean }[];
+  gestao?: ProducaoFuncionarioGestaoSaveDto;
 }
 
 export type FiltroEtapasRecebe = 'todas' | 'recebe' | 'nao_recebe';
@@ -95,6 +125,7 @@ export interface ProducaoConfigRelatorioEtapa {
 export interface ProducaoConfigRelatorioFuncionarioEtapa {
   codEtapa: string;
   etapa: string;
+  gestaoBaseEtapa?: string | null;
 }
 
 export interface ProducaoConfigRelatorioFuncionario {

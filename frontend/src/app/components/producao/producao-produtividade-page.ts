@@ -17,6 +17,7 @@ import {
   ProdutividadeTipoRelatorio,
   PRODUTIVIDADE_TIPOS_RELATORIO,
 } from '../../models/producao-produtividade.model';
+import { PRODUCAO_COD_ETAPA_GESTAO } from '../../models/producao-config.model';
 import { MESES_PT, nomeMesPt } from '../folha/folha-meses';
 import { environment } from '../../../environments/environment';
 
@@ -115,7 +116,7 @@ export class ProducaoProdutividadePage implements OnInit {
   }
 
   abrirModalAvisos(): void {
-    if (!this.temAvisos()) return;
+    if (!this.podeVerAlertas() || !this.temAvisos()) return;
     this.modalAvisosAberto = true;
   }
 
@@ -178,6 +179,10 @@ export class ProducaoProdutividadePage implements OnInit {
 
   podeLer(): boolean {
     return this.auth.hasPermission(Permission.PRODUCAO_PRODUTIVIDADE_READ);
+  }
+
+  podeVerAlertas(): boolean {
+    return this.auth.hasPermission(Permission.PRODUCAO_PRODUTIVIDADE_READ_ALERTAS);
   }
 
   podeSelecionarMultiplasUnidades(): boolean {
@@ -291,6 +296,18 @@ export class ProducaoProdutividadePage implements OnInit {
     return etapa.quantidade;
   }
 
+  totalColunaEtapa(codEtapa: string): number {
+    if (!this.resultado) return 0;
+    return this.resultado.funcionarios.reduce((acc, f) => {
+      const qtd = this.quantidadeCelula(f, codEtapa);
+      return acc + (qtd ?? 0);
+    }, 0);
+  }
+
+  totalGeralValor(): number {
+    return this.resultado?.resumo.totalValor ?? 0;
+  }
+
   colspanGridDetalhe(): number {
     return this.colunasEtapas.length + 2;
   }
@@ -336,6 +353,12 @@ export class ProducaoProdutividadePage implements OnInit {
       .join(', ');
   }
 
+  formatarAmostrasRequisicao(
+    item: ProdutividadeFuncionarioSemCadastro,
+  ): string {
+    return (item.amostrasRequisicoes ?? []).join(', ');
+  }
+
   temAvisosSemCadastro(): boolean {
     return (this.resultado?.avisos?.funcionariosSemCadastro?.length ?? 0) > 0;
   }
@@ -347,11 +370,12 @@ export class ProducaoProdutividadePage implements OnInit {
   }
 
   temAvisos(): boolean {
+    if (!this.podeVerAlertas()) return false;
     return this.temAvisosSemCadastro() || this.temAvisosSemEtapaVinculada();
   }
 
   totalLinhasAvisos(): number {
-    if (!this.resultado?.avisos) return 0;
+    if (!this.podeVerAlertas() || !this.resultado?.avisos) return 0;
     return (
       (this.resultado.avisos.totalLinhasSemCadastro ?? 0) +
       (this.resultado.avisos.totalLinhasSemEtapaVinculada ?? 0)
@@ -394,14 +418,35 @@ export class ProducaoProdutividadePage implements OnInit {
   }
 
   private initializeUnidadeFilter(): void {
-    const u = this.auth.getCurrentUser();
-    if (u?.unidade && String(u.unidade).trim() !== '') {
-      this.selectedUnidades = new Set([u.unidade as Unidade]);
-      this.unidadeDisabled = true;
-    } else {
-      this.selectedUnidades = new Set();
-      this.unidadeDisabled = false;
+    const permitidas = this.resolverUnidadesPermitidasUsuario();
+    if (permitidas) {
+      this.unidades = permitidas;
+      if (permitidas.length === 1) {
+        this.selectedUnidades = new Set(permitidas);
+        this.unidadeDisabled = true;
+      } else {
+        this.selectedUnidades = new Set(permitidas);
+        this.unidadeDisabled = false;
+      }
+      return;
     }
+
+    this.unidades = Object.values(Unidade);
+    this.selectedUnidades = new Set();
+    this.unidadeDisabled = false;
+  }
+
+  /** Escopo de produtividade conforme cadastro (`unidadesProdutividade`). */
+  private resolverUnidadesPermitidasUsuario(): Unidade[] | null {
+    const u = this.auth.getCurrentUser();
+    if (!u?.unidade || String(u.unidade).trim() === '') {
+      return null;
+    }
+    const extras = (u.unidadesProdutividade ?? []).filter(Boolean) as Unidade[];
+    if (!extras.length) {
+      return [u.unidade as Unidade];
+    }
+    return [...new Set(extras)].sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }
 
   private inicializarAnosOpcoes(): void {
@@ -482,9 +527,38 @@ export class ProducaoProdutividadePage implements OnInit {
         }
       }
     }
-    return [...map.entries()]
+    const colunas = [...map.entries()]
       .map(([codEtapa, etapa]) => ({ codEtapa, etapa }))
       .sort((a, b) => a.etapa.localeCompare(b.etapa, 'pt-BR'));
+
+    const idxGestao = colunas.findIndex(
+      (c) => c.codEtapa === PRODUCAO_COD_ETAPA_GESTAO,
+    );
+    if (idxGestao >= 0) {
+      const [gestao] = colunas.splice(idxGestao, 1);
+      colunas.push(gestao);
+    }
+
+    return colunas;
+  }
+
+  private renderRodapeTabelaResumida(
+    colunas: ProdutividadeColunaEtapa[],
+  ): string {
+    if (!this.resultado || colunas.length === 0) return '';
+    const celulas = colunas
+      .map((c) => {
+        const total = this.totalColunaEtapa(c.codEtapa);
+        return `<td class="col-num"><strong>${total}</strong></td>`;
+      })
+      .join('');
+    return `<tfoot>
+      <tr class="grid-total-row">
+        <td class="col-funcionario"><strong>Total</strong></td>
+        ${celulas}
+        <td class="col-num col-total"><strong>${this.escapeHtml(this.formatarMoeda(this.totalGeralValor()))}</strong></td>
+      </tr>
+    </tfoot>`;
   }
 
   private imprimirRelatorioResumida(): void {
@@ -527,6 +601,7 @@ export class ProducaoProdutividadePage implements OnInit {
           <tbody>
             ${linhas || '<tr><td colspan="' + (colunas.length + 2) + '">Nenhum dado.</td></tr>'}
           </tbody>
+          ${this.renderRodapeTabelaResumida(colunas)}
         </table>
       </div>`;
 
@@ -797,7 +872,8 @@ export class ProducaoProdutividadePage implements OnInit {
       .col-funcionario { min-width: 5.5rem; white-space: nowrap; }
       .col-etapa { max-width: 6rem; white-space: normal; word-break: break-word; font-size: 9px; }
       .col-total { min-width: 5rem; }
-      table tfoot td { background: #f8fafc; font-weight: 600; border-top: 1px solid #e5e7eb; }
+      table tfoot td { background: #f8fafc; font-weight: 600; border-top: 2px solid #94a3b8; }
+      .grid-total-row td { font-weight: 700; }
       .analitico-total-etapa td { text-align: right; color: #334155; font-size: 10px; }
       .func-cards { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
       .func-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; page-break-inside: avoid; break-inside: avoid; background: #fff; }

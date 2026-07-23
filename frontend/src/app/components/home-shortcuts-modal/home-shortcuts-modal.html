@@ -54,6 +54,7 @@
               type="search"
               class="home-shortcuts-search"
               [(ngModel)]="searchTerm"
+              (ngModelChange)="onSearchChange()"
               placeholder="Buscar por nome ou área…"
               autocomplete="off"
             />
@@ -72,28 +73,44 @@
                 }
               </p>
             }
-            @for (group of availableGroups; track group.category) {
+            @for (group of availableGroups; track group.category; let gi = $index) {
               <div class="home-shortcuts-group">
-                <h4>{{ group.category }}</h4>
-                <ul class="home-shortcuts-available-list">
-                  @for (item of group.items; track item.id) {
-                    <li>
-                      <label class="home-shortcuts-available-row">
-                        <input
-                          type="checkbox"
-                          [checked]="false"
-                          [disabled]="atMax"
-                          (change)="toggleAvailable(item, $any($event.target).checked)"
-                        />
-                        <span
-                          class="home-shortcuts-row-icon"
-                          [innerHTML]="iconHtml(item.icon)"
-                        ></span>
-                        <span>{{ item.label }}</span>
-                      </label>
-                    </li>
-                  }
-                </ul>
+                <button
+                  type="button"
+                  class="home-shortcuts-group-toggle"
+                  [attr.aria-expanded]="isCategoryExpanded(group.category)"
+                  [attr.aria-controls]="'home-shortcuts-group-' + gi"
+                  (click)="toggleCategory(group.category)">
+                  <span
+                    class="home-shortcuts-group-chevron"
+                    [class.is-expanded]="isCategoryExpanded(group.category)"
+                    aria-hidden="true"></span>
+                  <span class="home-shortcuts-group-title">{{ group.category }}</span>
+                  <span class="home-shortcuts-group-count">{{ group.items.length }}</span>
+                </button>
+                @if (isCategoryExpanded(group.category)) {
+                  <ul
+                    class="home-shortcuts-available-list"
+                    [id]="'home-shortcuts-group-' + gi">
+                    @for (item of group.items; track item.id) {
+                      <li>
+                        <label class="home-shortcuts-available-row">
+                          <input
+                            type="checkbox"
+                            [checked]="false"
+                            [disabled]="atMax"
+                            (change)="toggleAvailable(item, $any($event.target).checked)"
+                          />
+                          <span
+                            class="home-shortcuts-row-icon"
+                            [innerHTML]="iconHtml(item.icon)"
+                          ></span>
+                          <span>{{ item.label }}</span>
+                        </label>
+                      </li>
+                    }
+                  </ul>
+                }
               </div>
             }
           </div>

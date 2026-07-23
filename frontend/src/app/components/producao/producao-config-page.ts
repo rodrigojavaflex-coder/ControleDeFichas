@@ -10,12 +10,16 @@ import {
   ProducaoEtapaEditRow,
   ProducaoFuncionarioConfigRow,
   ProducaoFuncionarioEtapaModalRow,
+  ProducaoFuncionarioGestaoConfig,
+  ProducaoFuncionarioEtapasResponse,
   FiltroEtapasRecebe,
   FiltroFuncionarioEtapas,
   ProducaoConfigRelatorio,
   AcaoEtapasFuncionariosModal,
   AplicarEtapasRemuneradasDto,
   RemoverEtapasFuncionariosDto,
+  PRODUCAO_COD_ETAPA_GESTAO,
+  ProducaoEtapaTipoCalculo,
 } from '../../models/producao-config.model';
 
 @Component({
@@ -55,6 +59,7 @@ export class ProducaoConfigPage implements OnInit {
   modalAberto = false;
   modalFuncionario: ProducaoFuncionarioConfigRow | null = null;
   modalEtapas: ProducaoFuncionarioEtapaModalRow[] = [];
+  modalGestao: ProducaoFuncionarioGestaoConfig | null = null;
   modalCarregando = false;
   modalSalvando = false;
 
@@ -164,7 +169,14 @@ export class ProducaoConfigPage implements OnInit {
   }
 
   etapasRemuneradasSalvas(): ProducaoEtapaEditRow[] {
-    return this.etapas.filter((e) => e.recebe);
+    return this.etapas.filter((e) => e.recebe && !this.isEtapaGestao(e));
+  }
+
+  isEtapaGestao(row: { codEtapa: string; tipoCalculo?: string }): boolean {
+    return (
+      row.codEtapa === PRODUCAO_COD_ETAPA_GESTAO ||
+      row.tipoCalculo === 'gestao'
+    );
   }
 
   podeImprimirRelatorio(): boolean {
@@ -429,6 +441,7 @@ export class ProducaoConfigPage implements OnInit {
           posicaoEtapa: e.posicaoEtapa,
           recebe: e.recebe,
           valor: e.recebe ? Math.max(0, this.valorEtapaObrigatorio(e)) : 0,
+          tipoCalculo: this.isEtapaGestao(e) ? 'gestao' : 'erp',
         })),
       })
       .subscribe({
@@ -453,11 +466,13 @@ export class ProducaoConfigPage implements OnInit {
     this.modalAberto = true;
     this.modalCarregando = true;
     this.modalEtapas = [];
+    this.modalGestao = null;
     this.producaoConfig
       .listarEtapasFuncionario(this.unidadeFiltro, f.id)
       .subscribe({
-        next: (rows) => {
-          this.modalEtapas = rows;
+        next: (res) => {
+          this.modalEtapas = res.etapas;
+          this.modalGestao = res.gestao;
           this.modalCarregando = false;
         },
         error: (e) => {
@@ -475,6 +490,7 @@ export class ProducaoConfigPage implements OnInit {
     this.modalAberto = false;
     this.modalFuncionario = null;
     this.modalEtapas = [];
+    this.modalGestao = null;
   }
 
   alternarRecebeModal(row: ProducaoFuncionarioEtapaModalRow): void {
@@ -503,12 +519,40 @@ export class ProducaoConfigPage implements OnInit {
     }
   }
 
+  modalGestaoInvalido(): boolean {
+    if (!this.modalGestao?.recebe) return false;
+    return !this.modalGestao.codEtapaReferencia;
+  }
+
+  alternarGestaoModal(checked: boolean): void {
+    if (!this.modalGestao) return;
+    this.modalGestao = {
+      ...this.modalGestao,
+      recebe: checked,
+      codEtapaReferencia: checked
+        ? this.modalGestao.codEtapaReferencia
+        : null,
+    };
+  }
+
+  onGestaoReferenciaChange(codEtapa: string): void {
+    if (!this.modalGestao) return;
+    this.modalGestao = {
+      ...this.modalGestao,
+      codEtapaReferencia: codEtapa || null,
+      etapaReferencia:
+        this.modalGestao.opcoesBase.find((o) => o.codEtapa === codEtapa)
+          ?.etapa ?? null,
+    };
+  }
+
   salvarModalFuncionario(): void {
     if (
       !this.podeEditar() ||
       !this.unidadeFiltro ||
       !this.modalFuncionario ||
-      this.modalSalvando
+      this.modalSalvando ||
+      this.modalGestaoInvalido()
     ) {
       return;
     }
@@ -520,6 +564,12 @@ export class ProducaoConfigPage implements OnInit {
           codEtapa: e.codEtapa,
           recebe: e.recebe,
         })),
+        gestao: this.modalGestao
+          ? {
+              recebe: this.modalGestao.recebe,
+              codEtapaReferencia: this.modalGestao.codEtapaReferencia,
+            }
+          : undefined,
       })
       .subscribe({
         next: () => {
@@ -604,6 +654,7 @@ export class ProducaoConfigPage implements OnInit {
       posicaoEtapa: number;
       recebe: boolean;
       valor: number;
+      tipoCalculo?: ProducaoEtapaTipoCalculo;
     }[],
   ): ProducaoEtapaEditRow[] {
     return lista.map((e) => ({

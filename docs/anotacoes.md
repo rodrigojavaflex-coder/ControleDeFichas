@@ -27,7 +27,7 @@
 - [ ] **Intervalo nas importações noturnas** — tratar período de intervalo nas buscas das importações durante a madrugada, evitando conflito com backup das unidades.
 - [ ] **Agente WhatsApp (respostas automáticas)** — criar agente de respostas; definir permissões por número (ex.: folha, produção, metas, orçamento).
 - [ ] **Controle de produção (capacidade)** — gerenciar capacidade com base em quantidade de funcionários e fórmulas em produção; ao incluir requisição, calcular tempo de entrega ao cliente.
-- [ ] **Decisão gestão — fechamento produtividade (RN-PCP-004)** — alinhar com responsáveis: remunerar por fórmula concluída (atual) vs cada saída ERP; critério para correções PCP; relatório oficial ERP vs sistema novo. Ver `docs/regras-negocio.md` RN-PCP-004 e `docs/sql/producao_etapas_conferencia_erp.sql`.
+- [ ] **Decisão gestão — fechamento produtividade (RN-PCP-004)** — alinhar totais mensais vs ERP (ex.: INGRIDHY ROT +6, 96172 PESO, JESSICA); req. **97414 validada OK** (LADSON ENCAPS, INGRIDHY PESO). Ver `docs/regras-negocio.md` RN-PCP-004.
 - [ ] **Notas fiscais não transmitidas** — pesquisar na base informações sobre NF-e/NFC-e não transmitidas e criar tela de alerta.
 - [ ] **Fechamento de caixa por WhatsApp** — no fechamento de caixa, enviar imagem do fechamento via WhatsApp; se possível, enviar ao grupo.
 - [ ] **Unificação vendedor × funcionário** — cadastro de vendedor duplicado com funcionário (cargo vendedor); unificar no sistema e eliminar cadastro de vendedor.

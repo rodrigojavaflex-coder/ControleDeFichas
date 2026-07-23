@@ -92,6 +92,14 @@ export class ProdutividadeFuncionarioSemCadastroDto {
   @ApiProperty({ type: [ProdutividadeSemCadastroUnidadeDto] })
   unidades: ProdutividadeSemCadastroUnidadeDto[];
 
+  @ApiProperty({
+    type: [String],
+    example: ['23456-4 ROTULAÇÃO', '23457-4 ROTULAÇÃO'],
+    description:
+      'Amostras requisição-fórmula e etapa do resumo (até 5 por funcionário)',
+  })
+  amostrasRequisicoes: string[];
+
   @ApiProperty()
   totalLinhas: number;
 }

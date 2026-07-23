@@ -21,6 +21,9 @@ export class ProducaoConfigRelatorioFuncionarioEtapaDto {
 
   @ApiProperty()
   etapa: string;
+
+  @ApiProperty({ required: false })
+  gestaoBaseEtapa?: string | null;
 }
 
 export class ProducaoConfigRelatorioFuncionarioDto {

@@ -142,6 +142,7 @@ export enum Permission {
   PRODUCAO_CONFIG_READ = 'producao-config:read',
   PRODUCAO_CONFIG_UPDATE = 'producao-config:update',
   PRODUCAO_PRODUTIVIDADE_READ = 'producao-produtividade:read',
+  PRODUCAO_PRODUTIVIDADE_READ_ALERTAS = 'producao-produtividade:read-alertas',
 }
 
 export interface PermissionGroup {
@@ -200,6 +201,8 @@ export interface Usuario {
   /** IDs dos atalhos da tela inicial (`null` = usar padrão do sistema). */
   atalhosHome?: string[] | null;
   unidade?: Unidade | null; // Unidade do usuário (null = sem vínculo = escopo conforme RN-007 / admin)
+  /** Unidades consultáveis na produtividade (`null`/vazio = só `unidade`). */
+  unidadesProdutividade?: Unidade[] | null;
   vendedor?: Vendedor | null; // Vendedor associado ao usuário
   criadoEm: Date;
   atualizadoEm: Date;
@@ -218,6 +221,7 @@ export interface CreateUsuarioDto {
   ativo?: boolean;
   tema?: string; // Tema preferido (Claro ou Escuro)
   unidade?: Unidade | null; // Unidade do usuário (null para sem unidade)
+  unidadesProdutividade?: Unidade[] | null;
   perfilIds: string[];
   vendedorId?: string | null; // ID do vendedor associado ao usuário
 }
@@ -229,6 +233,7 @@ export interface UpdateUsuarioDto {
   ativo?: boolean;
   tema?: string; // Permitir atualizar tema do usuário (Claro ou Escuro)
   unidade?: Unidade | null; // Permitir atualizar unidade do usuário (null para limpar)
+  unidadesProdutividade?: Unidade[] | null;
   perfilIds?: string[];
   vendedorId?: string | null; // Atualizar vendedor associado ao usuário (null para remover)
 }

@@ -220,6 +220,7 @@ export class AuthService {
         tema: user.tema || 'Claro',
         atalhosHome: user.atalhosHome ?? null,
         unidade: user.unidade ?? null,
+        unidadesProdutividade: user.unidadesProdutividade ?? null,
         criadoEm: user.criadoEm,
         atualizadoEm: user.atualizadoEm,
         vendedor: user.vendedor ? {

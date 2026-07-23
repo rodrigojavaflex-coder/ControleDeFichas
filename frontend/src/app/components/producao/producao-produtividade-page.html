@@ -125,7 +125,7 @@
             </div>
           }
 
-          @if (resultado && temAvisos()) {
+          @if (resultado && podeVerAlertas() && temAvisos()) {
             <div class="filter-field filter-field-acao">
               <label class="form-label">Alertas</label>
               <button
@@ -296,6 +296,19 @@
                   }
                 }
               </tbody>
+              <tfoot>
+                <tr class="producao-prod-grid-total-row">
+                  <td class="col-funcionario"><strong>Total</strong></td>
+                  @for (col of colunasEtapas; track col.codEtapa) {
+                    <td class="col-etapa col-num">
+                      <strong>{{ totalColunaEtapa(col.codEtapa) }}</strong>
+                    </td>
+                  }
+                  <td class="col-total col-num">
+                    <strong>{{ formatarMoeda(totalGeralValor()) }}</strong>
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         }
@@ -381,7 +394,7 @@
   </div>
 }
 
-@if (modalAvisosAberto && resultado) {
+@if (modalAvisosAberto && resultado && podeVerAlertas()) {
   <div class="producao-prod-modal-overlay" (click)="fecharModalAvisos()">
     <div
       class="producao-prod-modal-box"
@@ -422,6 +435,11 @@
                   · Cód. ERP {{ item.codigoErp }}
                   · {{ formatarUnidadesAviso(item) }}
                   · {{ item.totalLinhas }} etapa(s)
+                  @if (item.amostrasRequisicoes.length) {
+                    <span class="producao-prod-avisos-amostras">
+                      · Ex.: {{ formatarAmostrasRequisicao(item) }}
+                    </span>
+                  }
                 </li>
               }
             </ul>

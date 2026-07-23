@@ -55,6 +55,7 @@ alwaysApply: true
 - Seguir convencoes: `snake_case`, constraints e indices coerentes.
 - Operacoes criticas/multiplos updates devem usar transacao quando necessario.
 - Evitar N+1 e revisar impacto de performance em consultas filtradas.
+- **Proibido** migration que altere `perfil.permissoes` para conceder/revogar permissoes automaticamente; use enum + `PERMISSION_GROUPS` e atribuicao manual em Perfis.
 
 ## Consistencia de contratos
 - Mudou payload de API? Ajustar models/services consumidores.

@@ -5,29 +5,51 @@ import { Usuario } from '../../usuarios/entities/usuario.entity';
 export type ListaFechamentoEscopo = Unidade | 'ALL';
 
 /**
- * Escopo de unidade única para **produtividade**: apenas `usuario.unidade`.
- * Não usa fallback de `vendedor.unidade` — usuário sem unidade no cadastro pode fechar várias unidades.
+ * Unidades que o usuário pode consultar na **produtividade**.
+ * `undefined` = sem `usuario.unidade` (escopo global conforme permissões).
+ * Não usa fallback de `vendedor.unidade`.
+ */
+export function unidadesPermitidasProdutividade(
+  usuario: Usuario,
+): Unidade[] | undefined {
+  const u = usuario.unidade;
+  const hasUnidade =
+    u !== undefined && u !== null && String(u).trim() !== '';
+  if (!hasUnidade) {
+    return undefined;
+  }
+
+  const extras = (usuario.unidadesProdutividade ?? []).filter(Boolean);
+  const unicas = [...new Set(extras)] as Unidade[];
+  if (unicas.length === 0) {
+    return [u as Unidade];
+  }
+  return unicas;
+}
+
+/**
+ * @deprecated Preferir `unidadesPermitidasProdutividade`. Retorna unidade única quando o escopo tem exatamente uma.
  */
 export function unidadeEscopoUsuarioProducao(
   usuario: Usuario,
 ): Unidade | undefined {
-  const u = usuario.unidade;
-  if (u !== undefined && u !== null && String(u).trim() !== '') {
-    return u;
+  const permitidas = unidadesPermitidasProdutividade(usuario);
+  if (!permitidas || permitidas.length !== 1) {
+    return undefined;
   }
-  return undefined;
+  return permitidas[0];
 }
 
-/** Produtividade: sem `usuario.unidade` pode consultar qualquer unidade informada. */
+/** Produtividade: valida unidade contra `unidadesPermitidasProdutividade`. */
 export function assertUnidadeProducao(
   usuario: Usuario,
   unidade: Unidade,
 ): void {
-  const escopo = unidadeEscopoUsuarioProducao(usuario);
-  if (!escopo) {
+  const permitidas = unidadesPermitidasProdutividade(usuario);
+  if (!permitidas) {
     return;
   }
-  if (escopo !== unidade) {
+  if (!permitidas.includes(unidade)) {
     throw new ForbiddenException('Acesso negado para a unidade informada.');
   }
 }

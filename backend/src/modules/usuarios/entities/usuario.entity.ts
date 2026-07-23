@@ -91,6 +91,17 @@ export class Usuario extends BaseEntity {
   })
   unidade?: Unidade;
 
+  @ApiProperty({
+    description:
+      'Unidades consultáveis na tela de produtividade (escopo ampliado além de `unidade`)',
+    example: ['INHUMAS', 'NERÓPOLIS'],
+    required: false,
+    enum: Unidade,
+    isArray: true,
+  })
+  @Column({ name: 'unidades_produtividade', type: 'jsonb', nullable: true })
+  unidadesProdutividade: Unidade[] | null;
+
   @ApiProperty({ description: 'Vendedor associado ao usuário', type: () => Vendedor, required: false })
   @ManyToOne(() => Vendedor, { nullable: true, eager: false })
   @JoinColumn({ name: 'vendedorId' })

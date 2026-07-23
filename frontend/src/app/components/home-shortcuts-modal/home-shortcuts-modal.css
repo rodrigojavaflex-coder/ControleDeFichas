@@ -210,16 +210,70 @@
 }
 
 .home-shortcuts-group {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.35rem;
 }
 
-.home-shortcuts-group h4 {
-  margin: 0 0 0.35rem;
+.home-shortcuts-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.35rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.home-shortcuts-group-toggle:hover,
+.home-shortcuts-group-toggle:focus-visible {
+  background: var(--bg-hover, #f1f5f9);
+  color: var(--text-primary, #1e293b);
+  outline: none;
+}
+
+.home-shortcuts-group-toggle:focus-visible {
+  outline: 2px solid var(--primary-color, #0d6efd);
+  outline-offset: 1px;
+}
+
+.home-shortcuts-group-chevron {
+  flex-shrink: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.home-shortcuts-group-chevron.is-expanded {
+  transform: rotate(45deg);
+}
+
+.home-shortcuts-group-title {
+  flex: 1;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.home-shortcuts-group-count {
+  flex-shrink: 0;
+  min-width: 1.25rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: var(--bg-secondary, #f1f5f9);
   color: var(--text-secondary, #64748b);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .home-shortcuts-available-list,
@@ -336,12 +390,15 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
+  flex-shrink: 0;
   gap: 0.75rem;
   padding: 0.85rem 1.5rem 1.25rem;
   border-top: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-primary, #fff);
 }
 
 .home-shortcuts-restore {
+  flex: 0 0 auto;
   padding: 0;
   border: none;
   background: none;
@@ -357,7 +414,40 @@
 
 .home-shortcuts-footer-actions {
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
   gap: 0.5rem;
+  margin-left: auto;
+}
+
+.home-shortcuts-footer-actions .btn {
+  min-width: 5.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, filter 0.15s ease;
+}
+
+.home-shortcuts-footer-actions .btn-secondary {
+  background-color: var(--bg-secondary, #6c757d);
+  color: var(--cor-texto-inverso, #fff);
+}
+
+.home-shortcuts-footer-actions .btn-secondary:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.home-shortcuts-footer-actions .btn-primary {
+  background-color: var(--primary-color, #0d6efd);
+  color: var(--btn-primary-contrast-color, #fff);
+}
+
+.home-shortcuts-footer-actions .btn-primary:hover:not(:disabled) {
+  filter: brightness(0.95);
 }
 
 .visually-hidden {
@@ -406,6 +496,8 @@
 
   .home-shortcuts-footer-actions {
     flex-direction: column;
+    margin-left: 0;
+    width: 100%;
   }
 
   .home-shortcuts-footer-actions .btn {

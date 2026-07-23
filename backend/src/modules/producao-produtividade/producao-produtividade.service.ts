@@ -9,9 +9,14 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import {
   assertUnidadeProducao,
-  unidadeEscopoUsuarioProducao,
+  unidadesPermitidasProdutividade,
 } from '../folha/utils/folha-unidade-scope.util';
+import {
+  PRODUCAO_COD_ETAPA_GESTAO,
+  isCodEtapaGestao,
+} from '../../common/constants/producao-gestao.constants';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
+import { Permission } from '../../common/enums/permission.enum';
 import {
   ProdutividadeAnaliticoLinhaDto,
   ProdutividadeAnaliticoResponseDto,
@@ -42,6 +47,7 @@ interface AccSemCadastro {
   codigoErp: number;
   nomes: Map<string, number>;
   unidades: Map<Unidade, number>;
+  amostrasRequisicoes: Set<string>;
   totalLinhas: number;
 }
 
@@ -56,6 +62,7 @@ interface AccSemEtapaVinculada {
 
 const LIMITE_AVISOS_SEM_CADASTRO = 50;
 const LIMITE_AVISOS_SEM_ETAPA = 50;
+const LIMITE_AMOSTRAS_REQUISICAO_AVISO = 5;
 
 @Injectable()
 export class ProducaoProdutividadeService {
@@ -126,16 +133,17 @@ export class ProducaoProdutividadeService {
           ? [unidadeLegado]
           : [];
 
-    const escopo = unidadeEscopoUsuarioProducao(usuario);
-    if (escopo) {
-      return [escopo];
-    }
+    const permitidas = unidadesPermitidasProdutividade(usuario);
+    const alvo =
+      solicitadas.length > 0
+        ? solicitadas
+        : permitidas ?? [];
 
-    if (solicitadas.length === 0) {
+    if (alvo.length === 0) {
       throw new BadRequestException('Informe ao menos uma unidade.');
     }
 
-    const unicas = [...new Set(solicitadas)];
+    const unicas = [...new Set(alvo)];
     for (const unidade of unicas) {
       assertUnidadeProducao(usuario, unidade);
     }
@@ -213,6 +221,7 @@ export class ProducaoProdutividadeService {
     let linhasContabilizadas = 0;
     let linhasSemFuncionario = 0;
     let linhasEtapaNaoConfigurada = 0;
+    const totalContabilizadoPorCodEtapa = new Map<string, number>();
 
     for (const row of linhasResumo) {
       const codFunc = row.codFuncSaida;
@@ -248,7 +257,15 @@ export class ProducaoProdutividadeService {
         continue;
       }
 
+      if (isCodEtapaGestao(row.codEtapa)) {
+        continue;
+      }
+
       linhasContabilizadas += 1;
+      totalContabilizadoPorCodEtapa.set(
+        row.codEtapa,
+        (totalContabilizadoPorCodEtapa.get(row.codEtapa) ?? 0) + 1,
+      );
 
       const chaveAgg = funcionario.codigoFuncionarioErp as number;
       let acc = aggPorCodErp.get(chaveAgg);
@@ -283,6 +300,13 @@ export class ProducaoProdutividadeService {
         });
       }
     }
+
+    await this.aplicarGestaoConsolidada(
+      unidades,
+      aggPorCodErp,
+      remuneracaoPorUnidadeEtapa,
+      totalContabilizadoPorCodEtapa,
+    );
 
     const funcionariosRows: ProdutividadeFuncionarioRowDto[] = [];
 
@@ -326,11 +350,14 @@ export class ProducaoProdutividadeService {
       0,
     );
     const totalValor = funcionariosRows.reduce((s, f) => s + f.totalValor, 0);
-    const avisos = this.montarAvisos(
-      semCadastroPorCodErp,
-      semEtapaVinculadaPorCodErp,
-      linhasSemFuncionario,
-    );
+    const podeVerAlertas = this.usuarioPodeVerAlertas(usuario);
+    const avisos = podeVerAlertas
+      ? this.montarAvisos(
+          semCadastroPorCodErp,
+          semEtapaVinculadaPorCodErp,
+          linhasSemFuncionario,
+        )
+      : this.avisosVazios();
 
     return {
       unidades,
@@ -339,8 +366,10 @@ export class ProducaoProdutividadeService {
       resumo: {
         linhasResumo: linhasResumo.length,
         linhasContabilizadas,
-        linhasSemFuncionario,
-        linhasEtapaNaoConfigurada,
+        linhasSemFuncionario: podeVerAlertas ? linhasSemFuncionario : 0,
+        linhasEtapaNaoConfigurada: podeVerAlertas
+          ? linhasEtapaNaoConfigurada
+          : 0,
         totalQuantidade,
         totalValor,
         totalFuncionarios: funcionariosRows.length,
@@ -471,6 +500,7 @@ export class ProducaoProdutividadeService {
         codigoErp,
         nomes: new Map<string, number>(),
         unidades: new Map<Unidade, number>(),
+        amostrasRequisicoes: new Set<string>(),
         totalLinhas: 0,
       };
       mapa.set(codigoErp, acc);
@@ -480,6 +510,12 @@ export class ProducaoProdutividadeService {
     const nomeResumo = row.funcSaida?.trim();
     if (nomeResumo) {
       acc.nomes.set(nomeResumo, (acc.nomes.get(nomeResumo) ?? 0) + 1);
+    }
+    if (acc.amostrasRequisicoes.size < LIMITE_AMOSTRAS_REQUISICAO_AVISO) {
+      const amostra = this.formatarAmostraRequisicao(row);
+      if (amostra) {
+        acc.amostrasRequisicoes.add(amostra);
+      }
     }
   }
 
@@ -513,6 +549,94 @@ export class ProducaoProdutividadeService {
         linhas: 1,
       });
     }
+  }
+
+  private async aplicarGestaoConsolidada(
+    unidades: Unidade[],
+    aggPorCodErp: Map<number, AccFuncionarioConsolidado>,
+    remuneracaoPorUnidadeEtapa: Map<
+      string,
+      { valor: number; etapa: string }
+    >,
+    totalContabilizadoPorCodEtapa: Map<string, number>,
+  ): Promise<void> {
+    const gestaoConfigs = await this.funcionarioEtapaRepo.find({
+      where: {
+        unidade: In(unidades),
+        codEtapa: PRODUCAO_COD_ETAPA_GESTAO,
+        recebe: true,
+      },
+      relations: ['funcionario', 'funcionario.cargo', 'funcionario.setor'],
+    });
+
+    if (gestaoConfigs.length === 0) {
+      return;
+    }
+
+    const gestaoAplicada = new Set<string>();
+
+    for (const gc of gestaoConfigs) {
+      const ref = gc.codEtapaReferencia?.trim();
+      const funcionario = gc.funcionario;
+      if (!ref || funcionario?.codigoFuncionarioErp == null) continue;
+
+      const codErp = funcionario.codigoFuncionarioErp;
+      const chaveDedupe = `${codErp}:${ref}`;
+      if (gestaoAplicada.has(chaveDedupe)) continue;
+
+      const remGestao = remuneracaoPorUnidadeEtapa.get(
+        `${gc.unidade}:${PRODUCAO_COD_ETAPA_GESTAO}`,
+      );
+      if (!remGestao) continue;
+
+      const qtd = totalContabilizadoPorCodEtapa.get(ref) ?? 0;
+      if (qtd <= 0) continue;
+
+      gestaoAplicada.add(chaveDedupe);
+
+      let acc = aggPorCodErp.get(codErp);
+      if (!acc) {
+        acc = {
+          funcionario,
+          codigosErp: new Set<number>([codErp]),
+          unidadesCadastro: new Set<Unidade>([funcionario.unidade]),
+          unidadesResumo: new Set<Unidade>(),
+          etapas: new Map<string, AggEtapaConsolidada>(),
+        };
+        aggPorCodErp.set(codErp, acc);
+      }
+
+      acc.etapas.set(PRODUCAO_COD_ETAPA_GESTAO, {
+        codEtapa: PRODUCAO_COD_ETAPA_GESTAO,
+        etapa: remGestao.etapa || 'GESTÃO',
+        quantidade: qtd,
+        valorTotal: qtd * remGestao.valor,
+      });
+    }
+  }
+
+  private usuarioPodeVerAlertas(usuario: Usuario): boolean {
+    return getUsuarioPermissoes(usuario).includes(
+      Permission.PRODUCAO_PRODUTIVIDADE_READ_ALERTAS,
+    );
+  }
+
+  private avisosVazios(): {
+    totalLinhasSemCadastro: number;
+    funcionariosSemCadastro: ProdutividadeFuncionarioSemCadastroDto[];
+    funcionariosSemCadastroOcultos: number;
+    totalLinhasSemEtapaVinculada: number;
+    funcionariosSemEtapaVinculada: ProdutividadeFuncionarioSemEtapaVinculadaDto[];
+    funcionariosSemEtapaVinculadaOcultos: number;
+  } {
+    return {
+      totalLinhasSemCadastro: 0,
+      funcionariosSemCadastro: [],
+      funcionariosSemCadastroOcultos: 0,
+      totalLinhasSemEtapaVinculada: 0,
+      funcionariosSemEtapaVinculada: [],
+      funcionariosSemEtapaVinculadaOcultos: 0,
+    };
   }
 
   private montarAvisos(
@@ -579,8 +703,18 @@ export class ProducaoProdutividadeService {
       unidades: [...acc.unidades.entries()]
         .map(([unidade, linhas]) => ({ unidade, linhas }))
         .sort((a, b) => a.unidade.localeCompare(b.unidade, 'pt-BR')),
+      amostrasRequisicoes: [...acc.amostrasRequisicoes].sort((a, b) =>
+        a.localeCompare(b, 'pt-BR'),
+      ),
       totalLinhas: acc.totalLinhas,
     };
+  }
+
+  private formatarAmostraRequisicao(row: ProducaoEtapaResumo): string {
+    const formula = row.formula?.trim() || '0';
+    const etapa =
+      row.etapa?.trim() || row.codEtapa?.trim() || 'Etapa não informada';
+    return `${row.requisicao}-${formula} ${etapa}`;
   }
 
   private mapSemEtapaVinculada(
