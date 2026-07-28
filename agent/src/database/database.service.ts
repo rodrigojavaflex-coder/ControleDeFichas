@@ -1562,6 +1562,11 @@ export class DatabaseService {
               AND (
                 p_ant.data < p.data
                 OR (p_ant.data = p.data AND p_ant.hora < p.hora)
+                OR (
+                  p_ant.data = p.data
+                  AND p_ant.hora = p.hora
+                  AND COALESCE(p_ant.cdfun, 0) > COALESCE(p.cdfun, 0)
+                )
               )
           )
       ) evt_ent
@@ -1613,6 +1618,11 @@ export class DatabaseService {
               AND (
                 p_ant.data < p.data
                 OR (p_ant.data = p.data AND p_ant.hora < p.hora)
+                OR (
+                  p_ant.data = p.data
+                  AND p_ant.hora = p.hora
+                  AND COALESCE(p_ant.cdfun, 0) > COALESCE(p.cdfun, 0)
+                )
               )
           )
       ) evt_sai

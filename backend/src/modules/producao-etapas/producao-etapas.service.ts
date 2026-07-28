@@ -172,9 +172,15 @@ export class ProducaoEtapasService {
       criados: 0,
       atualizados: 0,
     };
-    const total = registros.length;
+    const deduplicados = this.deduplicarRegistrosPorChaveImportacao(registros);
+    if (deduplicados.length < registros.length) {
+      this.logger.warn(
+        `Lote etapas: ${registros.length - deduplicados.length} linha(s) duplicada(s) por filial+req+formula+cod_etapa (ex.: tppcp distinto) — merge antes do upsert`,
+      );
+    }
+    const total = deduplicados.length;
 
-    for (const registro of registros) {
+    for (const registro of deduplicados) {
       resultado.processados++;
       const foiCriado = await this.upsertRegistro(registro, unidade);
       if (foiCriado) {
@@ -261,10 +267,151 @@ export class ProducaoEtapasService {
     if (!etapa) {
       etapa = this.etapaRepository.create(payload);
     } else {
+      this.preservarFuncionariosNoPayload(payload, etapa);
       Object.assign(etapa, payload);
     }
 
     await this.etapaRepository.save(etapa);
     return foiCriado;
+  }
+
+  /** Mesma chave do upsert (RN-PCP-001); o agente pode enviar várias linhas por `tppcp`. */
+  private chaveRegistroImportacao(registro: AgenteProducaoEtapa): string {
+    return [
+      Number(registro.filial ?? 0),
+      Number(registro.requisicao ?? 0),
+      String(registro.formula ?? '').trim(),
+      String(registro.cod_etapa ?? '').trim(),
+    ].join('|');
+  }
+
+  private codFuncValido(cod: number | null | undefined): boolean {
+    return cod != null && Number(cod) > 0;
+  }
+
+  private deduplicarRegistrosPorChaveImportacao(
+    registros: AgenteProducaoEtapa[],
+  ): AgenteProducaoEtapa[] {
+    const map = new Map<string, AgenteProducaoEtapa>();
+    for (const registro of registros) {
+      const key = this.chaveRegistroImportacao(registro);
+      const existente = map.get(key);
+      map.set(
+        key,
+        existente
+          ? this.mesclarRegistrosMesmaEtapa(existente, registro)
+          : registro,
+      );
+    }
+    return [...map.values()];
+  }
+
+  private mesclarRegistrosMesmaEtapa(
+    a: AgenteProducaoEtapa,
+    b: AgenteProducaoEtapa,
+  ): AgenteProducaoEtapa {
+    const entrada = this.escolherParFuncionario(a, b, 'entrada');
+    const saida = this.escolherParFuncionario(a, b, 'saida');
+    const posicao = Math.max(
+      Number(a.posicao_etapa ?? 0),
+      Number(b.posicao_etapa ?? 0),
+    );
+    const etapaNome =
+      (a.etapa?.trim() ? a.etapa : b.etapa)?.trim() || a.etapa || b.etapa || '';
+
+    return {
+      ...a,
+      ...b,
+      etapa: etapaNome,
+      posicao_etapa: posicao,
+      cod_func_entrada: entrada.cod,
+      func_entrada: entrada.func,
+      data_entrada: entrada.data,
+      hora_entrada: entrada.hora,
+      cod_func_saida: saida.cod,
+      func_saida: saida.func,
+      data_saida: saida.data,
+      hora_saida: saida.hora,
+      tempo_etapa:
+        a.tempo_etapa != null ? a.tempo_etapa : (b.tempo_etapa ?? null),
+    };
+  }
+
+  private escolherParFuncionario(
+    a: AgenteProducaoEtapa,
+    b: AgenteProducaoEtapa,
+    tipo: 'entrada' | 'saida',
+  ): {
+    cod: number | null | undefined;
+    func: string | null | undefined;
+    data: string | null | undefined;
+    hora: string | null | undefined;
+  } {
+    const codKey = tipo === 'entrada' ? 'cod_func_entrada' : 'cod_func_saida';
+    const funcKey = tipo === 'entrada' ? 'func_entrada' : 'func_saida';
+    const dataKey = tipo === 'entrada' ? 'data_entrada' : 'data_saida';
+    const horaKey = tipo === 'entrada' ? 'hora_entrada' : 'hora_saida';
+
+    const score = (r: AgenteProducaoEtapa): number => {
+      let s = 0;
+      if (this.codFuncValido(r[codKey])) {
+        s += 4;
+      }
+      if (String(r[funcKey] ?? '').trim()) {
+        s += 2;
+      }
+      return s;
+    };
+
+    const sa = score(a);
+    const sb = score(b);
+    const best = sa >= sb ? a : b;
+    const other = best === a ? b : a;
+
+    const codBest = best[codKey];
+    const codOther = other[codKey];
+    const cod = this.codFuncValido(codBest)
+      ? codBest
+      : this.codFuncValido(codOther)
+        ? codOther
+        : (codBest ?? codOther ?? null);
+
+    const func =
+      String(best[funcKey] ?? '').trim() ||
+      String(other[funcKey] ?? '').trim() ||
+      null;
+
+    const fonteDatas = score(best) > 0 ? best : score(other) > 0 ? other : best;
+
+    return {
+      cod,
+      func,
+      data: fonteDatas[dataKey] ?? null,
+      hora: fonteDatas[horaKey] ?? null,
+    };
+  }
+
+  private preservarFuncionariosNoPayload(
+    payload: Partial<ProducaoEtapaResumo>,
+    existente: ProducaoEtapaResumo,
+  ): void {
+    if (
+      !this.codFuncValido(payload.codFuncEntrada) &&
+      this.codFuncValido(existente.codFuncEntrada)
+    ) {
+      payload.codFuncEntrada = existente.codFuncEntrada;
+    }
+    if (!payload.funcEntrada?.trim() && existente.funcEntrada?.trim()) {
+      payload.funcEntrada = existente.funcEntrada;
+    }
+    if (
+      !this.codFuncValido(payload.codFuncSaida) &&
+      this.codFuncValido(existente.codFuncSaida)
+    ) {
+      payload.codFuncSaida = existente.codFuncSaida;
+    }
+    if (!payload.funcSaida?.trim() && existente.funcSaida?.trim()) {
+      payload.funcSaida = existente.funcSaida;
+    }
   }
 }
