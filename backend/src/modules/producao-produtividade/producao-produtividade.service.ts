@@ -222,10 +222,24 @@ export class ProducaoProdutividadeService {
     let linhasSemFuncionario = 0;
     let linhasEtapaNaoConfigurada = 0;
     const totalContabilizadoPorCodEtapa = new Map<string, number>();
+    /** Total da etapa base para GESTÃO: remunerada no resumo, sem exigir vínculo por funcionário. */
+    const totalBaseGestaoPorCodEtapa = new Map<string, number>();
 
     for (const row of linhasResumo) {
       const codFunc = row.codFuncSaida;
       if (codFunc == null) continue;
+
+      if (!isCodEtapaGestao(row.codEtapa)) {
+        const remBase = remuneracaoPorUnidadeEtapa.get(
+          `${row.unidade}:${row.codEtapa}`,
+        );
+        if (remBase) {
+          totalBaseGestaoPorCodEtapa.set(
+            row.codEtapa,
+            (totalBaseGestaoPorCodEtapa.get(row.codEtapa) ?? 0) + 1,
+          );
+        }
+      }
 
       const funcionario = this.resolverFuncionarioPorCodErp(
         codFunc,
@@ -305,7 +319,7 @@ export class ProducaoProdutividadeService {
       unidades,
       aggPorCodErp,
       remuneracaoPorUnidadeEtapa,
-      totalContabilizadoPorCodEtapa,
+      totalBaseGestaoPorCodEtapa,
     );
 
     const funcionariosRows: ProdutividadeFuncionarioRowDto[] = [];
@@ -558,7 +572,7 @@ export class ProducaoProdutividadeService {
       string,
       { valor: number; etapa: string }
     >,
-    totalContabilizadoPorCodEtapa: Map<string, number>,
+    totalBaseGestaoPorCodEtapa: Map<string, number>,
   ): Promise<void> {
     const gestaoConfigs = await this.funcionarioEtapaRepo.find({
       where: {
@@ -589,7 +603,7 @@ export class ProducaoProdutividadeService {
       );
       if (!remGestao) continue;
 
-      const qtd = totalContabilizadoPorCodEtapa.get(ref) ?? 0;
+      const qtd = totalBaseGestaoPorCodEtapa.get(ref) ?? 0;
       if (qtd <= 0) continue;
 
       gestaoAplicada.add(chaveDedupe);

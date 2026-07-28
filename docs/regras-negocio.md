@@ -352,13 +352,14 @@
 - **Etapa manual GESTÃO** (`codEtapa = GESTAO`, `tipo_calculo = gestao`): única etapa remunerada fora do ERP; valor unitário configurado em **Etapas remuneradas** da unidade.
 - **Configuração por funcionário (modal):** checkbox «Recebe gestão» + seleção da **etapa ERP base** (`cod_etapa_referencia` em `producao_funcionario_etapa`). Gestão é **independente** das etapas ERP do mesmo funcionário (ex.: pode ter PESAGEM própria e GESTÃO pelo total da base).
 - **Produtividade:** para cada gestor com GESTÃO ativa e etapa base definida:
-  - `quantidade` = soma das conclusões **contabilizadas** (mesmos critérios de **RN-PCP-005**) da **etapa base** no período e unidades da consulta, **consolidando todos os funcionários** (não restringe ao `codFuncSaida` do gestor);
-  - deve coincidir com o **total da coluna** da etapa base na grade de produtividade;
+  - `quantidade` = total de conclusões (`dataSaida`) da **etapa base** no período e unidades da consulta em que a etapa está **remunerada** na unidade da linha, **sem exigir** vínculo em `producao_funcionario_etapa` (inclui produção de quem só recebe GESTÃO e não a etapa base individualmente, e de quem ainda não tem cadastro/vínculo);
+  - **não** precisa coincidir com o total da coluna da etapa base na grade (a coluna soma apenas etapas **contabilizadas** por funcionário — RN-PCP-005);
   - `valor` = `quantidade × valor unitário` da etapa GESTÃO na unidade do cadastro do gestor;
   - vários gestores podem receber o **mesmo total inteiro** × valor (não rateio).
 - **Aplicar etapas** (ação em lote): replica apenas etapas ERP remuneradas; **não** inclui GESTÃO.
 - **Relatório de configuração:** exibe vínculo como `Gestão → {nome da etapa base}`; tela de produtividade e demais relatórios operacionais mostram apenas a coluna **GESTÃO** com quantidade/valor (sem expor a etapa base).
 - **Contagem** `qtdEtapasConfiguradas`: inclui GESTÃO somente quando `cod_etapa_referencia` estiver preenchido.
+- **Demanda futura:** relatório de detalhamento por etapa/funcionário e bloco de **etapas órfãs** na Gestão (conferência entre total da coluna base, total GESTÃO e linhas não contabilizadas) — ver `docs/anotacoes.md` (Pendente).
 
 ### RN-PCP-004 — Reconciliação ERP × fechamento de produtividade (decisão com gestão)
 

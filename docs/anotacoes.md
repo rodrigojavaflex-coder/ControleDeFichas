@@ -1,6 +1,6 @@
 # Anotações / Demandas
 
-> Última revisão: 2026-07-22
+> Última revisão: 2026-07-28
 
 ## Decisões operacionais
 
@@ -28,6 +28,10 @@
 - [ ] **Agente WhatsApp (respostas automáticas)** — criar agente de respostas; definir permissões por número (ex.: folha, produção, metas, orçamento).
 - [ ] **Controle de produção (capacidade)** — gerenciar capacidade com base em quantidade de funcionários e fórmulas em produção; ao incluir requisição, calcular tempo de entrega ao cliente.
 - [ ] **Decisão gestão — fechamento produtividade (RN-PCP-004)** — alinhar totais mensais vs ERP (ex.: INGRIDHY ROT +6, 96172 PESO, JESSICA); req. **97414 validada OK** (LADSON ENCAPS, INGRIDHY PESO). Ver `docs/regras-negocio.md` RN-PCP-004.
+- [ ] **Relatório de produtividade — detalhamento por etapa e funcionário (incl. órfãs na Gestão)** — novo relatório (impressão/exportação) para apoiar fechamento e conferência com a grade:
+  - Listar conclusões por **etapa base** (período/unidades da consulta), com **funcionário** (`funcSaida` / cadastro ERP), **requisição-fórmula** (`{requisicao}-{formula} {etapa}`) e unidade.
+  - Bloco específico para **Gestão**: detalhar **etapas órfãs** — linhas da etapa base remunerada no resumo que **não** entram na contabilização individual (RN-PCP-005): sem cadastro ERP, sem vínculo em `producao_funcionario_etapa`, etc.; total órfão vs total contabilizado vs total usado na coluna **GESTÃO** (RN-PCP-006).
+  - Permissão sugerida: `producao-produtividade:read` (+ alertas detalhados se reutilizar dados sensíveis); avaliar atalho na tela `/producao/produtividade`.
 - [ ] **Notas fiscais não transmitidas** — pesquisar na base informações sobre NF-e/NFC-e não transmitidas e criar tela de alerta.
 - [ ] **Fechamento de caixa por WhatsApp** — no fechamento de caixa, enviar imagem do fechamento via WhatsApp; se possível, enviar ao grupo.
 - [ ] **Unificação vendedor × funcionário** — cadastro de vendedor duplicado com funcionário (cargo vendedor); unificar no sistema e eliminar cadastro de vendedor.
