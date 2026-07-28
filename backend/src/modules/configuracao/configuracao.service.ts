@@ -32,13 +32,12 @@ export class ConfiguracaoService {
       const dadosAnteriores = { ...config };
       Object.assign(config, dto);
       if (logo) {
-        (config as any).logoImagem = logo.buffer;
-        (config as any).logoImagemMime = logo.mime;
+        config.logoImagem = logo.buffer;
+        config.logoImagemMime = logo.mime;
         config.logoRelatorio = LOGO_RELATORIO_MARKER;
       }
 
-      const configuracaoAtualizada =
-        await this.configuracaoRepository.save(config);
+      await this.configuracaoRepository.save(config);
 
       await this.auditoriaService.createLog({
         acao: AuditAction.UPDATE,
@@ -55,8 +54,8 @@ export class ConfiguracaoService {
 
     config = this.configuracaoRepository.create(dto);
     if (logo) {
-      (config as any).logoImagem = logo.buffer;
-      (config as any).logoImagemMime = logo.mime;
+      config.logoImagem = logo.buffer;
+      config.logoImagemMime = logo.mime;
       config.logoRelatorio = LOGO_RELATORIO_MARKER;
     }
     await this.configuracaoRepository.save(config);
@@ -103,9 +102,9 @@ export class ConfiguracaoService {
       .where('config.id IS NOT NULL')
       .limit(1)
       .getOne();
-    if (!config || !(config as any).logoImagem) return null;
-    const mime = (config as any).logoImagemMime || 'image/png';
-    return { buffer: (config as any).logoImagem as Buffer, mime };
+    if (!config?.logoImagem) return null;
+    const mime = config.logoImagemMime || 'image/png';
+    return { buffer: config.logoImagem, mime };
   }
 
   async update(
@@ -125,8 +124,8 @@ export class ConfiguracaoService {
     const dadosAnteriores = { ...config };
     Object.assign(config, dto);
     if (logo) {
-      (config as any).logoImagem = logo.buffer;
-      (config as any).logoImagemMime = logo.mime;
+      config.logoImagem = logo.buffer;
+      config.logoImagemMime = logo.mime;
       config.logoRelatorio = LOGO_RELATORIO_MARKER;
     }
 

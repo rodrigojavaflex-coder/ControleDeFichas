@@ -2,10 +2,7 @@ export const WHATSAPP_UPLOAD_MAX_BYTES = 16 * 1024 * 1024;
 
 export type WhatsappMediaCategoria = 'image' | 'audio' | 'document';
 
-export const WHATSAPP_MIME_IMAGE = new Set([
-  'image/jpeg',
-  'image/png',
-]);
+export const WHATSAPP_MIME_IMAGE = new Set(['image/jpeg', 'image/png']);
 
 export const WHATSAPP_MIME_AUDIO = new Set([
   'audio/ogg',
@@ -50,7 +47,11 @@ export function extensaoSegura(nome: string): string {
   return nome.slice(idx).toLowerCase();
 }
 
-export function rotuloPreviewTipo(tipo: string, nomeArquivo?: string | null, legenda?: string | null): string {
+export function rotuloPreviewTipo(
+  tipo: string,
+  nomeArquivo?: string | null,
+  legenda?: string | null,
+): string {
   if (tipo === 'image') return legenda?.trim() || '[Imagem]';
   if (tipo === 'audio') return '[Áudio]';
   if (tipo === 'document') return nomeArquivo?.trim() || '[Documento]';

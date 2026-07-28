@@ -70,7 +70,9 @@ export class OrcamentosController {
 
   @Patch('rejeitados/em-massa')
   @Permissions(Permission.ORCAMENTO_REJEITADO_UPDATE)
-  @ApiOperation({ summary: 'Registrar motivo e observação em lote (rejeitados)' })
+  @ApiOperation({
+    summary: 'Registrar motivo e observação em lote (rejeitados)',
+  })
   atualizarRejeitadosEmMassa(
     @Body() dto: BulkUpdateRejeitadosDto,
     @Req() req: { user: Usuario },

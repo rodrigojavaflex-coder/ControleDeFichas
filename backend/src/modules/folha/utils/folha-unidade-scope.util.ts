@@ -13,8 +13,7 @@ export function unidadesPermitidasProdutividade(
   usuario: Usuario,
 ): Unidade[] | undefined {
   const u = usuario.unidade;
-  const hasUnidade =
-    u !== undefined && u !== null && String(u).trim() !== '';
+  const hasUnidade = u !== undefined && u !== null && String(u).trim() !== '';
   if (!hasUnidade) {
     return undefined;
   }
@@ -22,7 +21,7 @@ export function unidadesPermitidasProdutividade(
   const extras = (usuario.unidadesProdutividade ?? []).filter(Boolean);
   const unicas = [...new Set(extras)] as Unidade[];
   if (unicas.length === 0) {
-    return [u as Unidade];
+    return [u];
   }
   return unicas;
 }
@@ -58,7 +57,9 @@ export function assertUnidadeProducao(
  * Unidade de escopo para folha quando há vínculo único (`usuario.unidade`; se vazio, usa
  * `vendedor.unidade` quando existir). Ausência ⇒ escopo liberado conforme permissões/RN-007.
  */
-export function unidadeEscopoUsuarioFolha(usuario: Usuario): Unidade | undefined {
+export function unidadeEscopoUsuarioFolha(
+  usuario: Usuario,
+): Unidade | undefined {
   const u = usuario.unidade;
   if (u !== undefined && u !== null && String(u).trim() !== '') {
     return u;

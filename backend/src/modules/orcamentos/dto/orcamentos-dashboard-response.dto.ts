@@ -214,7 +214,8 @@ export class DashboardFiltrosAplicadosDto {
   escopoUnidade: Unidade | 'ALL';
 
   @ApiProperty({
-    description: 'Indica se o usuário pode visualizar valores monetários no painel',
+    description:
+      'Indica se o usuário pode visualizar valores monetários no painel',
   })
   visualizarValores: boolean;
 }

@@ -11,7 +11,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { OrcamentoMotivosRejeicaoService } from './orcamento-motivos-rejeicao.service';
 import { CreateOrcamentoMotivoRejeicaoDto } from './dto/create-orcamento-motivo-rejeicao.dto';
 import { UpdateOrcamentoMotivoRejeicaoDto } from './dto/update-orcamento-motivo-rejeicao.dto';

@@ -129,11 +129,17 @@ export class VendedoresService {
     await this.vendedorRepository.remove(vendedor);
   }
 
-  async search(nome: string, unidade?: Unidade, limit: number = 20): Promise<Vendedor[]> {
+  async search(
+    nome: string,
+    unidade?: Unidade,
+    limit: number = 20,
+  ): Promise<Vendedor[]> {
     const queryBuilder = this.vendedorRepository.createQueryBuilder('vendedor');
 
     if (nome && nome.trim()) {
-      queryBuilder.andWhere('vendedor.nome ILIKE :nome', { nome: `%${nome.trim()}%` });
+      queryBuilder.andWhere('vendedor.nome ILIKE :nome', {
+        nome: `%${nome.trim()}%`,
+      });
     }
 
     if (unidade) {
@@ -146,4 +152,3 @@ export class VendedoresService {
       .getMany();
   }
 }
-

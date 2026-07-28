@@ -17,7 +17,7 @@ export class AddIndicesBaixasVendas1737000000000 implements MigrationInterface {
     // Verificar se o índice em vendas.unidade já existe
     const vendasTableWithIndices = await queryRunner.getTable('vendas');
     const idxVendasUnidadeExists = vendasTableWithIndices?.indices.some(
-      (idx) => idx.name === 'idx_vendas_unidade'
+      (idx) => idx.name === 'idx_vendas_unidade',
     );
 
     if (!idxVendasUnidadeExists) {
@@ -26,7 +26,7 @@ export class AddIndicesBaixasVendas1737000000000 implements MigrationInterface {
         new TableIndex({
           name: 'idx_vendas_unidade',
           columnNames: ['unidade'],
-        })
+        }),
       );
       console.log('Índice idx_vendas_unidade criado com sucesso.');
     } else {
@@ -36,7 +36,7 @@ export class AddIndicesBaixasVendas1737000000000 implements MigrationInterface {
     // Verificar se o índice em baixas.data_baixa já existe
     const baixasTableWithIndices = await queryRunner.getTable('baixas');
     const idxBaixasDataBaixaExists = baixasTableWithIndices?.indices.some(
-      (idx) => idx.name === 'idx_baixas_data_baixa'
+      (idx) => idx.name === 'idx_baixas_data_baixa',
     );
 
     if (!idxBaixasDataBaixaExists) {
@@ -46,7 +46,7 @@ export class AddIndicesBaixasVendas1737000000000 implements MigrationInterface {
           name: 'idx_baixas_data_baixa',
           columnNames: ['dataBaixa'],
           isUnique: false,
-        })
+        }),
       );
       console.log('Índice idx_baixas_data_baixa criado com sucesso.');
     } else {
@@ -58,7 +58,7 @@ export class AddIndicesBaixasVendas1737000000000 implements MigrationInterface {
     // Verificar se os índices existem antes de remover
     const vendasTable = await queryRunner.getTable('vendas');
     const idxVendasUnidade = vendasTable?.indices.find(
-      (idx) => idx.name === 'idx_vendas_unidade'
+      (idx) => idx.name === 'idx_vendas_unidade',
     );
 
     if (idxVendasUnidade) {
@@ -68,7 +68,7 @@ export class AddIndicesBaixasVendas1737000000000 implements MigrationInterface {
 
     const baixasTable = await queryRunner.getTable('baixas');
     const idxBaixasDataBaixa = baixasTable?.indices.find(
-      (idx) => idx.name === 'idx_baixas_data_baixa'
+      (idx) => idx.name === 'idx_baixas_data_baixa',
     );
 
     if (idxBaixasDataBaixa) {

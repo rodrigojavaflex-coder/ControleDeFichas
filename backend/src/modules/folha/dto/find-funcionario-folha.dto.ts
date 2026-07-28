@@ -12,7 +12,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
 export class FindFuncionarioFolhaDto {
-  @ApiPropertyOptional({ enum: Unidade, description: 'Omitir para listar todas as unidades do escopo (RN-007).' })
+  @ApiPropertyOptional({
+    enum: Unidade,
+    description: 'Omitir para listar todas as unidades do escopo (RN-007).',
+  })
   @IsOptional()
   @IsEnum(Unidade)
   unidade?: Unidade;
@@ -37,13 +40,17 @@ export class FindFuncionarioFolhaDto {
   @IsString()
   nome?: string;
 
-  @ApiPropertyOptional({ description: 'Retorna todos os registros (impressão), sem paginação.' })
+  @ApiPropertyOptional({
+    description: 'Retorna todos os registros (impressão), sem paginação.',
+  })
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   todos?: boolean;
 
-  @ApiPropertyOptional({ description: 'Inclui eventos fixos e verbas (impressão).' })
+  @ApiPropertyOptional({
+    description: 'Inclui eventos fixos e verbas (impressão).',
+  })
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SincronizacaoConfig } from './entities/sincronizacao-config.entity';
@@ -14,7 +18,9 @@ export class SincronizacaoConfigService {
     private readonly painelMedicosService: PainelMedicosService,
   ) {}
 
-  async create(dto: CreateSincronizacaoConfigDto): Promise<SincronizacaoConfig> {
+  async create(
+    dto: CreateSincronizacaoConfigDto,
+  ): Promise<SincronizacaoConfig> {
     // Verificar se já existe configuração para este agente
     const existing = await this.configRepository.findOne({
       where: { agente: dto.agente },
@@ -31,7 +37,8 @@ export class SincronizacaoConfigService {
       ultimaDataCliente: dto.ultimaDataCliente || undefined,
       ultimaDataPrescritor: dto.ultimaDataPrescritor || undefined,
       ultimaModificacaoOrcamento: dto.ultimaModificacaoOrcamento || undefined,
-      painelContratoRepresentantes: dto.painelContratoRepresentantes || undefined,
+      painelContratoRepresentantes:
+        dto.painelContratoRepresentantes || undefined,
       ultimaModificacaoProducaoEtapas:
         dto.ultimaModificacaoProducaoEtapas || undefined,
     });
@@ -91,12 +98,14 @@ export class SincronizacaoConfigService {
     Object.assign(config, {
       ...dto,
       // Manter como string YYYY-MM-DD, o transformer cuidará da conversão
-      ultimaDataCliente: dto.ultimaDataCliente !== undefined
-        ? dto.ultimaDataCliente || null
-        : config.ultimaDataCliente,
-      ultimaDataPrescritor: dto.ultimaDataPrescritor !== undefined
-        ? dto.ultimaDataPrescritor || null
-        : config.ultimaDataPrescritor,
+      ultimaDataCliente:
+        dto.ultimaDataCliente !== undefined
+          ? dto.ultimaDataCliente || null
+          : config.ultimaDataCliente,
+      ultimaDataPrescritor:
+        dto.ultimaDataPrescritor !== undefined
+          ? dto.ultimaDataPrescritor || null
+          : config.ultimaDataPrescritor,
       ultimaModificacaoOrcamento:
         dto.ultimaModificacaoOrcamento !== undefined
           ? dto.ultimaModificacaoOrcamento || null

@@ -3,7 +3,7 @@ import { AppDataSource } from '../data-source';
 async function runMigrations() {
   try {
     console.log('🔄 Iniciando execução de migrations...');
-    
+
     // Inicializar DataSource
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
@@ -12,16 +12,18 @@ async function runMigrations() {
 
     // Executar migrations (o TypeORM já verifica quais são pendentes)
     const executedMigrations = await AppDataSource.runMigrations();
-    
+
     if (executedMigrations && executedMigrations.length > 0) {
-      console.log(`✅ ${executedMigrations.length} migration(s) executada(s) com sucesso:`);
+      console.log(
+        `✅ ${executedMigrations.length} migration(s) executada(s) com sucesso:`,
+      );
       executedMigrations.forEach((migration) => {
         console.log(`   - ${migration.name}`);
       });
     } else {
       console.log('✅ Nenhuma migration pendente');
     }
-    
+
     console.log('🎉 Processo de migrations concluído');
   } catch (error) {
     console.error('❌ Erro ao executar migrations:', error);

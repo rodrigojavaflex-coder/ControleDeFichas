@@ -23,10 +23,10 @@ export class RemovePermissoesOrfasPerfil1749100000000
         .filter(Boolean);
       const next = list.filter((p) => !REMOVIDAS.includes(p));
       if (next.length === list.length) continue;
-      await queryRunner.query(`UPDATE perfil SET permissoes = $1 WHERE id = $2`, [
-        next.join(','),
-        row.id,
-      ]);
+      await queryRunner.query(
+        `UPDATE perfil SET permissoes = $1 WHERE id = $2`,
+        [next.join(','), row.id],
+      );
     }
   }
 

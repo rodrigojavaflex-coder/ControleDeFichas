@@ -11,7 +11,9 @@ export class OrcamentoMotivosRejeicao1748100000000
   implements MigrationInterface
 {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const motivosTable = await queryRunner.getTable('orcamento_motivo_rejeicao');
+    const motivosTable = await queryRunner.getTable(
+      'orcamento_motivo_rejeicao',
+    );
     if (!motivosTable) {
       await queryRunner.createTable(
         new Table({
@@ -56,7 +58,10 @@ export class OrcamentoMotivosRejeicao1748100000000
     }
 
     const orcamentosTable = await queryRunner.getTable('orcamentos');
-    if (orcamentosTable && !orcamentosTable.findColumnByName('motivoRejeicaoId')) {
+    if (
+      orcamentosTable &&
+      !orcamentosTable.findColumnByName('motivoRejeicaoId')
+    ) {
       await queryRunner.addColumn(
         'orcamentos',
         new TableColumn({
@@ -103,7 +108,9 @@ export class OrcamentoMotivosRejeicao1748100000000
         );
       }
 
-      console.log('✅ Colunas motivoRejeicaoId e observacaoRejeicao adicionadas em orcamentos');
+      console.log(
+        '✅ Colunas motivoRejeicaoId e observacaoRejeicao adicionadas em orcamentos',
+      );
     }
   }
 
@@ -126,7 +133,9 @@ export class OrcamentoMotivosRejeicao1748100000000
       await queryRunner.dropColumn('orcamentos', 'motivoRejeicaoId');
     }
 
-    const motivosTable = await queryRunner.getTable('orcamento_motivo_rejeicao');
+    const motivosTable = await queryRunner.getTable(
+      'orcamento_motivo_rejeicao',
+    );
     if (motivosTable) {
       await queryRunner.dropTable('orcamento_motivo_rejeicao');
     }

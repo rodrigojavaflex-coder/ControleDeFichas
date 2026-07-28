@@ -18,7 +18,9 @@ export class Laudo extends BaseEntity {
   nomeArquivo?: string;
 
   @ApiProperty({ description: 'Certificado associado' })
-  @ManyToOne(() => Certificado, certificado => certificado.laudos, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Certificado, (certificado) => certificado.laudos, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'certificado_id' })
   certificado: Certificado;
 }

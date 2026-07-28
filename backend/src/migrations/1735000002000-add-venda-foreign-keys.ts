@@ -6,9 +6,11 @@ export class AddVendaForeignKeys1735000002000 implements MigrationInterface {
     const clientesTable = await queryRunner.getTable('clientes');
     const vendedoresTable = await queryRunner.getTable('vendedores');
     const prescritoresTable = await queryRunner.getTable('prescritores');
-    
+
     if (!clientesTable || !vendedoresTable || !prescritoresTable) {
-      throw new Error('Tabelas clientes, vendedores ou prescritores não existem. Execute a migration de criação de tabelas (1735000001000) primeiro.');
+      throw new Error(
+        'Tabelas clientes, vendedores ou prescritores não existem. Execute a migration de criação de tabelas (1735000001000) primeiro.',
+      );
     }
 
     const table = await queryRunner.getTable('vendas');
@@ -17,18 +19,22 @@ export class AddVendaForeignKeys1735000002000 implements MigrationInterface {
     }
 
     const existingForeignKeys = table.foreignKeys || [];
-    
+
     // Verificar se as colunas existem
     const clienteIdColumn = table.findColumnByName('clienteId');
     const vendedorIdColumn = table.findColumnByName('vendedorId');
     const prescritorIdColumn = table.findColumnByName('prescritorId');
 
     if (!clienteIdColumn || !vendedorIdColumn || !prescritorIdColumn) {
-      throw new Error('Colunas clienteId, vendedorId ou prescritorId não existem na tabela vendas. Execute a migration de adição de colunas (1735000000000) primeiro.');
+      throw new Error(
+        'Colunas clienteId, vendedorId ou prescritorId não existem na tabela vendas. Execute a migration de adição de colunas (1735000000000) primeiro.',
+      );
     }
-    
+
     // Adicionar foreign key para cliente
-    const clienteFkExists = existingForeignKeys.some(fk => fk.name === 'FK_vendas_cliente');
+    const clienteFkExists = existingForeignKeys.some(
+      (fk) => fk.name === 'FK_vendas_cliente',
+    );
     if (!clienteFkExists) {
       await queryRunner.createForeignKey(
         'vendas',
@@ -43,7 +49,9 @@ export class AddVendaForeignKeys1735000002000 implements MigrationInterface {
     }
 
     // Adicionar foreign key para vendedor
-    const vendedorFkExists = existingForeignKeys.some(fk => fk.name === 'FK_vendas_vendedor');
+    const vendedorFkExists = existingForeignKeys.some(
+      (fk) => fk.name === 'FK_vendas_vendedor',
+    );
     if (!vendedorFkExists) {
       await queryRunner.createForeignKey(
         'vendas',
@@ -58,7 +66,9 @@ export class AddVendaForeignKeys1735000002000 implements MigrationInterface {
     }
 
     // Adicionar foreign key para prescritor
-    const prescritorFkExists = existingForeignKeys.some(fk => fk.name === 'FK_vendas_prescritor');
+    const prescritorFkExists = existingForeignKeys.some(
+      (fk) => fk.name === 'FK_vendas_prescritor',
+    );
     if (!prescritorFkExists) {
       await queryRunner.createForeignKey(
         'vendas',
@@ -77,13 +87,20 @@ export class AddVendaForeignKeys1735000002000 implements MigrationInterface {
     const table = await queryRunner.getTable('vendas');
     if (table) {
       const existingForeignKeys = table.foreignKeys || [];
-      const clienteFk = existingForeignKeys.find(fk => fk.name === 'FK_vendas_cliente');
-      const vendedorFk = existingForeignKeys.find(fk => fk.name === 'FK_vendas_vendedor');
-      const prescritorFk = existingForeignKeys.find(fk => fk.name === 'FK_vendas_prescritor');
+      const clienteFk = existingForeignKeys.find(
+        (fk) => fk.name === 'FK_vendas_cliente',
+      );
+      const vendedorFk = existingForeignKeys.find(
+        (fk) => fk.name === 'FK_vendas_vendedor',
+      );
+      const prescritorFk = existingForeignKeys.find(
+        (fk) => fk.name === 'FK_vendas_prescritor',
+      );
 
       if (clienteFk) await queryRunner.dropForeignKey('vendas', clienteFk);
       if (vendedorFk) await queryRunner.dropForeignKey('vendas', vendedorFk);
-      if (prescritorFk) await queryRunner.dropForeignKey('vendas', prescritorFk);
+      if (prescritorFk)
+        await queryRunner.dropForeignKey('vendas', prescritorFk);
     }
   }
 }

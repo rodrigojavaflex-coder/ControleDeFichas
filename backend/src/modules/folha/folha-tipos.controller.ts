@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FolhaTiposService } from './folha-tipos.service';
 import { CreateFolhaTipoDto } from './dto/create-folha-tipo.dto';
 import { UpdateFolhaTipoDto } from './dto/update-folha-tipo.dto';

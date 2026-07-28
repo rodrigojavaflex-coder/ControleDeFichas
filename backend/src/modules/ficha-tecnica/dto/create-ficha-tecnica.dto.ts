@@ -6,7 +6,6 @@ import {
   IsDateString,
   IsOptional,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
 
 export class CreateFichaTecnicaDto {
   @ApiProperty({

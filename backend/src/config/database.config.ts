@@ -13,10 +13,7 @@ export default registerAs('database', () => ({
     (process.env.NODE_ENV !== 'production' &&
       process.env.DATABASE_SYNCHRONIZE !== 'false'),
   // Configuração de logging otimizada
-  logging:
-    process.env.DATABASE_LOGGING === 'true'
-      ? true
-      : ['error', 'warn'],
+  logging: process.env.DATABASE_LOGGING === 'true' ? true : ['error', 'warn'],
   ssl:
     process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }

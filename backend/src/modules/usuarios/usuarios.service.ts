@@ -99,7 +99,6 @@ export class UsuariosService {
         vendedor: vendedor || undefined,
       };
 
-
       const user = this.usuarioRepository.create(userData);
 
       const savedUser = await this.usuarioRepository.save(user);
@@ -261,10 +260,13 @@ export class UsuariosService {
         updateUsuarioDto.unidadesProdutividade,
       );
     }
-    
+
     // Atualizar vendedor se fornecido
     if (updateUsuarioDto.vendedorId !== undefined) {
-      if (updateUsuarioDto.vendedorId === null || updateUsuarioDto.vendedorId === '') {
+      if (
+        updateUsuarioDto.vendedorId === null ||
+        updateUsuarioDto.vendedorId === ''
+      ) {
         // Se vendedorId for null ou string vazia, remover o vendedor
         user.vendedor = null as any;
       } else {
@@ -367,8 +369,8 @@ export class UsuariosService {
   async getPrintData(id: string) {
     const user = await this.findOne(id);
 
-  // Formatar permissões para impressão (perfis)
-  const userPermissions = getUsuarioPermissoes(user);
+    // Formatar permissões para impressão (perfis)
+    const userPermissions = getUsuarioPermissoes(user);
     const formattedPermissions: Array<{
       group: string;
       permissions: string[];

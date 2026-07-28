@@ -86,7 +86,7 @@ export function buildPermissionCatalog(): PermissionCatalogResponse {
         permissions: (
           PERMISSION_GROUPS[groupKey as keyof typeof PERMISSION_GROUPS] ?? []
         ).map((item) => ({
-          key: item.key as Permission,
+          key: item.key,
           label: item.label,
         })),
       })),

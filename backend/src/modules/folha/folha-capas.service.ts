@@ -89,7 +89,10 @@ export class FolhaCapasService {
   }
 
   /** Cria a capa se não existir; retorna sempre com funcionário, tipo e itens/carregável. */
-  async obterOuCriar(usuario: Usuario, dto: CreateFolhaCapaDto): Promise<FolhaCapaDetalheDto> {
+  async obterOuCriar(
+    usuario: Usuario,
+    dto: CreateFolhaCapaDto,
+  ): Promise<FolhaCapaDetalheDto> {
     assertUnidadeFolha(usuario, dto.unidade);
     await this.fechamentoSvc.assertLoteAberto(
       dto.unidade,
@@ -98,7 +101,9 @@ export class FolhaCapasService {
       dto.folhaTipoId,
     );
 
-    const tipo = await this.tipoRepo.findOne({ where: { id: dto.folhaTipoId } });
+    const tipo = await this.tipoRepo.findOne({
+      where: { id: dto.folhaTipoId },
+    });
     if (!tipo) throw new NotFoundException('Tipo de folha não encontrado');
 
     const funcionario = await this.funcionariosSvc.findOnePorUnidadeOuLanca(
@@ -106,7 +111,11 @@ export class FolhaCapasService {
       dto.unidade,
     );
 
-    this.funcionariosSvc.podeCriarCapaParaFuncionario(funcionario, dto.ano, dto.mes);
+    this.funcionariosSvc.podeCriarCapaParaFuncionario(
+      funcionario,
+      dto.ano,
+      dto.mes,
+    );
 
     let capa = await this.capaRepo.findOne({
       where: {
@@ -158,15 +167,20 @@ export class FolhaCapasService {
     usuario: Usuario,
     dto: CarregarFolhaCompetenciaDto,
   ): Promise<FolhaCapaDetalheDto[]> {
-    const tipo = await this.tipoRepo.findOne({ where: { id: dto.folhaTipoId } });
+    const tipo = await this.tipoRepo.findOne({
+      where: { id: dto.folhaTipoId },
+    });
     if (!tipo) throw new NotFoundException('Tipo de folha não encontrado');
 
-    const funcionarios = await this.funcionariosSvc.listarParaLancamento(usuario, {
-      unidade: dto.unidade,
-      ano: dto.ano,
-      mes: dto.mes,
-      somenteAtivos: true,
-    });
+    const funcionarios = await this.funcionariosSvc.listarParaLancamento(
+      usuario,
+      {
+        unidade: dto.unidade,
+        ano: dto.ano,
+        mes: dto.mes,
+        somenteAtivos: true,
+      },
+    );
 
     const resultados: FolhaCapaDetalheDto[] = [];
     for (const func of funcionarios) {
@@ -215,7 +229,10 @@ export class FolhaCapasService {
     }
 
     if (comDetalhe) {
-      qb.leftJoinAndSelect('c.itens', 'item').leftJoinAndSelect('item.folhaVerba', 'fv');
+      qb.leftJoinAndSelect('c.itens', 'item').leftJoinAndSelect(
+        'item.folhaVerba',
+        'fv',
+      );
     }
 
     qb.orderBy('f.nome', 'ASC');
@@ -245,12 +262,10 @@ export class FolhaCapasService {
         'itens.folhaVerba',
       ],
     });
-    if (
-      !capa ||
-      !capa.funcionario ||
-      capa.funcionario.unidade !== unidadeReq
-    ) {
-      throw new NotFoundException('Folha (capa) não encontrada para esta unidade.');
+    if (!capa || !capa.funcionario || capa.funcionario.unidade !== unidadeReq) {
+      throw new NotFoundException(
+        'Folha (capa) não encontrada para esta unidade.',
+      );
     }
 
     return this.calcularDetalhe(capa);
@@ -275,11 +290,7 @@ export class FolhaCapasService {
         'itens.folhaVerba',
       ],
     });
-    if (
-      !capa ||
-      !capa.funcionario ||
-      capa.funcionario.unidade !== unidade
-    ) {
+    if (!capa || !capa.funcionario || capa.funcionario.unidade !== unidade) {
       throw new NotFoundException('Capa não encontrada');
     }
 
@@ -292,7 +303,9 @@ export class FolhaCapasService {
 
     this.assertCapaItensEditaveis(capa);
 
-    const verba = await this.verbaRepo.findOne({ where: { id: dto.folhaVerbaId } });
+    const verba = await this.verbaRepo.findOne({
+      where: { id: dto.folhaVerbaId },
+    });
     if (!verba) throw new NotFoundException('Verba não encontrada');
     if (!verba.ativo) {
       throw new BadRequestException('Verba está inativa. Selecione outra.');
@@ -313,7 +326,9 @@ export class FolhaCapasService {
         ? Number(dto.quantidade)
         : 1;
     if (!Number.isFinite(q) || q < 0.0001) {
-      throw new BadRequestException('Quantidade deve ser um número maior que zero.');
+      throw new BadRequestException(
+        'Quantidade deve ser um número maior que zero.',
+      );
     }
 
     const item = this.itemRepo.create({
@@ -339,7 +354,13 @@ export class FolhaCapasService {
 
     const item = await this.itemRepo.findOne({
       where: { id: itemId },
-      relations: ['folhaCapa', 'folhaCapa.funcionario', 'folhaCapa.funcionario.cargo', 'folhaCapa.funcionario.setor', 'folhaCapa.folhaTipo'],
+      relations: [
+        'folhaCapa',
+        'folhaCapa.funcionario',
+        'folhaCapa.funcionario.cargo',
+        'folhaCapa.funcionario.setor',
+        'folhaCapa.folhaTipo',
+      ],
     });
     if (
       !item ||
@@ -367,7 +388,9 @@ export class FolhaCapasService {
     if (dto.quantidade !== undefined) {
       const q = Number(dto.quantidade);
       if (!Number.isFinite(q) || q < 0.0001) {
-        throw new BadRequestException('Quantidade deve ser um número maior que zero.');
+        throw new BadRequestException(
+          'Quantidade deve ser um número maior que zero.',
+        );
       }
       item.quantidade = q.toFixed(4);
     }
@@ -387,7 +410,13 @@ export class FolhaCapasService {
 
     const item = await this.itemRepo.findOne({
       where: { id: itemId },
-      relations: ['folhaCapa', 'folhaCapa.funcionario', 'folhaCapa.funcionario.cargo', 'folhaCapa.funcionario.setor', 'folhaCapa.folhaTipo'],
+      relations: [
+        'folhaCapa',
+        'folhaCapa.funcionario',
+        'folhaCapa.funcionario.cargo',
+        'folhaCapa.funcionario.setor',
+        'folhaCapa.folhaTipo',
+      ],
     });
     if (
       !item ||
@@ -537,7 +566,8 @@ export class FolhaCapasService {
         'itens.folhaVerba',
       ],
     });
-    if (!capa) throw new NotFoundException('Capa não encontrada após atualização.');
+    if (!capa)
+      throw new NotFoundException('Capa não encontrada após atualização.');
     return capa;
   }
 

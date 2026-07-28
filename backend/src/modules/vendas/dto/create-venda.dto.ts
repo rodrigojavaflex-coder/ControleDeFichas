@@ -55,7 +55,7 @@ class ValorCompraMenorOuIgualAoClienteConstraint
 export function ValorCompraMenorOuIgualAoCliente(
   validationOptions?: ValidationOptions,
 ) {
-  return function (object: Object, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       name: 'ValorCompraMenorOuIgualAoCliente',
       target: object.constructor,
@@ -83,7 +83,10 @@ export class CreateVendaDto {
     example: '2025-10-25',
   })
   @IsNotEmpty({ message: 'Data da venda é obrigatória' })
-  @IsDateString({}, { message: 'Data da venda deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data da venda deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataVenda: string;
 
   @ApiProperty({
@@ -92,8 +95,13 @@ export class CreateVendaDto {
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === null) ? undefined : value)
-  @IsDateString({}, { message: 'Data de fechamento deve ter formato válido (YYYY-MM-DD)' })
+  @Transform(({ value }) =>
+    value === '' || value === null ? undefined : value,
+  )
+  @IsDateString(
+    {},
+    { message: 'Data de fechamento deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataFechamento?: string;
 
   @ApiProperty({
@@ -127,38 +135,53 @@ export class CreateVendaDto {
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === null) ? undefined : value)
+  @Transform(({ value }) =>
+    value === '' || value === null ? undefined : value,
+  )
   @IsUUID('4', { message: 'ID do prescritor inválido' })
   prescritorId?: string;
 
   @ApiProperty({
     description: 'Valor da compra',
-    example: 1500.50,
+    example: 1500.5,
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === null) ? undefined : value)
-  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor da compra deve ser um número válido' })
+  @Transform(({ value }) =>
+    value === '' || value === null ? undefined : value,
+  )
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Valor da compra deve ser um número válido' },
+  )
   @Min(0, { message: 'Valor da compra deve ser maior ou igual a 0,00' })
   valorCompra?: number;
 
   @ApiProperty({
     description: 'Valor pago (total recebido)',
-    example: 1500.50,
+    example: 1500.5,
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value === '' || value === null) ? undefined : value)
-  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor pago deve ser um número válido' })
+  @Transform(({ value }) =>
+    value === '' || value === null ? undefined : value,
+  )
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Valor pago deve ser um número válido' },
+  )
   @Min(0, { message: 'Valor pago deve ser maior ou igual a 0,00' })
   valorPago?: number;
 
   @ApiProperty({
     description: 'Valor pago pelo cliente',
-    example: 1500.50,
+    example: 1500.5,
   })
   @IsNotEmpty({ message: 'Valor do cliente é obrigatório' })
-  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor do cliente deve ser um número válido' })
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Valor do cliente deve ser um número válido' },
+  )
   @Min(0, { message: 'Valor do cliente deve ser maior ou igual a 0,00' })
   @ValorCompraMenorOuIgualAoCliente({
     message: 'O valor da compra não pode ser maior que o valor do cliente',
@@ -172,9 +195,11 @@ export class CreateVendaDto {
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value === '') ? null : value)
+  @Transform(({ value }) => (value === '' ? null : value))
   @IsString({ message: 'Observação deve ser uma string' })
-  @MaxLength(500, { message: 'Observação não pode ter mais que 500 caracteres' })
+  @MaxLength(500, {
+    message: 'Observação não pode ter mais que 500 caracteres',
+  })
   observacao?: string;
 
   @ApiProperty({
@@ -195,7 +220,9 @@ export class CreateVendaDto {
     required: false,
   })
   @IsOptional()
-  @IsEnum(Unidade, { message: 'Unidade deve ser um valor válido (INHUMAS, NERÓPOLIS, UBERABA)' })
+  @IsEnum(Unidade, {
+    message: 'Unidade deve ser um valor válido (INHUMAS, NERÓPOLIS, UBERABA)',
+  })
   unidade?: Unidade;
 
   @ApiProperty({
@@ -205,7 +232,7 @@ export class CreateVendaDto {
     required: false,
   })
   @IsOptional()
-  @Transform(({ value }) => (value === '') ? null : value)
+  @Transform(({ value }) => (value === '' ? null : value))
   @IsString({ message: 'Ativo deve ser uma string' })
   @MaxLength(300, { message: 'Ativo não pode ter mais que 300 caracteres' })
   ativo?: string;

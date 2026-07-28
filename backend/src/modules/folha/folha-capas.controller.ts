@@ -46,7 +46,9 @@ export class FolhaCapasController {
   @Post()
   @Permissions(Permission.FOLHA_LANCAMENTO_CREATE)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obter ou criar folha_capa para o funcionário e competência' })
+  @ApiOperation({
+    summary: 'Obter ou criar folha_capa para o funcionário e competência',
+  })
   obterOuCriar(@Body() dto: CreateFolhaCapaDto, @Req() req: { user: Usuario }) {
     return this.service.obterOuCriar(req.user, dto);
   }
@@ -108,7 +110,8 @@ export class FolhaCapasController {
   @Permissions(Permission.FOLHA_LANCAMENTO_CONGELAR_CAPA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Congelar capa: bloqueia alteração de itens e do cadastro do funcionário até liberar',
+    summary:
+      'Congelar capa: bloqueia alteração de itens e do cadastro do funcionário até liberar',
   })
   @ApiQuery({ name: 'unidade', enum: Unidade, required: true })
   congelar(
@@ -123,7 +126,8 @@ export class FolhaCapasController {
   @Permissions(Permission.FOLHA_LANCAMENTO_LIBERAR_CAPA)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Liberar capa congelada (exige competência com lote aberto — RN-006)',
+    summary:
+      'Liberar capa congelada (exige competência com lote aberto — RN-006)',
   })
   @ApiQuery({ name: 'unidade', enum: Unidade, required: true })
   liberar(
@@ -149,7 +153,11 @@ export class FolhaCapasController {
     @Query('unidade') unidade: Unidade,
     @Req() req: { user: Usuario },
   ) {
-    return this.reciboWhatsappService.enviarReciboIndividual(req.user, id, unidade);
+    return this.reciboWhatsappService.enviarReciboIndividual(
+      req.user,
+      id,
+      unidade,
+    );
   }
 
   @Delete(':id')

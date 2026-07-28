@@ -39,7 +39,10 @@ export class AuthController {
     status: HttpStatus.UNAUTHORIZED,
     description: 'Email ou senha inválidos',
   })
-  async login(@Body() loginDto: LoginDto, @Request() req): Promise<AuthResponseDto> {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Request() req,
+  ): Promise<AuthResponseDto> {
     return this.authService.login(loginDto, req);
   }
 
@@ -87,11 +90,15 @@ export class AuthController {
     status: HttpStatus.OK,
     description: 'Logout realizado com sucesso',
   })
-  async logout(@Request() req, @Body() body?: { token?: string }): Promise<{ message: string; success: boolean }> {
+  async logout(
+    @Request() req,
+    @Body() body?: { token?: string },
+  ): Promise<{ message: string; success: boolean }> {
     try {
       // Tentar extrair informações do usuário do token (mesmo se expirado)
-      const token = req.headers.authorization?.replace('Bearer ', '') || body?.token;
-      
+      const token =
+        req.headers.authorization?.replace('Bearer ', '') || body?.token;
+
       if (token) {
         try {
           // Tentar fazer logout com o token disponível
@@ -99,20 +106,20 @@ export class AuthController {
           if (decoded?.sub) {
             await this.authService.logout(decoded.sub, req);
           }
-        } catch (error) {
+        } catch (_error) {
           // Se falhar ao decodificar, continua com logout simples
         }
       }
-      
-      return { 
+
+      return {
         message: 'Logout realizado com sucesso',
-        success: true 
+        success: true,
       };
-    } catch (error) {
+    } catch (_error) {
       // Sempre retorna sucesso para logout (mesmo com erro)
-      return { 
+      return {
         message: 'Logout realizado com sucesso',
-        success: true 
+        success: true,
       };
     }
   }

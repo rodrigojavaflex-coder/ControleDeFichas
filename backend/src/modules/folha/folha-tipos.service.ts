@@ -33,7 +33,9 @@ export class FolhaTiposService {
   }
 
   async findAll(): Promise<FolhaTipo[]> {
-    return this.tipoRepo.find({ order: { ordenacao: 'ASC', descricao: 'ASC' } });
+    return this.tipoRepo.find({
+      order: { ordenacao: 'ASC', descricao: 'ASC' },
+    });
   }
 
   async findOne(id: string): Promise<FolhaTipo> {

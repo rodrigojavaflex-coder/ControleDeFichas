@@ -11,7 +11,6 @@ import {
   ParseIntPipe,
   HttpStatus,
   ValidationPipe,
-  UseInterceptors,
   Req,
 } from '@nestjs/common';
 import {
@@ -200,7 +199,7 @@ export class FichaTecnicaController {
     // Capturar dados anteriores para auditoria
     const previousFicha = await this.fichaTecnicaService.findOne(id);
     (req as any).previousUserData = previousFicha;
-    
+
     return await this.fichaTecnicaService.update(id, updateFichaTecnicaDto);
   }
 
@@ -229,7 +228,7 @@ export class FichaTecnicaController {
     // Buscar ficha técnica antes da deleção para auditoria
     const fichaTecnica = await this.fichaTecnicaService.findOne(id);
     (req as any).entityToDelete = fichaTecnica;
-    
+
     return await this.fichaTecnicaService.remove(id);
   }
 }

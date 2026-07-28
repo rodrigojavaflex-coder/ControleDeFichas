@@ -54,10 +54,13 @@ export class PrescritoresService {
   ): Promise<PaginatedResponseDto<Prescritor>> {
     const { page = 1, limit = 10, nome, numeroCRM } = findPrescritoresDto;
 
-    const queryBuilder = this.prescritorRepository.createQueryBuilder('prescritor');
+    const queryBuilder =
+      this.prescritorRepository.createQueryBuilder('prescritor');
 
     if (nome) {
-      queryBuilder.andWhere('prescritor.nome ILIKE :nome', { nome: `%${nome}%` });
+      queryBuilder.andWhere('prescritor.nome ILIKE :nome', {
+        nome: `%${nome}%`,
+      });
     }
 
     if (numeroCRM) {
@@ -125,10 +128,13 @@ export class PrescritoresService {
   }
 
   async search(nome: string, limit: number = 20): Promise<Prescritor[]> {
-    const queryBuilder = this.prescritorRepository.createQueryBuilder('prescritor');
+    const queryBuilder =
+      this.prescritorRepository.createQueryBuilder('prescritor');
 
     if (nome && nome.trim()) {
-      queryBuilder.andWhere('prescritor.nome ILIKE :nome', { nome: `%${nome.trim()}%` });
+      queryBuilder.andWhere('prescritor.nome ILIKE :nome', {
+        nome: `%${nome.trim()}%`,
+      });
     }
 
     return await queryBuilder
@@ -137,4 +143,3 @@ export class PrescritoresService {
       .getMany();
   }
 }
-

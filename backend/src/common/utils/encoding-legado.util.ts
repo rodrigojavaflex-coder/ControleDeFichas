@@ -54,7 +54,10 @@ export function converterTextoFirebird(
 
     try {
       const decodedWin1252 = iconv.decode(buffer, effectiveCharset);
-      if (!SUSPEITO_PATTERN.test(decodedWin1252) || charsetNormalizado === 'NONE') {
+      if (
+        !SUSPEITO_PATTERN.test(decodedWin1252) ||
+        charsetNormalizado === 'NONE'
+      ) {
         return fixCorruptedChars(decodedWin1252);
       }
     } catch {
@@ -161,8 +164,8 @@ function fixCorruptedChars(str: string): string {
     .replace(/([A-ZÀ-Ú])ý(?=[A-ZÀ-Ú])/g, '$1É')
     .replace(/([GNRL])ý([AO])/gi, '$1Ç$2')
     .replace(/Çý/gi, 'Çã')
-    .replace(/([BCDFGHJKLMNPQRSTVWXZ])ý(?=[\s,.;!?\-]|$)/gi, '$1Ê')
-    .replace(/([BCDFGHJKLMNPQRSTVWXZ])Ý(?=[\s,.;!?\-]|$)/gi, '$1Ê')
+    .replace(/([BCDFGHJKLMNPQRSTVWXZ])ý(?=[\s,.;!?-]|$)/gi, '$1Ê')
+    .replace(/([BCDFGHJKLMNPQRSTVWXZ])Ý(?=[\s,.;!?-]|$)/gi, '$1Ê')
     .replace(/ý/g, 'Ç')
     .replace(/Ý/g, 'Ç')
     .replace(/Ã§/g, 'ç')

@@ -102,7 +102,11 @@ export class Usuario extends BaseEntity {
   @Column({ name: 'unidades_produtividade', type: 'jsonb', nullable: true })
   unidadesProdutividade: Unidade[] | null;
 
-  @ApiProperty({ description: 'Vendedor associado ao usuário', type: () => Vendedor, required: false })
+  @ApiProperty({
+    description: 'Vendedor associado ao usuário',
+    type: () => Vendedor,
+    required: false,
+  })
   @ManyToOne(() => Vendedor, { nullable: true, eager: false })
   @JoinColumn({ name: 'vendedorId' })
   vendedor?: Vendedor;

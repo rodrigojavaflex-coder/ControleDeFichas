@@ -36,4 +36,3 @@ export class Prescritor extends BaseEntity {
   @Column({ length: 2, nullable: true })
   UFCRM?: string;
 }
-

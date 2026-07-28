@@ -13,7 +13,6 @@ import {
   IsIn,
   IsUUID,
 } from 'class-validator';
-import { Permission } from '../../../common/enums/permission.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
 export class CreateUsuarioDto {
@@ -84,7 +83,9 @@ export class CreateUsuarioDto {
     required: false,
   })
   @IsOptional()
-  @IsEnum(Unidade, { message: 'Unidade deve ser um valor válido (INHUMAS, NERÓPOLIS, UBERABA)' })
+  @IsEnum(Unidade, {
+    message: 'Unidade deve ser um valor válido (INHUMAS, NERÓPOLIS, UBERABA)',
+  })
   unidade?: Unidade;
 
   @ApiProperty({

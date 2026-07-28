@@ -9,7 +9,8 @@ export class ConfirmarVinculoCodigoFuncionarioDto {
 
   @ApiProperty({
     type: [String],
-    description: 'IDs dos funcionários selecionados na prévia (somente elegíveis).',
+    description:
+      'IDs dos funcionários selecionados na prévia (somente elegíveis).',
   })
   @IsArray()
   @ArrayNotEmpty()

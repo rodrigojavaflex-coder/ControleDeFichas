@@ -16,12 +16,8 @@ import {
 import { OrcamentoStatus } from '../../common/enums/orcamento-status.enum';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { Usuario } from '../usuarios/entities/usuario.entity';
-import {
-  unidadeEscopoUsuarioFolha,
-} from '../folha/utils/folha-unidade-scope.util';
-import {
-  getUsuarioPermissoes,
-} from '../../common/utils/usuario-permissoes.util';
+import { unidadeEscopoUsuarioFolha } from '../folha/utils/folha-unidade-scope.util';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import { Permission } from '../../common/enums/permission.enum';
 
 /** Classificação operacional para rejeitados sem motivo cadastrado (RN-ORC-002). */
@@ -327,10 +323,7 @@ export class OrcamentosDashboardService {
       qb.andWhere(`${alias}.status = :statusUnico`, {
         statusUnico: filtros.status[0],
       });
-    } else if (
-      filtros.status.length > 0 &&
-      filtros.status.length < 2
-    ) {
+    } else if (filtros.status.length > 0 && filtros.status.length < 2) {
       qb.andWhere(`${alias}.status IN (:...statusList)`, {
         statusList: filtros.status,
       });
@@ -408,7 +401,7 @@ export class OrcamentosDashboardService {
   ): Promise<DashboardEvolucaoTemporalDto> {
     const trunc =
       filtros.granularidadeTemporal === 'dia'
-        ? "TO_CHAR(o.\"dataOrcamento\", 'YYYY-MM-DD')"
+        ? 'TO_CHAR(o."dataOrcamento", \'YYYY-MM-DD\')'
         : "TO_CHAR(DATE_TRUNC('month', o.\"dataOrcamento\"), 'YYYY-MM')";
 
     const qb = this.orcamentoRepo.createQueryBuilder('o');
@@ -683,10 +676,7 @@ export class OrcamentosDashboardService {
     const qb = this.orcamentoRepo
       .createQueryBuilder('o')
       .leftJoin('o.motivoRejeicao', 'motivo')
-      .select(
-        `COALESCE(motivo.descricao, :semMotivo)`,
-        'descricao',
-      )
+      .select(`COALESCE(motivo.descricao, :semMotivo)`, 'descricao')
       .addSelect('motivo.id', 'motivoRejeicaoId')
       .addSelect('COUNT(*)', 'quantidade')
       .addSelect('COALESCE(SUM(o.precoVenda), 0)', 'valorPerdido')

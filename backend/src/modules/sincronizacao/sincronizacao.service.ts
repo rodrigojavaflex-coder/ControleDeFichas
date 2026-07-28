@@ -1,4 +1,9 @@
-import { Injectable, Logger, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -182,7 +187,10 @@ export class SincronizacaoService {
     private readonly importacaoProgressService: ImportacaoManualProgressService,
   ) {}
 
-  private criarResultadoVazio(agente: string, erros: string[] = []): SincronizacaoResult {
+  private criarResultadoVazio(
+    agente: string,
+    erros: string[] = [],
+  ): SincronizacaoResult {
     return {
       agente,
       clientesProcessados: 0,
@@ -257,8 +265,10 @@ export class SincronizacaoService {
     if (!this.syncProgress) return;
     this.syncProgress.status = status;
     this.syncProgress.message = message;
-    this.syncProgress.etapa = status === 'completed' ? 'concluido' : this.syncProgress.etapa;
-    this.syncProgress.percentual = status === 'completed' ? 100 : this.syncProgress.percentual;
+    this.syncProgress.etapa =
+      status === 'completed' ? 'concluido' : this.syncProgress.etapa;
+    this.syncProgress.percentual =
+      status === 'completed' ? 100 : this.syncProgress.percentual;
   }
 
   private atualizarProgresso(
@@ -376,9 +386,14 @@ export class SincronizacaoService {
       });
 
       if (configs.length === 0) {
-        this.logger.log('Nenhuma configuração de sincronização ativa encontrada');
+        this.logger.log(
+          'Nenhuma configuração de sincronização ativa encontrada',
+        );
         this.iniciarProgresso(0);
-        this.finalizarProgresso('completed', 'Nenhum agente ativo para sincronizar');
+        this.finalizarProgresso(
+          'completed',
+          'Nenhum agente ativo para sincronizar',
+        );
         return [];
       }
 
@@ -419,7 +434,10 @@ export class SincronizacaoService {
         });
       }
 
-      this.finalizarProgresso('completed', 'Sincronização concluída com sucesso!');
+      this.finalizarProgresso(
+        'completed',
+        'Sincronização concluída com sucesso!',
+      );
     } catch (error: any) {
       // Se a tabela não existir ainda (erro 42P01), retorna array vazio
       if (error?.code === '42P01' || error?.driverError?.code === '42P01') {
@@ -429,7 +447,10 @@ export class SincronizacaoService {
         return [];
       }
       // Para outros erros, propaga
-      this.finalizarProgresso('error', error?.message || 'Erro na sincronização');
+      this.finalizarProgresso(
+        'error',
+        error?.message || 'Erro na sincronização',
+      );
       throw error;
     } finally {
       this.isRunning = false;
@@ -590,13 +611,15 @@ export class SincronizacaoService {
     config: SincronizacaoConfig,
   ): Promise<SincronizacaoResult> {
     this.logger.log(`Iniciando sincronização para agente: ${config.agente}`);
-    this.logger.debug(`Config recebida: ${JSON.stringify({
-      agente: config.agente,
-      ultimaDataCliente: config.ultimaDataCliente,
-      ultimaDataPrescritor: config.ultimaDataPrescritor,
-      intervaloMinutos: config.intervaloMinutos,
-      ativo: config.ativo,
-    })}`);
+    this.logger.debug(
+      `Config recebida: ${JSON.stringify({
+        agente: config.agente,
+        ultimaDataCliente: config.ultimaDataCliente,
+        ultimaDataPrescritor: config.ultimaDataPrescritor,
+        intervaloMinutos: config.intervaloMinutos,
+        ativo: config.ativo,
+      })}`,
+    );
 
     const agentesConfig = this.configService.get('agentes');
     const agenteConfig = agentesConfig[config.agente];
@@ -611,19 +634,21 @@ export class SincronizacaoService {
 
     // Preparar datas mínimas (já vêm como string YYYY-MM-DD do transformer)
     const dataMinimaCliente = config.ultimaDataCliente
-      ? (typeof config.ultimaDataCliente === 'string' 
-          ? config.ultimaDataCliente 
-          : this.formatDate(config.ultimaDataCliente))
+      ? typeof config.ultimaDataCliente === 'string'
+        ? config.ultimaDataCliente
+        : this.formatDate(config.ultimaDataCliente)
       : '2000-01-01';
     const dataMinimaPrescritor = config.ultimaDataPrescritor
-      ? (typeof config.ultimaDataPrescritor === 'string'
-          ? config.ultimaDataPrescritor
-          : this.formatDate(config.ultimaDataPrescritor))
+      ? typeof config.ultimaDataPrescritor === 'string'
+        ? config.ultimaDataPrescritor
+        : this.formatDate(config.ultimaDataPrescritor)
       : '2000-01-01';
 
     // Log dos parâmetros que serão enviados ao agente
     const unit = this.agenteCdfilMap[config.agente];
-    this.logger.log(`Parâmetros da sincronização para agente ${config.agente}:`);
+    this.logger.log(
+      `Parâmetros da sincronização para agente ${config.agente}:`,
+    );
     this.logger.log(`  - URL: ${agenteConfig.url}`);
     this.logger.log(`  - Unit (cdfil): ${unit}`);
     this.logger.log(`  - dataMinimaCliente: ${dataMinimaCliente}`);
@@ -649,7 +674,9 @@ export class SincronizacaoService {
 
       // Processar clientes
       if (clientes && clientes.length > 0) {
-        this.logger.log(`Processando ${clientes.length} clientes do agente ${config.agente}...`);
+        this.logger.log(
+          `Processando ${clientes.length} clientes do agente ${config.agente}...`,
+        );
         this.atualizarProgresso({
           etapa: 'clientes',
           message: `Processando ${clientes.length} clientes (${config.agente})...`,
@@ -662,7 +689,10 @@ export class SincronizacaoService {
           const clienteAgente = clientes[ci];
           try {
             resultado.clientesProcessados++;
-            const foiCriado = await this.processarCliente(clienteAgente, config.agente);
+            const foiCriado = await this.processarCliente(
+              clienteAgente,
+              config.agente,
+            );
             if (foiCriado) {
               resultado.clientesCriados++;
             } else {
@@ -696,13 +726,17 @@ export class SincronizacaoService {
         // CORREÇÃO: Usar a maior data dos registros retornados, não comparar com data inicial
         const maxDataCliente = clientes.reduce((max: string | null, c) => {
           const data = String(c.dtcad || '').trim();
-          
+
           // Log para debug
-          this.logger.debug(`[${config.agente}] Cliente dtcad original: ${c.dtcad}, tipo: ${typeof c.dtcad}, após String(): ${data}`);
-          
+          this.logger.debug(
+            `[${config.agente}] Cliente dtcad original: ${c.dtcad}, tipo: ${typeof c.dtcad}, após String(): ${data}`,
+          );
+
           // Validar formato YYYY-MM-DD
           if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-            this.logger.warn(`[${config.agente}] Data de cliente inválida ou formato incorreto: "${data}"`);
+            this.logger.warn(
+              `[${config.agente}] Data de cliente inválida ou formato incorreto: "${data}"`,
+            );
             return max;
           }
           // Se max é null ou data é maior, usar data
@@ -712,16 +746,27 @@ export class SincronizacaoService {
         // CORREÇÃO: Só atualizar se encontrou uma data válida nos registros
         if (maxDataCliente) {
           config.ultimaDataCliente = maxDataCliente as any;
-          this.logger.log(`[${config.agente}] Atualizando última data de clientes para: ${maxDataCliente}`);
+          this.logger.log(
+            `[${config.agente}] Atualizando última data de clientes para: ${maxDataCliente}`,
+          );
         } else {
-          this.logger.warn(`[${config.agente}] Nenhuma data válida encontrada nos clientes retornados. Mantendo data atual: ${config.ultimaDataCliente}`);
-          this.logger.debug(`[${config.agente}] Primeiras 3 datas de clientes: ${clientes.slice(0, 3).map(c => c.dtcad).join(', ')}`);
+          this.logger.warn(
+            `[${config.agente}] Nenhuma data válida encontrada nos clientes retornados. Mantendo data atual: ${config.ultimaDataCliente}`,
+          );
+          this.logger.debug(
+            `[${config.agente}] Primeiras 3 datas de clientes: ${clientes
+              .slice(0, 3)
+              .map((c) => c.dtcad)
+              .join(', ')}`,
+          );
         }
       }
 
       // Processar prescritores
       if (prescritores && prescritores.length > 0) {
-        this.logger.log(`Processando ${prescritores.length} prescritores do agente ${config.agente}...`);
+        this.logger.log(
+          `Processando ${prescritores.length} prescritores do agente ${config.agente}...`,
+        );
         this.atualizarProgresso({
           etapa: 'prescritores',
           message: `Processando ${prescritores.length} prescritores (${config.agente})...`,
@@ -766,28 +811,44 @@ export class SincronizacaoService {
         }
 
         // CORREÇÃO: Usar a maior data dos registros retornados
-        const maxDataPrescritor = prescritores.reduce((max: string | null, p) => {
-          const data = String(p.dtcad || '').trim();
-          
-          // Log para debug
-          this.logger.debug(`[${config.agente}] Prescritor dtcad original: ${p.dtcad}, tipo: ${typeof p.dtcad}, após String(): ${data}`);
-          
-          // Validar formato YYYY-MM-DD
-          if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
-            this.logger.warn(`[${config.agente}] Data de prescritor inválida ou formato incorreto: "${data}"`);
-            return max;
-          }
-          // Se max é null ou data é maior, usar data
-          return !max || data > max ? data : max;
-        }, null);
+        const maxDataPrescritor = prescritores.reduce(
+          (max: string | null, p) => {
+            const data = String(p.dtcad || '').trim();
+
+            // Log para debug
+            this.logger.debug(
+              `[${config.agente}] Prescritor dtcad original: ${p.dtcad}, tipo: ${typeof p.dtcad}, após String(): ${data}`,
+            );
+
+            // Validar formato YYYY-MM-DD
+            if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+              this.logger.warn(
+                `[${config.agente}] Data de prescritor inválida ou formato incorreto: "${data}"`,
+              );
+              return max;
+            }
+            // Se max é null ou data é maior, usar data
+            return !max || data > max ? data : max;
+          },
+          null,
+        );
 
         // CORREÇÃO: Só atualizar se encontrou uma data válida nos registros
         if (maxDataPrescritor) {
           config.ultimaDataPrescritor = maxDataPrescritor as any;
-          this.logger.log(`[${config.agente}] Atualizando última data de prescritores para: ${maxDataPrescritor}`);
+          this.logger.log(
+            `[${config.agente}] Atualizando última data de prescritores para: ${maxDataPrescritor}`,
+          );
         } else {
-          this.logger.warn(`[${config.agente}] Nenhuma data válida encontrada nos prescritores retornados. Mantendo data atual: ${config.ultimaDataPrescritor}`);
-          this.logger.debug(`[${config.agente}] Primeiras 3 datas de prescritores: ${prescritores.slice(0, 3).map(p => p.dtcad).join(', ')}`);
+          this.logger.warn(
+            `[${config.agente}] Nenhuma data válida encontrada nos prescritores retornados. Mantendo data atual: ${config.ultimaDataPrescritor}`,
+          );
+          this.logger.debug(
+            `[${config.agente}] Primeiras 3 datas de prescritores: ${prescritores
+              .slice(0, 3)
+              .map((p) => p.dtcad)
+              .join(', ')}`,
+          );
         }
       }
     } catch (error) {
@@ -801,7 +862,12 @@ export class SincronizacaoService {
     // Sincronizar orçamentos (somente se watermark configurado)
     if (config.ultimaModificacaoOrcamento) {
       try {
-        await this.sincronizarOrcamentos(config, agenteConfig.url, agenteConfig.token, resultado);
+        await this.sincronizarOrcamentos(
+          config,
+          agenteConfig.url,
+          agenteConfig.token,
+          resultado,
+        );
       } catch (error: any) {
         this.logger.error(
           `Erro ao sincronizar orçamentos do agente ${config.agente}:`,
@@ -859,20 +925,22 @@ export class SincronizacaoService {
 
     // Antes de salvar, garantir que as datas sejam strings YYYY-MM-DD
     // CORREÇÃO: Manter a data atual se não foi atualizada (não usar '2000-01-01')
-    const ultimaDataClienteStr = config.ultimaDataCliente 
-      ? (typeof config.ultimaDataCliente === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(config.ultimaDataCliente)
-          ? config.ultimaDataCliente
-          : config.ultimaDataCliente instanceof Date
-            ? this.formatDate(config.ultimaDataCliente)
-            : null) // CORREÇÃO: null em vez de '2000-01-01'
+    const ultimaDataClienteStr = config.ultimaDataCliente
+      ? typeof config.ultimaDataCliente === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(config.ultimaDataCliente)
+        ? config.ultimaDataCliente
+        : config.ultimaDataCliente instanceof Date
+          ? this.formatDate(config.ultimaDataCliente)
+          : null // CORREÇÃO: null em vez de '2000-01-01'
       : null;
-    
+
     const ultimaDataPrescritorStr = config.ultimaDataPrescritor
-      ? (typeof config.ultimaDataPrescritor === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(config.ultimaDataPrescritor)
-          ? config.ultimaDataPrescritor
-          : config.ultimaDataPrescritor instanceof Date
-            ? this.formatDate(config.ultimaDataPrescritor)
-            : null) // CORREÇÃO: null em vez de '2000-01-01'
+      ? typeof config.ultimaDataPrescritor === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(config.ultimaDataPrescritor)
+        ? config.ultimaDataPrescritor
+        : config.ultimaDataPrescritor instanceof Date
+          ? this.formatDate(config.ultimaDataPrescritor)
+          : null // CORREÇÃO: null em vez de '2000-01-01'
       : null;
 
     // CORREÇÃO: Só atualizar campos que foram modificados e são válidos
@@ -898,7 +966,8 @@ export class SincronizacaoService {
     }
 
     if (config.painelContratoRepresentantes) {
-      updateData.painelContratoRepresentantes = config.painelContratoRepresentantes;
+      updateData.painelContratoRepresentantes =
+        config.painelContratoRepresentantes;
     }
 
     if (config.ultimaModificacaoProducaoEtapas) {
@@ -952,13 +1021,17 @@ export class SincronizacaoService {
     );
 
     if (!orcamentos.length) {
-      this.logger.log(`[${config.agente}] Nenhum orçamento retornado pelo agente`);
+      this.logger.log(
+        `[${config.agente}] Nenhum orçamento retornado pelo agente`,
+      );
       this.atualizarWatermarkOrcamentos(config);
       return;
     }
 
     const unidade =
-      this.agenteUnidadeMap[config.agente] || this.unidadeMap[unit] || Unidade.INHUMAS;
+      this.agenteUnidadeMap[config.agente] ||
+      this.unidadeMap[unit] ||
+      Unidade.INHUMAS;
 
     this.logger.log(
       `[${config.agente}] Processando ${orcamentos.length} orçamentos...`,
@@ -1129,7 +1202,9 @@ export class SincronizacaoService {
       return;
     }
 
-    const unidade = this.producaoEtapasService.getUnidadePorAgente(config.agente);
+    const unidade = this.producaoEtapasService.getUnidadePorAgente(
+      config.agente,
+    );
 
     this.atualizarProgresso({
       etapa: 'producao_etapas',
@@ -1140,7 +1215,10 @@ export class SincronizacaoService {
       percentualProducaoEtapas: 0,
     });
 
-    const lote = await this.producaoEtapasService.processarLote(etapas, unidade);
+    const lote = await this.producaoEtapasService.processarLote(
+      etapas,
+      unidade,
+    );
     resultado.producaoEtapasProcessados = lote.processados;
     resultado.producaoEtapasCriados = lote.criados;
     resultado.producaoEtapasAtualizados = lote.atualizados;
@@ -1591,7 +1669,9 @@ export class SincronizacaoService {
     return foiCriado;
   }
 
-  private formatDateTimeForAgent(value: Date | string | null | undefined): string {
+  private formatDateTimeForAgent(
+    value: Date | string | null | undefined,
+  ): string {
     if (!value) {
       throw new Error('Data/hora de modificação de orçamento não configurada');
     }
@@ -1631,23 +1711,24 @@ export class SincronizacaoService {
     }
 
     const urlCompleta = `${url}/api/v1/sincronizacao?dataMinimaCliente=${dataMinimaCliente}&dataMinimaPrescritor=${dataMinimaPrescritor}&unit=${unit}`;
-    
+
     this.logger.log(`[${agente}] Chamando agente: ${urlCompleta}`);
-    this.logger.debug(`[${agente}] Parâmetros: dataMinimaCliente=${dataMinimaCliente}, dataMinimaPrescritor=${dataMinimaPrescritor}, unit=${unit}`);
+    this.logger.debug(
+      `[${agente}] Parâmetros: dataMinimaCliente=${dataMinimaCliente}, dataMinimaPrescritor=${dataMinimaPrescritor}, unit=${unit}`,
+    );
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 segundos (mais tempo para ambas as queries)
 
     try {
       const response = await fetch(urlCompleta, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-      );
+        signal: controller.signal,
+      });
 
       clearTimeout(timeoutId);
 
@@ -1659,9 +1740,13 @@ export class SincronizacaoService {
       }
 
       const data = await response.json();
-      this.logger.log(`[${agente}] Resposta do agente: ${data.clientes?.length || 0} clientes, ${data.prescritores?.length || 0} prescritores`);
-      this.logger.debug(`[${agente}] Primeiros clientes: ${JSON.stringify(data.clientes?.slice(0, 3) || [])}`);
-      
+      this.logger.log(
+        `[${agente}] Resposta do agente: ${data.clientes?.length || 0} clientes, ${data.prescritores?.length || 0} prescritores`,
+      );
+      this.logger.debug(
+        `[${agente}] Primeiros clientes: ${JSON.stringify(data.clientes?.slice(0, 3) || [])}`,
+      );
+
       return {
         clientes: data.clientes || [],
         prescritores: data.prescritores || [],
@@ -1769,11 +1854,14 @@ export class SincronizacaoService {
     clienteAgente: AgenteCliente,
     agente: string,
   ): Promise<boolean> {
-    const unidade = this.agenteUnidadeMap[agente] || this.unidadeMap[clienteAgente.cdfil] || Unidade.INHUMAS;
+    const unidade =
+      this.agenteUnidadeMap[agente] ||
+      this.unidadeMap[clienteAgente.cdfil] ||
+      Unidade.INHUMAS;
 
     // Buscar cliente existente por cdcliente E unidade (mesmo código pode existir em unidades diferentes)
     let cliente = await this.clienteRepository.findOne({
-      where: { 
+      where: {
         cdcliente: clienteAgente.cdcli,
         unidade: unidade,
       },
@@ -1786,8 +1874,12 @@ export class SincronizacaoService {
       cliente = this.clienteRepository.create({
         nome: padronizarNomeDeSistemaLegado(clienteAgente.nomecli),
         cdcliente: clienteAgente.cdcli,
-        cpf: clienteAgente.nrcnpj ? normalizarTextoLegado(clienteAgente.nrcnpj) : undefined,
-        email: clienteAgente.email ? normalizarTextoLegado(clienteAgente.email) : undefined,
+        cpf: clienteAgente.nrcnpj
+          ? normalizarTextoLegado(clienteAgente.nrcnpj)
+          : undefined,
+        email: clienteAgente.email
+          ? normalizarTextoLegado(clienteAgente.email)
+          : undefined,
         dataNascimento: clienteAgente.dtnas
           ? this.parseDate(clienteAgente.dtnas)
           : undefined,
@@ -1796,8 +1888,10 @@ export class SincronizacaoService {
     } else {
       // Atualizar cliente existente
       cliente.nome = padronizarNomeDeSistemaLegado(clienteAgente.nomecli);
-      if (clienteAgente.nrcnpj) cliente.cpf = normalizarTextoLegado(clienteAgente.nrcnpj);
-      if (clienteAgente.email) cliente.email = normalizarTextoLegado(clienteAgente.email);
+      if (clienteAgente.nrcnpj)
+        cliente.cpf = normalizarTextoLegado(clienteAgente.nrcnpj);
+      if (clienteAgente.email)
+        cliente.email = normalizarTextoLegado(clienteAgente.email);
       if (clienteAgente.dtnas) {
         cliente.dataNascimento = this.parseDate(clienteAgente.dtnas);
       }
@@ -1816,19 +1910,21 @@ export class SincronizacaoService {
     prescritorAgente: AgentePrescritor,
   ): Promise<boolean> {
     // Padronizar nome para usar na busca
-    const nomePadronizado = padronizarNomeDeSistemaLegado(prescritorAgente.nomemed);
+    const nomePadronizado = padronizarNomeDeSistemaLegado(
+      prescritorAgente.nomemed,
+    );
     const ufcrmValido = prescritorAgente.ufcrm
       ? normalizarTextoLegado(prescritorAgente.ufcrm)
       : undefined;
-    
+
     // Buscar prescritor existente por nome + numeroCRM + UFCRM juntos
     // NUNCA buscar apenas por nome (pode ser o mesmo nome mas CRM diferente)
     let prescritor: Prescritor | null = null;
-    
+
     if (prescritorAgente.nrcrm && ufcrmValido) {
       // Buscar por nome + CRM + UF juntos (todos os três campos)
       prescritor = await this.prescritorRepository.findOne({
-        where: { 
+        where: {
           nome: nomePadronizado,
           numeroCRM: prescritorAgente.nrcrm,
           UFCRM: ufcrmValido,

@@ -11,7 +11,9 @@ export class ProducaoConfigTables1749000001000 implements MigrationInterface {
   name = 'ProducaoConfigTables1749000001000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const etapaExists = await queryRunner.hasTable('producao_etapa_remuneracao');
+    const etapaExists = await queryRunner.hasTable(
+      'producao_etapa_remuneracao',
+    );
     if (!etapaExists) {
       await queryRunner.createTable(
         new Table({

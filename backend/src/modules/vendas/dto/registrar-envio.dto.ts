@@ -9,13 +9,19 @@ export class RegistrarEnvioDto {
   })
   @IsArray()
   @ArrayNotEmpty({ message: 'Informe ao menos uma venda para registrar envio' })
-  @IsUUID('4', { each: true, message: 'Todos os IDs de venda devem ser UUID válidos' })
+  @IsUUID('4', {
+    each: true,
+    message: 'Todos os IDs de venda devem ser UUID válidos',
+  })
   vendaIds: string[];
 
   @ApiProperty({
     description: 'Data do envio (YYYY-MM-DD)',
     example: '2025-11-05',
   })
-  @IsDateString({}, { message: 'Data de envio deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data de envio deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataEnvio: string;
 }

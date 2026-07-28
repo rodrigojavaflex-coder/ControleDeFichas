@@ -5,6 +5,7 @@ import {
   converterObjetoFirebird,
   converterTextoFirebird,
 } from '../../common/utils/encoding-legado.util';
+import { rejectReason } from '../../common/utils/reject-unknown.util';
 
 @Injectable()
 export class FirebirdConnectionService {
@@ -33,14 +34,14 @@ export class FirebirdConnectionService {
       firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
           this.logger.error('Erro ao conectar banco 1:', err);
-          return reject(err);
+          return reject(rejectReason(err));
         }
 
         db.query(sql, params, (err, result) => {
           db.detach();
           if (err) {
             this.logger.error('Erro ao executar query banco 1:', err);
-            return reject(err);
+            return reject(rejectReason(err));
           }
 
           const convertedResult = converterObjetoFirebird<T[]>(
@@ -68,14 +69,14 @@ export class FirebirdConnectionService {
       firebird.attach(firebirdConfig, (err, db) => {
         if (err) {
           this.logger.error('Erro ao conectar banco 2:', err);
-          return reject(err);
+          return reject(rejectReason(err));
         }
 
         db.query(sql, params, (err, result) => {
           db.detach();
           if (err) {
             this.logger.error('Erro ao executar query banco 2:', err);
-            return reject(err);
+            return reject(rejectReason(err));
           }
 
           const convertedResult = converterObjetoFirebird<T[]>(

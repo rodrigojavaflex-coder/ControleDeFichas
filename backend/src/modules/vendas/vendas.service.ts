@@ -12,7 +12,11 @@ import { Venda } from './entities/venda.entity';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
 import { FindVendasDto } from './dto/find-vendas.dto';
-import { VendaOrigem, VendaStatus, TipoAtualizacao } from '../../common/enums/venda.enum';
+import {
+  VendaOrigem,
+  VendaStatus,
+  TipoAtualizacao,
+} from '../../common/enums/venda.enum';
 import {
   PaginatedResponseDto,
   PaginationMetaDto,
@@ -27,9 +31,7 @@ import { Cliente } from '../clientes/entities/cliente.entity';
 import { Vendedor } from '../vendedores/entities/vendedor.entity';
 import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Permission } from '../../common/enums/permission.enum';
-import {
-  getUsuarioPermissoes,
-} from '../../common/utils/usuario-permissoes.util';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 
 interface FecharVendaFalha {
   id: string;
@@ -58,7 +60,9 @@ export class VendasService {
     private readonly configService: ConfigService,
   ) {}
 
-  private mapUnidadeParaOrigem(unidade?: Unidade | null): VendaOrigem | undefined {
+  private mapUnidadeParaOrigem(
+    unidade?: Unidade | null,
+  ): VendaOrigem | undefined {
     if (!unidade) {
       return undefined;
     }
@@ -75,32 +79,51 @@ export class VendasService {
     }
   }
 
-  async create(createVendaDto: CreateVendaDto, usuario?: Usuario | null): Promise<Venda> {
+  async create(
+    createVendaDto: CreateVendaDto,
+    usuario?: Usuario | null,
+  ): Promise<Venda> {
     try {
       // Validar que os IDs existem
-      const cliente = await this.clienteRepository.findOneBy({ id: createVendaDto.clienteId });
+      const cliente = await this.clienteRepository.findOneBy({
+        id: createVendaDto.clienteId,
+      });
       if (!cliente) {
-        throw new NotFoundException(`Cliente com ID ${createVendaDto.clienteId} não encontrado`);
+        throw new NotFoundException(
+          `Cliente com ID ${createVendaDto.clienteId} não encontrado`,
+        );
       }
 
-      const vendedor = await this.vendedorRepository.findOneBy({ id: createVendaDto.vendedorId });
+      const vendedor = await this.vendedorRepository.findOneBy({
+        id: createVendaDto.vendedorId,
+      });
       if (!vendedor) {
-        throw new NotFoundException(`Vendedor com ID ${createVendaDto.vendedorId} não encontrado`);
+        throw new NotFoundException(
+          `Vendedor com ID ${createVendaDto.vendedorId} não encontrado`,
+        );
       }
 
       if (createVendaDto.prescritorId) {
-        const prescritor = await this.prescritorRepository.findOneBy({ id: createVendaDto.prescritorId });
+        const prescritor = await this.prescritorRepository.findOneBy({
+          id: createVendaDto.prescritorId,
+        });
         if (!prescritor) {
-          throw new NotFoundException(`Prescritor com ID ${createVendaDto.prescritorId} não encontrado`);
+          throw new NotFoundException(
+            `Prescritor com ID ${createVendaDto.prescritorId} não encontrado`,
+          );
         }
       }
 
       // Buscar prescritor se fornecido
       let prescritor: Prescritor | null = null;
       if (createVendaDto.prescritorId) {
-        prescritor = await this.prescritorRepository.findOneBy({ id: createVendaDto.prescritorId });
+        prescritor = await this.prescritorRepository.findOneBy({
+          id: createVendaDto.prescritorId,
+        });
         if (!prescritor) {
-          throw new NotFoundException(`Prescritor com ID ${createVendaDto.prescritorId} não encontrado`);
+          throw new NotFoundException(
+            `Prescritor com ID ${createVendaDto.prescritorId} não encontrado`,
+          );
         }
       }
 
@@ -131,7 +154,10 @@ export class VendasService {
       return await this.findOne(savedVenda.id, usuario);
     } catch (error) {
       this.logger.error('Error creating venda:', error);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       throw error;
@@ -155,7 +181,11 @@ export class VendasService {
       const venda = vendasMap.get(vendaId);
 
       if (!venda) {
-        falhas.push({ id: vendaId, protocolo: undefined, motivo: 'Venda não encontrada' });
+        falhas.push({
+          id: vendaId,
+          protocolo: undefined,
+          motivo: 'Venda não encontrada',
+        });
         continue;
       }
 
@@ -170,8 +200,10 @@ export class VendasService {
       }
 
       // Verificar se valorCompra e valorPago estão preenchidos (não null, não 0)
-      const valorCompra = venda.valorCompra != null ? Number(venda.valorCompra) : null;
-      const valorPago = venda.valorPago != null ? Number(venda.valorPago) : null;
+      const valorCompra =
+        venda.valorCompra != null ? Number(venda.valorCompra) : null;
+      const valorPago =
+        venda.valorPago != null ? Number(venda.valorPago) : null;
       if (!valorCompra || valorCompra === 0 || !valorPago || valorPago === 0) {
         falhas.push({
           id: vendaId,
@@ -209,7 +241,11 @@ export class VendasService {
       const venda = vendasMap.get(vendaId);
 
       if (!venda) {
-        falhas.push({ id: vendaId, protocolo: undefined, motivo: 'Venda não encontrada' });
+        falhas.push({
+          id: vendaId,
+          protocolo: undefined,
+          motivo: 'Venda não encontrada',
+        });
         continue;
       }
 
@@ -239,7 +275,11 @@ export class VendasService {
       const venda = vendasMap.get(vendaId);
 
       if (!venda) {
-        falhas.push({ id: vendaId, protocolo: undefined, motivo: 'Venda não encontrada' });
+        falhas.push({
+          id: vendaId,
+          protocolo: undefined,
+          motivo: 'Venda não encontrada',
+        });
         continue;
       }
 
@@ -311,7 +351,6 @@ export class VendasService {
 
     const [vendas, total] = await queryBuilder.getManyAndCount();
 
-    const totalPages = Math.ceil(total / limit);
     const meta = new PaginationMetaDto(page, limit, total);
 
     return {
@@ -333,7 +372,11 @@ export class VendasService {
     return this.mascararValorCompraVenda(venda, usuario);
   }
 
-  async update(id: string, updateVendaDto: UpdateVendaDto, usuario?: Usuario | null): Promise<Venda> {
+  async update(
+    id: string,
+    updateVendaDto: UpdateVendaDto,
+    usuario?: Usuario | null,
+  ): Promise<Venda> {
     try {
       const venda = await this.findOne(id);
 
@@ -353,26 +396,38 @@ export class VendasService {
       // Validar e buscar os objetos relacionados (se estiverem sendo atualizados)
       let cliente: Cliente | null | undefined = undefined;
       if (updateVendaDto.clienteId) {
-        cliente = await this.clienteRepository.findOneBy({ id: updateVendaDto.clienteId });
+        cliente = await this.clienteRepository.findOneBy({
+          id: updateVendaDto.clienteId,
+        });
         if (!cliente) {
-          throw new NotFoundException(`Cliente com ID ${updateVendaDto.clienteId} não encontrado`);
+          throw new NotFoundException(
+            `Cliente com ID ${updateVendaDto.clienteId} não encontrado`,
+          );
         }
       }
 
       let vendedor: Vendedor | null | undefined = undefined;
       if (updateVendaDto.vendedorId) {
-        vendedor = await this.vendedorRepository.findOneBy({ id: updateVendaDto.vendedorId });
+        vendedor = await this.vendedorRepository.findOneBy({
+          id: updateVendaDto.vendedorId,
+        });
         if (!vendedor) {
-          throw new NotFoundException(`Vendedor com ID ${updateVendaDto.vendedorId} não encontrado`);
+          throw new NotFoundException(
+            `Vendedor com ID ${updateVendaDto.vendedorId} não encontrado`,
+          );
         }
       }
 
       let prescritor: Prescritor | null | undefined = undefined;
       if (updateVendaDto.prescritorId !== undefined) {
         if (updateVendaDto.prescritorId) {
-          prescritor = await this.prescritorRepository.findOneBy({ id: updateVendaDto.prescritorId });
+          prescritor = await this.prescritorRepository.findOneBy({
+            id: updateVendaDto.prescritorId,
+          });
           if (!prescritor) {
-            throw new NotFoundException(`Prescritor com ID ${updateVendaDto.prescritorId} não encontrado`);
+            throw new NotFoundException(
+              `Prescritor com ID ${updateVendaDto.prescritorId} não encontrado`,
+            );
           }
         } else {
           prescritor = null; // Explicitamente null para remover o relacionamento
@@ -380,15 +435,18 @@ export class VendasService {
       }
 
       // Se o novo valorCliente for informado, validar contra as baixas já lançadas (valorCliente não pode ser menor que o total já baixado)
-      if (updateVendaDto.valorCliente !== undefined && updateVendaDto.valorCliente !== venda.valorCliente) {
+      if (
+        updateVendaDto.valorCliente !== undefined &&
+        updateVendaDto.valorCliente !== venda.valorCliente
+      ) {
         const novoValorCliente = updateVendaDto.valorCliente;
-        
+
         // Calcular total das baixas já lançadas para esta venda
         const result = await this.vendaRepository.query(
           `SELECT COALESCE(SUM(CAST("valorBaixa" AS NUMERIC)), 0) as total 
            FROM baixas 
            WHERE idvenda = $1`,
-          [id]
+          [id],
         );
 
         const totalBaixas = parseFloat(result[0]?.total || '0');
@@ -396,19 +454,26 @@ export class VendasService {
         if (novoValorCliente < totalBaixas) {
           const diferenca = totalBaixas - novoValorCliente;
           throw new ConflictException(
-            `O novo valor do cliente (R$ ${novoValorCliente.toFixed(2)}) é menor que o total de baixas já lançadas (R$ ${totalBaixas.toFixed(2)}). Diferença: R$ ${diferenca.toFixed(2)}`
+            `O novo valor do cliente (R$ ${novoValorCliente.toFixed(2)}) é menor que o total de baixas já lançadas (R$ ${totalBaixas.toFixed(2)}). Diferença: R$ ${diferenca.toFixed(2)}`,
           );
         }
       }
 
       // Preparar dados de atualização
       // IMPORTANTE: Remover os IDs do DTO e usar os objetos relacionados
-      const { clienteId, vendedorId, prescritorId, ...updateDataWithoutIds } = updateVendaDto;
-      
+      const {
+        clienteId: _clienteId,
+        vendedorId: _vendedorId,
+        prescritorId: _prescritorId,
+        ...updateDataWithoutIds
+      } = updateVendaDto;
+
       // Construir objeto de atualização com objetos relacionados
       const updateData: any = {
         ...updateDataWithoutIds,
-        ...(updateVendaDto.dataVenda && { dataVenda: updateVendaDto.dataVenda as any }),
+        ...(updateVendaDto.dataVenda && {
+          dataVenda: updateVendaDto.dataVenda as any,
+        }),
       };
 
       // Adicionar objetos relacionados se foram fornecidos
@@ -426,7 +491,6 @@ export class VendasService {
       Object.assign(venda, updateData);
       await this.vendaRepository.save(venda);
 
-      
       // Após atualizar a venda, recalcular o status baseado nas baixas
       await this.updateVendaStatusBasedOnBaixas(id);
 
@@ -549,9 +613,12 @@ export class VendasService {
         queryBuilder.andWhere('venda.dataFechamento IS NOT NULL');
       }
       if (filters.dataInicialFechamento) {
-        queryBuilder.andWhere('venda.dataFechamento >= :dataInicialFechamento', {
-          dataInicialFechamento: filters.dataInicialFechamento,
-        });
+        queryBuilder.andWhere(
+          'venda.dataFechamento >= :dataInicialFechamento',
+          {
+            dataInicialFechamento: filters.dataInicialFechamento,
+          },
+        );
       }
       if (filters.dataFinalFechamento) {
         queryBuilder.andWhere('venda.dataFechamento <= :dataFinalFechamento', {
@@ -578,16 +645,26 @@ export class VendasService {
       });
     }
 
-    if (filters.pctLucroMenorQue != null && !Number.isNaN(filters.pctLucroMenorQue)) {
-      queryBuilder.andWhere('venda.valorPago IS NOT NULL AND venda.valorPago > 0');
+    if (
+      filters.pctLucroMenorQue != null &&
+      !Number.isNaN(filters.pctLucroMenorQue)
+    ) {
+      queryBuilder.andWhere(
+        'venda.valorPago IS NOT NULL AND venda.valorPago > 0',
+      );
       queryBuilder.andWhere(
         '(CAST(venda.valorCliente AS DECIMAL) - CAST(venda.valorPago AS DECIMAL)) / CAST(venda.valorPago AS DECIMAL) * 100 < :pctLucroMenorQue',
         { pctLucroMenorQue: filters.pctLucroMenorQue },
       );
     }
 
-    if (filters.pctLucroMaiorQue != null && !Number.isNaN(filters.pctLucroMaiorQue)) {
-      queryBuilder.andWhere('venda.valorPago IS NOT NULL AND venda.valorPago > 0');
+    if (
+      filters.pctLucroMaiorQue != null &&
+      !Number.isNaN(filters.pctLucroMaiorQue)
+    ) {
+      queryBuilder.andWhere(
+        'venda.valorPago IS NOT NULL AND venda.valorPago > 0',
+      );
       queryBuilder.andWhere(
         '(CAST(venda.valorCliente AS DECIMAL) - CAST(venda.valorPago AS DECIMAL)) / CAST(venda.valorPago AS DECIMAL) * 100 > :pctLucroMaiorQue',
         { pctLucroMaiorQue: filters.pctLucroMaiorQue },
@@ -597,14 +674,14 @@ export class VendasService {
 
   /**
    * Atualiza o status da venda baseado no total das baixas
-   * 
+   *
    * Regras de atualização de status:
    * - REGISTRADO: Nenhuma baixa (totalPago = 0)
    * - PAGO_PARCIAL: Valor baixado > 0 E menor que valorCliente
    * - PAGO: Valor baixado >= valorCliente
-   * 
+   *
    * O status é sempre atualizado baseado nas baixas, independente de dataFechamento.
-   * 
+   *
    * @param idvenda - ID da venda para atualizar o status
    */
   async updateVendaStatusBasedOnBaixas(idvenda: string): Promise<void> {
@@ -638,7 +715,10 @@ export class VendasService {
         await this.vendaRepository.update(idvenda, { status: novoStatus });
       }
     } catch (error) {
-      this.logger.error(`[updateVendaStatusBasedOnBaixas] Erro ao atualizar status da venda ${idvenda}:`, error);
+      this.logger.error(
+        `[updateVendaStatusBasedOnBaixas] Erro ao atualizar status da venda ${idvenda}:`,
+        error,
+      );
       // Não lançar erro para não quebrar a edição da venda
     }
   }
@@ -661,19 +741,21 @@ export class VendasService {
     });
 
     if (vendas.length === 0) {
-      throw new NotFoundException('Nenhuma venda encontrada com os IDs fornecidos');
+      throw new NotFoundException(
+        'Nenhuma venda encontrada com os IDs fornecidos',
+      );
     }
 
     // Agrupar vendas por origem/unidade para chamar o agente correto
     const vendasPorOrigem = new Map<VendaOrigem, typeof vendas>();
     const vendasSemOrigem: typeof vendas = [];
-    
+
     for (const venda of vendas) {
       // Validar se tem dataFechamento - não processar essas vendas
       if (venda.dataFechamento) {
         continue;
       }
-      
+
       if (!venda.origem) {
         vendasSemOrigem.push(venda);
         continue;
@@ -693,7 +775,8 @@ export class VendasService {
         falhas.push({
           id: venda.id,
           protocolo: venda.protocolo,
-          motivo: 'Não é possível atualizar o valor de compra de uma venda com fechamento registrado.',
+          motivo:
+            'Não é possível atualizar o valor de compra de uma venda com fechamento registrado.',
         });
       }
     }
@@ -720,7 +803,7 @@ export class VendasService {
               if (!venda.protocolo) {
                 continue;
               }
-              
+
               const protocoloStr = venda.protocolo.toString().trim();
               if (!/^\d+$/.test(protocoloStr)) {
                 continue;
@@ -767,14 +850,14 @@ export class VendasService {
             vendasComProtocoloInvalido.push(venda);
             continue;
           }
-          
+
           // Validar se o protocolo contém apenas números
           const protocoloStr = venda.protocolo.toString().trim();
           if (!/^\d+$/.test(protocoloStr)) {
             vendasComProtocoloInvalido.push(venda);
             continue;
           }
-          
+
           vendasComProtocoloValido.push(venda);
         }
 
@@ -803,7 +886,8 @@ export class VendasService {
             falhas.push({
               id: venda.id,
               protocolo: venda.protocolo,
-              motivo: 'Protocolo inválido. O protocolo deve conter apenas números.',
+              motivo:
+                'Protocolo inválido. O protocolo deve conter apenas números.',
             });
           }
         }
@@ -815,7 +899,7 @@ export class VendasService {
 
         // Extrair protocolos das vendas válidas (converter string para number)
         const protocolos = vendasComProtocoloValido
-          .map((v) => parseInt(v.protocolo!, 10))
+          .map((v) => parseInt(v.protocolo, 10))
           .filter((p): p is number => !isNaN(p));
 
         // Chamar o agente usando fetch nativo com timeout
@@ -841,24 +925,32 @@ export class VendasService {
           );
         } catch (fetchError: any) {
           clearTimeout(timeoutId);
-          
+
           // Tratar diferentes tipos de erro
           if (fetchError.name === 'AbortError') {
-            throw new Error('Timeout: O agente não respondeu dentro do tempo esperado (30 segundos)');
+            throw new Error(
+              'Timeout: O agente não respondeu dentro do tempo esperado (30 segundos)',
+            );
           }
-          
+
           if (fetchError.cause) {
             const cause = fetchError.cause;
             const nomeUnidade = this.getNomeUnidadePorOrigem(origem);
             if (cause.code === 'ENOTFOUND' || cause.code === 'ECONNREFUSED') {
-              throw new Error(`Não foi possível conectar à unidade: ${nomeUnidade}`);
+              throw new Error(
+                `Não foi possível conectar à unidade: ${nomeUnidade}`,
+              );
             }
             if (cause.code === 'ETIMEDOUT') {
-              throw new Error(`Timeout ao conectar à unidade: ${nomeUnidade}. O serviço pode estar sobrecarregado.`);
+              throw new Error(
+                `Timeout ao conectar à unidade: ${nomeUnidade}. O serviço pode estar sobrecarregado.`,
+              );
             }
           }
-          
-          throw new Error(`Erro ao chamar agente: ${fetchError.message || 'Erro desconhecido'}`);
+
+          throw new Error(
+            `Erro ao chamar agente: ${fetchError.message || 'Erro desconhecido'}`,
+          );
         } finally {
           clearTimeout(timeoutId);
         }
@@ -870,15 +962,16 @@ export class VendasService {
           } catch {
             // Se não conseguir ler o texto do erro, usar mensagem padrão
           }
-          
-          const statusMessage = response.status === 404
-            ? 'Endpoint não encontrado no agente'
-            : response.status === 401 || response.status === 403
-            ? 'Erro de autenticação com o agente'
-            : response.status >= 500
-            ? 'Erro interno no agente'
-            : `Erro HTTP ${response.status}`;
-          
+
+          const statusMessage =
+            response.status === 404
+              ? 'Endpoint não encontrado no agente'
+              : response.status === 401 || response.status === 403
+                ? 'Erro de autenticação com o agente'
+                : response.status >= 500
+                  ? 'Erro interno no agente'
+                  : `Erro HTTP ${response.status}`;
+
           throw new Error(`${statusMessage}: ${errorText}`);
         }
 
@@ -895,9 +988,9 @@ export class VendasService {
 
         // Atualizar vendas com os valores retornados (apenas as válidas)
         for (const venda of vendasComProtocoloValido) {
-          const protocoloNum = parseInt(venda.protocolo!, 10);
+          const protocoloNum = parseInt(venda.protocolo, 10);
           const valorCompra = valorCompraMap.get(protocoloNum);
-          
+
           if (valorCompra === undefined) {
             // Se não encontrou no agente e o usuário quer atualizar com valor do cliente
             if (dto.atualizarComValorCliente === true) {
@@ -958,7 +1051,8 @@ export class VendasService {
               falhas.push({
                 id: venda.id,
                 protocolo: venda.protocolo,
-                motivo: 'Protocolo inválido. O protocolo deve conter apenas números.',
+                motivo:
+                  'Protocolo inválido. O protocolo deve conter apenas números.',
               });
               continue;
             }
@@ -968,7 +1062,8 @@ export class VendasService {
               falhas.push({
                 id: venda.id,
                 protocolo: venda.protocolo,
-                motivo: 'Protocolo inválido. O protocolo deve conter apenas números.',
+                motivo:
+                  'Protocolo inválido. O protocolo deve conter apenas números.',
               });
               continue;
             }
@@ -997,7 +1092,7 @@ export class VendasService {
           if (error instanceof Error) {
             errorMessage = error.message;
           } else if (typeof error === 'object' && error !== null) {
-            errorMessage = (error as any).message || JSON.stringify(error);
+            errorMessage = error.message || JSON.stringify(error);
           }
 
           for (const venda of vendasGrupo) {
@@ -1033,7 +1128,9 @@ export class VendasService {
   } | null {
     const agentes = this.configService.get('agentes');
     if (!agentes) {
-      this.logger.warn('[getAgenteConfigByOrigem] Configuração de agentes não encontrada');
+      this.logger.warn(
+        '[getAgenteConfigByOrigem] Configuração de agentes não encontrada',
+      );
       return null;
     }
 
@@ -1050,7 +1147,9 @@ export class VendasService {
         config = agentes.neropolis || null;
         break;
       default:
-        this.logger.warn(`[getAgenteConfigByOrigem] Origem não mapeada: ${origem}`);
+        this.logger.warn(
+          `[getAgenteConfigByOrigem] Origem não mapeada: ${origem}`,
+        );
         return null;
     }
 

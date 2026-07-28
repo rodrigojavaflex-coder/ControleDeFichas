@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Unidade } from '../../../common/enums/unidade.enum';
 

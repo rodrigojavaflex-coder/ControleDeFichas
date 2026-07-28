@@ -28,7 +28,9 @@ export class CreatePainelProducaoImport1748900000000
       }
     }
 
-    const painelExists = await queryRunner.hasTable('painel_medicos_representantes');
+    const painelExists = await queryRunner.hasTable(
+      'painel_medicos_representantes',
+    );
     if (!painelExists) {
       await queryRunner.createTable(
         new Table({
@@ -167,13 +169,33 @@ export class CreatePainelProducaoImport1748900000000
             { name: 'etapa', type: 'varchar', length: '200' },
             { name: 'posicaoEtapa', type: 'integer' },
             { name: 'codFuncEntrada', type: 'integer', isNullable: true },
-            { name: 'funcEntrada', type: 'varchar', length: '500', isNullable: true },
+            {
+              name: 'funcEntrada',
+              type: 'varchar',
+              length: '500',
+              isNullable: true,
+            },
             { name: 'codFuncSaida', type: 'integer', isNullable: true },
-            { name: 'funcSaida', type: 'varchar', length: '500', isNullable: true },
+            {
+              name: 'funcSaida',
+              type: 'varchar',
+              length: '500',
+              isNullable: true,
+            },
             { name: 'dataEntrada', type: 'date', isNullable: true },
-            { name: 'horaEntrada', type: 'varchar', length: '8', isNullable: true },
+            {
+              name: 'horaEntrada',
+              type: 'varchar',
+              length: '8',
+              isNullable: true,
+            },
             { name: 'dataSaida', type: 'date', isNullable: true },
-            { name: 'horaSaida', type: 'varchar', length: '8', isNullable: true },
+            {
+              name: 'horaSaida',
+              type: 'varchar',
+              length: '8',
+              isNullable: true,
+            },
             { name: 'tempoEtapa', type: 'integer', isNullable: true },
             {
               name: 'formaFarmaceutica',
@@ -194,15 +216,45 @@ export class CreatePainelProducaoImport1748900000000
               length: '20',
               isNullable: true,
             },
-            { name: 'laboratorio', type: 'varchar', length: '200', isNullable: true },
-            { name: 'tipoFormula', type: 'varchar', length: '200', isNullable: true },
+            {
+              name: 'laboratorio',
+              type: 'varchar',
+              length: '200',
+              isNullable: true,
+            },
+            {
+              name: 'tipoFormula',
+              type: 'varchar',
+              length: '200',
+              isNullable: true,
+            },
             { name: 'qtdPrincipiosAtivos', type: 'integer', default: 0 },
             { name: 'principiosAtivos', type: 'text', isNullable: true },
-            { name: 'embalagem', type: 'varchar', length: '500', isNullable: true },
-            { name: 'paciente', type: 'varchar', length: '500', isNullable: true },
-            { name: 'cliente', type: 'varchar', length: '500', isNullable: true },
+            {
+              name: 'embalagem',
+              type: 'varchar',
+              length: '500',
+              isNullable: true,
+            },
+            {
+              name: 'paciente',
+              type: 'varchar',
+              length: '500',
+              isNullable: true,
+            },
+            {
+              name: 'cliente',
+              type: 'varchar',
+              length: '500',
+              isNullable: true,
+            },
             { name: 'dataRetirada', type: 'date', isNullable: true },
-            { name: 'horaRetirada', type: 'varchar', length: '8', isNullable: true },
+            {
+              name: 'horaRetirada',
+              type: 'varchar',
+              length: '8',
+              isNullable: true,
+            },
             {
               name: 'criadoEm',
               type: 'timestamp',

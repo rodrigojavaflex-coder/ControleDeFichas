@@ -39,10 +39,15 @@ export class FichaTecnicaService {
         if (uniqueMatch) {
           const column = uniqueMatch[1];
           const value = uniqueMatch[2];
-          const columnName = column === 'codigo_formula_certa' ? 'código fórmula certa' : column;
-          throw new BadRequestException(`Ficha técnica duplicada: já existe ficha técnica com ${columnName} = "${value}".`);
+          const columnName =
+            column === 'codigo_formula_certa' ? 'código fórmula certa' : column;
+          throw new BadRequestException(
+            `Ficha técnica duplicada: já existe ficha técnica com ${columnName} = "${value}".`,
+          );
         } else {
-          throw new BadRequestException('Ficha técnica duplicada: já existe um registro com esses dados.');
+          throw new BadRequestException(
+            'Ficha técnica duplicada: já existe um registro com esses dados.',
+          );
         }
       }
       throw new BadRequestException(
@@ -207,10 +212,15 @@ export class FichaTecnicaService {
         if (uniqueMatch) {
           const column = uniqueMatch[1];
           const value = uniqueMatch[2];
-          const columnName = column === 'codigo_formula_certa' ? 'código fórmula certa' : column;
-          throw new BadRequestException(`Ficha técnica duplicada: já existe ficha técnica com ${columnName} = "${value}".`);
+          const columnName =
+            column === 'codigo_formula_certa' ? 'código fórmula certa' : column;
+          throw new BadRequestException(
+            `Ficha técnica duplicada: já existe ficha técnica com ${columnName} = "${value}".`,
+          );
         } else {
-          throw new BadRequestException('Ficha técnica duplicada: já existe um registro com esses dados.');
+          throw new BadRequestException(
+            'Ficha técnica duplicada: já existe um registro com esses dados.',
+          );
         }
       }
       if (error instanceof NotFoundException) {
@@ -232,7 +242,7 @@ export class FichaTecnicaService {
         throw error;
       }
       // Violação de FK (certificados associados)
-      const pgErrorCode = (error as any)?.code || (error as any)?.driverError?.code;
+      const pgErrorCode = error?.code || error?.driverError?.code;
       if (pgErrorCode === '23503') {
         throw new BadRequestException(
           'Não é possível excluir esta ficha técnica pois existem certificados associados. Remova os certificados antes de excluir a ficha técnica.',

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface SendTemplateWithHeaderImageParams {
@@ -34,9 +38,13 @@ export class WhatsappService {
   }
 
   /** Template utilitário: cabeçalho Imagem (recibo PNG) + corpo com variáveis. */
-  async sendTemplateWithHeaderImage(params: SendTemplateWithHeaderImageParams): Promise<string> {
+  async sendTemplateWithHeaderImage(
+    params: SendTemplateWithHeaderImageParams,
+  ): Promise<string> {
     if (!params.headerImageMediaId?.trim()) {
-      throw new BadRequestException('Mídia do recibo não foi carregada no WhatsApp.');
+      throw new BadRequestException(
+        'Mídia do recibo não foi carregada no WhatsApp.',
+      );
     }
 
     const components: Array<Record<string, unknown>> = [
@@ -52,7 +60,9 @@ export class WhatsappService {
     ];
 
     if (!params.bodyParams.length) {
-      throw new BadRequestException('Parâmetros do corpo do template são obrigatórios.');
+      throw new BadRequestException(
+        'Parâmetros do corpo do template são obrigatórios.',
+      );
     }
     components.push({
       type: 'body',
@@ -72,7 +82,9 @@ export class WhatsappService {
     const data = await this.postJson('/messages', body);
     const messageId = data?.messages?.[0]?.id ?? '';
     if (!messageId) {
-      throw new BadRequestException('WhatsApp não retornou ID da mensagem com imagem do recibo.');
+      throw new BadRequestException(
+        'WhatsApp não retornou ID da mensagem com imagem do recibo.',
+      );
     }
     return messageId;
   }
@@ -88,7 +100,11 @@ export class WhatsappService {
     return this.extractMessageId(await this.postJson('/messages', body));
   }
 
-  async sendImageMessage(to: string, mediaId: string, caption?: string): Promise<string> {
+  async sendImageMessage(
+    to: string,
+    mediaId: string,
+    caption?: string,
+  ): Promise<string> {
     const image: Record<string, string> = { id: mediaId };
     if (caption?.trim()) {
       image.caption = caption.trim().slice(0, 1024);
@@ -138,7 +154,11 @@ export class WhatsappService {
     return this.uploadMedia(filename, content, 'image/png');
   }
 
-  async uploadMedia(filename: string, content: Buffer, mimeType: string): Promise<string> {
+  async uploadMedia(
+    filename: string,
+    content: Buffer,
+    mimeType: string,
+  ): Promise<string> {
     if (!content?.length) {
       throw new BadRequestException('Arquivo de mídia está vazio.');
     }
@@ -159,7 +179,8 @@ export class WhatsappService {
   ): Promise<{ buffer: Buffer; mimeType: string }> {
     const meta = await this.getJson(`/${mediaId}`);
     const url = meta?.url as string | undefined;
-    const mimeType = (meta?.mime_type as string | undefined) ?? 'application/octet-stream';
+    const mimeType =
+      (meta?.mime_type as string | undefined) ?? 'application/octet-stream';
     if (!url) {
       throw new BadRequestException('WhatsApp não retornou URL da mídia.');
     }
@@ -177,7 +198,9 @@ export class WhatsappService {
 
   private async getJson(path: string): Promise<any> {
     if (!this.isEnabled()) {
-      throw new BadRequestException('Envio WhatsApp desativado (WHATSAPP_ENABLED=false).');
+      throw new BadRequestException(
+        'Envio WhatsApp desativado (WHATSAPP_ENABLED=false).',
+      );
     }
     const version = this.config.get<string>('WHATSAPP_API_VERSION') ?? 'v21.0';
     const response = await fetch(
@@ -205,7 +228,9 @@ export class WhatsappService {
 
   private async postJson(path: string, payload: unknown): Promise<any> {
     if (!this.isEnabled()) {
-      throw new BadRequestException('Envio WhatsApp desativado (WHATSAPP_ENABLED=false).');
+      throw new BadRequestException(
+        'Envio WhatsApp desativado (WHATSAPP_ENABLED=false).',
+      );
     }
     const response = await fetch(this.buildUrl(path), {
       method: 'POST',
@@ -224,7 +249,9 @@ export class WhatsappService {
 
   private async postFormData(path: string, payload: FormData): Promise<any> {
     if (!this.isEnabled()) {
-      throw new BadRequestException('Envio WhatsApp desativado (WHATSAPP_ENABLED=false).');
+      throw new BadRequestException(
+        'Envio WhatsApp desativado (WHATSAPP_ENABLED=false).',
+      );
     }
     const response = await fetch(this.buildUrl(path), {
       method: 'POST',

@@ -219,7 +219,10 @@ export class CreateCadastrosTables1735000001000 implements MigrationInterface {
         (idx) => idx.name === 'idx_prescritores_numeroCRM',
       );
       if (idxPrescritoresCRM) {
-        await queryRunner.dropIndex('prescritores', 'idx_prescritores_numeroCRM');
+        await queryRunner.dropIndex(
+          'prescritores',
+          'idx_prescritores_numeroCRM',
+        );
       }
       await queryRunner.dropTable('prescritores');
     }

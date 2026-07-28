@@ -1,11 +1,9 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  TableColumn,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 /** Contato e endereço no cadastro de funcionários (folha); colunas camelCase como o restante da tabela `funcionarios`. */
-export class FuncionarioContatoPessoal1740960000000 implements MigrationInterface {
+export class FuncionarioContatoPessoal1740960000000
+  implements MigrationInterface
+{
   name = 'FuncionarioContatoPessoal1740960000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

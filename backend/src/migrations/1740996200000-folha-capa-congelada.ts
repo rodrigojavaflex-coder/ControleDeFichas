@@ -1,4 +1,9 @@
-import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  TableColumn,
+  TableForeignKey,
+} from 'typeorm';
 
 /**
  * Congelamento por capa: impede alteração de itens e cadastro do funcionário
@@ -40,7 +45,10 @@ export class FolhaCapaCongelada1740996200000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropForeignKey('folha_capa', 'FK_folha_capa_congelada_por');
+    await queryRunner.dropForeignKey(
+      'folha_capa',
+      'FK_folha_capa_congelada_por',
+    );
     await queryRunner.dropColumn('folha_capa', 'congeladaPorId');
     await queryRunner.dropColumn('folha_capa', 'congeladaEm');
     await queryRunner.dropColumn('folha_capa', 'congelada');

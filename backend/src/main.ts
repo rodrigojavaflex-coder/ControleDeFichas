@@ -16,19 +16,21 @@ import { assertPermissionCatalogIntegrity } from './common/utils/permission-cata
  */
 async function runMigrations() {
   const logger = new Logger('Migrations');
-  
+
   try {
     logger.log('🔄 Verificando migrations pendentes...');
-    
+
     if (!AppDataSource.isInitialized) {
       await AppDataSource.initialize();
       logger.log('✅ DataSource inicializado');
     }
 
     const executedMigrations = await AppDataSource.runMigrations();
-    
+
     if (executedMigrations && executedMigrations.length > 0) {
-      logger.log(`✅ ${executedMigrations.length} migration(s) executada(s) com sucesso:`);
+      logger.log(
+        `✅ ${executedMigrations.length} migration(s) executada(s) com sucesso:`,
+      );
       executedMigrations.forEach((migration) => {
         logger.log(`   - ${migration.name}`);
       });
@@ -45,7 +47,9 @@ async function runMigrations() {
     }
     // Não encerrar a aplicação - pode ser que as migrations já foram executadas
     // ou que há um problema de conexão temporário
-    logger.warn('⚠️  Continuando inicialização da aplicação mesmo com erro nas migrations');
+    logger.warn(
+      '⚠️  Continuando inicialização da aplicação mesmo com erro nas migrations',
+    );
   }
 }
 
@@ -53,7 +57,7 @@ async function bootstrap() {
   // Verificar se deve executar migrations antes de criar a aplicação
   const nodeEnv = process.env.NODE_ENV || 'development';
   const databaseSynchronize = process.env.DATABASE_SYNCHRONIZE === 'true';
-  
+
   // Executar migrations se:
   // 1. Estiver em produção (NODE_ENV=production)
   // 2. Ou se DATABASE_SYNCHRONIZE=false (não usar auto-sync)
@@ -182,6 +186,9 @@ async function bootstrap() {
 
 bootstrap().catch((error) => {
   const logger = new Logger('bootstrap');
-  logger.error('Falha ao iniciar a aplicação', error instanceof Error ? error.stack : String(error));
+  logger.error(
+    'Falha ao iniciar a aplicação',
+    error instanceof Error ? error.stack : String(error),
+  );
   process.exit(1);
 });

@@ -118,7 +118,12 @@ export class ProducaoProdutividadeService {
       );
     }
 
-    return this.consultarAnaliticoLinhas(usuario, unidades, dataInicio, dataFim);
+    return this.consultarAnaliticoLinhas(
+      usuario,
+      unidades,
+      dataInicio,
+      dataFim,
+    );
   }
 
   private resolverUnidadesConsulta(
@@ -134,10 +139,7 @@ export class ProducaoProdutividadeService {
           : [];
 
     const permitidas = unidadesPermitidasProdutividade(usuario);
-    const alvo =
-      solicitadas.length > 0
-        ? solicitadas
-        : permitidas ?? [];
+    const alvo = solicitadas.length > 0 ? solicitadas : (permitidas ?? []);
 
     if (alvo.length === 0) {
       throw new BadRequestException('Informe ao menos uma unidade.');
@@ -330,8 +332,7 @@ export class ProducaoProdutividadeService {
           codEtapa: e.codEtapa,
           etapa: e.etapa,
           quantidade: e.quantidade,
-          valorUnitario:
-            e.quantidade > 0 ? e.valorTotal / e.quantidade : 0,
+          valorUnitario: e.quantidade > 0 ? e.valorTotal / e.quantidade : 0,
           valorTotal: e.valorTotal,
         }))
         .sort((a, b) => a.etapa.localeCompare(b.etapa, 'pt-BR'));
@@ -568,10 +569,7 @@ export class ProducaoProdutividadeService {
   private async aplicarGestaoConsolidada(
     unidades: Unidade[],
     aggPorCodErp: Map<number, AccFuncionarioConsolidado>,
-    remuneracaoPorUnidadeEtapa: Map<
-      string,
-      { valor: number; etapa: string }
-    >,
+    remuneracaoPorUnidadeEtapa: Map<string, { valor: number; etapa: string }>,
     totalBaseGestaoPorCodEtapa: Map<string, number>,
   ): Promise<void> {
     const gestaoConfigs = await this.funcionarioEtapaRepo.find({
@@ -779,8 +777,6 @@ export class ProducaoProdutividadeService {
   ): Funcionario | undefined {
     const candidatos = funcionariosPorCodErp.get(codFuncSaida);
     if (!candidatos?.length) return undefined;
-    return (
-      candidatos.find((f) => f.unidade === unidadeResumo) ?? candidatos[0]
-    );
+    return candidatos.find((f) => f.unidade === unidadeResumo) ?? candidatos[0];
   }
 }

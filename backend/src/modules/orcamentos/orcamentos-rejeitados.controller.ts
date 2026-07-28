@@ -35,7 +35,9 @@ export class OrcamentosRejeitadosController {
 
   @Get('opcoes-filtro')
   @Permissions(Permission.ORCAMENTO_REJEITADO_READ)
-  @ApiOperation({ summary: '[Legado] Opções de filtro para orçamentos rejeitados' })
+  @ApiOperation({
+    summary: '[Legado] Opções de filtro para orçamentos rejeitados',
+  })
   @ApiResponse({ status: 200, type: OrcamentosRejeitadosOpcoesFiltroDto })
   getOpcoesFiltro(
     @Query() dto: FindOrcamentosRejeitadosDto,

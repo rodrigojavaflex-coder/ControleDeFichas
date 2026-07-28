@@ -1,11 +1,9 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  TableColumn,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 /** Remove `salarioBase` do cadastro de funcionário (valor passa a derivar só de eventos/itens de folha). */
-export class FuncionarioRemoveSalarioBase1740996400000 implements MigrationInterface {
+export class FuncionarioRemoveSalarioBase1740996400000
+  implements MigrationInterface
+{
   name = 'FuncionarioRemoveSalarioBase1740996400000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

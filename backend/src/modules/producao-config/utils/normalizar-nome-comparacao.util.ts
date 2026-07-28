@@ -1,5 +1,7 @@
 /** Normaliza nome para comparação (trim, espaços, maiúsculas pt-BR). */
-export function normalizarNomeComparacao(nome: string | null | undefined): string {
+export function normalizarNomeComparacao(
+  nome: string | null | undefined,
+): string {
   const base = (nome ?? '').trim().replace(/\s+/g, ' ');
   if (!base) return '';
   try {

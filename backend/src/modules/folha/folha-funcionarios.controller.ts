@@ -12,11 +12,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FolhaFuncionariosService } from './folha-funcionarios.service';
 import { CreateFuncionarioFolhaDto } from './dto/create-funcionario-folha.dto';
 import { FindFuncionarioFolhaDto } from './dto/find-funcionario-folha.dto';
@@ -73,13 +69,19 @@ export class FolhaFuncionariosController {
   @Get(':id')
   @Permissions(Permission.FOLHA_FUNCIONARIO_READ)
   @ApiOperation({ summary: 'Detalhe do funcionário' })
-  findOne(@Param('id', ParseUUIDPipe) id: string, @Req() req: { user: Usuario }) {
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: { user: Usuario },
+  ) {
     return this.service.findOne(req.user, id);
   }
 
   @Patch(':id')
   @Permissions(Permission.FOLHA_FUNCIONARIO_UPDATE)
-  @ApiOperation({ summary: 'Atualizar dados do funcionário (inclusive unidade, se permitido pelo escopo)' })
+  @ApiOperation({
+    summary:
+      'Atualizar dados do funcionário (inclusive unidade, se permitido pelo escopo)',
+  })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateFuncionarioFolhaDto,

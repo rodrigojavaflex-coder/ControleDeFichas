@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayNotEmpty, IsArray, IsDateString, IsOptional, IsUUID } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsDateString,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 export class FecharVendasEmMassaDto {
   @ApiProperty({
@@ -18,6 +24,9 @@ export class FecharVendasEmMassaDto {
     example: '2025-11-12',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data de fechamento deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data de fechamento deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataFechamento?: string;
 }

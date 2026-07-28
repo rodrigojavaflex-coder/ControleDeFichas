@@ -19,7 +19,10 @@ export class ProcessarBaixasEmMassaDto {
   })
   @IsArray({ message: 'A lista de vendas deve ser um array válido' })
   @ArrayMinSize(1, { message: 'Informe ao menos uma venda para processar' })
-  @IsUUID('4', { each: true, message: 'Cada ID de venda deve ser um UUID válido' })
+  @IsUUID('4', {
+    each: true,
+    message: 'Cada ID de venda deve ser um UUID válido',
+  })
   vendaIds: string[];
 
   @ApiProperty({
@@ -33,7 +36,10 @@ export class ProcessarBaixasEmMassaDto {
     description: 'Data de referência da baixa (YYYY-MM-DD)',
     example: '2025-11-18',
   })
-  @IsDateString({}, { message: 'Data da baixa deve estar no formato YYYY-MM-DD' })
+  @IsDateString(
+    {},
+    { message: 'Data da baixa deve estar no formato YYYY-MM-DD' },
+  )
   dataBaixa: string;
 
   @ApiProperty({

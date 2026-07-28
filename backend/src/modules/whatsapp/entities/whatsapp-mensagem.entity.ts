@@ -19,7 +19,9 @@ export class WhatsappMensagem extends BaseEntity {
   @Column({ type: 'uuid' })
   conversaId: string;
 
-  @ManyToOne(() => WhatsappConversa, (c) => c.mensagens, { onDelete: 'CASCADE' })
+  @ManyToOne(() => WhatsappConversa, (c) => c.mensagens, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'conversaId' })
   conversa: WhatsappConversa;
 

@@ -9,7 +9,11 @@ export class UpdateFolhaItemDto {
   @IsNumber()
   valor?: number;
 
-  @ApiProperty({ example: 1.5, required: false, description: 'Referência / quantidade' })
+  @ApiProperty({
+    example: 1.5,
+    required: false,
+    description: 'Referência / quantidade',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import {
   IMPORTACAO_MANUAL_LOG_MAX,
   ImportacaoManualFase,
@@ -18,7 +14,9 @@ export class ImportacaoManualProgressService {
   private progress: ImportacaoManualProgress | null = null;
 
   getProgress(): ImportacaoManualProgress | null {
-    return this.progress ? { ...this.progress, logs: [...this.progress.logs] } : null;
+    return this.progress
+      ? { ...this.progress, logs: [...this.progress.logs] }
+      : null;
   }
 
   estaEmExecucao(): boolean {

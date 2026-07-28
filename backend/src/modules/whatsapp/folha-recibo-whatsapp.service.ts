@@ -3,7 +3,10 @@ import { Unidade } from '../../common/enums/unidade.enum';
 import { AuditAction } from '../../common/enums/auditoria.enum';
 import { AuditoriaService } from '../../common/services/auditoria.service';
 import { QueryFolhaCapaDto } from '../folha/dto/query-folha-capa.dto';
-import { FolhaCapasService, FolhaCapaDetalheDto } from '../folha/folha-capas.service';
+import {
+  FolhaCapasService,
+  FolhaCapaDetalheDto,
+} from '../folha/folha-capas.service';
 import { FolhaFechamentoService } from '../folha/folha-fechamento.service';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { EnviarRecibosWhatsappDto } from '../folha/dto/enviar-recibos-whatsapp.dto';
@@ -40,8 +43,12 @@ export class FolhaReciboWhatsappService {
     capaId: string,
     unidade: Unidade,
   ): Promise<{ ok: true; templateMessageId: string; imageMessageId: string }> {
-    const detalhe = await this.folhaCapasService.buscarCompletaPorId(usuario, capaId, unidade);
-    this.assertCompetenciaFechada(
+    const detalhe = await this.folhaCapasService.buscarCompletaPorId(
+      usuario,
+      capaId,
+      unidade,
+    );
+    await this.assertCompetenciaFechada(
       unidade,
       detalhe.capa.ano,
       detalhe.capa.mes,
@@ -50,7 +57,9 @@ export class FolhaReciboWhatsappService {
 
     const result = await this.processarEnvio(usuario, detalhe);
     if (!result.enviado) {
-      throw new BadRequestException(result.motivo ?? 'Não foi possível enviar o recibo por WhatsApp.');
+      throw new BadRequestException(
+        result.motivo ?? 'Não foi possível enviar o recibo por WhatsApp.',
+      );
     }
     return {
       ok: true,
@@ -63,7 +72,12 @@ export class FolhaReciboWhatsappService {
     usuario: Usuario,
     dto: EnviarRecibosWhatsappDto,
   ): Promise<EnviarRecibosMassaResultado> {
-    this.assertCompetenciaFechada(dto.unidade, dto.ano, dto.mes, dto.folhaTipoId);
+    await this.assertCompetenciaFechada(
+      dto.unidade,
+      dto.ano,
+      dto.mes,
+      dto.folhaTipoId,
+    );
 
     const filtros: QueryFolhaCapaDto = {
       unidade: dto.unidade,
@@ -112,7 +126,13 @@ export class FolhaReciboWhatsappService {
     if (funcionario?.naoReceberReciboWhatsapp) {
       const motivo =
         'Funcionário marcado para não receber recibo pelo WhatsApp.';
-      await this.registrarAuditoriaTentativa(usuario, detalhe, null, false, motivo);
+      await this.registrarAuditoriaTentativa(
+        usuario,
+        detalhe,
+        null,
+        false,
+        motivo,
+      );
       return {
         enviado: false,
         motivo,
@@ -120,9 +140,17 @@ export class FolhaReciboWhatsappService {
         imageMessageId: '',
       };
     }
-    const telefoneNormalizado = canonizarTelefoneWhatsappBR(funcionario?.telefone ?? null);
+    const telefoneNormalizado = canonizarTelefoneWhatsappBR(
+      funcionario?.telefone ?? null,
+    );
     if (!telefoneNormalizado) {
-      await this.registrarAuditoriaTentativa(usuario, detalhe, null, false, 'Telefone não cadastrado/ inválido');
+      await this.registrarAuditoriaTentativa(
+        usuario,
+        detalhe,
+        null,
+        false,
+        'Telefone não cadastrado/ inválido',
+      );
       return {
         enviado: false,
         motivo: 'Telefone não cadastrado ou inválido (E.164).',
@@ -135,7 +163,8 @@ export class FolhaReciboWhatsappService {
       const saudacao = this.saudacaoAtual();
       const nome = funcionario?.nome?.trim() || 'Funcionário';
       const contatoDuvidasNome = this.whatsappService.getContatoDuvidasNome();
-      const contatoDuvidasNumero = this.whatsappService.getContatoDuvidasNumero();
+      const contatoDuvidasNumero =
+        this.whatsappService.getContatoDuvidasNumero();
 
       const png = this.reciboImagemService.gerarReciboPng(
         detalhe,
@@ -147,7 +176,12 @@ export class FolhaReciboWhatsappService {
         detalhe.capa.ano,
       );
       const mediaId = await this.whatsappService.uploadPngMedia(arquivo, png);
-      const bodyParams = [nome, saudacao, contatoDuvidasNome, contatoDuvidasNumero];
+      const bodyParams = [
+        nome,
+        saudacao,
+        contatoDuvidasNome,
+        contatoDuvidasNumero,
+      ];
 
       // Um único template: cabeçalho Imagem (recibo) + corpo com 4 variáveis (RN-015).
       const messageId = await this.whatsappService.sendTemplateWithHeaderImage({
@@ -176,7 +210,9 @@ export class FolhaReciboWhatsappService {
       return { enviado: true, templateMessageId, imageMessageId };
     } catch (error: any) {
       let motivo =
-        error?.response?.data?.error?.message || error?.message || 'Erro ao enviar WhatsApp.';
+        error?.response?.data?.error?.message ||
+        error?.message ||
+        'Erro ao enviar WhatsApp.';
       const details =
         error?.response?.data?.error?.error_data?.details ??
         (typeof motivo === 'string' && motivo.includes('header') ? motivo : '');
@@ -190,7 +226,13 @@ export class FolhaReciboWhatsappService {
           `WHATSAPP_TEMPLATE_RECIBO_NAME (${this.whatsappService.getTemplateName()}) precisa ` +
           'ter cabeçalho Imagem e corpo com 4 variáveis (Utilidade).';
       }
-      await this.registrarAuditoriaTentativa(usuario, detalhe, telefoneNormalizado, false, motivo);
+      await this.registrarAuditoriaTentativa(
+        usuario,
+        detalhe,
+        telefoneNormalizado,
+        false,
+        motivo,
+      );
       return {
         enviado: false,
         motivo,
@@ -206,7 +248,12 @@ export class FolhaReciboWhatsappService {
     mes: number,
     folhaTipoId: string,
   ): Promise<void> {
-    const status = await this.folhaFechamentoService.getStatus(unidade, ano, mes, folhaTipoId);
+    const status = await this.folhaFechamentoService.getStatus(
+      unidade,
+      ano,
+      mes,
+      folhaTipoId,
+    );
     if (!status.registrada || !status.fechado) {
       throw new BadRequestException(
         'Envio permitido apenas com lote fechado para esta competência (RN-015).',

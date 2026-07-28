@@ -90,14 +90,14 @@ export class CaixaFechamentoConsolidadoService {
       },
     });
 
-    const totaisPorForma = await this.fechamentoCaixaService.obterTotaisPorFormaPublic(
-      query.unidade,
-      query.data,
-      query.data,
-    );
-    const totaisErp = this.fechamentoCaixaService.normalizarTotaisErp(
-      totaisPorForma,
-    );
+    const totaisPorForma =
+      await this.fechamentoCaixaService.obterTotaisPorFormaPublic(
+        query.unidade,
+        query.data,
+        query.data,
+      );
+    const totaisErp =
+      this.fechamentoCaixaService.normalizarTotaisErp(totaisPorForma);
     const totaisTerceiroDetalhe =
       await this.fechamentoCaixaService.obterTotaisTerceiroDetalhe(
         query.unidade,
@@ -358,9 +358,8 @@ export class CaixaFechamentoConsolidadoService {
         fechamento.dataOperacao,
         fechamento.dataOperacao,
       );
-    const totaisErp = this.fechamentoCaixaService.normalizarTotaisErp(
-      totaisPorForma,
-    );
+    const totaisErp =
+      this.fechamentoCaixaService.normalizarTotaisErp(totaisPorForma);
     const detalhe =
       await this.fechamentoCaixaService.obterTotaisTerceiroDetalhe(
         fechamento.unidade,
@@ -421,7 +420,10 @@ export class CaixaFechamentoConsolidadoService {
         const terceiroPorOrigem = terceiroValido.filter(
           (item) => item.forma === blocoForma,
         );
-        const totalErp = erpLinhas.reduce((acc, linha) => acc + linha.liquido, 0);
+        const totalErp = erpLinhas.reduce(
+          (acc, linha) => acc + linha.liquido,
+          0,
+        );
         const totalTerceiro = terceiroPorOrigem.reduce(
           (acc, item) => acc + item.liquido,
           0,

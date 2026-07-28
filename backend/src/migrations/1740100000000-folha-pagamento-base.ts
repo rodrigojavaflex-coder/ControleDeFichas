@@ -4,7 +4,6 @@ import {
   Table,
   TableForeignKey,
   TableIndex,
-  TableUnique,
 } from 'typeorm';
 
 export class FolhaPagamentoBase1740100000000 implements MigrationInterface {
@@ -67,7 +66,12 @@ export class FolhaPagamentoBase1740100000000 implements MigrationInterface {
             generationStrategy: 'uuid',
             default: 'uuid_generate_v4()',
           },
-          { name: 'descricao', type: 'varchar', length: '120', isNullable: false },
+          {
+            name: 'descricao',
+            type: 'varchar',
+            length: '120',
+            isNullable: false,
+          },
           { name: 'ativo', type: 'boolean', default: true },
           { name: 'ordenacao', type: 'int', default: 0 },
           {
@@ -97,7 +101,12 @@ export class FolhaPagamentoBase1740100000000 implements MigrationInterface {
             generationStrategy: 'uuid',
             default: 'uuid_generate_v4()',
           },
-          { name: 'descricao', type: 'varchar', length: '200', isNullable: false },
+          {
+            name: 'descricao',
+            type: 'varchar',
+            length: '200',
+            isNullable: false,
+          },
           {
             name: 'tipoMovimento',
             type: 'folha_movimento_tipo_enum',
@@ -283,12 +292,7 @@ export class FolhaPagamentoBase1740100000000 implements MigrationInterface {
         uniques: [
           {
             name: 'UQ_folha_capa_competencia',
-            columnNames: [
-              'funcionarioUnidadeId',
-              'ano',
-              'mes',
-              'folhaTipoId',
-            ],
+            columnNames: ['funcionarioUnidadeId', 'ano', 'mes', 'folhaTipoId'],
           },
         ],
       }),

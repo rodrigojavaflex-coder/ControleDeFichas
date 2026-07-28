@@ -12,6 +12,8 @@
 - Subir Node na filial no futuro: fazer **junto** com deploy de sync; após trocar Node no servidor, `npm ci --omit=dev` em `C:\agente` — **não** exige regerar pacote na dev só por causa da versão do Node.
 - Referência deploy: `agent/scripts/deploy.ps1`, `agent/scripts/atualiza-agente.ps1`, `agent/README.md`.
 
+
+
 ## Pendente
 
 - [ ] **Configurar envio de e-mail** — recuperação de senha e notificações (pendências de fechamento, pendências de vendas, resumo de folha, etc.).
@@ -36,9 +38,9 @@
 - [ ] **Fechamento de caixa por WhatsApp** — no fechamento de caixa, enviar imagem do fechamento via WhatsApp; se possível, enviar ao grupo.
 - [ ] **Unificação vendedor × funcionário** — cadastro de vendedor duplicado com funcionário (cargo vendedor); unificar no sistema e eliminar cadastro de vendedor.
 
+
+
 ## Concluído
 
 - [x] **Configuração de cálculo por etapas de produção** — valor por etapa concluída; vínculo funcionário × etapas remuneradas; fechamento de produtividade por período; telas em Configuração → Produção e Produtividade. (2026-07-19, frontend v1.6.0)
 - [x] **Nomes das etapas de produção** — padronização em uppercase pt-BR na importação (agente + backend); reimportar período para atualizar registros existentes. (2026-07-17)
-
-<!-- Mover itens aqui ao finalizar; anotar data e referência (commit/PR) quando aplicável. -->

@@ -11,7 +11,10 @@ export function normalizarTelefoneE164BR(
 ): string | null {
   const digits = somenteDigitos(raw);
   if (!digits) return null;
-  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+  if (
+    digits.startsWith('55') &&
+    (digits.length === 12 || digits.length === 13)
+  ) {
     return digits;
   }
   if (digits.length === 10 || digits.length === 11) {
@@ -65,12 +68,20 @@ export function canonizarTelefoneWhatsappBR(
 /** Variantes E.164 (com/sem 9) para busca de conversa existente. */
 export function variantesTelefoneConversa(canon: string): string[] {
   const set = new Set<string>([canon]);
-  if (canon.startsWith('55') && canon.length === 13 && canon.charAt(4) === '9') {
+  if (
+    canon.startsWith('55') &&
+    canon.length === 13 &&
+    canon.charAt(4) === '9'
+  ) {
     set.add(canon.slice(0, 4) + canon.slice(5));
   }
   if (canon.startsWith('55') && canon.length === 12) {
     const local = canon.slice(4);
-    if (local.length === 8 && local.charAt(0) >= '6' && local.charAt(0) <= '9') {
+    if (
+      local.length === 8 &&
+      local.charAt(0) >= '6' &&
+      local.charAt(0) <= '9'
+    ) {
       set.add(`${canon.slice(0, 4)}9${local}`);
     }
   }
@@ -88,7 +99,8 @@ export function mascararTelefone(telefone: string | null | undefined): string {
 export function formatarTelefoneExibicaoBR(
   telefone: string | null | undefined,
 ): string {
-  const canon = canonizarTelefoneWhatsappBR(telefone) ?? somenteDigitos(telefone);
+  const canon =
+    canonizarTelefoneWhatsappBR(telefone) ?? somenteDigitos(telefone);
   if (!canon) return telefone?.trim() || '—';
 
   if (canon.startsWith('55') && (canon.length === 12 || canon.length === 13)) {

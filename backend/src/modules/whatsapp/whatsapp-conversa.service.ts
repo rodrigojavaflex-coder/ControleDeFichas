@@ -66,8 +66,7 @@ export class WhatsappConversaService {
 
   private resolverTelefoneCanonico(telefoneRaw: string): string {
     return (
-      canonizarTelefoneWhatsappBR(telefoneRaw) ??
-      telefoneRaw.replace(/\D/g, '')
+      canonizarTelefoneWhatsappBR(telefoneRaw) ?? telefoneRaw.replace(/\D/g, '')
     );
   }
 
@@ -155,7 +154,8 @@ export class WhatsappConversaService {
     let conversa = await this.buscarConversaExistente(telefoneOrigem);
 
     if (!conversa) {
-      const funcionario = await this.buscarFuncionarioPorTelefone(telefoneOrigem);
+      const funcionario =
+        await this.buscarFuncionarioPorTelefone(telefoneOrigem);
       conversa = this.conversaRepo.create({
         telefoneOrigem,
         telefoneMascarado: mascararTelefone(telefoneOrigem),
@@ -176,7 +176,8 @@ export class WhatsappConversaService {
       alterou = true;
     }
     if (!conversa.funcionarioId) {
-      const funcionario = await this.buscarFuncionarioPorTelefone(telefoneOrigem);
+      const funcionario =
+        await this.buscarFuncionarioPorTelefone(telefoneOrigem);
       if (funcionario) {
         conversa.funcionarioId = funcionario.id;
         alterou = true;

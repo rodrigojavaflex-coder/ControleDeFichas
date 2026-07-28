@@ -12,7 +12,7 @@ export class CreatePerfilDto {
     isArray: true,
     enum: Permission,
     example: [Permission.PROFILE_CREATE, Permission.PROFILE_READ],
-    description: 'Lista de permissões associadas ao perfil'
+    description: 'Lista de permissões associadas ao perfil',
   })
   @IsArray()
   @IsEnum(Permission, { each: true })

@@ -28,12 +28,18 @@ function toStringArray(value: unknown): string[] | undefined {
 export class FindOrcamentosDashboardDto {
   @ApiPropertyOptional({ example: '2026-01-01' })
   @IsOptional()
-  @IsDateString({}, { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataInicial?: string;
 
   @ApiPropertyOptional({ example: '2026-06-30' })
   @IsOptional()
-  @IsDateString({}, { message: 'Data final deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataFinal?: string;
 
   @ApiPropertyOptional({ enum: Unidade, isArray: true })

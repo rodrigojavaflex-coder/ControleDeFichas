@@ -90,4 +90,3 @@ export class Cliente extends BaseEntity {
   })
   unidade: Unidade;
 }
-

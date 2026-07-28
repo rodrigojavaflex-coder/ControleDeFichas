@@ -95,7 +95,10 @@ export class FechamentoCaixaController {
   @UseGuards(PermissionsGuard)
   @Permissions(Permission.VENDA_FECHAR_CAIXA)
   @ApiOperation({ summary: 'Obter rascunho consolidado ERP + terceiro' })
-  @ApiResponse({ status: HttpStatus.OK, type: FechamentoConsolidadoResponseDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: FechamentoConsolidadoResponseDto,
+  })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Sem permissão' })
   obterConsolidado(
     @Query() query: FechamentoConsolidadoQueryDto,

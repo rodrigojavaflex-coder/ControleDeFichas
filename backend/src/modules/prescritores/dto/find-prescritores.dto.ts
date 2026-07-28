@@ -55,4 +55,3 @@ export class FindPrescritoresDto {
   @IsInt()
   numeroCRM?: number;
 }
-

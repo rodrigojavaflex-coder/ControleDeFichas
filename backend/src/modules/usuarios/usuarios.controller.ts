@@ -31,9 +31,7 @@ import { UpdateAtalhosHomeDto } from './dto/update-atalhos-home.dto';
 import { Usuario } from './entities/usuario.entity';
 import type { Request } from 'express';
 import { Permission } from '../../common/enums/permission.enum';
-import {
-  buildPermissionCatalog,
-} from '../../common/utils/permission-catalog.util';
+import { buildPermissionCatalog } from '../../common/utils/permission-catalog.util';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Perfil } from '../perfil/entities/perfil.entity';
@@ -66,7 +64,9 @@ export class UsuariosController {
   }
 
   @Get('permissions')
-  @ApiOperation({ summary: 'Catálogo hierárquico de permissões (módulos → grupos)' })
+  @ApiOperation({
+    summary: 'Catálogo hierárquico de permissões (módulos → grupos)',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Catálogo de permissões para cadastro de perfil',
@@ -74,7 +74,7 @@ export class UsuariosController {
   getPermissions() {
     return buildPermissionCatalog();
   }
-  
+
   @Get('profiles')
   @ApiOperation({ summary: 'Listar perfis disponíveis' })
   @ApiResponse({
@@ -85,7 +85,6 @@ export class UsuariosController {
   getProfiles(): Promise<Perfil[]> {
     return this.usuariosService.getProfiles();
   }
-  
 
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)

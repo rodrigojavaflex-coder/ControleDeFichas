@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Certificado } from './entities/certificado.entity';
@@ -21,7 +17,9 @@ export class CertificadoService {
     private readonly fichaTecnicaRepository: Repository<FichaTecnica>,
   ) {}
 
-  async create(createCertificadoDto: CreateCertificadoDto): Promise<Certificado> {
+  async create(
+    createCertificadoDto: CreateCertificadoDto,
+  ): Promise<Certificado> {
     try {
       // Remover fichaTecnicaId do DTO para não conflitar com a entidade
       const { fichaTecnicaId, ...certificadoData } = createCertificadoDto;
@@ -34,7 +32,9 @@ export class CertificadoService {
           id: fichaTecnicaId,
         });
         if (!fichaTecnica) {
-          throw new NotFoundException(`Ficha técnica com ID ${fichaTecnicaId} não encontrada`);
+          throw new NotFoundException(
+            `Ficha técnica com ID ${fichaTecnicaId} não encontrada`,
+          );
         }
         certificado.fichaTecnica = fichaTecnica;
       }
@@ -74,7 +74,10 @@ export class CertificadoService {
     }
   }
 
-  async update(id: string, updateCertificadoDto: UpdateCertificadoDto): Promise<Certificado> {
+  async update(
+    id: string,
+    updateCertificadoDto: UpdateCertificadoDto,
+  ): Promise<Certificado> {
     try {
       const certificado = await this.findOne(id);
       Object.assign(certificado, updateCertificadoDto);
@@ -94,7 +97,7 @@ export class CertificadoService {
       throw error;
     }
   }
-  
+
   /**
    * Lista certificados associados a uma ficha técnica
    */

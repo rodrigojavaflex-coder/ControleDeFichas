@@ -45,7 +45,11 @@ export function dividirPeriodoEmSegmentosMensais(
   inicio: string,
   fim: string,
 ): Array<{ inicio: string; fim: string }> {
-  if (!ISO_DATE_REGEX.test(inicio) || !ISO_DATE_REGEX.test(fim) || inicio > fim) {
+  if (
+    !ISO_DATE_REGEX.test(inicio) ||
+    !ISO_DATE_REGEX.test(fim) ||
+    inicio > fim
+  ) {
     return [];
   }
 

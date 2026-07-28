@@ -19,4 +19,3 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
   exports: [VendedoresService],
 })
 export class VendedoresModule {}
-

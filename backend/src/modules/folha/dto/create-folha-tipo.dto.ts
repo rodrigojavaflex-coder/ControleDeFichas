@@ -1,4 +1,11 @@
-import { IsBoolean, IsOptional, IsString, Length, IsNumber, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Length,
+  IsNumber,
+  Min,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -19,7 +26,10 @@ export class CreateFolhaTipoDto {
   @Min(0)
   ordenacao?: number;
 
-  @ApiPropertyOptional({ default: false, description: 'Folha de competência mensal (massa na tela de lançamentos)' })
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Folha de competência mensal (massa na tela de lançamentos)',
+  })
   @IsOptional()
   @IsBoolean()
   folhaMensal?: boolean;

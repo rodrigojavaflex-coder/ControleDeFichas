@@ -1,8 +1,4 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  TableColumn,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 /** Opt-out de recibo de folha por WhatsApp no cadastro de funcionários (RN-015). */
 export class FuncionarioNaoReceberReciboWhatsapp1747925500000

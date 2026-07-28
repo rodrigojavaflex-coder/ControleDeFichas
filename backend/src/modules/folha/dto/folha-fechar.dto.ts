@@ -1,10 +1,4 @@
-import {
-  IsEnum,
-  IsInt,
-  Max,
-  Min,
-  IsUUID,
-} from 'class-validator';
+import { IsEnum, IsInt, Max, Min, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { Unidade } from '../../../common/enums/unidade.enum';

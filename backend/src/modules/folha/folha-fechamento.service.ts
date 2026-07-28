@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Unidade } from '../../common/enums/unidade.enum';
@@ -181,7 +178,7 @@ export class FolhaFechamentoService {
     folhaTipoId: string,
     _folhaTipoRef: FolhaTipo,
   ): Promise<FolhaFechamento> {
-    let row = await this.fechamentoRepo.findOne({
+    const row = await this.fechamentoRepo.findOne({
       where: {
         unidade,
         ano,
@@ -225,7 +222,9 @@ export class FolhaFechamentoService {
       );
     }
     if (!row.fechado) {
-      throw new BadRequestException('Este lote já está aberto para lançamentos.');
+      throw new BadRequestException(
+        'Este lote já está aberto para lançamentos.',
+      );
     }
     row.fechado = false;
     row.fechadoEm = null;

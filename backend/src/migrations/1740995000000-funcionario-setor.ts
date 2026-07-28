@@ -1,8 +1,4 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  TableColumn,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 /** Campo opcional `setor` no cadastro de funcionários da folha. */
 export class FuncionarioSetor1740995000000 implements MigrationInterface {

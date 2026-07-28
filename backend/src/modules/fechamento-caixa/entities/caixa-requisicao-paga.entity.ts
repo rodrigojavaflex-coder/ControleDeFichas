@@ -44,7 +44,11 @@ export class CaixaRequisicaoPaga {
   unidade: Unidade;
 
   @ApiProperty()
-  @Column({ type: 'date', name: 'data_pagamento', transformer: dateColumnTransformer })
+  @Column({
+    type: 'date',
+    name: 'data_pagamento',
+    transformer: dateColumnTransformer,
+  })
   dataPagamento: string;
 
   @ApiProperty()
@@ -134,7 +138,12 @@ export class CaixaRequisicaoPaga {
   codigoVendedor?: number | null;
 
   @ApiProperty({ required: false })
-  @Column({ type: 'varchar', length: 200, nullable: true, name: 'nome_vendedor' })
+  @Column({
+    type: 'varchar',
+    length: 200,
+    nullable: true,
+    name: 'nome_vendedor',
+  })
   nomeVendedor?: string | null;
 
   @ApiProperty({ required: false })
@@ -158,10 +167,18 @@ export class CaixaRequisicaoPaga {
   orcamento?: Orcamento | null;
 
   @ApiProperty()
-  @Column({ type: 'timestamptz', name: 'importado_em', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'timestamptz',
+    name: 'importado_em',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   importadoEm: Date;
 
   @ApiProperty()
-  @Column({ type: 'timestamptz', name: 'atualizado_em', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'timestamptz',
+    name: 'atualizado_em',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   atualizadoEm: Date;
 }

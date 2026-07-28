@@ -11,7 +11,11 @@ import { Unidade } from '../../../common/enums/unidade.enum';
   'contratoRepresentante',
   'codigoRepresentante',
 ])
-@Index('idx_painel_unidade_rep', ['unidade', 'contratoRepresentante', 'codigoRepresentante'])
+@Index('idx_painel_unidade_rep', [
+  'unidade',
+  'contratoRepresentante',
+  'codigoRepresentante',
+])
 export class PainelMedicoRepresentante extends BaseEntity {
   static get nomeAmigavel(): string {
     return 'painel médico representante';

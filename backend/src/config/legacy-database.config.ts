@@ -5,7 +5,9 @@ export default registerAs('legacyDatabases', () => ({
   banco1: {
     host: process.env.LEGACY_DB1_HOST || 'localhost',
     port: parseInt(process.env.LEGACY_DB1_PORT || '3050', 10),
-    database: process.env.LEGACY_DB1_PATH || 'C:\\PROJETOS\\AVALIACAO_BANCO_FIREBIRD\\bancofc.ib',
+    database:
+      process.env.LEGACY_DB1_PATH ||
+      'C:\\PROJETOS\\AVALIACAO_BANCO_FIREBIRD\\bancofc.ib',
     user: process.env.LEGACY_DB1_USER || 'SYSDBA',
     password: process.env.LEGACY_DB1_PASSWORD || 'masterkey',
     role: process.env.LEGACY_DB1_ROLE || undefined,
@@ -16,7 +18,9 @@ export default registerAs('legacyDatabases', () => ({
   banco2: {
     host: process.env.LEGACY_DB2_HOST || 'localhost',
     port: parseInt(process.env.LEGACY_DB2_PORT || '3050', 10),
-    database: process.env.LEGACY_DB2_PATH || 'C:\\PROJETOS\\AVALIACAO_BANCO_FIREBIRD\\bancofcube.ib',
+    database:
+      process.env.LEGACY_DB2_PATH ||
+      'C:\\PROJETOS\\AVALIACAO_BANCO_FIREBIRD\\bancofcube.ib',
     user: process.env.LEGACY_DB2_USER || 'SYSDBA',
     password: process.env.LEGACY_DB2_PASSWORD || 'masterkey',
     role: process.env.LEGACY_DB2_ROLE || undefined,
@@ -24,4 +28,3 @@ export default registerAs('legacyDatabases', () => ({
     charset: process.env.LEGACY_DB2_CHARSET || 'NONE', // Charset do banco é NONE
   },
 }));
-

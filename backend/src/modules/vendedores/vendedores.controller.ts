@@ -68,11 +68,27 @@ export class VendedoresController {
     description: 'Lista de vendedores encontrados',
     type: [Vendedor],
   })
-  @ApiQuery({ name: 'nome', required: true, description: 'Nome para buscar (parcial)' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Limite de resultados (padrão: 20)' })
-  async search(@Query('nome') nome: string, @Query('limit') limit?: number, @Req() req?: any) {
+  @ApiQuery({
+    name: 'nome',
+    required: true,
+    description: 'Nome para buscar (parcial)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Limite de resultados (padrão: 20)',
+  })
+  async search(
+    @Query('nome') nome: string,
+    @Query('limit') limit?: number,
+    @Req() req?: any,
+  ) {
     const unidade = req?.user?.unidade;
-    return this.vendedoresService.search(nome, unidade, limit ? Number(limit) : 20);
+    return this.vendedoresService.search(
+      nome,
+      unidade,
+      limit ? Number(limit) : 20,
+    );
   }
 
   @Get()
@@ -85,7 +101,11 @@ export class VendedoresController {
   @ApiQuery({ name: 'page', required: false, description: 'Número da página' })
   @ApiQuery({ name: 'limit', required: false, description: 'Itens por página' })
   @ApiQuery({ name: 'nome', required: false, description: 'Filtrar por nome' })
-  @ApiQuery({ name: 'unidade', required: false, description: 'Filtrar por unidade' })
+  @ApiQuery({
+    name: 'unidade',
+    required: false,
+    description: 'Filtrar por unidade',
+  })
   findAll(@Query() findVendedoresDto: FindVendedoresDto) {
     return this.vendedoresService.findAll(findVendedoresDto);
   }
@@ -152,4 +172,3 @@ export class VendedoresController {
     return this.vendedoresService.remove(id);
   }
 }
-

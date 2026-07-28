@@ -37,62 +37,67 @@ export class BaixasService {
   ) {}
 
   async create(createBaixaDto: CreateBaixaDto): Promise<Baixa> {
-    try {
-      // Verificar se a venda existe
-      const venda = await this.vendasService.findOne(createBaixaDto.idvenda);
-      if (!venda) {
-        throw new NotFoundException(`Venda com ID ${createBaixaDto.idvenda} não encontrada`);
-      }
-
-      // Validar data da baixa (fechamento de caixa + última baixa da unidade)
-      if (venda.unidade) {
-        this.logger.debug(
-          `Validando criação de baixa. Venda: ${createBaixaDto.idvenda}, ` +
-          `Unidade: ${venda.unidade}, Data: ${createBaixaDto.dataBaixa}`
-        );
-        await this.validarDataBaixaPorUnidade(createBaixaDto.dataBaixa, venda.unidade);
-      } else {
-        this.logger.warn(
-          `Venda ${createBaixaDto.idvenda} não possui unidade definida. Validação de data por unidade ignorada.`
-        );
-      }
-
-      // Calcular total das baixas existentes para esta venda
-      const totalPagoAnterior = await this.getTotalBaixasParaVenda(createBaixaDto.idvenda);
-      const valorCliente = venda.valorCliente || 0;
-
-      // Validar se a soma das baixas não ultrapassará o valor do cliente
-      const totalComNovaBaixa = totalPagoAnterior + createBaixaDto.valorBaixa;
-
-      if (totalComNovaBaixa > valorCliente) {
-        const diferenca = totalComNovaBaixa - valorCliente;
-        throw new ConflictException(
-          `O valor da baixa ultrapassa o valor total em R$ ${diferenca.toFixed(2)}. Valor restante: R$ ${(valorCliente - totalPagoAnterior).toFixed(2)}`
-        );
-      }
-
-      // Manter data como string YYYY-MM-DD para evitar conversão de timezone
-      const baixa = this.baixaRepository.create({
-        ...createBaixaDto,
-        dataBaixa: createBaixaDto.dataBaixa as any, // TypeORM transformer cuidará da conversão
-      });
-
-      const savedBaixa = await this.baixaRepository.save(baixa);
-      // Atualizar status da venda baseado no total das baixas
-      await this.updateVendaStatus(createBaixaDto.idvenda);
-
-      this.logger.log(
-        `Baixa criada com sucesso. ID: ${savedBaixa.id}, Venda: ${createBaixaDto.idvenda}, ` +
-        `Unidade: ${venda.unidade}, Data: ${createBaixaDto.dataBaixa}`
+    // Verificar se a venda existe
+    const venda = await this.vendasService.findOne(createBaixaDto.idvenda);
+    if (!venda) {
+      throw new NotFoundException(
+        `Venda com ID ${createBaixaDto.idvenda} não encontrada`,
       );
-
-      return savedBaixa;
-    } catch (error) {
-      throw error;
     }
+
+    // Validar data da baixa (fechamento de caixa + última baixa da unidade)
+    if (venda.unidade) {
+      this.logger.debug(
+        `Validando criação de baixa. Venda: ${createBaixaDto.idvenda}, ` +
+          `Unidade: ${venda.unidade}, Data: ${createBaixaDto.dataBaixa}`,
+      );
+      await this.validarDataBaixaPorUnidade(
+        createBaixaDto.dataBaixa,
+        venda.unidade,
+      );
+    } else {
+      this.logger.warn(
+        `Venda ${createBaixaDto.idvenda} não possui unidade definida. Validação de data por unidade ignorada.`,
+      );
+    }
+
+    // Calcular total das baixas existentes para esta venda
+    const totalPagoAnterior = await this.getTotalBaixasParaVenda(
+      createBaixaDto.idvenda,
+    );
+    const valorCliente = venda.valorCliente || 0;
+
+    // Validar se a soma das baixas não ultrapassará o valor do cliente
+    const totalComNovaBaixa = totalPagoAnterior + createBaixaDto.valorBaixa;
+
+    if (totalComNovaBaixa > valorCliente) {
+      const diferenca = totalComNovaBaixa - valorCliente;
+      throw new ConflictException(
+        `O valor da baixa ultrapassa o valor total em R$ ${diferenca.toFixed(2)}. Valor restante: R$ ${(valorCliente - totalPagoAnterior).toFixed(2)}`,
+      );
+    }
+
+    // Manter data como string YYYY-MM-DD para evitar conversão de timezone
+    const baixa = this.baixaRepository.create({
+      ...createBaixaDto,
+      dataBaixa: createBaixaDto.dataBaixa as any, // TypeORM transformer cuidará da conversão
+    });
+
+    const savedBaixa = await this.baixaRepository.save(baixa);
+    // Atualizar status da venda baseado no total das baixas
+    await this.updateVendaStatus(createBaixaDto.idvenda);
+
+    this.logger.log(
+      `Baixa criada com sucesso. ID: ${savedBaixa.id}, Venda: ${createBaixaDto.idvenda}, ` +
+        `Unidade: ${venda.unidade}, Data: ${createBaixaDto.dataBaixa}`,
+    );
+
+    return savedBaixa;
   }
 
-  async findAll(findBaixasDto: FindBaixasDto): Promise<PaginatedResponseDto<Baixa>> {
+  async findAll(
+    findBaixasDto: FindBaixasDto,
+  ): Promise<PaginatedResponseDto<Baixa>> {
     const queryBuilder = this.baixaRepository.createQueryBuilder('baixa');
 
     // Aplicar filtros
@@ -110,7 +115,6 @@ export class BaixasService {
 
     const [baixas, total] = await queryBuilder.getManyAndCount();
 
-    const totalPages = Math.ceil(total / limit);
     const meta = new PaginationMetaDto(page, limit, total);
 
     return {
@@ -138,17 +142,24 @@ export class BaixasService {
 
     // Validar data da baixa (fechamento de caixa + última baixa da unidade)
     if (venda.unidade) {
-      const dataAtual = typeof baixa.dataBaixa === 'string'
-        ? baixa.dataBaixa
-        : (baixa.dataBaixa as Date).toISOString().split('T')[0];
+      const dataAtual =
+        typeof baixa.dataBaixa === 'string'
+          ? baixa.dataBaixa
+          : baixa.dataBaixa.toISOString().split('T')[0];
       const dataEfetiva = updateBaixaDto.dataBaixa || dataAtual;
-      await this.validarDataBaixaPorUnidade(dataEfetiva, venda.unidade, baixa.id);
+      await this.validarDataBaixaPorUnidade(
+        dataEfetiva,
+        venda.unidade,
+        baixa.id,
+      );
     }
 
     // Manter data como string YYYY-MM-DD para evitar conversão de timezone
     const updateData = {
       ...updateBaixaDto,
-      ...(updateBaixaDto.dataBaixa && { dataBaixa: updateBaixaDto.dataBaixa as any }),
+      ...(updateBaixaDto.dataBaixa && {
+        dataBaixa: updateBaixaDto.dataBaixa as any,
+      }),
     };
 
     await this.baixaRepository.update(id, updateData);
@@ -160,7 +171,7 @@ export class BaixasService {
 
     this.logger.log(
       `Baixa atualizada com sucesso. ID: ${id}, Venda: ${baixa.idvenda}, ` +
-      `Unidade: ${venda.unidade}`
+        `Unidade: ${venda.unidade}`,
     );
 
     return updatedBaixa;
@@ -173,10 +184,11 @@ export class BaixasService {
 
     // Validar data da baixa (fechamento de caixa + última baixa da unidade)
     if (venda.unidade) {
-      const dataBaixa = typeof baixa.dataBaixa === 'string' 
-        ? baixa.dataBaixa 
-        : (baixa.dataBaixa as Date).toISOString().split('T')[0];
-      
+      const dataBaixa =
+        typeof baixa.dataBaixa === 'string'
+          ? baixa.dataBaixa
+          : baixa.dataBaixa.toISOString().split('T')[0];
+
       await this.validarDataBaixaPorUnidade(dataBaixa, venda.unidade, baixa.id);
     }
 
@@ -187,7 +199,7 @@ export class BaixasService {
 
     this.logger.log(
       `Baixa removida com sucesso. ID: ${id}, Venda: ${baixa.idvenda}, ` +
-      `Unidade: ${venda.unidade}`
+        `Unidade: ${venda.unidade}`,
     );
   }
 
@@ -245,7 +257,7 @@ export class BaixasService {
 
     this.logger.debug(
       `Validando data de baixa. Unidade: ${unidade}, Data informada: ${dataBaixaFormatada}` +
-      (excludeBaixaId ? `, Excluindo baixa: ${excludeBaixaId}` : ''),
+        (excludeBaixaId ? `, Excluindo baixa: ${excludeBaixaId}` : ''),
     );
 
     await this.fechamentoCaixaService.assertPodeRegistrarBaixa(
@@ -271,7 +283,10 @@ export class BaixasService {
     unidade: string,
     excludeBaixaId?: string,
   ): Promise<void> {
-    const ultimaData = await this.getUltimaDataBaixaPorUnidade(unidade, excludeBaixaId);
+    const ultimaData = await this.getUltimaDataBaixaPorUnidade(
+      unidade,
+      excludeBaixaId,
+    );
 
     if (!ultimaData) {
       this.logger.debug(
@@ -285,7 +300,7 @@ export class BaixasService {
 
       this.logger.warn(
         `Tentativa de operação com baixa de data anterior à última baixa da unidade. ` +
-        `Unidade: ${unidade}, Última baixa: ${ultimaData}, Data informada: ${dataBaixa}`,
+          `Unidade: ${unidade}, Última baixa: ${ultimaData}, Data informada: ${dataBaixa}`,
       );
 
       const urlBaixas = `/relatorios/baixas?dataInicial=${ultimaData}&dataFinal=${ultimaData}&unidade=${encodeURIComponent(unidade)}`;
@@ -313,7 +328,9 @@ export class BaixasService {
         .where('venda.unidade = :unidade', { unidade });
 
       if (excludeBaixaId) {
-        queryBuilder.andWhere('baixa.id != :excludeBaixaId', { excludeBaixaId });
+        queryBuilder.andWhere('baixa.id != :excludeBaixaId', {
+          excludeBaixaId,
+        });
       }
 
       const resultado = await queryBuilder
@@ -326,7 +343,9 @@ export class BaixasService {
         return null;
       }
 
-      const dataBaixaValue: Date | string = resultado.dataBaixa as Date | string;
+      const dataBaixaValue: Date | string = resultado.dataBaixa as
+        | Date
+        | string;
 
       if (dataBaixaValue instanceof Date) {
         return dataBaixaValue.toISOString().split('T')[0];
@@ -366,7 +385,10 @@ export class BaixasService {
   async processarBaixasEmMassa(
     processarDto: ProcessarBaixasEmMassaDto,
   ): Promise<ProcessamentoBaixasEmMassaResult> {
-    const resultado: ProcessamentoBaixasEmMassaResult = { sucesso: [], falhas: [] };
+    const resultado: ProcessamentoBaixasEmMassaResult = {
+      sucesso: [],
+      falhas: [],
+    };
 
     for (const vendaId of processarDto.vendaIds) {
       let venda: any = null;
@@ -398,12 +420,16 @@ export class BaixasService {
         // Validar data da baixa (fechamento de caixa + última baixa da unidade)
         if (venda.unidade) {
           try {
-            await this.validarDataBaixaPorUnidade(processarDto.dataBaixa, venda.unidade);
+            await this.validarDataBaixaPorUnidade(
+              processarDto.dataBaixa,
+              venda.unidade,
+            );
           } catch (error: any) {
             resultado.falhas.push({
               idvenda: vendaId,
               protocolo: venda?.protocolo,
-              motivo: error?.message || 'Data da baixa inválida para a unidade.',
+              motivo:
+                error?.message || 'Data da baixa inválida para a unidade.',
             });
             continue;
           }

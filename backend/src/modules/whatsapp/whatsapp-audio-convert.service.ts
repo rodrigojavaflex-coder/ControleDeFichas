@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { execFile } from 'child_process';
 import ffmpegStatic from 'ffmpeg-static';

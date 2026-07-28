@@ -17,6 +17,7 @@ import { AuditoriaService } from '../../common/services/auditoria.service';
 import { AuditAction } from '../../common/enums/auditoria.enum';
 import { Configuracao } from '../configuracao/entities/configuracao.entity';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
+import { decode as jwtDecode } from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -36,7 +37,7 @@ export class AuthService {
   private async shouldAuditAction(action: AuditAction): Promise<boolean> {
     try {
       const config = await this.configuracaoRepository.findOne({ where: {} });
-      
+
       if (!config) {
         // Se não há configuração, auditar tudo por padrão
         return true;
@@ -47,22 +48,22 @@ export class AuthService {
         case AuditAction.LOGOUT:
         case AuditAction.LOGIN_FAILED:
           return config.auditarLoginLogOff;
-        
+
         case AuditAction.CREATE:
           return config.auditarCriacao;
-        
+
         case AuditAction.READ:
           return config.auditarConsultas;
-        
+
         case AuditAction.UPDATE:
           return config.auditarAlteracao;
-        
+
         case AuditAction.DELETE:
           return config.auditarExclusao;
-        
+
         case AuditAction.CHANGE_PASSWORD:
           return config.auditarSenhaAlterada;
-        
+
         default:
           return true; // Para ações não mapeadas, auditar por segurança
       }
@@ -223,13 +224,15 @@ export class AuthService {
         unidadesProdutividade: user.unidadesProdutividade ?? null,
         criadoEm: user.criadoEm,
         atualizadoEm: user.atualizadoEm,
-        vendedor: user.vendedor ? {
-          id: user.vendedor.id,
-          nome: user.vendedor.nome,
-          unidade: user.vendedor.unidade,
-          criadoEm: user.vendedor.criadoEm,
-          atualizadoEm: user.vendedor.atualizadoEm,
-        } : null,
+        vendedor: user.vendedor
+          ? {
+              id: user.vendedor.id,
+              nome: user.vendedor.nome,
+              unidade: user.vendedor.unidade,
+              criadoEm: user.vendedor.criadoEm,
+              atualizadoEm: user.vendedor.atualizadoEm,
+            }
+          : null,
       },
     };
   }
@@ -280,13 +283,26 @@ export class AuthService {
    * Decodifica token JWT sem validar expiração
    * Útil para logout de tokens expirados
    */
-  decodeToken(token: string): any {
+  decodeToken(token: string): JwtPayload | null {
     try {
-      // Importar jwt para decodificar sem verificar expiração
-      const jwt = require('jsonwebtoken');
-      return jwt.decode(token);
+      const decoded = jwtDecode(token);
+      if (!decoded || typeof decoded === 'string') {
+        return null;
+      }
+      const sub = decoded.sub;
+      if (typeof sub !== 'string') {
+        return null;
+      }
+      const email = typeof decoded.email === 'string' ? decoded.email : '';
+      return {
+        sub,
+        email,
+        iat: decoded.iat,
+        exp: decoded.exp,
+      };
     } catch (error) {
-      console.warn('Erro ao decodificar token:', error.message);
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn('Erro ao decodificar token:', message);
       return null;
     }
   }
@@ -294,7 +310,7 @@ export class AuthService {
   async logout(userId: string, request?: any): Promise<void> {
     // Buscar usuário para obter informações
     const user = await this.userRepository.findOneBy({ id: userId });
-    
+
     // Auditar logout se configurado
     if (await this.shouldAuditAction(AuditAction.LOGOUT)) {
       await this.auditoriaService.createLog({

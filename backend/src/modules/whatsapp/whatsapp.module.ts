@@ -45,10 +45,6 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
     WhatsappMediaCleanupService,
     PermissionsGuard,
   ],
-  exports: [
-    WhatsappService,
-    FolhaReciboImagemService,
-    WhatsappConversaService,
-  ],
+  exports: [WhatsappService, FolhaReciboImagemService, WhatsappConversaService],
 })
 export class WhatsappModule {}

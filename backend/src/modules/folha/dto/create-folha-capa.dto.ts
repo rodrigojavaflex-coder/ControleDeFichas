@@ -7,7 +7,10 @@ export class CreateFolhaCapaDto {
   @IsUUID()
   funcionarioId: string;
 
-  @ApiProperty({ enum: Unidade, description: 'Deve conferir com a unidade cadastrada do funcionário.' })
+  @ApiProperty({
+    enum: Unidade,
+    description: 'Deve conferir com a unidade cadastrada do funcionário.',
+  })
   @IsEnum(Unidade)
   unidade: Unidade;
 

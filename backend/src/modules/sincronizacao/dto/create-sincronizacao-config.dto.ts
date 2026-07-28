@@ -58,8 +58,7 @@ export class CreateSincronizacaoConfigDto {
   })
   @IsOptional()
   @Matches(/^(\d+)\s+([\d,\s]+)$/, {
-    message:
-      'painelContratoRepresentantes deve estar no formato "9999 1,2"',
+    message: 'painelContratoRepresentantes deve estar no formato "9999 1,2"',
   })
   painelContratoRepresentantes?: string;
 

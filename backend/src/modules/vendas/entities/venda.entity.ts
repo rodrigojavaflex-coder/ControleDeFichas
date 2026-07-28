@@ -1,7 +1,11 @@
 import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
-import { VendaOrigem, VendaStatus, TipoAtualizacao } from '../../../common/enums/venda.enum';
+import {
+  VendaOrigem,
+  VendaStatus,
+  TipoAtualizacao,
+} from '../../../common/enums/venda.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
 import { Cliente } from '../../clientes/entities/cliente.entity';
 import { Vendedor } from '../../vendedores/entities/vendedor.entity';
@@ -28,7 +32,7 @@ export class Venda extends BaseEntity {
     description: 'Data da venda',
     example: '2025-10-25',
   })
-  @Column({ 
+  @Column({
     type: 'date',
     transformer: {
       from: (value: string) => value, // Retorna como string YYYY-MM-DD
@@ -36,8 +40,8 @@ export class Venda extends BaseEntity {
         if (typeof value === 'string') return value;
         if (value instanceof Date) return value.toISOString().split('T')[0];
         return value;
-      }
-    }
+      },
+    },
   })
   dataVenda: Date;
 
@@ -46,7 +50,7 @@ export class Venda extends BaseEntity {
     example: '2025-10-30',
     required: false,
   })
-  @Column({ 
+  @Column({
     type: 'date',
     nullable: true,
     transformer: {
@@ -56,8 +60,8 @@ export class Venda extends BaseEntity {
         if (typeof value === 'string') return value;
         if (value instanceof Date) return value.toISOString().split('T')[0];
         return null;
-      }
-    }
+      },
+    },
   })
   dataFechamento?: Date | null;
 
@@ -94,24 +98,7 @@ export class Venda extends BaseEntity {
 
   @ApiProperty({
     description: 'Valor da compra',
-    example: 1500.50,
-    required: false,
-  })
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
-    scale: 2,
-    nullable: true,
-    transformer: {
-      from: (value: string | null) => (value === null ? null : parseFloat(value)),
-      to: (value: number | null | undefined) => (value === null || value === undefined ? null : value),
-    }
-  })
-  valorCompra?: number | null;
-
-  @ApiProperty({
-    description: 'Valor pago (total recebido)',
-    example: 1500.50,
+    example: 1500.5,
     required: false,
   })
   @Column({
@@ -120,24 +107,45 @@ export class Venda extends BaseEntity {
     scale: 2,
     nullable: true,
     transformer: {
-      from: (value: string | null) => (value === null ? null : parseFloat(value)),
-      to: (value: number | null | undefined) => (value === null || value === undefined ? null : value),
+      from: (value: string | null) =>
+        value === null ? null : parseFloat(value),
+      to: (value: number | null | undefined) =>
+        value === null || value === undefined ? null : value,
+    },
+  })
+  valorCompra?: number | null;
+
+  @ApiProperty({
+    description: 'Valor pago (total recebido)',
+    example: 1500.5,
+    required: false,
+  })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: {
+      from: (value: string | null) =>
+        value === null ? null : parseFloat(value),
+      to: (value: number | null | undefined) =>
+        value === null || value === undefined ? null : value,
     },
   })
   valorPago?: number | null;
 
   @ApiProperty({
     description: 'Valor pago pelo cliente',
-    example: 1500.50,
+    example: 1500.5,
   })
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     transformer: {
       from: (value: string) => parseFloat(value),
       to: (value: number) => value,
-    }
+    },
   })
   valorCliente: number;
 

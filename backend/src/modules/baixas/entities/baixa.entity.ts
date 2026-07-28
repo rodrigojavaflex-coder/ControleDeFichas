@@ -37,16 +37,16 @@ export class Baixa extends BaseEntity {
 
   @ApiProperty({
     description: 'Valor da baixa',
-    example: 500.00,
+    example: 500.0,
   })
-  @Column({ 
-    type: 'decimal', 
-    precision: 10, 
+  @Column({
+    type: 'decimal',
+    precision: 10,
     scale: 2,
     transformer: {
       from: (value: string) => parseFloat(value),
       to: (value: number) => value,
-    }
+    },
   })
   valorBaixa: number;
 
@@ -62,8 +62,8 @@ export class Baixa extends BaseEntity {
         if (typeof value === 'string') return value;
         if (value instanceof Date) return value.toISOString().split('T')[0];
         return value;
-      }
-    }
+      },
+    },
   })
   dataBaixa: Date;
 

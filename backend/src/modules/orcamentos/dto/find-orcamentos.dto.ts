@@ -12,8 +12,13 @@ import {
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
-export const ORCAMENTO_LISTA_STATUS = ['APROVADO', 'REJEITADO', 'TODOS'] as const;
-export type OrcamentoListaStatusFiltro = (typeof ORCAMENTO_LISTA_STATUS)[number];
+export const ORCAMENTO_LISTA_STATUS = [
+  'APROVADO',
+  'REJEITADO',
+  'TODOS',
+] as const;
+export type OrcamentoListaStatusFiltro =
+  (typeof ORCAMENTO_LISTA_STATUS)[number];
 
 function toStringArray(value: unknown): string[] | undefined {
   if (Array.isArray(value)) {
@@ -87,12 +92,18 @@ export class FindOrcamentosDto extends PaginationDto {
 
   @ApiPropertyOptional({ example: '2026-01-01' })
   @IsOptional()
-  @IsDateString({}, { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataInicial?: string;
 
   @ApiPropertyOptional({ example: '2026-12-31' })
   @IsOptional()
-  @IsDateString({}, { message: 'Data final deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataFinal?: string;
 
   @ApiPropertyOptional({ default: 'dataOrcamento' })

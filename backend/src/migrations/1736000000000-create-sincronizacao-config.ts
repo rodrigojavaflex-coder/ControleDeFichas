@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';
 
-export class CreateSincronizacaoConfig1736000000000 implements MigrationInterface {
+export class CreateSincronizacaoConfig1736000000000
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     const table = await queryRunner.getTable('sincronizacao_config');
     if (table) {

@@ -61,7 +61,8 @@ export class SincronizacaoConfig extends BaseEntity {
   ultimaDataPrescritor?: Date;
 
   @ApiProperty({
-    description: 'Última data/hora de busca de orçamentos (watermark de dtmodificacao)',
+    description:
+      'Última data/hora de busca de orçamentos (watermark de dtmodificacao)',
     example: '2026-01-01T00:00:00',
     required: false,
   })

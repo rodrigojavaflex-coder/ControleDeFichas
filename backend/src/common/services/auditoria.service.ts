@@ -36,7 +36,11 @@ export class AuditoriaService {
   /**
    * Gera descrição contextual baseada na ação e tipo de entidade
    */
-  private generateEntityDescription(action: AuditAction, entityType?: string, entityInstance?: any): string | null {
+  private generateEntityDescription(
+    action: AuditAction,
+    entityType?: string,
+    entityInstance?: any,
+  ): string | null {
     if (!entityType && !entityInstance) {
       return null;
     }
@@ -47,16 +51,16 @@ export class AuditoriaService {
     switch (action) {
       case AuditAction.CREATE:
         return `Registro foi criado no cadastro de ${entityName}`;
-      
+
       case AuditAction.UPDATE:
         return `Registro foi alterado no cadastro de ${entityName}`;
-      
+
       case AuditAction.DELETE:
         return `Registro foi removido do cadastro de ${entityName}`;
-      
+
       case AuditAction.READ:
         return `Registro foi consultado no cadastro de ${entityName}`;
-      
+
       default:
         return null; // Para outras ações, usar as descrições padrão
     }
@@ -65,7 +69,10 @@ export class AuditoriaService {
   /**
    * Obtém o nome amigável da entidade baseado no nome da tabela ou instância
    */
-  private getEntityFriendlyName(tableName?: string, entityInstance?: any): string {
+  private getEntityFriendlyName(
+    tableName?: string,
+    entityInstance?: any,
+  ): string {
     // Primeiro tentar obter da instância da entidade
     if (entityInstance && typeof entityInstance === 'object') {
       try {
@@ -76,13 +83,20 @@ export class AuditoriaService {
 
         // Tentar obter o nome da tabela via TypeORM metadata
         const metadata = getMetadataArgsStorage();
-        const tableMetadata = metadata.tables.find(table => table.target === entityClass);
+        const tableMetadata = metadata.tables.find(
+          (table) => table.target === entityClass,
+        );
         if (tableMetadata && tableMetadata.name) {
-          const tableNameFromMetadata = tableMetadata.name as string;
-          
+          const tableNameFromMetadata = tableMetadata.name;
+
           // Tentar carregar a classe da entidade dinamicamente
-          const entityClassFromTable = this.getEntityClassFromTableName(tableNameFromMetadata);
-          if (entityClassFromTable && typeof entityClassFromTable.nomeAmigavel === 'string') {
+          const entityClassFromTable = this.getEntityClassFromTableName(
+            tableNameFromMetadata,
+          );
+          if (
+            entityClassFromTable &&
+            typeof entityClassFromTable.nomeAmigavel === 'string'
+          ) {
             return entityClassFromTable.nomeAmigavel;
           }
         }
@@ -99,22 +113,25 @@ export class AuditoriaService {
           return entityClass.nomeAmigavel;
         }
       } catch (error) {
-        this.logger.warn(`Erro ao obter nome amigável para entidade ${tableName}:`, error);
+        this.logger.warn(
+          `Erro ao obter nome amigável para entidade ${tableName}:`,
+          error,
+        );
       }
     }
 
     // Fallback para casos especiais e nomes não mapeados
     const fallbackNames: Record<string, string> = {
-      'Permissões': 'permissões',
-      'Senha': 'senha',
-      'Tema': 'tema',
-      'ContagemFichas': 'contagem de fichas',
-      'FichasRecentes': 'fichas recentes',
-      'Login': 'login',
-      'Logout': 'logout',
-      'Token': 'token',
-      'Autenticação': 'autenticação',
-      'Perfil': 'perfil',
+      Permissões: 'permissões',
+      Senha: 'senha',
+      Tema: 'tema',
+      ContagemFichas: 'contagem de fichas',
+      FichasRecentes: 'fichas recentes',
+      Login: 'login',
+      Logout: 'logout',
+      Token: 'token',
+      Autenticação: 'autenticação',
+      Perfil: 'perfil',
     };
 
     return fallbackNames[tableName || ''] || tableName || 'entidade';
@@ -138,7 +155,11 @@ export class AuditoriaService {
 
       // Primeiro, tentar encontrar entidade com nome de tabela exato
       for (const table of metadataStorage.tables) {
-        if (table.name === tableName && table.target && typeof table.target === 'function') {
+        if (
+          table.name === tableName &&
+          table.target &&
+          typeof table.target === 'function'
+        ) {
           return table.target;
         }
       }
@@ -170,7 +191,10 @@ export class AuditoriaService {
 
       return null;
     } catch (error) {
-      this.logger.warn(`Erro ao obter classe da entidade para tabela ${tableName}:`, error);
+      this.logger.warn(
+        `Erro ao obter classe da entidade para tabela ${tableName}:`,
+        error,
+      );
       return null;
     }
   }
@@ -197,16 +221,27 @@ export class AuditoriaService {
   /**
    * Lista todas as entidades registradas no TypeORM (para debug)
    */
-  private getAllRegisteredEntities(): Array<{ tableName: string; entityClass: any; friendlyName?: string }> {
+  private getAllRegisteredEntities(): Array<{
+    tableName: string;
+    entityClass: any;
+    friendlyName?: string;
+  }> {
     try {
       const metadataStorage = getMetadataArgsStorage();
-      const entities: Array<{ tableName: string; entityClass: any; friendlyName?: string }> = [];
+      const entities: Array<{
+        tableName: string;
+        entityClass: any;
+        friendlyName?: string;
+      }> = [];
 
       for (const table of metadataStorage.tables) {
         if (table.target && typeof table.target === 'function') {
           const entityClass = table.target;
           const tableName = table.name || 'unknown';
-          const friendlyName = typeof (entityClass as any).nomeAmigavel === 'string' ? (entityClass as any).nomeAmigavel : undefined;
+          const friendlyName =
+            typeof (entityClass as any).nomeAmigavel === 'string'
+              ? (entityClass as any).nomeAmigavel
+              : undefined;
 
           entities.push({
             tableName,
@@ -240,7 +275,11 @@ export class AuditoriaService {
       // Descrição
       auditLog.descricao =
         data.descricao ||
-        this.generateEntityDescription(data.acao, data.entidade, data.entityInstance) ||
+        this.generateEntityDescription(
+          data.acao,
+          data.entidade,
+          data.entityInstance,
+        ) ||
         AUDIT_ACTION_DESCRIPTIONS[data.acao] ||
         'Ação não especificada';
 
@@ -440,16 +479,19 @@ export class AuditoriaService {
     return AUDIT_ACTION_DESCRIPTIONS[action] || `Action: ${action}`;
   }
 
-  async findByEntity(entidade: string, entidadeId: string): Promise<Auditoria[]> {
+  async findByEntity(
+    entidade: string,
+    entidadeId: string,
+  ): Promise<Auditoria[]> {
     return this.auditLogRepository.find({
       where: {
         entidade,
-        entidadeId
+        entidadeId,
       },
       relations: ['usuario'],
       order: {
-        criadoEm: 'DESC'
-      }
+        criadoEm: 'DESC',
+      },
     });
   }
 }

@@ -4,19 +4,19 @@ import {
   ExecutionContext,
   CallHandler,
   Logger,
-} from "@nestjs/common";
-import { Observable } from "rxjs";
-import { tap, catchError } from "rxjs/operators";
-import { Request } from "express";
-import { Reflector } from "@nestjs/core";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, getMetadataArgsStorage, DataSource } from "typeorm";
-import { AuditoriaService } from "../services/auditoria.service";
-import { AuditAction } from "../enums/auditoria.enum";
-import { Configuracao } from "../../modules/configuracao/entities/configuracao.entity";
+} from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
+import { Request } from 'express';
+import { Reflector } from '@nestjs/core';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, getMetadataArgsStorage, DataSource } from 'typeorm';
+import { AuditoriaService } from '../services/auditoria.service';
+import { AuditAction } from '../enums/auditoria.enum';
+import { Configuracao } from '../../modules/configuracao/entities/configuracao.entity';
 
-export const AUDIT_ACTION_KEY = "audit_action";
-export const AUDIT_ENTITY_TYPE_KEY = "audit_entity_type";
+export const AUDIT_ACTION_KEY = 'audit_action';
+export const AUDIT_ENTITY_TYPE_KEY = 'audit_entity_type';
 
 /**
  * Decorator para marcar endpoints que devem gerar logs de auditoria
@@ -68,18 +68,17 @@ export class AuditoriaInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    const startTime = Date.now();
     const userId = (request as any).user?.id;
 
     // Capturar dados anteriores para UPDATE/DELETE antes da operação
     let previousDataPromise: Promise<any> | null = null;
     const method = request.method;
-    const pathOnly = request.url.split("?")[0];
+    const pathOnly = request.url.split('?')[0];
     const earlyEntityType = this.extractEntityTypeFromPath(pathOnly);
     const earlyEntityId = this.extractEntityId(request, null, earlyEntityType);
 
     if (
-      (method === "PUT" || method === "PATCH" || method === "DELETE") &&
+      (method === 'PUT' || method === 'PATCH' || method === 'DELETE') &&
       earlyEntityId &&
       userId
     ) {
@@ -90,47 +89,15 @@ export class AuditoriaInterceptor implements NestInterceptor {
     }
 
     return next.handle().pipe(
-      tap(async (response) => {
-        try {
-          const { shouldAudit, action, entityType } = this.determineAuditAction(
-            request,
-            handler,
-            className,
-            response,
-          );
-
-          // Verificar se deve auditar baseado nas configurações do sistema
-          const shouldAuditConfig = await this.shouldAuditAction(action, entityType);
-
-          if (shouldAudit && shouldAuditConfig && userId) {
-            const entityId = this.extractEntityId(request, response, entityType);
-            
-            // Capturar dados anteriores se necessário
-            let previousData = null;
-            if (previousDataPromise) {
-              try {
-                previousData = await previousDataPromise;
-              } catch (error) {
-                this.logger.warn('Erro ao capturar dados anteriores:', error.message);
-              }
-            }
-
-            const { newData } = await this.extractOperationDataAsync(action, request, response, entityType, entityId || '');
-
-            await this.auditoriaService.createLog({
-              usuarioId: userId,
-              acao: action,
-              entidade: entityType,
-              entidadeId: entityId,
-              dadosAnteriores: previousData,
-              dadosNovos: newData,
-              enderecoIp: this.extractIpAddress(request),
-              descricao: this.generateDescription(action, entityType, (request as any).user?.nome),
-            });
-          }
-        } catch (error) {
-          this.logger.error("Erro ao criar log de auditoria:", error);
-        }
+      tap((response) => {
+        void this.auditAfterSuccess(
+          request,
+          handler,
+          className,
+          response,
+          userId,
+          previousDataPromise,
+        );
       }),
       catchError(async (error) => {
         try {
@@ -142,7 +109,10 @@ export class AuditoriaInterceptor implements NestInterceptor {
           );
 
           // Verificar se deve auditar baseado nas configurações do sistema
-          const shouldAuditConfig = await this.shouldAuditAction(action, entityType);
+          const shouldAuditConfig = await this.shouldAuditAction(
+            action,
+            entityType,
+          );
 
           if (shouldAudit && shouldAuditConfig && userId) {
             await this.auditoriaService.createLog({
@@ -150,17 +120,83 @@ export class AuditoriaInterceptor implements NestInterceptor {
               acao: action,
               entidade: entityType,
               enderecoIp: this.extractIpAddress(request),
-              descricao: `Erro: ${error.message || "Erro desconhecido"}`,
+              descricao: `Erro: ${error.message || 'Erro desconhecido'}`,
               dadosNovos: { error: error.message },
             });
           }
         } catch (auditError) {
-          this.logger.error("Erro ao criar log de auditoria de erro:", auditError);
+          this.logger.error(
+            'Erro ao criar log de auditoria de erro:',
+            auditError,
+          );
         }
 
         throw error;
       }),
     );
+  }
+
+  private async auditAfterSuccess(
+    request: Request,
+    handler: any,
+    className: string,
+    response: unknown,
+    userId: string | undefined,
+    previousDataPromise: Promise<unknown> | null,
+  ): Promise<void> {
+    try {
+      const { shouldAudit, action, entityType } = this.determineAuditAction(
+        request,
+        handler,
+        className,
+        response,
+      );
+
+      const shouldAuditConfig = await this.shouldAuditAction(
+        action,
+        entityType,
+      );
+
+      if (shouldAudit && shouldAuditConfig && userId) {
+        const entityId = this.extractEntityId(request, response, entityType);
+
+        let previousData: unknown = null;
+        if (previousDataPromise) {
+          try {
+            previousData = await previousDataPromise;
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            this.logger.warn('Erro ao capturar dados anteriores:', message);
+          }
+        }
+
+        const { newData } = await this.extractOperationDataAsync(
+          action,
+          request,
+          response,
+          entityType,
+          entityId || '',
+        );
+
+        await this.auditoriaService.createLog({
+          usuarioId: userId,
+          acao: action,
+          entidade: entityType,
+          entidadeId: entityId,
+          dadosAnteriores: previousData,
+          dadosNovos: newData,
+          enderecoIp: this.extractIpAddress(request),
+          descricao: this.generateDescription(
+            action,
+            entityType,
+            (request as { user?: { nome?: string } }).user?.nome,
+          ),
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro ao criar log de auditoria:', error);
+    }
   }
 
   /**
@@ -170,7 +206,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
     request: Request,
     handler: any,
     className: string,
-    response: any,
+    _response: unknown,
   ): { shouldAudit: boolean; action: AuditAction; entityType: string } {
     // Primeiro, verificar se há decorator específico
     const auditAction = this.reflector.get<AuditAction>(
@@ -186,13 +222,14 @@ export class AuditoriaInterceptor implements NestInterceptor {
       return {
         shouldAudit: true,
         action: auditAction,
-        entityType: auditEntityType || this.extractEntityTypeFromClass(className),
+        entityType:
+          auditEntityType || this.extractEntityTypeFromClass(className),
       };
     }
 
     // Determinar automaticamente baseado no método HTTP e caminho
     const method = request.method;
-    const path = request.url.split("?")[0];
+    const path = request.url.split('?')[0];
 
     // Operações sensíveis sempre auditadas
     if (this.isSensitiveOperation(path, method)) {
@@ -206,26 +243,33 @@ export class AuditoriaInterceptor implements NestInterceptor {
     return {
       shouldAudit: false,
       action: AuditAction.READ,
-      entityType: "",
+      entityType: '',
     };
   }
 
   /**
    * Verifica se uma ação deve ser auditada baseado nas configurações do sistema
    */
-  private async shouldAuditAction(action: AuditAction, entityType?: string): Promise<boolean> {
+  private async shouldAuditAction(
+    action: AuditAction,
+    _entityType?: string,
+  ): Promise<boolean> {
     try {
       // Buscar a configuração do sistema (assumindo que existe apenas uma)
       const config = await this.configuracaoRepository.findOne({
-        where: {}
+        where: {},
       });
 
       // ✅ DEBUG: Log da configuração encontrada
 
       if (!config) {
         // Se não há configuração, auditar por segurança (apenas operações críticas)
-        return action === AuditAction.LOGIN || action === AuditAction.LOGOUT ||
-               action === AuditAction.CHANGE_PASSWORD || action === AuditAction.LOGIN_FAILED;
+        return (
+          action === AuditAction.LOGIN ||
+          action === AuditAction.LOGOUT ||
+          action === AuditAction.CHANGE_PASSWORD ||
+          action === AuditAction.LOGIN_FAILED
+        );
       }
 
       // Verificar configurações específicas baseadas na ação
@@ -256,7 +300,6 @@ export class AuditoriaInterceptor implements NestInterceptor {
       }
 
       return shouldAudit;
-
     } catch (error) {
       this.logger.error('Erro ao verificar configuração de auditoria:', error);
       // Em caso de erro, não auditar por padrão (mais seguro)
@@ -269,9 +312,12 @@ export class AuditoriaInterceptor implements NestInterceptor {
    */
   private getAllEntityTables(): Map<string, string> {
     const now = Date.now();
-    
+
     // Cache com TTL para performance
-    if (this.entityTableCache.size > 0 && (now - this.lastCacheUpdate) < this.CACHE_TTL) {
+    if (
+      this.entityTableCache.size > 0 &&
+      now - this.lastCacheUpdate < this.CACHE_TTL
+    ) {
       return this.entityTableCache;
     }
 
@@ -282,12 +328,13 @@ export class AuditoriaInterceptor implements NestInterceptor {
       // Descobrir todas as entidades registradas
       for (const table of metadataArgsStorage.tables) {
         if (table.target && table.name) {
-          const entityName = typeof table.target === 'function' 
-            ? table.target.name.toLowerCase()
-            : String(table.target).toLowerCase();
-          
+          const entityName =
+            typeof table.target === 'function'
+              ? table.target.name.toLowerCase()
+              : String(table.target).toLowerCase();
+
           const tableName = table.name;
-          
+
           // Mapear variações comuns do nome
           this.addEntityVariations(entityMap, entityName, tableName);
           this.addEntityVariations(entityMap, tableName, tableName);
@@ -296,10 +343,11 @@ export class AuditoriaInterceptor implements NestInterceptor {
 
       this.entityTableCache = entityMap;
       this.lastCacheUpdate = now;
-      
-      
     } catch (error) {
-      this.logger.warn('Erro ao descobrir entidades via TypeORM, usando cache existente', error.message);
+      this.logger.warn(
+        'Erro ao descobrir entidades via TypeORM, usando cache existente',
+        error.message,
+      );
     }
 
     return this.entityTableCache;
@@ -308,7 +356,11 @@ export class AuditoriaInterceptor implements NestInterceptor {
   /**
    * Adiciona variações comuns de nomes de entidades
    */
-  private addEntityVariations(map: Map<string, string>, entityName: string, tableName: string): void {
+  private addEntityVariations(
+    map: Map<string, string>,
+    entityName: string,
+    tableName: string,
+  ): void {
     const variations = [
       entityName,
       entityName.replace('entity', ''),
@@ -319,7 +371,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
       this.toSnakeCase(entityName),
     ];
 
-    variations.forEach(variation => {
+    variations.forEach((variation) => {
       if (variation && variation.length > 0) {
         map.set(variation.toLowerCase(), tableName);
       }
@@ -329,7 +381,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
     if (tableName === 'usuarios') {
       map.set('users', 'usuarios');
       map.set('user', 'usuarios');
-    } 
+    }
   }
 
   /**
@@ -337,45 +389,48 @@ export class AuditoriaInterceptor implements NestInterceptor {
    */
   private isSensitiveOperation(path: string, method: string): boolean {
     // Sempre auditar operações de escrita
-    if (["POST", "PUT", "DELETE", "PATCH"].includes(method)) {
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
       return true;
     }
 
     // Verificar se path corresponde a alguma entidade conhecida
     const entityType = this.extractEntityTypeFromPath(path);
     const entityMap = this.getAllEntityTables();
-    
+
     // Se encontrou uma entidade conhecida, é sensível
-    return entityMap.has(entityType.toLowerCase()) || entityType !== "unknown";
+    return entityMap.has(entityType.toLowerCase()) || entityType !== 'unknown';
   }
 
   /**
    * Mapeia método HTTP para ação de auditoria
    */
-  private mapHttpMethodToAuditAction(method: string, path: string): AuditAction {
+  private mapHttpMethodToAuditAction(
+    method: string,
+    path: string,
+  ): AuditAction {
     // Operações especiais
-    if (path.includes("/change-password")) {
+    if (path.includes('/change-password')) {
       return AuditAction.CHANGE_PASSWORD;
     }
 
-    if (path.includes("/login")) {
+    if (path.includes('/login')) {
       return AuditAction.LOGIN;
     }
 
-    if (path.includes("/logout")) {
+    if (path.includes('/logout')) {
       return AuditAction.LOGOUT;
     }
 
     // Mapeamento padrão
     switch (method) {
-      case "POST":
+      case 'POST':
         return AuditAction.CREATE;
-      case "PUT":
-      case "PATCH":
+      case 'PUT':
+      case 'PATCH':
         return AuditAction.UPDATE;
-      case "DELETE":
+      case 'DELETE':
         return AuditAction.DELETE;
-      case "GET":
+      case 'GET':
       default:
         return AuditAction.READ;
     }
@@ -385,10 +440,10 @@ export class AuditoriaInterceptor implements NestInterceptor {
    * Extrai tipo de entidade do caminho da URL - TOTALMENTE ESCALÁVEL
    */
   private extractEntityTypeFromPath(path: string): string {
-    const cleanPath = path.split("?")[0].replace(/^\/api\//, "");
-    const segments = cleanPath.split("/").filter(Boolean);
+    const cleanPath = path.split('?')[0].replace(/^\/api\//, '');
+    const segments = cleanPath.split('/').filter(Boolean);
 
-    if (segments.length === 0) return "unknown";
+    if (segments.length === 0) return 'unknown';
 
     /** Congelar / liberar capa (`cleanPath` é relativo a `/api/`, sem barra inicial — ex.: `folha/capas/…`) */
     if (/^folha\/capas\/[^/]+\/(congelar|liberar)$/i.test(cleanPath)) {
@@ -422,10 +477,10 @@ export class AuditoriaInterceptor implements NestInterceptor {
     }
 
     const pathSegment = segments[0].toLowerCase();
-    
+
     // ✅ ESCALÁVEL: Usa descoberta automática
     const entityMap = this.getAllEntityTables();
-    
+
     // Tentar encontrar correspondência exata primeiro
     if (entityMap.has(pathSegment)) {
       return entityMap.get(pathSegment)!;
@@ -439,14 +494,14 @@ export class AuditoriaInterceptor implements NestInterceptor {
     }
 
     // Fallback: normalizar o nome do path
-    return pathSegment.replace(/-/g, "_");
+    return pathSegment.replace(/-/g, '_');
   }
 
   /**
    * Extrai tipo de entidade do nome da classe
    */
   private extractEntityTypeFromClass(className: string): string {
-    return className.replace("Controller", "").toLowerCase();
+    return className.replace('Controller', '').toLowerCase();
   }
 
   /**
@@ -470,8 +525,11 @@ export class AuditoriaInterceptor implements NestInterceptor {
     ) {
       const vb = request.body.folhaVerbaId as string;
       const item = response.capa.itens.find(
-        (i: { id?: string; folhaVerba?: { id?: string }; folhaVerbaId?: string }) =>
-          i?.folhaVerba?.id === vb || i?.folhaVerbaId === vb,
+        (i: {
+          id?: string;
+          folhaVerba?: { id?: string };
+          folhaVerbaId?: string;
+        }) => i?.folhaVerba?.id === vb || i?.folhaVerbaId === vb,
       );
       if (item?.id) {
         return String(item.id);
@@ -510,7 +568,11 @@ export class AuditoriaInterceptor implements NestInterceptor {
       }
       // Fallback: primeira propriedade array de strings/UUIDs
       for (const value of Object.values(body)) {
-        if (Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
+        if (
+          Array.isArray(value) &&
+          value.length > 0 &&
+          value.every((v) => typeof v === 'string')
+        ) {
           return value.join(',');
         }
       }
@@ -518,7 +580,9 @@ export class AuditoriaInterceptor implements NestInterceptor {
       if (typeof body.id === 'string') {
         return body.id;
       }
-      const singleKey = Object.keys(body).find(k => k.toLowerCase().endsWith('id') && typeof body[k] === 'string');
+      const singleKey = Object.keys(body).find(
+        (k) => k.toLowerCase().endsWith('id') && typeof body[k] === 'string',
+      );
       if (singleKey) {
         return body[singleKey];
       }
@@ -555,18 +619,22 @@ export class AuditoriaInterceptor implements NestInterceptor {
                 return { newData: this.sanitizeData(completeObject) };
               }
             } catch (error) {
-              this.logger.warn('Erro ao buscar objeto completo após CREATE:', error.message);
+              this.logger.warn(
+                'Erro ao buscar objeto completo após CREATE:',
+                error.message,
+              );
             }
           }
           return { newData: this.sanitizeData(response) };
         }
         return { newData: this.sanitizeData(request.body) };
 
-      case AuditAction.UPDATE:
+      case AuditAction.UPDATE: {
         // Atualização em massa: focar apenas nos campos alterados
         const bodyUpdate: any = request.body || {};
         const idsFromBody = this.getIdsFromBody(bodyUpdate);
-        const isEntityIdList = typeof entityId === 'string' && entityId.includes(',');
+        const isEntityIdList =
+          typeof entityId === 'string' && entityId.includes(',');
 
         if (idsFromBody || isEntityIdList) {
           const ids = idsFromBody || entityId.split(',').filter(Boolean);
@@ -577,12 +645,18 @@ export class AuditoriaInterceptor implements NestInterceptor {
         // Atualização simples: tentar buscar objeto completo
         if (entityId) {
           try {
-            const completeObject = await this.fetchCompleteObject(entityType, entityId);
+            const completeObject = await this.fetchCompleteObject(
+              entityType,
+              entityId,
+            );
             if (completeObject) {
               return { newData: this.sanitizeData(completeObject) };
             }
           } catch (error) {
-            this.logger.warn('Erro ao buscar objeto completo após UPDATE:', error.message);
+            this.logger.warn(
+              'Erro ao buscar objeto completo após UPDATE:',
+              error.message,
+            );
           }
         }
         // Fallback para response ou request.body
@@ -590,6 +664,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
           return { newData: this.sanitizeData(response) };
         }
         return { newData: this.sanitizeData(request.body) };
+      }
 
       case AuditAction.DELETE:
         // Para DELETE, dados anteriores já foram capturados, response pode ter confirmação
@@ -606,11 +681,14 @@ export class AuditoriaInterceptor implements NestInterceptor {
   /**
    * Busca objeto completo do banco de dados
    */
-  private async fetchCompleteObject(entityType: string, entityId: string): Promise<any> {
+  private async fetchCompleteObject(
+    entityType: string,
+    entityId: string,
+  ): Promise<any> {
     try {
       // Mapear nome da entidade para classe TypeORM usando cache
       const entityTableMap = this.getAllEntityTables();
-      
+
       // Encontrar a entidade baseada no entityType
       let targetEntity: string | null = null;
       for (const [entityName, variations] of entityTableMap.entries()) {
@@ -626,27 +704,32 @@ export class AuditoriaInterceptor implements NestInterceptor {
       }
 
       // Obter repositório usando metadata do TypeORM
-      const metadata = this.dataSource.entityMetadatas.find(meta => 
-        meta.tableName === targetEntity || 
-        meta.name.toLowerCase() === targetEntity!.toLowerCase()
+      const metadata = this.dataSource.entityMetadatas.find(
+        (meta) =>
+          meta.tableName === targetEntity ||
+          meta.name.toLowerCase() === targetEntity.toLowerCase(),
       );
 
       if (!metadata) {
-        this.logger.warn(`Metadata não encontrada para entidade ${targetEntity}`);
+        this.logger.warn(
+          `Metadata não encontrada para entidade ${targetEntity}`,
+        );
         return null;
       }
 
       const repository = this.dataSource.getRepository(metadata.target);
-      
+
       // Buscar a entidade completa
       const completeObject = await repository.findOne({
-        where: { id: entityId }
+        where: { id: entityId },
       });
 
       return completeObject;
-
     } catch (error) {
-      this.logger.warn(`Erro ao buscar objeto completo para ${entityType}:${entityId}`, error.message);
+      this.logger.warn(
+        `Erro ao buscar objeto completo para ${entityType}:${entityId}`,
+        error.message,
+      );
       return null;
     }
   }
@@ -763,47 +846,52 @@ export class AuditoriaInterceptor implements NestInterceptor {
   }
   */
 
-  private async capturePreviousData(entityType: string, entityId: string): Promise<any> {
-  try {
+  private async capturePreviousData(
+    entityType: string,
+    entityId: string,
+  ): Promise<any> {
+    try {
+      // 1) Encontrar metadata pela tableName (entityType)
+      const metadata = this.dataSource.entityMetadatas.find(
+        (meta) => meta.tableName === entityType,
+      );
+      if (!metadata) {
+        this.logger.warn(
+          `Metadata não encontrada para tableName="${entityType}"`,
+        );
+        return null;
+      }
 
-    // 1) Encontrar metadata pela tableName (entityType)
-    const metadata = this.dataSource.entityMetadatas.find(
-      meta => meta.tableName === entityType
-    );
-    if (!metadata) {
-      this.logger.warn(`Metadata não encontrada para tableName="${entityType}"`);
-      return null;
+      // 2) Obter repositório da entidade
+      const repository = this.dataSource.getRepository(metadata.target);
+
+      // 3) Buscar registro ANTES da operação
+      const before = await repository.findOne({ where: { id: entityId } });
+
+      if (!before) {
+        this.logger.warn(
+          `Nenhum dado anterior encontrado para ${entityType}:${entityId}`,
+        );
+        return null;
+      }
+
+      // 4) Sanitizar e retornar
+      return this.sanitizeData(before);
+    } catch (error) {
+      this.logger.warn(
+        `Erro ao capturar dados anteriores para ${entityType}:${entityId}`,
+        error.message,
+      );
+      // Fallback – retornar ao menos informações básicas
+      return {
+        _error: 'Falha ao capturar dados anteriores',
+        entityType,
+        entityId,
+        timestamp: new Date().toISOString(),
+        errorMessage: error.message,
+      };
     }
-
-    // 2) Obter repositório da entidade
-    const repository = this.dataSource.getRepository(metadata.target);
-
-    // 3) Buscar registro ANTES da operação
-    const before = await repository.findOne({ where: { id: entityId } });
-
-    if (!before) {
-      this.logger.warn(`Nenhum dado anterior encontrado para ${entityType}:${entityId}`);
-      return null;
-    }
-
-    // 4) Sanitizar e retornar
-    return this.sanitizeData(before);
-
-  } catch (error) {
-    this.logger.warn(
-      `Erro ao capturar dados anteriores para ${entityType}:${entityId}`,
-      error.message
-    );
-    // Fallback – retornar ao menos informações básicas
-    return {
-      _error: 'Falha ao capturar dados anteriores',
-      entityType,
-      entityId,
-      timestamp: new Date().toISOString(),
-      errorMessage: error.message
-    };
   }
-}
 
   /**
    * Remove dados sensíveis
@@ -814,10 +902,10 @@ export class AuditoriaInterceptor implements NestInterceptor {
     const sanitized = { ...data };
 
     // Remover campos sensíveis
-    const sensitiveFields = ["password", "senha", "token", "secret"];
-    sensitiveFields.forEach(field => {
+    const sensitiveFields = ['password', 'senha', 'token', 'secret'];
+    sensitiveFields.forEach((field) => {
       if (sanitized[field]) {
-        sanitized[field] = "[REDACTED]";
+        sanitized[field] = '[REDACTED]';
       }
     });
 
@@ -828,35 +916,40 @@ export class AuditoriaInterceptor implements NestInterceptor {
    * Extrai endereço IP
    */
   private extractIpAddress(request: Request): string {
-    const forwarded = request.headers["x-forwarded-for"] as string;
-    const realIp = request.headers["x-real-ip"] as string;
-    const remoteAddress = (request as any).connection?.remoteAddress ||
-                         (request as any).socket?.remoteAddress ||
-                         (request as any).ip;
+    const forwarded = request.headers['x-forwarded-for'] as string;
+    const realIp = request.headers['x-real-ip'] as string;
+    const remoteAddress =
+      (request as any).connection?.remoteAddress ||
+      (request as any).socket?.remoteAddress ||
+      (request as any).ip;
 
     if (forwarded) {
-      return forwarded.split(",")[0].trim();
+      return forwarded.split(',')[0].trim();
     }
 
-    return realIp || remoteAddress || "unknown";
+    return realIp || remoteAddress || 'unknown';
   }
 
   /**
    * Gera descrição amigável
    */
-  private generateDescription(action: AuditAction, entityName: string, userName?: string): string {
+  private generateDescription(
+    action: AuditAction,
+    entityName: string,
+    userName?: string,
+  ): string {
     const actionText = {
-      [AuditAction.CREATE]: "criou",
-      [AuditAction.UPDATE]: "atualizou",
-      [AuditAction.DELETE]: "excluiu",
-      [AuditAction.READ]: "consultou",
-      [AuditAction.LOGIN]: "fez login",
-      [AuditAction.LOGOUT]: "fez logout",
-      [AuditAction.LOGIN_FAILED]: "tentou fazer login",
-      [AuditAction.CHANGE_PASSWORD]: "alterou senha",
+      [AuditAction.CREATE]: 'criou',
+      [AuditAction.UPDATE]: 'atualizou',
+      [AuditAction.DELETE]: 'excluiu',
+      [AuditAction.READ]: 'consultou',
+      [AuditAction.LOGIN]: 'fez login',
+      [AuditAction.LOGOUT]: 'fez logout',
+      [AuditAction.LOGIN_FAILED]: 'tentou fazer login',
+      [AuditAction.CHANGE_PASSWORD]: 'alterou senha',
     };
 
-    const user = userName || "Usuário";
+    const user = userName || 'Usuário';
     const entity = this.getEntityFriendlyName(entityName);
 
     return `${user} ${actionText[action]} ${entity}`;
@@ -868,10 +961,10 @@ export class AuditoriaInterceptor implements NestInterceptor {
   private getEntityFriendlyName(entityType: string): string {
     // ✅ ESCALÁVEL: Gerar nome amigável automaticamente
     return entityType
-      .replace(/_/g, " ")
-      .replace(/-/g, " ")
+      .replace(/_/g, ' ')
+      .replace(/-/g, ' ')
       .toLowerCase()
-      .replace(/\b\w/g, l => l.toUpperCase());
+      .replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
   // Utilitários para transformação de strings
@@ -915,7 +1008,11 @@ export class AuditoriaInterceptor implements NestInterceptor {
       }
     }
     for (const value of Object.values(body)) {
-      if (Array.isArray(value) && value.length > 0 && value.every(v => typeof v === 'string')) {
+      if (
+        Array.isArray(value) &&
+        value.length > 0 &&
+        value.every((v) => typeof v === 'string')
+      ) {
         return value;
       }
     }
@@ -939,12 +1036,12 @@ export class AuditoriaInterceptor implements NestInterceptor {
     }
 
     const keysToRemove = Object.keys(clone).filter(
-      k => k.toLowerCase() === 'ids' || k.toLowerCase().endsWith('ids'),
+      (k) => k.toLowerCase() === 'ids' || k.toLowerCase().endsWith('ids'),
     );
-    keysToRemove.forEach(k => delete clone[k]);
+    keysToRemove.forEach((k) => delete clone[k]);
 
     // Limpar recursivamente estruturas aninhadas
-    Object.keys(clone).forEach(k => {
+    Object.keys(clone).forEach((k) => {
       if (typeof clone[k] === 'object') {
         clone[k] = this.stripIdsDeep(clone[k]);
       }

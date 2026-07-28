@@ -9,7 +9,8 @@ export class AplicarEtapasRemuneradasDto {
 
   @ApiProperty({
     type: [String],
-    description: 'IDs dos funcionários selecionados para receber as etapas remuneradas',
+    description:
+      'IDs dos funcionários selecionados para receber as etapas remuneradas',
   })
   @IsArray()
   @ArrayMinSize(1)

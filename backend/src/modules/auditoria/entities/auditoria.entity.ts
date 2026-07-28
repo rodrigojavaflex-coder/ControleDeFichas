@@ -1,9 +1,4 @@
-import {
-  Entity,
-  Column,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
 import { AuditAction } from '../../../common/enums/auditoria.enum';
 import { BaseEntity } from '../../../common/entities/base.entity';

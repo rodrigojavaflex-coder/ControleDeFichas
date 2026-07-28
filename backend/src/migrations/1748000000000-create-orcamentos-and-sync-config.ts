@@ -11,7 +11,10 @@ export class CreateOrcamentosAndSyncConfig1748000000000
 {
   public async up(queryRunner: QueryRunner): Promise<void> {
     const configTable = await queryRunner.getTable('sincronizacao_config');
-    if (configTable && !configTable.findColumnByName('ultimaModificacaoOrcamento')) {
+    if (
+      configTable &&
+      !configTable.findColumnByName('ultimaModificacaoOrcamento')
+    ) {
       await queryRunner.addColumn(
         'sincronizacao_config',
         new TableColumn({
@@ -20,7 +23,9 @@ export class CreateOrcamentosAndSyncConfig1748000000000
           isNullable: true,
         }),
       );
-      console.log('✅ Coluna ultimaModificacaoOrcamento adicionada em sincronizacao_config');
+      console.log(
+        '✅ Coluna ultimaModificacaoOrcamento adicionada em sincronizacao_config',
+      );
     }
 
     const orcamentosTable = await queryRunner.getTable('orcamentos');

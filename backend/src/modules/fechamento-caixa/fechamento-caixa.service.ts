@@ -30,9 +30,7 @@ import { CaixaRequisicaoPaga } from './entities/caixa-requisicao-paga.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { CaixaFechamento } from './entities/caixa-fechamento.entity';
 import { CaixaFechamentoStatus } from './enums/caixa-fechamento-status.enum';
-import {
-  CaixaTerceiroOrigemTotalDto,
-} from './dto/caixa-terceiro-origem-total.dto';
+import { CaixaTerceiroOrigemTotalDto } from './dto/caixa-terceiro-origem-total.dto';
 import {
   CaixaBaixaDetalheDto,
   CaixaErpPagamentoDetalheDto,
@@ -203,7 +201,10 @@ export class FechamentoCaixaService {
           pagamentosStats,
           statsSegmento.pagamentosStats,
         );
-        itensStats = this.somarUpsertStats(itensStats, statsSegmento.itensStats);
+        itensStats = this.somarUpsertStats(
+          itensStats,
+          statsSegmento.itensStats,
+        );
         requisicoesStats = this.somarUpsertStats(
           requisicoesStats,
           statsSegmento.requisicoesStats,
@@ -319,9 +320,7 @@ export class FechamentoCaixaService {
       end: dataFim,
     };
 
-    this.logger.log(
-      `Importando segmento caixa ERP: ${dataInicio}..${dataFim}`,
-    );
+    this.logger.log(`Importando segmento caixa ERP: ${dataInicio}..${dataFim}`);
 
     const pctBase = Math.round(((segmentoAtual - 1) / segmentosTotal) * 100);
     const pctSlice = Math.round(100 / segmentosTotal);
@@ -499,7 +498,9 @@ export class FechamentoCaixaService {
       });
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Erro desconhecido');
+        const errorText = await response
+          .text()
+          .catch(() => 'Erro desconhecido');
         throw new ServiceUnavailableException(
           `Erro ao consultar agente (${response.status}) em ${rotulo}: ${errorText}`,
         );
@@ -541,7 +542,8 @@ export class FechamentoCaixaService {
   }
 
   private getAgenteConfig(unidade: Unidade): AgenteConfig | null {
-    const agentes = this.configService.get<Record<string, AgenteConfig>>('agentes');
+    const agentes =
+      this.configService.get<Record<string, AgenteConfig>>('agentes');
     if (!agentes) {
       return null;
     }
@@ -602,7 +604,9 @@ export class FechamentoCaixaService {
     if (atualizar) {
       await this.pagamentoRepo.upsert(entitiesUnicas, ['chaveErp']);
     } else {
-      const novos = entitiesUnicas.filter((e) => !existentesSet.has(e.chaveErp));
+      const novos = entitiesUnicas.filter(
+        (e) => !existentesSet.has(e.chaveErp),
+      );
       if (novos.length) {
         await this.pagamentoRepo.save(novos);
       }
@@ -696,7 +700,9 @@ export class FechamentoCaixaService {
     if (atualizar) {
       await this.itemRepo.upsert(entitiesUnicas, ['chaveErp']);
     } else {
-      const novos = entitiesUnicas.filter((e) => !existentesSet.has(e.chaveErp));
+      const novos = entitiesUnicas.filter(
+        (e) => !existentesSet.has(e.chaveErp),
+      );
       if (novos.length) {
         await this.itemRepo.save(novos);
       }
@@ -815,7 +821,7 @@ export class FechamentoCaixaService {
             : null,
         orcamentoId:
           row.nr_orcamento != null
-            ? orcamentoPorNr.get(row.nr_orcamento) ?? null
+            ? (orcamentoPorNr.get(row.nr_orcamento) ?? null)
             : null,
         atualizadoEm: new Date(),
       }),
@@ -826,7 +832,9 @@ export class FechamentoCaixaService {
     if (atualizar) {
       await this.requisicaoRepo.upsert(entitiesUnicas, ['chaveErp']);
     } else {
-      const novos = entitiesUnicas.filter((e) => !existentesSet.has(e.chaveErp));
+      const novos = entitiesUnicas.filter(
+        (e) => !existentesSet.has(e.chaveErp),
+      );
       if (novos.length) {
         await this.requisicaoRepo.save(novos);
       }
@@ -858,12 +866,13 @@ export class FechamentoCaixaService {
       this.obterPagamentosErpDetalhe(unidade, dataNormalizada),
     ]);
 
-    const totalBaixas = Math.round(
-      baixas.reduce((acc, item) => acc + item.valorBaixa, 0) * 100,
-    ) / 100;
-    const totalErpLiquido = Math.round(
-      erpPagamentos.reduce((acc, item) => acc + item.valorLiquido, 0) * 100,
-    ) / 100;
+    const totalBaixas =
+      Math.round(baixas.reduce((acc, item) => acc + item.valorBaixa, 0) * 100) /
+      100;
+    const totalErpLiquido =
+      Math.round(
+        erpPagamentos.reduce((acc, item) => acc + item.valorLiquido, 0) * 100,
+      ) / 100;
 
     return {
       unidade,
@@ -952,7 +961,7 @@ export class FechamentoCaixaService {
         referenciaRequisicao,
         descricaoProduto:
           referenciaRequisicao == null
-            ? descricoesProduto.get(chaveCupom) ?? null
+            ? (descricoesProduto.get(chaveCupom) ?? null)
             : null,
         codigoTerminal: pagamento.codigoTerminal,
         formaPagamento: pagamento.formaPagamento,
@@ -963,7 +972,7 @@ export class FechamentoCaixaService {
         codigoCliente: pagamento.codigoCliente ?? null,
         clienteNome:
           pagamento.codigoCliente != null
-            ? nomesClientes.get(pagamento.codigoCliente) ?? null
+            ? (nomesClientes.get(pagamento.codigoCliente) ?? null)
             : null,
         nomeOperadorCaixa: pagamento.nomeOperadorCaixa ?? null,
       };
@@ -1104,7 +1113,9 @@ export class FechamentoCaixaService {
     });
 
     const cuponsFallback = [
-      ...new Set(pagamentosSemRequisicao.map((pagamento) => pagamento.numeroCupom)),
+      ...new Set(
+        pagamentosSemRequisicao.map((pagamento) => pagamento.numeroCupom),
+      ),
     ];
 
     if (cuponsFallback.length > 0) {
@@ -1122,7 +1133,8 @@ export class FechamentoCaixaService {
         if (requisicao.numeroRequisicao == null) {
           continue;
         }
-        const existentes = requisicoesPorCupom.get(requisicao.numeroCupom) ?? [];
+        const existentes =
+          requisicoesPorCupom.get(requisicao.numeroCupom) ?? [];
         if (!existentes.includes(requisicao.numeroRequisicao)) {
           existentes.push(requisicao.numeroRequisicao);
           requisicoesPorCupom.set(requisicao.numeroCupom, existentes);
@@ -1261,7 +1273,6 @@ export class FechamentoCaixaService {
     }
     return Object.fromEntries(acumulado.entries());
   }
-
 
   private montarTotaisConsolidados(
     erp: Record<string, CaixaFormaTotalDto>,

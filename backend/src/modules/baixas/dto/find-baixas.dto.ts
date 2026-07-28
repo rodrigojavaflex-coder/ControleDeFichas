@@ -26,7 +26,10 @@ export class FindBaixasDto extends PaginationDto {
     example: '2025-01-01',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataInicial?: string;
 
   @ApiPropertyOptional({
@@ -34,6 +37,9 @@ export class FindBaixasDto extends PaginationDto {
     example: '2025-12-31',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data final deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataFinal?: string;
 }

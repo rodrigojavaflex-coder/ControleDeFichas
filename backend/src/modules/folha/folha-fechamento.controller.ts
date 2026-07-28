@@ -102,7 +102,10 @@ export class FolhaFechamentoController {
     @Req() req: { user: Usuario },
   ): Promise<FolhaCompetenciaGridRowDto[]> {
     const unidadeOpcional = parseUnidadeQueryOpcional(unidadeRaw);
-    const escopo = resolverEscopoListaFechamentoPorUsuario(req.user, unidadeOpcional);
+    const escopo = resolverEscopoListaFechamentoPorUsuario(
+      req.user,
+      unidadeOpcional,
+    );
     let mes: number | undefined;
     if (mesRaw !== undefined && mesRaw !== '') {
       mes = Number(mesRaw);
@@ -120,8 +123,13 @@ export class FolhaFechamentoController {
 
   @Post('abertura')
   @Permissions(Permission.FOLHA_FECHAMENTO_REGISTRAR_ABERTURA)
-  @ApiOperation({ summary: 'Registrar abertura da competência (habilita lançamentos)' })
-  registrarAbertura(@Body() dto: FolhaFecharDto, @Req() req: { user: Usuario }) {
+  @ApiOperation({
+    summary: 'Registrar abertura da competência (habilita lançamentos)',
+  })
+  registrarAbertura(
+    @Body() dto: FolhaFecharDto,
+    @Req() req: { user: Usuario },
+  ) {
     assertUnidadeFolha(req.user, dto.unidade);
     return this.tipos
       .findOne(dto.folhaTipoId)
@@ -157,13 +165,21 @@ export class FolhaFechamentoController {
 
   @Post('reabrir')
   @Permissions(Permission.FOLHA_FECHAMENTO_REABRIR)
-  @ApiOperation({ summary: 'Reabrir competência fechada (habilita novamente lançamentos)' })
+  @ApiOperation({
+    summary: 'Reabrir competência fechada (habilita novamente lançamentos)',
+  })
   reabrir(@Body() dto: FolhaFecharDto, @Req() req: { user: Usuario }) {
     assertUnidadeFolha(req.user, dto.unidade);
     return this.tipos
       .findOne(dto.folhaTipoId)
       .then((tipo) =>
-        this.service.reabrir(dto.unidade, dto.ano, dto.mes, dto.folhaTipoId, tipo),
+        this.service.reabrir(
+          dto.unidade,
+          dto.ano,
+          dto.mes,
+          dto.folhaTipoId,
+          tipo,
+        ),
       );
   }
 

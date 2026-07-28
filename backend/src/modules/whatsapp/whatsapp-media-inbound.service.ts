@@ -16,7 +16,10 @@ export class WhatsappMediaInboundService {
     private readonly storage: WhatsappMediaStorageService,
   ) {}
 
-  async baixarEPersistir(mensagemId: string, metaMediaId: string): Promise<void> {
+  async baixarEPersistir(
+    mensagemId: string,
+    metaMediaId: string,
+  ): Promise<void> {
     try {
       const { buffer, mimeType } =
         await this.whatsappService.downloadMediaBuffer(metaMediaId);

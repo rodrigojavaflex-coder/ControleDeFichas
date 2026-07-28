@@ -1,8 +1,4 @@
-import {
-  MigrationInterface,
-  QueryRunner,
-  TableColumn,
-} from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 /** Pix no cadastro de funcionários; colunas camelCase como o restante da tabela `funcionarios`. */
 export class FuncionarioPix1740970000000 implements MigrationInterface {

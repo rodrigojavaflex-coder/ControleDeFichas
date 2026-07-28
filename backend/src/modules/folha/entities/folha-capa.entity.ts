@@ -49,7 +49,10 @@ export class FolhaCapa extends BaseEntity {
   @JoinColumn({ name: 'folhaTipoId' })
   folhaTipo: FolhaTipo;
 
-  @ApiProperty({ description: 'Capa congelada: sem alteração de itens na tela de lançamento.' })
+  @ApiProperty({
+    description:
+      'Capa congelada: sem alteração de itens na tela de lançamento.',
+  })
   @Column({ type: 'boolean', default: false })
   congelada: boolean;
 

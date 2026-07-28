@@ -21,10 +21,7 @@ import { CertificadoService } from './certificado.service';
 import { CreateCertificadoDto } from './dto/create-certificado.dto';
 import { UpdateCertificadoDto } from './dto/update-certificado.dto';
 import { Certificado } from './entities/certificado.entity';
-import {
-  PERMISSION_GROUPS,
-  Permission,
-} from '../../common/enums/permission.enum';
+import { Permission } from '../../common/enums/permission.enum';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 
@@ -47,7 +44,9 @@ export class CertificadoController {
     status: HttpStatus.BAD_REQUEST,
     description: 'Dados inválidos',
   })
-  create(@Body() createCertificadoDto: CreateCertificadoDto): Promise<Certificado> {
+  create(
+    @Body() createCertificadoDto: CreateCertificadoDto,
+  ): Promise<Certificado> {
     return this.certificadoService.create(createCertificadoDto);
   }
 
@@ -120,12 +119,16 @@ export class CertificadoController {
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.certificadoService.remove(id);
   }
-  
+
   @Get('by-ficha/:fichaTecnicaId')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(Permission.CERTIFICADO_READ)
   @ApiOperation({ summary: 'Listar certificados por ficha técnica' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Lista de certificados', type: [Certificado] })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Lista de certificados',
+    type: [Certificado],
+  })
   findByFicha(
     @Param('fichaTecnicaId', ParseUUIDPipe) fichaTecnicaId: string,
   ): Promise<Certificado[]> {

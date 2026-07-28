@@ -116,8 +116,9 @@ export class FolhaFuncionarioUnidadeNoCadastro1740950000000
       ALTER TABLE "folha_capa" DROP CONSTRAINT IF EXISTS "UQ_folha_capa_competencia"
     `);
 
-    const fuFkRows: Array<{ constraint_name: string }> = await queryRunner.query(
-      `
+    const fuFkRows: Array<{ constraint_name: string }> =
+      await queryRunner.query(
+        `
       SELECT tc.constraint_name AS constraint_name
       FROM information_schema.table_constraints tc
       JOIN information_schema.key_column_usage kcu
@@ -128,7 +129,7 @@ export class FolhaFuncionarioUnidadeNoCadastro1740950000000
         AND tc.constraint_type = 'FOREIGN KEY'
         AND kcu.column_name = 'funcionarioUnidadeId'
     `,
-    );
+      );
     for (const r of fuFkRows) {
       await queryRunner.query(
         `ALTER TABLE "folha_capa" DROP CONSTRAINT IF EXISTS "${r.constraint_name}"`,
@@ -241,8 +242,9 @@ export class FolhaFuncionarioUnidadeNoCadastro1740950000000
       ALTER TABLE "folha_capa" DROP CONSTRAINT IF EXISTS "UQ_folha_capa_competencia"
     `);
 
-    const funcFkRows: Array<{ constraint_name: string }> = await queryRunner.query(
-      `
+    const funcFkRows: Array<{ constraint_name: string }> =
+      await queryRunner.query(
+        `
       SELECT tc.constraint_name AS constraint_name
       FROM information_schema.table_constraints tc
       JOIN information_schema.key_column_usage kcu
@@ -253,14 +255,17 @@ export class FolhaFuncionarioUnidadeNoCadastro1740950000000
         AND tc.constraint_type = 'FOREIGN KEY'
         AND kcu.column_name = 'funcionarioId'
     `,
-    );
+      );
     for (const r of funcFkRows) {
       await queryRunner.query(
         `ALTER TABLE "folha_capa" DROP CONSTRAINT IF EXISTS "${r.constraint_name}"`,
       );
     }
 
-    await queryRunner.dropIndex('folha_capa', 'idx_folha_capa_funcionario_competencia');
+    await queryRunner.dropIndex(
+      'folha_capa',
+      'idx_folha_capa_funcionario_competencia',
+    );
 
     await queryRunner.addColumn(
       'folha_capa',

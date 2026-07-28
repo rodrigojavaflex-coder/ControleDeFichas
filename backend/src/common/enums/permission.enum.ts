@@ -20,7 +20,7 @@ export enum Permission {
   AUDIT_MANAGE = 'audit:manage',
   // Perfis
   PROFILE_CREATE = 'perfil:create',
-  PROFILE_READ   = 'perfil:read',
+  PROFILE_READ = 'perfil:read',
   PROFILE_UPDATE = 'perfil:update',
   PROFILE_DELETE = 'perfil:delete',
 
@@ -204,20 +204,41 @@ export const PERMISSION_GROUPS = {
     { key: Permission.VENDA_BAIXAR, label: 'Baixar vendas' },
     { key: Permission.VENDA_REMOVE_BAIXA, label: 'Remover baixas' },
     { key: Permission.VENDA_AUDIT, label: 'Visualizar auditoria' },
-    { key: Permission.VENDA_VIEW_VALOR_COMPRA, label: 'Visualizar valor de compra' },
-    { key: Permission.VENDA_ACOMPANHAR, label: 'Acompanhar vendas por unidade' },
+    {
+      key: Permission.VENDA_VIEW_VALOR_COMPRA,
+      label: 'Visualizar valor de compra',
+    },
+    {
+      key: Permission.VENDA_ACOMPANHAR,
+      label: 'Acompanhar vendas por unidade',
+    },
   ],
   'Fechamento de vendas': [
     { key: Permission.VENDA_FECHAR, label: 'Fechar vendas' },
-    { key: Permission.VENDA_CANCELAR_FECHAMENTO, label: 'Cancelar fechamento de vendas' },
-    { key: Permission.VENDA_ACESSAR_FECHAMENTO, label: 'Acessar tela de fechamento de vendas' },
+    {
+      key: Permission.VENDA_CANCELAR_FECHAMENTO,
+      label: 'Cancelar fechamento de vendas',
+    },
+    {
+      key: Permission.VENDA_ACESSAR_FECHAMENTO,
+      label: 'Acessar tela de fechamento de vendas',
+    },
   ],
   Caixa: [
-    { key: Permission.VENDA_FECHAR_CAIXA, label: 'Fechar caixa consolidado (inclui importar ERP)' },
-    { key: Permission.VENDA_REABRIR_CAIXA, label: 'Reabrir fechamento de caixa' },
+    {
+      key: Permission.VENDA_FECHAR_CAIXA,
+      label: 'Fechar caixa consolidado (inclui importar ERP)',
+    },
+    {
+      key: Permission.VENDA_REABRIR_CAIXA,
+      label: 'Reabrir fechamento de caixa',
+    },
   ],
   'Relatório Análise de Valores': [
-    { key: Permission.VENDA_ANALISE_VALORES, label: 'Acessar relatório Análise de Valores' },
+    {
+      key: Permission.VENDA_ANALISE_VALORES,
+      label: 'Acessar relatório Análise de Valores',
+    },
   ],
   Clientes: [
     { key: Permission.CLIENTE_CREATE, label: 'Criar clientes' },
@@ -241,31 +262,52 @@ export const PERMISSION_GROUPS = {
     { key: Permission.PRESCRITOR_AUDIT, label: 'Visualizar auditoria' },
   ],
   'Folha — Funcionários': [
-    { key: Permission.FOLHA_FUNCIONARIO_CREATE, label: 'Criar funcionários (folha)' },
-    { key: Permission.FOLHA_FUNCIONARIO_READ, label: 'Visualizar funcionários (folha)' },
-    { key: Permission.FOLHA_FUNCIONARIO_UPDATE, label: 'Editar funcionários (folha)' },
-    { key: Permission.FOLHA_FUNCIONARIO_DELETE, label: 'Excluir funcionários (folha)' },
+    {
+      key: Permission.FOLHA_FUNCIONARIO_CREATE,
+      label: 'Criar funcionários (folha)',
+    },
+    {
+      key: Permission.FOLHA_FUNCIONARIO_READ,
+      label: 'Visualizar funcionários (folha)',
+    },
+    {
+      key: Permission.FOLHA_FUNCIONARIO_UPDATE,
+      label: 'Editar funcionários (folha)',
+    },
+    {
+      key: Permission.FOLHA_FUNCIONARIO_DELETE,
+      label: 'Excluir funcionários (folha)',
+    },
   ],
   'Folha — Cargos': [
     { key: Permission.FOLHA_CARGO_CREATE, label: 'Criar cargos (folha)' },
     { key: Permission.FOLHA_CARGO_READ, label: 'Visualizar cargos (folha)' },
     { key: Permission.FOLHA_CARGO_UPDATE, label: 'Editar cargos (folha)' },
     { key: Permission.FOLHA_CARGO_DELETE, label: 'Excluir cargos (folha)' },
-    { key: Permission.FOLHA_CARGO_AUDIT, label: 'Visualizar auditoria de cargos (folha)' },
+    {
+      key: Permission.FOLHA_CARGO_AUDIT,
+      label: 'Visualizar auditoria de cargos (folha)',
+    },
   ],
   'Folha — Setores': [
     { key: Permission.FOLHA_SETOR_CREATE, label: 'Criar setores (folha)' },
     { key: Permission.FOLHA_SETOR_READ, label: 'Visualizar setores (folha)' },
     { key: Permission.FOLHA_SETOR_UPDATE, label: 'Editar setores (folha)' },
     { key: Permission.FOLHA_SETOR_DELETE, label: 'Excluir setores (folha)' },
-    { key: Permission.FOLHA_SETOR_AUDIT, label: 'Visualizar auditoria de setores (folha)' },
+    {
+      key: Permission.FOLHA_SETOR_AUDIT,
+      label: 'Visualizar auditoria de setores (folha)',
+    },
   ],
   'Folha — Verbas': [
     { key: Permission.FOLHA_VERBA_CREATE, label: 'Criar verbas (folha)' },
     { key: Permission.FOLHA_VERBA_READ, label: 'Visualizar verbas (folha)' },
     { key: Permission.FOLHA_VERBA_UPDATE, label: 'Editar verbas (folha)' },
     { key: Permission.FOLHA_VERBA_DELETE, label: 'Excluir verbas (folha)' },
-    { key: Permission.FOLHA_VERBA_AUDIT, label: 'Visualizar auditoria de eventos (folha)' },
+    {
+      key: Permission.FOLHA_VERBA_AUDIT,
+      label: 'Visualizar auditoria de eventos (folha)',
+    },
   ],
   'Folha — Tipos': [
     { key: Permission.FOLHA_TIPO_CREATE, label: 'Criar tipos de folha' },
@@ -274,13 +316,34 @@ export const PERMISSION_GROUPS = {
     { key: Permission.FOLHA_TIPO_DELETE, label: 'Excluir tipos de folha' },
   ],
   'Folha — Lançamentos': [
-    { key: Permission.FOLHA_LANCAMENTO_CREATE, label: 'Criar capa e itens da folha' },
-    { key: Permission.FOLHA_LANCAMENTO_READ, label: 'Visualizar lançamentos da folha' },
-    { key: Permission.FOLHA_LANCAMENTO_UPDATE, label: 'Editar valores de itens da folha' },
-    { key: Permission.FOLHA_LANCAMENTO_DELETE, label: 'Excluir itens da folha' },
-    { key: Permission.FOLHA_LANCAMENTO_DELETE_CAPA, label: 'Excluir folha (capa) do funcionário' },
-    { key: Permission.FOLHA_LANCAMENTO_CONGELAR_CAPA, label: 'Congelar folha (capa) do funcionário' },
-    { key: Permission.FOLHA_LANCAMENTO_LIBERAR_CAPA, label: 'Liberar folha (capa) para modificação' },
+    {
+      key: Permission.FOLHA_LANCAMENTO_CREATE,
+      label: 'Criar capa e itens da folha',
+    },
+    {
+      key: Permission.FOLHA_LANCAMENTO_READ,
+      label: 'Visualizar lançamentos da folha',
+    },
+    {
+      key: Permission.FOLHA_LANCAMENTO_UPDATE,
+      label: 'Editar valores de itens da folha',
+    },
+    {
+      key: Permission.FOLHA_LANCAMENTO_DELETE,
+      label: 'Excluir itens da folha',
+    },
+    {
+      key: Permission.FOLHA_LANCAMENTO_DELETE_CAPA,
+      label: 'Excluir folha (capa) do funcionário',
+    },
+    {
+      key: Permission.FOLHA_LANCAMENTO_CONGELAR_CAPA,
+      label: 'Congelar folha (capa) do funcionário',
+    },
+    {
+      key: Permission.FOLHA_LANCAMENTO_LIBERAR_CAPA,
+      label: 'Liberar folha (capa) para modificação',
+    },
     {
       key: Permission.FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP,
       label: 'Enviar recibo por WhatsApp (lançamento — individual)',
@@ -319,10 +382,22 @@ export const PERMISSION_GROUPS = {
     },
   ],
   'Orçamentos — Motivos': [
-    { key: Permission.ORCAMENTO_MOTIVO_CREATE, label: 'Criar motivos de rejeição' },
-    { key: Permission.ORCAMENTO_MOTIVO_READ, label: 'Visualizar motivos de rejeição' },
-    { key: Permission.ORCAMENTO_MOTIVO_UPDATE, label: 'Editar motivos de rejeição' },
-    { key: Permission.ORCAMENTO_MOTIVO_DELETE, label: 'Excluir motivos de rejeição' },
+    {
+      key: Permission.ORCAMENTO_MOTIVO_CREATE,
+      label: 'Criar motivos de rejeição',
+    },
+    {
+      key: Permission.ORCAMENTO_MOTIVO_READ,
+      label: 'Visualizar motivos de rejeição',
+    },
+    {
+      key: Permission.ORCAMENTO_MOTIVO_UPDATE,
+      label: 'Editar motivos de rejeição',
+    },
+    {
+      key: Permission.ORCAMENTO_MOTIVO_DELETE,
+      label: 'Excluir motivos de rejeição',
+    },
   ],
   Orçamentos: [
     {

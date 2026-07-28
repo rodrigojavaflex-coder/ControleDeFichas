@@ -1,8 +1,4 @@
-import {
-  Entity,
-  Column,
-  OneToMany,
-} from 'typeorm';
+import { Entity, Column, OneToMany } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Certificado } from '../../certificado/entities/certificado.entity';
@@ -15,8 +11,6 @@ export class FichaTecnica extends BaseEntity {
   static get nomeAmigavel(): string {
     return 'ficha técnica';
   }
-
-
 
   @Column({ type: 'varchar', length: 400, unique: true })
   @ApiProperty({
@@ -248,7 +242,9 @@ export class FichaTecnica extends BaseEntity {
     description: 'Certificados associados à ficha técnica',
     type: () => [Certificado],
   })
-  @OneToMany(() => Certificado, certificado => certificado.fichaTecnica, { cascade: true, eager: false })
+  @OneToMany(() => Certificado, (certificado) => certificado.fichaTecnica, {
+    cascade: true,
+    eager: false,
+  })
   certificados: Certificado[];
-
 }

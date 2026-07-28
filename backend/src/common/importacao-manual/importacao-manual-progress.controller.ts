@@ -19,7 +19,9 @@ export class ImportacaoManualProgressController {
   ) {}
 
   @Get('progresso')
-  @ApiOperation({ summary: 'Obter progresso da importação manual em andamento' })
+  @ApiOperation({
+    summary: 'Obter progresso da importação manual em andamento',
+  })
   @ApiResponse({ status: 200, description: 'Progresso atual ou null' })
   getProgresso(): ImportacaoManualProgress | null {
     return this.progressService.getProgress();

@@ -64,4 +64,3 @@ export class FindClientesDto {
   @IsEnum(Unidade, { message: 'Unidade deve ser um valor válido' })
   unidade?: Unidade;
 }
-

@@ -106,7 +106,9 @@ export class ProducaoConfigService {
         posicaoEtapa: string;
       }>();
 
-    const configs = await this.etapaRemuneracaoRepo.find({ where: { unidade } });
+    const configs = await this.etapaRemuneracaoRepo.find({
+      where: { unidade },
+    });
     const configMap = new Map(configs.map((c) => [c.codEtapa, c]));
 
     const codigosVistos = new Set<string>();
@@ -155,18 +157,18 @@ export class ProducaoConfigService {
 
     await this.dataSource.transaction(async (manager) => {
       const repo = manager.getRepository(ProducaoEtapaRemuneracao);
-    for (const item of dto.itens) {
-      const recebe = item.recebe === true;
-      const valor = recebe ? Math.max(0, Number(item.valor) || 0) : 0;
-      const isGestao =
-        isCodEtapaGestao(item.codEtapa) ||
-        item.tipoCalculo === ProducaoEtapaTipoCalculo.GESTAO;
-      if (recebe && valor <= 0) {
-        throw new BadRequestException(
-          `Informe valor maior que zero para a etapa «${item.etapa.trim()}» marcada como Recebe.`,
-        );
-      }
-      let entity = await repo.findOne({
+      for (const item of dto.itens) {
+        const recebe = item.recebe === true;
+        const valor = recebe ? Math.max(0, Number(item.valor) || 0) : 0;
+        const isGestao =
+          isCodEtapaGestao(item.codEtapa) ||
+          item.tipoCalculo === ProducaoEtapaTipoCalculo.GESTAO;
+        if (recebe && valor <= 0) {
+          throw new BadRequestException(
+            `Informe valor maior que zero para a etapa «${item.etapa.trim()}» marcada como Recebe.`,
+          );
+        }
+        let entity = await repo.findOne({
           where: { unidade: dto.unidade, codEtapa: item.codEtapa },
         });
         if (!entity) {
@@ -178,9 +180,7 @@ export class ProducaoConfigService {
         entity.etapa = isGestao
           ? PRODUCAO_NOME_ETAPA_GESTAO
           : item.etapa.trim();
-        entity.posicaoEtapa = isGestao
-          ? 99999
-          : Number(item.posicaoEtapa) || 0;
+        entity.posicaoEtapa = isGestao ? 99999 : Number(item.posicaoEtapa) || 0;
         entity.recebe = recebe;
         entity.valor = String(valor);
         entity.tipoCalculo = isGestao
@@ -367,11 +367,7 @@ export class ProducaoConfigService {
       }
     });
 
-    return this.listarEtapasFuncionario(
-      usuario,
-      dto.unidade,
-      funcionarioId,
-    );
+    return this.listarEtapasFuncionario(usuario, dto.unidade, funcionarioId);
   }
 
   async gerarRelatorioConfig(
@@ -453,9 +449,9 @@ export class ProducaoConfigService {
   ): Promise<AplicarEtapasRemuneradasResponseDto> {
     assertUnidadeFolha(usuario, dto.unidade);
 
-    const etapasRemuneradas = (await this.listarEtapas(usuario, dto.unidade)).filter(
-      (e) => e.recebe && !isCodEtapaGestao(e.codEtapa),
-    );
+    const etapasRemuneradas = (
+      await this.listarEtapas(usuario, dto.unidade)
+    ).filter((e) => e.recebe && !isCodEtapaGestao(e.codEtapa));
     if (etapasRemuneradas.length === 0) {
       throw new BadRequestException(
         'Nenhuma etapa remunerada configurada na unidade.',
@@ -626,9 +622,7 @@ export class ProducaoConfigService {
     };
   }
 
-  private async montarVinculoCodigoFuncionario(
-    unidade: Unidade,
-  ): Promise<{
+  private async montarVinculoCodigoFuncionario(unidade: Unidade): Promise<{
     itens: VinculoCodigoFuncionarioPreviewRowDto[];
     erpSemFuncionario: string[];
     totalErpDistinct: number;
@@ -707,19 +701,13 @@ export class ProducaoConfigService {
     const qtdNomesPorCodErp = new Map<string, number>();
 
     for (const p of pares) {
-      qtdFuncPorNome.set(
-        p.nomeNorm,
-        (qtdFuncPorNome.get(p.nomeNorm) ?? 0) + 1,
-      );
+      qtdFuncPorNome.set(p.nomeNorm, (qtdFuncPorNome.get(p.nomeNorm) ?? 0) + 1);
       qtdErpPorFunc.set(
         p.funcionarioId,
         (qtdErpPorFunc.get(p.funcionarioId) ?? 0) + 1,
       );
       const codKey = String(p.codigoErp);
-      qtdNomesPorCodErp.set(
-        codKey,
-        (qtdNomesPorCodErp.get(codKey) ?? 0) + 1,
-      );
+      qtdNomesPorCodErp.set(codKey, (qtdNomesPorCodErp.get(codKey) ?? 0) + 1);
     }
 
     const itens: VinculoCodigoFuncionarioPreviewRowDto[] = pares.map((p) => {
@@ -742,8 +730,7 @@ export class ProducaoConfigService {
       } else if (p.codigoAtual === p.codigoErp) {
         situacao = VinculoCodigoFuncionarioSituacao.OK_JA_CORRETO;
       } else {
-        situacao =
-          VinculoCodigoFuncionarioSituacao.CONFLITO_CODIGO_DIFERENTE;
+        situacao = VinculoCodigoFuncionarioSituacao.CONFLITO_CODIGO_DIFERENTE;
       }
 
       const atualizavel =
@@ -801,8 +788,7 @@ export class ProducaoConfigService {
       totalErp: totalErpDistinct,
       totalPreencher: itens.filter((i) => i.atualizavel).length,
       totalOk: itens.filter(
-        (i) =>
-          i.situacao === VinculoCodigoFuncionarioSituacao.OK_JA_CORRETO,
+        (i) => i.situacao === VinculoCodigoFuncionarioSituacao.OK_JA_CORRETO,
       ).length,
       totalConflitos: itens.filter(
         (i) =>

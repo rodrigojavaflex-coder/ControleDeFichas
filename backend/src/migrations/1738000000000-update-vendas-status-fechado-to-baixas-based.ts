@@ -6,7 +6,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * - total baixas >= valorCliente → PAGO
  * - 0 < total baixas < valorCliente → PAGO_PARCIAL
  */
-export class UpdateVendasStatusFechadoToBaixasBased1738000000000 implements MigrationInterface {
+export class UpdateVendasStatusFechadoToBaixasBased1738000000000
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     const vendasTable = await queryRunner.getTable('vendas');
     if (!vendasTable) {
@@ -16,7 +18,7 @@ export class UpdateVendasStatusFechadoToBaixasBased1738000000000 implements Migr
     const fechadas = await queryRunner.query(
       `SELECT v.id, COALESCE(CAST(v."valorCliente" AS NUMERIC), 0) as "valorCliente"
        FROM vendas v
-       WHERE v.status = 'FECHADO'`
+       WHERE v.status = 'FECHADO'`,
     );
 
     if (!fechadas || fechadas.length === 0) {
@@ -28,7 +30,7 @@ export class UpdateVendasStatusFechadoToBaixasBased1738000000000 implements Migr
         `SELECT COALESCE(SUM(CAST(b."valorBaixa" AS NUMERIC)), 0) as total
          FROM baixas b
          WHERE b.idvenda = $1`,
-        [row.id]
+        [row.id],
       );
       const totalPago = parseFloat(totalResult[0]?.total ?? '0');
       const valorCliente = parseFloat(row.valorCliente ?? '0');
@@ -42,13 +44,15 @@ export class UpdateVendasStatusFechadoToBaixasBased1738000000000 implements Migr
         novoStatus = 'PAGO_PARCIAL';
       }
 
-      await queryRunner.query(
-        `UPDATE vendas SET status = $1 WHERE id = $2`,
-        [novoStatus, row.id]
-      );
+      await queryRunner.query(`UPDATE vendas SET status = $1 WHERE id = $2`, [
+        novoStatus,
+        row.id,
+      ]);
     }
 
-    console.log(`Migração: ${fechadas.length} venda(s) com status FECHADO atualizada(s) para status baseado em baixas.`);
+    console.log(
+      `Migração: ${fechadas.length} venda(s) com status FECHADO atualizada(s) para status baseado em baixas.`,
+    );
   }
 
   public async down(_queryRunner: QueryRunner): Promise<void> {

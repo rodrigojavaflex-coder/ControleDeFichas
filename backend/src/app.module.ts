@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -41,19 +41,23 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     ImportacaoManualProgressModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        ...configService.get('database'),
-      }),
+      useFactory: (configService: ConfigService): TypeOrmModuleOptions => {
+        const database = configService.get<TypeOrmModuleOptions>('database');
+        if (!database) {
+          throw new Error('Configuração "database" não encontrada');
+        }
+        return database;
+      },
     }),
     UsuariosModule,
     AuthModule,
     AuditoriaModule,
     FichaTecnicaModule,
-  ConfiguracaoModule,
-  PerfilModule,
-  CertificadoModule,
-  VendasModule,
-  BaixasModule,
+    ConfiguracaoModule,
+    PerfilModule,
+    CertificadoModule,
+    VendasModule,
+    BaixasModule,
     ClientesModule,
     VendedoresModule,
     PrescritoresModule,
@@ -61,9 +65,9 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     SincronizacaoModule,
     OrcamentosModule,
     FolhaModule,
-  FechamentoCaixaModule,
-  ProducaoConfigModule,
-  ProducaoProdutividadeModule,
+    FechamentoCaixaModule,
+    ProducaoConfigModule,
+    ProducaoProdutividadeModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],

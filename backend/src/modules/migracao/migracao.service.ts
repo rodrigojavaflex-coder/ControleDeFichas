@@ -7,6 +7,7 @@ import { Vendedor } from '../vendedores/entities/vendedor.entity';
 import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { FirebirdConnectionService } from './firebird-connection.service';
+import { loadAppDataSource } from './load-app-data-source.util';
 
 export interface MigracaoResult {
   totalVendas: number;
@@ -97,7 +98,7 @@ export class MigracaoService {
    */
   private normalizarNome(nome: string): string {
     if (!nome) return '';
-    
+
     return nome
       .trim()
       .toUpperCase()
@@ -115,33 +116,38 @@ export class MigracaoService {
    */
   private parseDate(data: any): Date | undefined {
     if (!data) return undefined;
-    
+
     // Se já for Date, valida
     if (data instanceof Date) {
       return isNaN(data.getTime()) ? undefined : data;
     }
-    
+
     // Se for string, converte
     if (typeof data === 'string') {
       const trimmed = data.trim();
       // Ignora datas inválidas comuns do Firebird
-      if (!trimmed || trimmed === '0000-00-00' || trimmed === '1899-12-30' || trimmed === '1900-01-01') {
+      if (
+        !trimmed ||
+        trimmed === '0000-00-00' ||
+        trimmed === '1899-12-30' ||
+        trimmed === '1900-01-01'
+      ) {
         return undefined;
       }
       const date = new Date(trimmed);
       return isNaN(date.getTime()) ? undefined : date;
     }
-    
+
     // Tenta converter para Date
     try {
       const date = new Date(data);
       // Verifica se é uma data válida (não é 1899-12-30 que é padrão do Firebird para datas vazias)
       if (isNaN(date.getTime())) return undefined;
-      
+
       const year = date.getFullYear();
       // Ignora anos inválidos comuns do Firebird
       if (year < 1900 || year > 2100) return undefined;
-      
+
       return date;
     } catch {
       return undefined;
@@ -185,9 +191,14 @@ export class MigracaoService {
     `;
 
     try {
-      const results = banco === 'banco1'
-        ? await this.firebirdService.queryBanco1<LegacyCliente>(sql, [nomeNormalizado])
-        : await this.firebirdService.queryBanco2<LegacyCliente>(sql, [nomeNormalizado]);
+      const results =
+        banco === 'banco1'
+          ? await this.firebirdService.queryBanco1<LegacyCliente>(sql, [
+              nomeNormalizado,
+            ])
+          : await this.firebirdService.queryBanco2<LegacyCliente>(sql, [
+              nomeNormalizado,
+            ]);
 
       // Filtrar por nome normalizado (já que Firebird não remove acentos nativamente)
       const match = results.find(
@@ -196,7 +207,9 @@ export class MigracaoService {
 
       return match || null;
     } catch (error) {
-      this.logger.error(`Erro ao buscar cliente no banco legado: ${error.message}`);
+      this.logger.error(
+        `Erro ao buscar cliente no banco legado: ${error.message}`,
+      );
       return null;
     }
   }
@@ -220,9 +233,14 @@ export class MigracaoService {
     `;
 
     try {
-      const results = banco === 'banco1'
-        ? await this.firebirdService.queryBanco1<LegacyVendedor>(sql, [nomeNormalizado])
-        : await this.firebirdService.queryBanco2<LegacyVendedor>(sql, [nomeNormalizado]);
+      const results =
+        banco === 'banco1'
+          ? await this.firebirdService.queryBanco1<LegacyVendedor>(sql, [
+              nomeNormalizado,
+            ])
+          : await this.firebirdService.queryBanco2<LegacyVendedor>(sql, [
+              nomeNormalizado,
+            ]);
 
       const match = results.find(
         (v) => this.normalizarNome(v.NOME) === nomeNormalizado,
@@ -230,7 +248,9 @@ export class MigracaoService {
 
       return match || null;
     } catch (error) {
-      this.logger.error(`Erro ao buscar vendedor no banco legado: ${error.message}`);
+      this.logger.error(
+        `Erro ao buscar vendedor no banco legado: ${error.message}`,
+      );
       return null;
     }
   }
@@ -254,9 +274,14 @@ export class MigracaoService {
     `;
 
     try {
-      const results = banco === 'banco1'
-        ? await this.firebirdService.queryBanco1<LegacyPrescritor>(sql, [nomeNormalizado])
-        : await this.firebirdService.queryBanco2<LegacyPrescritor>(sql, [nomeNormalizado]);
+      const results =
+        banco === 'banco1'
+          ? await this.firebirdService.queryBanco1<LegacyPrescritor>(sql, [
+              nomeNormalizado,
+            ])
+          : await this.firebirdService.queryBanco2<LegacyPrescritor>(sql, [
+              nomeNormalizado,
+            ]);
 
       const match = results.find(
         (p) => this.normalizarNome(p.NOME) === nomeNormalizado,
@@ -264,7 +289,9 @@ export class MigracaoService {
 
       return match || null;
     } catch (error) {
-      this.logger.error(`Erro ao buscar prescritor no banco legado: ${error.message}`);
+      this.logger.error(
+        `Erro ao buscar prescritor no banco legado: ${error.message}`,
+      );
       return null;
     }
   }
@@ -308,9 +335,13 @@ export class MigracaoService {
     const novoCliente = this.clienteRepository.create({
       nome: this.padronizarNome(nomeCliente) || nome,
       cdcliente: clienteLegado?.CDCLIENTE ?? undefined,
-      cpf: clienteLegado?.CPF ? this.garantirUtf8Valido(clienteLegado.CPF) : undefined,
+      cpf: clienteLegado?.CPF
+        ? this.garantirUtf8Valido(clienteLegado.CPF)
+        : undefined,
       dataNascimento: this.parseDate(clienteLegado?.DATANASCIMENTO),
-      email: clienteLegado?.EMAIL ? this.garantirUtf8Valido(clienteLegado.EMAIL) : undefined,
+      email: clienteLegado?.EMAIL
+        ? this.garantirUtf8Valido(clienteLegado.EMAIL)
+        : undefined,
       telefone: undefined, // Não vem do legado
       unidade: unidadeFinal,
     });
@@ -394,7 +425,9 @@ export class MigracaoService {
     const novoPrescritor = this.prescritorRepository.create({
       nome: this.padronizarNome(nomePrescritor) || nome,
       numeroCRM: prescritorLegado?.NRCRM ?? undefined,
-      UFCRM: prescritorLegado?.UFCRM ? this.garantirUtf8Valido(prescritorLegado.UFCRM) : undefined,
+      UFCRM: prescritorLegado?.UFCRM
+        ? this.garantirUtf8Valido(prescritorLegado.UFCRM)
+        : undefined,
     });
 
     return await this.prescritorRepository.save(novoPrescritor);
@@ -420,7 +453,7 @@ export class MigracaoService {
    */
   private async padronizarDadosVendas(): Promise<number> {
     this.logger.log('Iniciando padronização de dados de vendedores...');
-    
+
     const queries = [
       // 1. Atualiza vendedores com as unidades corretas
       `UPDATE public.vendas SET vendedor = 'POLYANA' WHERE vendedor ilike '%ester%' and unidade = 'NERÓPOLIS'`,
@@ -428,7 +461,7 @@ export class MigracaoService {
       `UPDATE public.vendas SET vendedor = 'POLYANA' WHERE vendedor ilike '%heline%' and unidade = 'NERÓPOLIS'`,
       `UPDATE public.vendas SET vendedor = 'OLIVIA' WHERE vendedor ilike '%heline%' and unidade = 'INHUMAS'`,
       `UPDATE public.vendas SET vendedor = 'POLYANA' WHERE vendedor ilike '%ivana%' and unidade = 'NERÓPOLIS'`,
-      
+
       // 2. Padroniza nomes de vendedores
       `UPDATE public.vendas SET vendedor = 'GABRIELA GARCIA LIMA' WHERE vendedor ilike '%GABRIELA%' and unidade = 'INHUMAS'`,
       `UPDATE public.vendas SET vendedor = 'ISLA TAWANY DE PAIVA OLIVEIRA' WHERE vendedor ilike '%isla%' and unidade = 'INHUMAS'`,
@@ -446,7 +479,7 @@ export class MigracaoService {
     try {
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
-      
+
       for (const query of queries) {
         try {
           // Executar UPDATE
@@ -457,18 +490,24 @@ export class MigracaoService {
           totalQueriesExecutadas++;
           this.logger.debug(`Query executada: ${query.substring(0, 80)}...`);
         } catch (queryError) {
-          this.logger.warn(`Erro ao executar query: ${query.substring(0, 60)}... - ${queryError.message}`);
+          this.logger.warn(
+            `Erro ao executar query: ${query.substring(0, 60)}... - ${queryError.message}`,
+          );
           // Continua com as próximas queries mesmo se uma falhar
         }
       }
 
       await queryRunner.release();
 
-      this.logger.log(`Padronização concluída. ${totalQueriesExecutadas} de ${queries.length} queries executadas com sucesso.`);
+      this.logger.log(
+        `Padronização concluída. ${totalQueriesExecutadas} de ${queries.length} queries executadas com sucesso.`,
+      );
       return totalQueriesExecutadas;
     } catch (error) {
       this.logger.error('Erro ao padronizar dados de vendas:', error);
-      throw new BadRequestException(`Erro ao padronizar dados: ${error.message}`);
+      throw new BadRequestException(
+        `Erro ao padronizar dados: ${error.message}`,
+      );
     }
   }
 
@@ -478,7 +517,9 @@ export class MigracaoService {
   async migrarVendasParaRelacoes(): Promise<MigracaoResult> {
     // Proteção contra execução concorrente
     if (this.migrationRunning) {
-      throw new BadRequestException('Migração já está em execução. Aguarde a conclusão.');
+      throw new BadRequestException(
+        'Migração já está em execução. Aguarde a conclusão.',
+      );
     }
 
     this.migrationRunning = true;
@@ -493,9 +534,11 @@ export class MigracaoService {
 
     try {
       // PASSO 1: Padronizar dados de vendedores (primeiro processamento)
-      this.logger.log('Executando padronização de dados como primeiro processamento...');
+      this.logger.log(
+        'Executando padronização de dados como primeiro processamento...',
+      );
       await this.padronizarDadosVendas();
-      
+
       // Buscar todas as vendas sem relacionamento usando query raw para ler campos texto diretamente do banco
       // (os campos texto ainda existem no banco mas não mais na entity)
       const vendasRaw = await this.dataSource.query(`
@@ -509,7 +552,7 @@ export class MigracaoService {
       `);
 
       resultado.totalVendas = vendasRaw.length;
-      
+
       // Inicializar progresso
       this.migrationProgress = {
         totalVendas: vendasRaw.length,
@@ -532,7 +575,6 @@ export class MigracaoService {
           const vendedorNome: string = vendaRaw.vendedor;
           const prescritorNome: string | null = vendaRaw.prescritor;
           const vendaId: string = vendaRaw.id;
-          const protocolo: string = vendaRaw.protocolo;
 
           // Determinar unidade da venda
           let unidade: Unidade;
@@ -549,8 +591,8 @@ export class MigracaoService {
           // Buscar ou criar cliente
           const clienteAntes = await this.clienteRepository
             .createQueryBuilder('cliente')
-            .where('UPPER(TRIM(cliente.nome)) = :nome', { 
-              nome: this.normalizarNome(clienteNome) 
+            .where('UPPER(TRIM(cliente.nome)) = :nome', {
+              nome: this.normalizarNome(clienteNome),
             })
             .andWhere('cliente.unidade = :unidade', { unidade })
             .getOne();
@@ -560,19 +602,20 @@ export class MigracaoService {
             unidade,
             banco,
           );
-          
+
           if (!clienteAntes) {
             resultado.clientesCriados++;
             if (this.migrationProgress) {
-              this.migrationProgress.clientesCriados = resultado.clientesCriados;
+              this.migrationProgress.clientesCriados =
+                resultado.clientesCriados;
             }
           }
 
           // Buscar ou criar vendedor
           const vendedorAntes = await this.vendedorRepository
             .createQueryBuilder('vendedor')
-            .where('UPPER(TRIM(vendedor.nome)) = :nome', { 
-              nome: this.normalizarNome(vendedorNome) 
+            .where('UPPER(TRIM(vendedor.nome)) = :nome', {
+              nome: this.normalizarNome(vendedorNome),
             })
             .andWhere('vendedor.unidade = :unidade', { unidade })
             .getOne();
@@ -582,11 +625,12 @@ export class MigracaoService {
             unidade,
             banco,
           );
-          
+
           if (!vendedorAntes) {
             resultado.vendedoresCriados++;
             if (this.migrationProgress) {
-              this.migrationProgress.vendedoresCriados = resultado.vendedoresCriados;
+              this.migrationProgress.vendedoresCriados =
+                resultado.vendedoresCriados;
             }
           }
 
@@ -595,8 +639,8 @@ export class MigracaoService {
           if (prescritorNome) {
             prescritorAntes = await this.prescritorRepository
               .createQueryBuilder('prescritor')
-              .where('UPPER(TRIM(prescritor.nome)) = :nome', { 
-                nome: this.normalizarNome(prescritorNome) 
+              .where('UPPER(TRIM(prescritor.nome)) = :nome', {
+                nome: this.normalizarNome(prescritorNome),
               })
               .getOne();
           }
@@ -605,28 +649,38 @@ export class MigracaoService {
             prescritorNome || undefined,
             banco,
           );
-          
+
           if (prescritor && !prescritorAntes) {
             resultado.prescritoresCriados++;
             if (this.migrationProgress) {
-              this.migrationProgress.prescritoresCriados = resultado.prescritoresCriados;
+              this.migrationProgress.prescritoresCriados =
+                resultado.prescritoresCriados;
             }
           }
 
           // Atualizar apenas os relacionamentos (IDs) usando query direta
           // porque a entidade não mapeia esses campos diretamente como colunas
-          await this.dataSource.query(`
+          await this.dataSource.query(
+            `
             UPDATE vendas 
             SET "clienteId" = $1, "vendedorId" = $2, "prescritorId" = $3
             WHERE id = $4
-          `, [cliente?.id || null, vendedor?.id || null, prescritor?.id || null, vendaId]);
+          `,
+            [
+              cliente?.id || null,
+              vendedor?.id || null,
+              prescritor?.id || null,
+              vendaId,
+            ],
+          );
 
           resultado.vendasAtualizadas++;
-          
+
           // Atualizar progresso
           if (this.migrationProgress) {
             this.migrationProgress.vendasProcessadas = i + 1;
-            this.migrationProgress.vendasAtualizadas = resultado.vendasAtualizadas;
+            this.migrationProgress.vendasAtualizadas =
+              resultado.vendasAtualizadas;
             this.migrationProgress.erros = resultado.erros.length;
           }
         } catch (error) {
@@ -639,7 +693,7 @@ export class MigracaoService {
             protocolo: vendaRaw.protocolo || 'N/A',
             motivo: error.message,
           });
-          
+
           // Atualizar progresso com erro
           if (this.migrationProgress) {
             this.migrationProgress.erros = resultado.erros.length;
@@ -658,13 +712,13 @@ export class MigracaoService {
       return resultado;
     } catch (error) {
       this.logger.error('Erro geral na migração:', error);
-      
+
       // Marcar como erro
       if (this.migrationProgress) {
         this.migrationProgress.status = 'error';
         this.migrationProgress.message = error.message;
       }
-      
+
       throw error;
     } finally {
       this.migrationRunning = false;
@@ -677,28 +731,28 @@ export class MigracaoService {
    */
   async executarMigration(): Promise<{ message: string; success: boolean }> {
     try {
-      const { AppDataSource } = require('../../data-source');
-      
+      const AppDataSource = await loadAppDataSource();
+
       if (!AppDataSource.isInitialized) {
         await AppDataSource.initialize();
       }
-      
+
       // Carregar todas as migrations disponíveis
       const allMigrations = AppDataSource.migrations || [];
-      
+
       if (allMigrations.length === 0) {
         this.logger.log('Nenhuma migration disponível');
-        
+
         if (AppDataSource.isInitialized) {
           await AppDataSource.destroy();
         }
-        
+
         return { message: 'Nenhuma migration disponível', success: true };
       }
-      
+
       // Verificar quais migrations já foram executadas consultando o banco
       const queryRunner = AppDataSource.createQueryRunner();
-      
+
       // Verificar se a tabela migrations existe, se não existir, criar
       const migrationsTableExists = await queryRunner.hasTable('migrations');
       if (!migrationsTableExists) {
@@ -719,7 +773,7 @@ export class MigracaoService {
           FROM pg_constraint 
           WHERE conname = 'UQ_migrations_timestamp_name'
         `);
-        
+
         if (constraintExists.length === 0) {
           this.logger.log('Constraint UNIQUE não existe. Criando...');
           // Tentar adicionar a constraint UNIQUE
@@ -731,7 +785,10 @@ export class MigracaoService {
             this.logger.log('✅ Constraint UNIQUE criada com sucesso');
           } catch (error) {
             // Se falhar (por exemplo, se já houver duplicatas), criar índice único ao invés
-            this.logger.warn('Não foi possível criar constraint UNIQUE, criando índice único:', error.message);
+            this.logger.warn(
+              'Não foi possível criar constraint UNIQUE, criando índice único:',
+              error.message,
+            );
             await queryRunner.query(`
               CREATE UNIQUE INDEX IF NOT EXISTS "UQ_migrations_timestamp_name_idx" 
               ON migrations (timestamp, name)
@@ -739,7 +796,7 @@ export class MigracaoService {
           }
         }
       }
-      
+
       // Consultar migrations executadas (agora a tabela existe)
       let executedMigrations: any[] = [];
       try {
@@ -747,18 +804,21 @@ export class MigracaoService {
           SELECT name FROM migrations ORDER BY timestamp DESC
         `);
       } catch (error) {
-        this.logger.warn('Erro ao consultar migrations executadas, assumindo nenhuma:', error);
+        this.logger.warn(
+          'Erro ao consultar migrations executadas, assumindo nenhuma:',
+          error,
+        );
         executedMigrations = [];
       }
-      
+
       const executedNames = new Set(executedMigrations.map((m: any) => m.name));
-      
+
       // Filtrar apenas as migrations estruturais pendentes (timestamp <= 1736000000000)
       // Excluir a migration de remoção de campos texto (1735000003000)
       const structuralMigrations = allMigrations.filter((migration: any) => {
         // migration é uma classe de migration
         let migrationName: string;
-        
+
         if (typeof migration === 'function') {
           migrationName = migration.name;
         } else if (migration && migration.constructor) {
@@ -766,22 +826,22 @@ export class MigracaoService {
         } else {
           return false; // Não é uma migration válida
         }
-        
+
         if (!migrationName || migrationName === 'undefined') {
           return false;
         }
-        
+
         // Verificar se já foi executada
         if (executedNames.has(migrationName)) {
           return false;
         }
-        
+
         // Extrair timestamp do nome da migration (formato: ClassName1735000000000)
         const match = migrationName.match(/(\d+)$/);
         if (match) {
           const timestamp = parseInt(match[1], 10);
           // Executar apenas migrations estruturais (até 1736000000000)
-          // Isso inclui: 
+          // Isso inclui:
           // - 1735000000000 (add-venda-relations)
           // - 1735000001000 (create-cadastros-tables)
           // - 1735000002000 (add-venda-foreign-keys)
@@ -791,128 +851,154 @@ export class MigracaoService {
         }
         return false;
       });
-      
+
       // Ordenar migrations por timestamp em ordem crescente (importante para ordem de execução)
       structuralMigrations.sort((a: any, b: any) => {
         let timestampA = 0;
         let timestampB = 0;
-        
+
         let nameA = '';
         let nameB = '';
-        
+
         if (typeof a === 'function') {
           nameA = a.name;
         } else if (a && a.constructor) {
           nameA = a.constructor.name;
         }
-        
+
         if (typeof b === 'function') {
           nameB = b.name;
         } else if (b && b.constructor) {
           nameB = b.constructor.name;
         }
-        
+
         const matchA = nameA.match(/(\d+)$/);
         const matchB = nameB.match(/(\d+)$/);
-        
+
         if (matchA) timestampA = parseInt(matchA[1], 10);
         if (matchB) timestampB = parseInt(matchB[1], 10);
-        
+
         return timestampA - timestampB; // Ordem crescente
       });
-      
+
       if (structuralMigrations.length === 0) {
         this.logger.log('Nenhuma migration estrutural pendente para executar');
-        
+
         await queryRunner.release();
-        
+
         if (AppDataSource.isInitialized) {
           await AppDataSource.destroy();
         }
-        
-        return { message: 'Nenhuma migration estrutural pendente para executar', success: true };
+
+        return {
+          message: 'Nenhuma migration estrutural pendente para executar',
+          success: true,
+        };
       }
-      
+
       // Executar apenas as migrations estruturais manualmente
       await queryRunner.startTransaction();
-      
+
       try {
-        for (const migration of structuralMigrations) {
+        for (const migration of structuralMigrations as any[]) {
           // migration pode ser uma classe ou instância
           let MigrationClass: any;
-          let migrationName: string;
-          
+          let migrationName = '';
+
           if (typeof migration === 'function') {
             MigrationClass = migration;
-            migrationName = migration.name;
-          } else {
+            migrationName = migration.name || 'Migration';
+          } else if (migration && typeof migration === 'object') {
             MigrationClass = migration.constructor;
             migrationName = migration.constructor.name;
+          } else {
+            continue;
           }
-          
+
           if (!migrationName || migrationName === 'undefined') {
             this.logger.warn(`Migration com nome inválido, pulando...`);
             continue;
           }
-          
+
           try {
-            this.logger.log(`Executando migration estrutural: ${migrationName}`);
-            
+            this.logger.log(
+              `Executando migration estrutural: ${migrationName}`,
+            );
+
             // Instanciar a migration
             const migrationInstance = new MigrationClass();
-            
+
             // Verificar se tem método up
-            if (!migrationInstance.up || typeof migrationInstance.up !== 'function') {
-              throw new Error(`Migration ${migrationName} não possui método up`);
+            if (
+              !migrationInstance.up ||
+              typeof migrationInstance.up !== 'function'
+            ) {
+              throw new Error(
+                `Migration ${migrationName} não possui método up`,
+              );
             }
-            
+
             // Executar o método up diretamente com o queryRunner
             await migrationInstance.up(queryRunner);
-            
+
             // Registrar a migration como executada na tabela migrations
             const timestampMatch = migrationName.match(/(\d+)$/);
             if (timestampMatch) {
               const timestamp = parseInt(timestampMatch[1], 10);
-              
+
               // Verificar se a constraint UNIQUE existe
               const constraintExists = await queryRunner.query(`
                 SELECT 1 
                 FROM pg_constraint 
                 WHERE conname = 'UQ_migrations_timestamp_name'
               `);
-              
+
               if (constraintExists.length > 0) {
                 // Usar ON CONFLICT se a constraint existe
-                await queryRunner.query(`
+                await queryRunner.query(
+                  `
                   INSERT INTO migrations (timestamp, name)
                   VALUES ($1, $2)
                   ON CONFLICT (timestamp, name) DO NOTHING
-                `, [timestamp, migrationName]);
+                `,
+                  [timestamp, migrationName],
+                );
               } else {
                 // Verificar manualmente se já existe antes de inserir
-                const exists = await queryRunner.query(`
+                const exists = await queryRunner.query(
+                  `
                   SELECT 1 FROM migrations 
                   WHERE timestamp = $1 AND name = $2
-                `, [timestamp, migrationName]);
-                
+                `,
+                  [timestamp, migrationName],
+                );
+
                 if (exists.length === 0) {
-                  await queryRunner.query(`
+                  await queryRunner.query(
+                    `
                     INSERT INTO migrations (timestamp, name)
                     VALUES ($1, $2)
-                  `, [timestamp, migrationName]);
+                  `,
+                    [timestamp, migrationName],
+                  );
                 }
               }
             }
-            
-            this.logger.log(`✅ Migration ${migrationName} executada com sucesso`);
+
+            this.logger.log(
+              `✅ Migration ${migrationName} executada com sucesso`,
+            );
           } catch (error) {
-            this.logger.error(`Erro ao executar migration ${migrationName}:`, error);
+            this.logger.error(
+              `Erro ao executar migration ${migrationName}:`,
+              error,
+            );
             await queryRunner.rollbackTransaction();
             await queryRunner.release();
             throw error;
           }
         }
-        
+
         await queryRunner.commitTransaction();
       } catch (error) {
         if (queryRunner.isTransactionActive) {
@@ -922,19 +1008,23 @@ export class MigracaoService {
       } finally {
         await queryRunner.release();
       }
-      
+
       if (AppDataSource.isInitialized) {
         await AppDataSource.destroy();
       }
-      
-      this.logger.log(`Migrations estruturais executadas com sucesso (${structuralMigrations.length} migration(s))`);
-      return { 
-        message: `Migrations estruturais executadas com sucesso (${structuralMigrations.length} migration(s))`, 
-        success: true 
+
+      this.logger.log(
+        `Migrations estruturais executadas com sucesso (${structuralMigrations.length} migration(s))`,
+      );
+      return {
+        message: `Migrations estruturais executadas com sucesso (${structuralMigrations.length} migration(s))`,
+        success: true,
       };
     } catch (error) {
       this.logger.error('Erro ao executar migration:', error);
-      throw new BadRequestException(`Erro ao executar migration: ${error.message}`);
+      throw new BadRequestException(
+        `Erro ao executar migration: ${error.message}`,
+      );
     }
   }
 
@@ -944,9 +1034,13 @@ export class MigracaoService {
    */
   async removerCamposTexto(): Promise<{ message: string; success: boolean }> {
     try {
-      this.logger.warn('⚠️  ATENÇÃO: Iniciando remoção dos campos texto da tabela vendas');
-      this.logger.warn('⚠️  Certifique-se de que fez backup do banco de dados!');
-      
+      this.logger.warn(
+        '⚠️  ATENÇÃO: Iniciando remoção dos campos texto da tabela vendas',
+      );
+      this.logger.warn(
+        '⚠️  Certifique-se de que fez backup do banco de dados!',
+      );
+
       // Primeiro, verificar se as colunas ainda existem
       const result = await this.dataSource.query(`
         SELECT column_name 
@@ -960,14 +1054,16 @@ export class MigracaoService {
         this.logger.log('✅ Os campos texto já foram removidos anteriormente');
         return {
           message: 'Os campos texto já foram removidos anteriormente.',
-          success: true
+          success: true,
         };
       }
 
-      this.logger.log(`📋 Encontradas ${result.length} coluna(s) texto para remover: ${result.map((r: any) => r.column_name).join(', ')}`);
-      
-      const { AppDataSource } = require('../../data-source');
-      
+      this.logger.log(
+        `📋 Encontradas ${result.length} coluna(s) texto para remover: ${result.map((r: any) => r.column_name).join(', ')}`,
+      );
+
+      const AppDataSource = await loadAppDataSource();
+
       if (!AppDataSource.isInitialized) {
         await AppDataSource.initialize();
       }
@@ -975,9 +1071,9 @@ export class MigracaoService {
       // Executar todas as migrations pendentes (incluindo a de remoção de campos texto)
       // O TypeORM só executa migrations que ainda não foram executadas
       const migrations = await AppDataSource.runMigrations();
-      
+
       const targetMigration = migrations.find(
-        (m: any) => m.name === 'RemoveTextFieldsFromVendas1735000003000'
+        (m: any) => m.name === 'RemoveTextFieldsFromVendas1735000003000',
       );
 
       // Verificar novamente se as colunas foram removidas
@@ -994,53 +1090,54 @@ export class MigracaoService {
         if (!targetMigration) {
           throw new BadRequestException(
             `A migration já foi executada anteriormente, mas as colunas ainda existem (${resultAfter.map((r: any) => r.column_name).join(', ')}). ` +
-            `Execute manualmente via: npm run migration:run ou remova as colunas manualmente via SQL.`
+              `Execute manualmente via: npm run migration:run ou remova as colunas manualmente via SQL.`,
           );
         } else {
           // Migration foi executada mas as colunas ainda existem (erro na migration)
           throw new BadRequestException(
-            `A migration foi executada, mas as colunas ainda existem. Verifique os logs para mais detalhes.`
+            `A migration foi executada, mas as colunas ainda existem. Verifique os logs para mais detalhes.`,
           );
         }
       }
 
       this.logger.log('✅ Campos texto removidos com sucesso!');
-      
+
       // Destruir AppDataSource se foi inicializado
       try {
-        const { AppDataSource } = require('../../data-source');
+        const AppDataSource = await loadAppDataSource();
         if (AppDataSource?.isInitialized) {
           await AppDataSource.destroy();
         }
-      } catch (destroyError) {
+      } catch (_destroyError) {
         // Ignorar erro ao destruir
       }
-      
+
       return {
-        message: 'Campos texto (cliente, vendedor, prescritor) removidos com sucesso da tabela vendas.',
-        success: true
+        message:
+          'Campos texto (cliente, vendedor, prescritor) removidos com sucesso da tabela vendas.',
+        success: true,
       };
     } catch (error) {
       this.logger.error('❌ Erro ao remover campos texto:', error);
-      
+
       // Destruir AppDataSource se foi inicializado
       try {
-        const { AppDataSource } = require('../../data-source');
+        const AppDataSource = await loadAppDataSource();
         if (AppDataSource?.isInitialized) {
           await AppDataSource.destroy();
         }
-      } catch (destroyError) {
+      } catch (_destroyError) {
         // Ignorar erro ao destruir
       }
-      
+
       // Se o erro já é uma BadRequestException, apenas relançar
       if (error instanceof BadRequestException) {
         throw error;
       }
-      
+
       throw new BadRequestException(
         `Erro ao remover campos texto: ${error.message}. ` +
-        `Verifique se todos os dados foram migrados antes de tentar novamente.`
+          `Verifique se todos os dados foram migrados antes de tentar novamente.`,
       );
     }
   }
@@ -1064,12 +1161,15 @@ export class MigracaoService {
     `;
 
     try {
-      const results = banco === 'banco1'
-        ? await this.firebirdService.queryBanco1<LegacyCliente>(sql, [])
-        : await this.firebirdService.queryBanco2<LegacyCliente>(sql, []);
+      const results =
+        banco === 'banco1'
+          ? await this.firebirdService.queryBanco1<LegacyCliente>(sql, [])
+          : await this.firebirdService.queryBanco2<LegacyCliente>(sql, []);
       return results || [];
     } catch (error) {
-      this.logger.error(`Erro ao buscar todos os clientes no banco legado: ${error.message}`);
+      this.logger.error(
+        `Erro ao buscar todos os clientes no banco legado: ${error.message}`,
+      );
       return [];
     }
   }
@@ -1090,12 +1190,15 @@ export class MigracaoService {
     `;
 
     try {
-      const results = banco === 'banco1'
-        ? await this.firebirdService.queryBanco1<LegacyVendedor>(sql, [])
-        : await this.firebirdService.queryBanco2<LegacyVendedor>(sql, []);
+      const results =
+        banco === 'banco1'
+          ? await this.firebirdService.queryBanco1<LegacyVendedor>(sql, [])
+          : await this.firebirdService.queryBanco2<LegacyVendedor>(sql, []);
       return results || [];
     } catch (error) {
-      this.logger.error(`Erro ao buscar todos os vendedores no banco legado: ${error.message}`);
+      this.logger.error(
+        `Erro ao buscar todos os vendedores no banco legado: ${error.message}`,
+      );
       return [];
     }
   }
@@ -1116,12 +1219,15 @@ export class MigracaoService {
     `;
 
     try {
-      const results = banco === 'banco1'
-        ? await this.firebirdService.queryBanco1<LegacyPrescritor>(sql, [])
-        : await this.firebirdService.queryBanco2<LegacyPrescritor>(sql, []);
+      const results =
+        banco === 'banco1'
+          ? await this.firebirdService.queryBanco1<LegacyPrescritor>(sql, [])
+          : await this.firebirdService.queryBanco2<LegacyPrescritor>(sql, []);
       return results || [];
     } catch (error) {
-      this.logger.error(`Erro ao buscar todos os prescritores no banco legado: ${error.message}`);
+      this.logger.error(
+        `Erro ao buscar todos os prescritores no banco legado: ${error.message}`,
+      );
       return [];
     }
   }
@@ -1137,7 +1243,9 @@ export class MigracaoService {
   }> {
     // Proteção contra execução concorrente
     if (this.cadastrosRunning) {
-      throw new BadRequestException('Migração de cadastros já está em execução. Aguarde a conclusão.');
+      throw new BadRequestException(
+        'Migração de cadastros já está em execução. Aguarde a conclusão.',
+      );
     }
 
     this.cadastrosRunning = true;
@@ -1162,8 +1270,10 @@ export class MigracaoService {
       };
 
       // Processar Banco 1 (INHUMAS + NERÓPOLIS)
-      this.logger.log('Iniciando migração de cadastros do Banco 1 (INHUMAS/NERÓPOLIS)...');
-      
+      this.logger.log(
+        'Iniciando migração de cadastros do Banco 1 (INHUMAS/NERÓPOLIS)...',
+      );
+
       // 1. Migrar Clientes do Banco 1
       if (this.cadastrosProgress) {
         this.cadastrosProgress.etapa = 'clientes';
@@ -1176,13 +1286,18 @@ export class MigracaoService {
       for (let i = 0; i < clientesBanco1.length; i++) {
         const clienteLegado = clientesBanco1[i];
         try {
-          const unidade = this.codigoUnidadeParaEnum(clienteLegado.UNIDADE, 'banco1');
+          const unidade = this.codigoUnidadeParaEnum(
+            clienteLegado.UNIDADE,
+            'banco1',
+          );
           const nomeNormalizado = this.normalizarNome(clienteLegado.NOME);
 
           // Verificar se já existe
           const existe = await this.clienteRepository
             .createQueryBuilder('cliente')
-            .where('UPPER(TRIM(cliente.nome)) = :nome', { nome: nomeNormalizado })
+            .where('UPPER(TRIM(cliente.nome)) = :nome', {
+              nome: nomeNormalizado,
+            })
             .andWhere('cliente.unidade = :unidade', { unidade })
             .getOne();
 
@@ -1190,9 +1305,13 @@ export class MigracaoService {
             const novoCliente = this.clienteRepository.create({
               nome: this.padronizarNome(clienteLegado.NOME),
               cdcliente: clienteLegado.CDCLIENTE ?? undefined,
-              cpf: clienteLegado.CPF ? this.garantirUtf8Valido(clienteLegado.CPF) : undefined,
+              cpf: clienteLegado.CPF
+                ? this.garantirUtf8Valido(clienteLegado.CPF)
+                : undefined,
               dataNascimento: this.parseDate(clienteLegado.DATANASCIMENTO),
-              email: clienteLegado.EMAIL ? this.garantirUtf8Valido(clienteLegado.EMAIL) : undefined,
+              email: clienteLegado.EMAIL
+                ? this.garantirUtf8Valido(clienteLegado.EMAIL)
+                : undefined,
               telefone: undefined,
               unidade: unidade,
             });
@@ -1205,7 +1324,10 @@ export class MigracaoService {
             this.cadastrosProgress.clientesCriados = resultado.clientesCriados;
           }
         } catch (error) {
-          this.logger.error(`Erro ao migrar cliente ${clienteLegado.NOME}:`, error);
+          this.logger.error(
+            `Erro ao migrar cliente ${clienteLegado.NOME}:`,
+            error,
+          );
           resultado.erros++;
           if (this.cadastrosProgress) {
             this.cadastrosProgress.erros = resultado.erros;
@@ -1218,7 +1340,8 @@ export class MigracaoService {
       if (this.cadastrosProgress) {
         this.cadastrosProgress.etapa = 'prescritores';
       }
-      const prescritoresBanco1 = await this.buscarTodosPrescritoresLegado('banco1');
+      const prescritoresBanco1 =
+        await this.buscarTodosPrescritoresLegado('banco1');
       if (this.cadastrosProgress) {
         this.cadastrosProgress.totalPrescritores = prescritoresBanco1.length;
       }
@@ -1231,14 +1354,18 @@ export class MigracaoService {
           // Verificar se já existe
           const existe = await this.prescritorRepository
             .createQueryBuilder('prescritor')
-            .where('UPPER(TRIM(prescritor.nome)) = :nome', { nome: nomeNormalizado })
+            .where('UPPER(TRIM(prescritor.nome)) = :nome', {
+              nome: nomeNormalizado,
+            })
             .getOne();
 
           if (!existe) {
             const novoPrescritor = this.prescritorRepository.create({
               nome: this.padronizarNome(prescritorLegado.NOME),
               numeroCRM: prescritorLegado.NRCRM ?? undefined,
-              UFCRM: prescritorLegado.UFCRM ? this.garantirUtf8Valido(prescritorLegado.UFCRM) : undefined,
+              UFCRM: prescritorLegado.UFCRM
+                ? this.garantirUtf8Valido(prescritorLegado.UFCRM)
+                : undefined,
             });
             await this.prescritorRepository.save(novoPrescritor);
             resultado.prescritoresCriados++;
@@ -1246,10 +1373,14 @@ export class MigracaoService {
 
           if (this.cadastrosProgress) {
             this.cadastrosProgress.prescritoresProcessados = i + 1;
-            this.cadastrosProgress.prescritoresCriados = resultado.prescritoresCriados;
+            this.cadastrosProgress.prescritoresCriados =
+              resultado.prescritoresCriados;
           }
         } catch (error) {
-          this.logger.error(`Erro ao migrar prescritor ${prescritorLegado.NOME}:`, error);
+          this.logger.error(
+            `Erro ao migrar prescritor ${prescritorLegado.NOME}:`,
+            error,
+          );
           resultado.erros++;
           if (this.cadastrosProgress) {
             this.cadastrosProgress.erros = resultado.erros;
@@ -1259,7 +1390,9 @@ export class MigracaoService {
       }
 
       // Processar Banco 2 (UBERABA)
-      this.logger.log('Iniciando migração de cadastros do Banco 2 (UBERABA)...');
+      this.logger.log(
+        'Iniciando migração de cadastros do Banco 2 (UBERABA)...',
+      );
 
       // 1. Migrar Clientes do Banco 2
       if (this.cadastrosProgress) {
@@ -1273,13 +1406,18 @@ export class MigracaoService {
       for (let i = 0; i < clientesBanco2.length; i++) {
         const clienteLegado = clientesBanco2[i];
         try {
-          const unidade = this.codigoUnidadeParaEnum(clienteLegado.UNIDADE, 'banco2');
+          const unidade = this.codigoUnidadeParaEnum(
+            clienteLegado.UNIDADE,
+            'banco2',
+          );
           const nomeNormalizado = this.normalizarNome(clienteLegado.NOME);
 
           // Verificar se já existe
           const existe = await this.clienteRepository
             .createQueryBuilder('cliente')
-            .where('UPPER(TRIM(cliente.nome)) = :nome', { nome: nomeNormalizado })
+            .where('UPPER(TRIM(cliente.nome)) = :nome', {
+              nome: nomeNormalizado,
+            })
             .andWhere('cliente.unidade = :unidade', { unidade })
             .getOne();
 
@@ -1287,9 +1425,13 @@ export class MigracaoService {
             const novoCliente = this.clienteRepository.create({
               nome: this.padronizarNome(clienteLegado.NOME),
               cdcliente: clienteLegado.CDCLIENTE ?? undefined,
-              cpf: clienteLegado.CPF ? this.garantirUtf8Valido(clienteLegado.CPF) : undefined,
+              cpf: clienteLegado.CPF
+                ? this.garantirUtf8Valido(clienteLegado.CPF)
+                : undefined,
               dataNascimento: this.parseDate(clienteLegado.DATANASCIMENTO),
-              email: clienteLegado.EMAIL ? this.garantirUtf8Valido(clienteLegado.EMAIL) : undefined,
+              email: clienteLegado.EMAIL
+                ? this.garantirUtf8Valido(clienteLegado.EMAIL)
+                : undefined,
               telefone: undefined,
               unidade: unidade,
             });
@@ -1302,7 +1444,10 @@ export class MigracaoService {
             this.cadastrosProgress.clientesCriados = resultado.clientesCriados;
           }
         } catch (error) {
-          this.logger.error(`Erro ao migrar cliente ${clienteLegado.NOME}:`, error);
+          this.logger.error(
+            `Erro ao migrar cliente ${clienteLegado.NOME}:`,
+            error,
+          );
           resultado.erros++;
           if (this.cadastrosProgress) {
             this.cadastrosProgress.erros = resultado.erros;
@@ -1315,7 +1460,8 @@ export class MigracaoService {
       if (this.cadastrosProgress) {
         this.cadastrosProgress.etapa = 'prescritores';
       }
-      const prescritoresBanco2 = await this.buscarTodosPrescritoresLegado('banco2');
+      const prescritoresBanco2 =
+        await this.buscarTodosPrescritoresLegado('banco2');
       if (this.cadastrosProgress) {
         this.cadastrosProgress.totalPrescritores += prescritoresBanco2.length;
       }
@@ -1328,14 +1474,18 @@ export class MigracaoService {
           // Verificar se já existe
           const existe = await this.prescritorRepository
             .createQueryBuilder('prescritor')
-            .where('UPPER(TRIM(prescritor.nome)) = :nome', { nome: nomeNormalizado })
+            .where('UPPER(TRIM(prescritor.nome)) = :nome', {
+              nome: nomeNormalizado,
+            })
             .getOne();
 
           if (!existe) {
             const novoPrescritor = this.prescritorRepository.create({
               nome: this.padronizarNome(prescritorLegado.NOME),
               numeroCRM: prescritorLegado.NRCRM ?? undefined,
-              UFCRM: prescritorLegado.UFCRM ? this.garantirUtf8Valido(prescritorLegado.UFCRM) : undefined,
+              UFCRM: prescritorLegado.UFCRM
+                ? this.garantirUtf8Valido(prescritorLegado.UFCRM)
+                : undefined,
             });
             await this.prescritorRepository.save(novoPrescritor);
             resultado.prescritoresCriados++;
@@ -1343,10 +1493,14 @@ export class MigracaoService {
 
           if (this.cadastrosProgress) {
             this.cadastrosProgress.prescritoresProcessados += 1;
-            this.cadastrosProgress.prescritoresCriados = resultado.prescritoresCriados;
+            this.cadastrosProgress.prescritoresCriados =
+              resultado.prescritoresCriados;
           }
         } catch (error) {
-          this.logger.error(`Erro ao migrar prescritor ${prescritorLegado.NOME}:`, error);
+          this.logger.error(
+            `Erro ao migrar prescritor ${prescritorLegado.NOME}:`,
+            error,
+          );
           resultado.erros++;
           if (this.cadastrosProgress) {
             this.cadastrosProgress.erros = resultado.erros;
@@ -1359,20 +1513,21 @@ export class MigracaoService {
       if (this.cadastrosProgress) {
         this.cadastrosProgress.status = 'completed';
         this.cadastrosProgress.etapa = 'concluido';
-        this.cadastrosProgress.message = 'Migração de cadastros concluída com sucesso!';
+        this.cadastrosProgress.message =
+          'Migração de cadastros concluída com sucesso!';
       }
 
       this.logger.log('Migração de cadastros concluída com sucesso!');
       return resultado;
     } catch (error) {
       this.logger.error('Erro geral na migração de cadastros:', error);
-      
+
       // Marcar como erro
       if (this.cadastrosProgress) {
         this.cadastrosProgress.status = 'error';
         this.cadastrosProgress.message = error.message;
       }
-      
+
       throw error;
     } finally {
       this.cadastrosRunning = false;
@@ -1384,14 +1539,19 @@ export class MigracaoService {
    * ATENÇÃO: Este método será removido após a migration que remove os campos texto.
    * Usa query raw para ler os campos texto diretamente do banco (já que não existem mais na entity).
    */
-  async padronizarNomesVendas(): Promise<{ vendasAtualizadas: number; erros: number }> {
+  async padronizarNomesVendas(): Promise<{
+    vendasAtualizadas: number;
+    erros: number;
+  }> {
     const resultado = {
       vendasAtualizadas: 0,
       erros: 0,
     };
 
     try {
-      this.logger.log('Iniciando padronização de nomes nas vendas (usando query raw)...');
+      this.logger.log(
+        'Iniciando padronização de nomes nas vendas (usando query raw)...',
+      );
 
       // Buscar todas as vendas usando query raw para ler campos texto do banco
       const vendasRaw = await this.dataSource.query(`
@@ -1411,7 +1571,9 @@ export class MigracaoService {
           if (vendaRaw.cliente) {
             const clienteNormalizado = this.padronizarNome(vendaRaw.cliente);
             if (clienteNormalizado !== vendaRaw.cliente) {
-              updates.push(`cliente = '${clienteNormalizado.replace(/'/g, "''")}'`);
+              updates.push(
+                `cliente = '${clienteNormalizado.replace(/'/g, "''")}'`,
+              );
             }
           }
 
@@ -1419,25 +1581,34 @@ export class MigracaoService {
           if (vendaRaw.vendedor) {
             const vendedorNormalizado = this.padronizarNome(vendaRaw.vendedor);
             if (vendedorNormalizado !== vendaRaw.vendedor) {
-              updates.push(`vendedor = '${vendedorNormalizado.replace(/'/g, "''")}'`);
+              updates.push(
+                `vendedor = '${vendedorNormalizado.replace(/'/g, "''")}'`,
+              );
             }
           }
 
           // Padronizar nome do prescritor
           if (vendaRaw.prescritor) {
-            const prescritorNormalizado = this.padronizarNome(vendaRaw.prescritor);
+            const prescritorNormalizado = this.padronizarNome(
+              vendaRaw.prescritor,
+            );
             if (prescritorNormalizado !== vendaRaw.prescritor) {
-              updates.push(`prescritor = '${prescritorNormalizado.replace(/'/g, "''")}'`);
+              updates.push(
+                `prescritor = '${prescritorNormalizado.replace(/'/g, "''")}'`,
+              );
             }
           }
 
           // Atualizar se houve alteração
           if (updates.length > 0) {
-            await this.dataSource.query(`
+            await this.dataSource.query(
+              `
               UPDATE vendas 
               SET ${updates.join(', ')}
               WHERE id = $1
-            `, [vendaRaw.id]);
+            `,
+              [vendaRaw.id],
+            );
             resultado.vendasAtualizadas++;
           }
         } catch (error) {
@@ -1466,24 +1637,30 @@ export class MigracaoService {
    */
   private garantirUtf8Valido(str: string): string {
     if (!str) return str;
-    
+
     try {
       // Tenta decodificar e re-encodar para garantir UTF-8 válido
       // Se a string já está em UTF-8 válido, isso não altera nada
       const buffer = Buffer.from(str, 'utf8');
       return buffer.toString('utf8');
-    } catch (error) {
+    } catch (_error) {
       // Se falhar, tenta remover caracteres inválidos
-      this.logger.warn(`String com encoding inválido detectada, removendo caracteres inválidos: ${str.substring(0, 50)}...`);
+      this.logger.warn(
+        `String com encoding inválido detectada, removendo caracteres inválidos: ${str.substring(0, 50)}...`,
+      );
       // Remove caracteres não-UTF-8 válidos
-      return str.replace(/[\uFFFD\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+      return str.replace(
+        // eslint-disable-next-line no-control-regex -- sanitização de bytes legados
+        /[\uFFFD\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g,
+        '',
+      );
     }
   }
 
   /**
    * Padroniza um nome: maiúsculas e normaliza espaços
    * Ex: "Abnil C. L  Neto" -> "ABNIL C. L NETO"
-   * CORREÇÃO: 
+   * CORREÇÃO:
    * 1. Garante UTF-8 válido antes de processar
    * 2. Usa toLocaleUpperCase('pt-BR') para preservar caracteres especiais (acentos, cedilha)
    * 3. Preserva caracteres especiais após a conversão de encoding do FirebirdConnectionService
@@ -1510,11 +1687,12 @@ export class MigracaoService {
       normalized = normalized.toLocaleUpperCase('pt-BR');
     } catch (error) {
       // Fallback para toUpperCase se toLocaleUpperCase falhar
-      this.logger.warn(`Erro ao usar toLocaleUpperCase, usando toUpperCase: ${error.message}`);
+      this.logger.warn(
+        `Erro ao usar toLocaleUpperCase, usando toUpperCase: ${error.message}`,
+      );
       normalized = normalized.toUpperCase();
     }
 
     return normalized;
   }
 }
-

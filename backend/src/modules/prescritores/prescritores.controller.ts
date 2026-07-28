@@ -67,8 +67,16 @@ export class PrescritoresController {
     description: 'Lista de prescritores encontrados',
     type: [Prescritor],
   })
-  @ApiQuery({ name: 'nome', required: true, description: 'Nome para buscar (parcial)' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Limite de resultados (padrão: 20)' })
+  @ApiQuery({
+    name: 'nome',
+    required: true,
+    description: 'Nome para buscar (parcial)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Limite de resultados (padrão: 20)',
+  })
   async search(@Query('nome') nome: string, @Query('limit') limit?: number) {
     return this.prescritoresService.search(nome, limit ? Number(limit) : 20);
   }
@@ -83,7 +91,11 @@ export class PrescritoresController {
   @ApiQuery({ name: 'page', required: false, description: 'Número da página' })
   @ApiQuery({ name: 'limit', required: false, description: 'Itens por página' })
   @ApiQuery({ name: 'nome', required: false, description: 'Filtrar por nome' })
-  @ApiQuery({ name: 'numeroCRM', required: false, description: 'Filtrar por número do CRM' })
+  @ApiQuery({
+    name: 'numeroCRM',
+    required: false,
+    description: 'Filtrar por número do CRM',
+  })
   findAll(@Query() findPrescritoresDto: FindPrescritoresDto) {
     return this.prescritoresService.findAll(findPrescritoresDto);
   }
@@ -150,4 +162,3 @@ export class PrescritoresController {
     return this.prescritoresService.remove(id);
   }
 }
-

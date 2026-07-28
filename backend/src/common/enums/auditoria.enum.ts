@@ -14,8 +14,6 @@ export enum AuditAction {
   CHANGE_PASSWORD = 'change_password',
 }
 
-
-
 export const AUDIT_ACTION_DESCRIPTIONS = {
   [AuditAction.LOGIN]: 'Usuário fez login no sistema',
   [AuditAction.LOGOUT]: 'Usuário fez logout do sistema',

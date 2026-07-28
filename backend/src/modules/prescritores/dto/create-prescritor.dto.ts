@@ -40,4 +40,3 @@ export class CreatePrescritorDto {
   @Transform(({ value }) => (value === '' ? null : value))
   UFCRM?: string;
 }
-

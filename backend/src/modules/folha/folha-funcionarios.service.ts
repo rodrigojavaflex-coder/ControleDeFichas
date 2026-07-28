@@ -214,8 +214,10 @@ export class FolhaFuncionariosService {
     }
 
     if (dto.comEventosFixos) {
-      qb.leftJoinAndSelect('f.eventosFixos', 'eventoFixo')
-        .leftJoinAndSelect('eventoFixo.folhaVerba', 'eventoFixoVerba');
+      qb.leftJoinAndSelect('f.eventosFixos', 'eventoFixo').leftJoinAndSelect(
+        'eventoFixo.folhaVerba',
+        'eventoFixoVerba',
+      );
     }
 
     return qb;
@@ -246,7 +248,7 @@ export class FolhaFuncionariosService {
     if (!entity) {
       throw new NotFoundException(`Funcionário ${id} não encontrado`);
     }
-    if (!usuarioPodeGerenciarUnidade(usuario, entity.unidade as Unidade)) {
+    if (!usuarioPodeGerenciarUnidade(usuario, entity.unidade)) {
       throw new NotFoundException(`Funcionário ${id} não encontrado`);
     }
     return entity;
@@ -311,11 +313,11 @@ export class FolhaFuncionariosService {
     if (!entity) {
       throw new NotFoundException(`Funcionário ${id} não encontrado`);
     }
-    if (!usuarioPodeGerenciarUnidade(usuario, entity.unidade as Unidade)) {
+    if (!usuarioPodeGerenciarUnidade(usuario, entity.unidade)) {
       throw new NotFoundException(`Funcionário ${id} não encontrado`);
     }
     if (dto.unidade !== undefined && dto.unidade !== entity.unidade) {
-      assertUnidadeFolha(usuario, dto.unidade as Unidade);
+      assertUnidadeFolha(usuario, dto.unidade);
     }
 
     const {
@@ -328,7 +330,7 @@ export class FolhaFuncionariosService {
     Object.assign(entity, restPatch);
 
     if (dto.unidade !== undefined) {
-      entity.unidade = dto.unidade as Unidade;
+      entity.unidade = dto.unidade;
     }
     if (dto.telefone !== undefined) {
       entity.telefone = dto.telefone?.trim() ? dto.telefone.trim() : null;
@@ -343,7 +345,7 @@ export class FolhaFuncionariosService {
       entity.cpf = dto.cpf?.trim() ? dto.cpf.trim() : null;
     }
     if (dto.codigoFuncionarioErp !== undefined) {
-      const unidadeAlvo = (dto.unidade ?? entity.unidade) as Unidade;
+      const unidadeAlvo = dto.unidade ?? entity.unidade;
       await this.assertCodigoFuncionarioErpUnico(
         unidadeAlvo,
         dto.codigoFuncionarioErp ?? null,
@@ -353,19 +355,12 @@ export class FolhaFuncionariosService {
     }
 
     if (patchCargoId !== undefined) {
-      await this.assertCargoSetorIds(
-        patchCargoId as string | null,
-        undefined,
-      );
-      entity.cargo = patchCargoId
-        ? ({ id: patchCargoId } as FolhaCargo)
-        : null;
+      await this.assertCargoSetorIds(patchCargoId, undefined);
+      entity.cargo = patchCargoId ? ({ id: patchCargoId } as FolhaCargo) : null;
     }
     if (patchSetorId !== undefined) {
-      await this.assertCargoSetorIds(undefined, patchSetorId as string | null);
-      entity.setor = patchSetorId
-        ? ({ id: patchSetorId } as FolhaSetor)
-        : null;
+      await this.assertCargoSetorIds(undefined, patchSetorId);
+      entity.setor = patchSetorId ? ({ id: patchSetorId } as FolhaSetor) : null;
     }
 
     if (dto.tipoPix !== undefined) {
@@ -520,10 +515,7 @@ export class FolhaFuncionariosService {
       );
     }
     if (temTipo && temChave && f.tipoPix && f.chavePix?.trim()) {
-      this.validarChavePixFormato(
-        f.tipoPix as TipoChavePixFolha,
-        f.chavePix.trim(),
-      );
+      this.validarChavePixFormato(f.tipoPix, f.chavePix.trim());
     }
   }
 
@@ -556,9 +548,7 @@ export class FolhaFuncionariosService {
       }
       case TipoChavePixFolha.EMAIL: {
         if (!EMAIL_CHAVE_PIX.test(chave)) {
-          throw new BadRequestException(
-            'Chave Pix do tipo e-mail é inválida.',
-          );
+          throw new BadRequestException('Chave Pix do tipo e-mail é inválida.');
         }
         break;
       }

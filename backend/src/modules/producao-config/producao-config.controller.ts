@@ -50,7 +50,9 @@ export class ProducaoConfigController {
 
   @Get('etapas')
   @Permissions(Permission.PRODUCAO_CONFIG_READ)
-  @ApiOperation({ summary: 'Lista etapas da unidade com config de remuneração' })
+  @ApiOperation({
+    summary: 'Lista etapas da unidade com config de remuneração',
+  })
   @ApiResponse({ status: 200 })
   listarEtapas(
     @Req() req: { user: Usuario },
@@ -106,11 +108,7 @@ export class ProducaoConfigController {
     @Param('funcionarioId', ParseUUIDPipe) funcionarioId: string,
     @Body() dto: BulkSaveProducaoFuncionarioEtapasDto,
   ) {
-    return this.service.salvarEtapasFuncionario(
-      req.user,
-      funcionarioId,
-      dto,
-    );
+    return this.service.salvarEtapasFuncionario(req.user, funcionarioId, dto);
   }
 
   @Get('relatorio')
@@ -147,7 +145,8 @@ export class ProducaoConfigController {
   @Post('funcionarios/remover-etapas')
   @Permissions(Permission.PRODUCAO_CONFIG_UPDATE)
   @ApiOperation({
-    summary: 'Remove todas as etapas configuradas dos funcionários selecionados',
+    summary:
+      'Remove todas as etapas configuradas dos funcionários selecionados',
   })
   @ApiResponse({ status: 200, type: RemoverEtapasFuncionariosResponseDto })
   removerEtapasFuncionarios(
@@ -163,7 +162,10 @@ export class ProducaoConfigController {
     summary:
       'Prévia: vincular codigoFuncionarioErp pelo nome (producao_etapas_resumo.funcSaida)',
   })
-  @ApiResponse({ status: 200, type: VinculoCodigoFuncionarioPreviewResponseDto })
+  @ApiResponse({
+    status: 200,
+    type: VinculoCodigoFuncionarioPreviewResponseDto,
+  })
   previewVincularCodigoFuncionario(
     @Req() req: { user: Usuario },
     @Query() query: ProducaoConfigUnidadeQueryDto,
@@ -175,12 +177,18 @@ export class ProducaoConfigController {
   }
 
   @Post('importacao/vincular-codigo-funcionario/confirmar')
-  @Permissions(Permission.PRODUCAO_CONFIG_UPDATE, Permission.CONFIGURACAO_ACCESS)
+  @Permissions(
+    Permission.PRODUCAO_CONFIG_UPDATE,
+    Permission.CONFIGURACAO_ACCESS,
+  )
   @ApiOperation({
     summary:
       'Confirma vínculo seguro de codigoFuncionarioErp (match único, código ainda NULL)',
   })
-  @ApiResponse({ status: 200, type: VinculoCodigoFuncionarioConfirmResponseDto })
+  @ApiResponse({
+    status: 200,
+    type: VinculoCodigoFuncionarioConfirmResponseDto,
+  })
   confirmarVincularCodigoFuncionario(
     @Req() req: { user: Usuario },
     @Body() dto: ConfirmarVinculoCodigoFuncionarioDto,

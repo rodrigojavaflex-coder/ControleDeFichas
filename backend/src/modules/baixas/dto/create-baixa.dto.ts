@@ -32,10 +32,13 @@ export class CreateBaixaDto {
 
   @ApiProperty({
     description: 'Valor da baixa',
-    example: 500.00,
+    example: 500.0,
   })
   @IsNotEmpty({ message: 'Valor da baixa é obrigatório' })
-  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'Valor da baixa deve ser um número válido' })
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Valor da baixa deve ser um número válido' },
+  )
   @IsPositive({ message: 'Valor da baixa deve ser maior que 0,00' })
   valorBaixa: number;
 
@@ -44,7 +47,10 @@ export class CreateBaixaDto {
     example: '2025-10-27',
   })
   @IsNotEmpty({ message: 'Data da baixa é obrigatória' })
-  @IsDateString({}, { message: 'Data da baixa deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data da baixa deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataBaixa: string;
 
   @ApiProperty({
@@ -55,6 +61,8 @@ export class CreateBaixaDto {
   })
   @IsOptional()
   @IsString({ message: 'Observação deve ser uma string' })
-  @MaxLength(500, { message: 'Observação não pode ter mais que 500 caracteres' })
+  @MaxLength(500, {
+    message: 'Observação não pode ter mais que 500 caracteres',
+  })
   observacao?: string;
 }

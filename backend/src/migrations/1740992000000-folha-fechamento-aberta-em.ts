@@ -3,7 +3,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 /**
  * Momento registrado da abertura vigente da competência (primeiro registro ou após Reabrir).
  */
-export class FolhaFechamentoAbertaEm1740992000000 implements MigrationInterface {
+export class FolhaFechamentoAbertaEm1740992000000
+  implements MigrationInterface
+{
   name = 'FolhaFechamentoAbertaEm1740992000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

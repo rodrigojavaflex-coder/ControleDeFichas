@@ -9,7 +9,8 @@ export class RemoverEtapasFuncionariosDto {
 
   @ApiProperty({
     type: [String],
-    description: 'IDs dos funcionários selecionados para remover todas as etapas configuradas',
+    description:
+      'IDs dos funcionários selecionados para remover todas as etapas configuradas',
   })
   @IsArray()
   @ArrayMinSize(1)

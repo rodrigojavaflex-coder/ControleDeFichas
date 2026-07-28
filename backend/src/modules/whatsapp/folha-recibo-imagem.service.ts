@@ -65,12 +65,21 @@ export class FolhaReciboImagemService {
    * PNG do recibo — layout idêntico ao impresso em `montarCorpoHtmlReciboPagamento`.
    * @param impressoPor Nome do usuário (rodapé), como na impressão.
    */
-  gerarReciboPng(detalhe: FolhaCapaDetalheDto, impressoPor = 'Sistema'): Buffer {
+  gerarReciboPng(
+    detalhe: FolhaCapaDetalheDto,
+    impressoPor = 'Sistema',
+  ): Buffer {
     const capa = detalhe.capa;
     const funcionario = (capa.funcionario?.nome ?? '').trim() || '—';
     const refMensal = `${this.nomeMesPt(capa.mes)}/${capa.ano}`;
-    const itensReceitas = this.itensPorTipo(capa.itens, FolhaMovimentoTipo.RECEITA);
-    const itensDespesas = this.itensPorTipo(capa.itens, FolhaMovimentoTipo.DESPESA);
+    const itensReceitas = this.itensPorTipo(
+      capa.itens,
+      FolhaMovimentoTipo.RECEITA,
+    );
+    const itensDespesas = this.itensPorTipo(
+      capa.itens,
+      FolhaMovimentoTipo.DESPESA,
+    );
 
     const secRecH = this.alturaSecao(itensReceitas.length || 1);
     const secDescH = this.alturaSecao(itensDespesas.length || 1);
@@ -80,13 +89,19 @@ export class FolhaReciboImagemService {
     const footerH = 48;
     const padTop = 16;
     const height =
-      padTop + headerH + gapSec + secRecH + gapSec + secDescH + gapSec + liqH + footerH;
+      padTop +
+      headerH +
+      gapSec +
+      secRecH +
+      gapSec +
+      secDescH +
+      gapSec +
+      liqH +
+      footerH;
 
     let y = padTop;
     const parts: string[] = [];
     const font = 'Arial, Helvetica, sans-serif';
-    const bx = LAYOUT.blocosX;
-    const bw = LAYOUT.blocosWidth;
     const cx = LAYOUT.width / 2;
 
     parts.push(`<rect width="100%" height="100%" fill="#ffffff"/>`);
@@ -184,7 +199,15 @@ export class FolhaReciboImagemService {
     if (linhas) {
       linhas.forEach((it, idx) => {
         const bg = idx % 2 === 0 ? LAYOUT.stripeA : LAYOUT.stripeB;
-        parts.push(...this.desenharLinhaTabela(rowY, bg, it.folhaVerba?.descricao ?? 'Evento', it.valor, false));
+        parts.push(
+          ...this.desenharLinhaTabela(
+            rowY,
+            bg,
+            it.folhaVerba?.descricao ?? 'Evento',
+            it.valor,
+            false,
+          ),
+        );
         rowY += LAYOUT.rowH;
       });
     } else {
@@ -195,7 +218,15 @@ export class FolhaReciboImagemService {
     parts.push(
       `<line x1="${bx}" y1="${rowY}" x2="${bx + bw}" y2="${rowY}" stroke="${LAYOUT.totalRowBorder}" stroke-width="2"/>`,
     );
-    parts.push(...this.desenharLinhaTabela(rowY, LAYOUT.totalRowBg, rotuloTotal, total, true));
+    parts.push(
+      ...this.desenharLinhaTabela(
+        rowY,
+        LAYOUT.totalRowBg,
+        rotuloTotal,
+        total,
+        true,
+      ),
+    );
 
     return y + secH;
   }
@@ -265,7 +296,10 @@ export class FolhaReciboImagemService {
     return [...(itens ?? [])]
       .filter((it) => it.folhaVerba?.tipoMovimento === tipo)
       .sort((a, b) =>
-        (a.folhaVerba?.descricao ?? '').localeCompare(b.folhaVerba?.descricao ?? '', 'pt-BR'),
+        (a.folhaVerba?.descricao ?? '').localeCompare(
+          b.folhaVerba?.descricao ?? '',
+          'pt-BR',
+        ),
       );
   }
 
@@ -274,7 +308,15 @@ export class FolhaReciboImagemService {
   }
 
   private moeda(valor: unknown): string {
-    const num = Number(String(valor ?? '0').replace(',', '.'));
+    let raw = '0';
+    if (typeof valor === 'number' && Number.isFinite(valor)) {
+      raw = String(valor);
+    } else if (typeof valor === 'string') {
+      raw = valor;
+    } else if (typeof valor === 'bigint') {
+      raw = String(valor);
+    }
+    const num = Number(raw.replace(',', '.'));
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',

@@ -7,12 +7,15 @@ import { Usuario } from '../../usuarios/entities/usuario.entity';
 @Entity('perfil')
 @Index(['nomePerfil'], { unique: true })
 export class Perfil extends BaseEntity {
-
   @ApiProperty({ description: 'Nome único do perfil', example: 'ADMIN' })
   @Column({ unique: true })
   nomePerfil: string;
 
-  @ApiProperty({ description: 'Permissões associadas ao perfil', example: ['user:read', 'user:create'], isArray: true })
+  @ApiProperty({
+    description: 'Permissões associadas ao perfil',
+    example: ['user:read', 'user:create'],
+    isArray: true,
+  })
   @Column('simple-array')
   permissoes: Permission[];
 

@@ -1,6 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
@@ -9,7 +16,10 @@ function toStringArray(value: unknown): string[] | undefined {
     return value.map(String).filter((s) => s.trim() !== '');
   }
   if (typeof value === 'string' && value.trim() !== '') {
-    return value.split(',').map((s) => s.trim()).filter(Boolean);
+    return value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   return undefined;
 }
@@ -55,19 +65,27 @@ export class FindOrcamentosRejeitadosDto extends PaginationDto {
   @IsBoolean()
   comMotivo?: boolean;
 
-  @ApiPropertyOptional({ description: 'Filtrar por motivo de rejeição cadastrado (UUID)' })
+  @ApiPropertyOptional({
+    description: 'Filtrar por motivo de rejeição cadastrado (UUID)',
+  })
   @IsOptional()
   @IsUUID('4')
   motivoRejeicaoId?: string;
 
   @ApiPropertyOptional({ example: '2026-01-01' })
   @IsOptional()
-  @IsDateString({}, { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataInicial?: string;
 
   @ApiPropertyOptional({ example: '2026-12-31' })
   @IsOptional()
-  @IsDateString({}, { message: 'Data final deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataFinal?: string;
 
   @ApiPropertyOptional({ default: 'dataOrcamento' })

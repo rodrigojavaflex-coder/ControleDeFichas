@@ -17,4 +17,3 @@ export default registerAs('agentes', () => ({
     unit: 4,
   },
 }));
-

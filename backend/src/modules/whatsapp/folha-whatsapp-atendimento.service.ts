@@ -142,7 +142,9 @@ export class FolhaWhatsappAtendimentoService {
       throw new BadRequestException('Informe o texto da mensagem.');
     }
     if (corpo.length > 4096) {
-      throw new BadRequestException('Mensagem excede o limite de 4096 caracteres.');
+      throw new BadRequestException(
+        'Mensagem excede o limite de 4096 caracteres.',
+      );
     }
 
     const janelaAberta = await this.calcularJanela24hAberta(conversa.id);
@@ -289,19 +291,27 @@ export class FolhaWhatsappAtendimentoService {
   async obterArquivoMensagem(
     usuario: Usuario,
     mensagemId: string,
-  ): Promise<{ stream: StreamableFile; mimeType: string; nomeArquivo: string }> {
+  ): Promise<{
+    stream: StreamableFile;
+    mimeType: string;
+    nomeArquivo: string;
+  }> {
     const mensagem = await this.mensagemRepo.findOne({
       where: { id: mensagemId },
       relations: ['conversa', 'conversa.funcionario'],
     });
     if (!mensagem || !this.mediaStorage.arquivoDisponivel(mensagem)) {
-      throw new NotFoundException('Arquivo da mensagem não encontrado ou expirado.');
+      throw new NotFoundException(
+        'Arquivo da mensagem não encontrado ou expirado.',
+      );
     }
 
     await this.buscarConversaComEscopo(usuario, mensagem.conversaId);
     const buffer = await this.mediaStorage.lerArquivoMensagem(mensagem);
     if (!buffer?.length) {
-      throw new NotFoundException('Arquivo da mensagem não encontrado ou expirado.');
+      throw new NotFoundException(
+        'Arquivo da mensagem não encontrado ou expirado.',
+      );
     }
     const mimeType = mensagem.mimeType ?? 'application/octet-stream';
     const nomeArquivo = mensagem.nomeArquivo ?? 'arquivo';
@@ -327,7 +337,9 @@ export class FolhaWhatsappAtendimentoService {
 
   private sanitizarNomeArquivo(nome: string): string {
     const base = nome.split(/[/\\]/).pop()?.trim() || 'arquivo';
-    return base.replace(/[^\w.\-() áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]/g, '_').slice(0, 200);
+    return base
+      .replace(/[^\w.\-() áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]/g, '_')
+      .slice(0, 200);
   }
 
   private aplicarEscopoConversas(
@@ -378,9 +390,7 @@ export class FolhaWhatsappAtendimentoService {
     });
     const janela24hAberta = await this.calcularJanela24hAberta(conversa.id);
     const nomeFunc =
-      conversa.funcionario?.nome?.trim() ||
-      conversa.nomePerfil?.trim() ||
-      null;
+      conversa.funcionario?.nome?.trim() || conversa.nomePerfil?.trim() || null;
 
     return {
       id: conversa.id,
@@ -393,10 +403,14 @@ export class FolhaWhatsappAtendimentoService {
       ultimaMensagemEm: conversa.ultimaMensagemEm?.toISOString() ?? null,
       ultimaMensagemPreview:
         ultima?.tipo && ultima.tipo !== 'text'
-          ? rotuloPreviewTipo(ultima.tipo, ultima.nomeArquivo, ultima.legenda) ||
+          ? rotuloPreviewTipo(
+              ultima.tipo,
+              ultima.nomeArquivo,
+              ultima.legenda,
+            ) ||
             ultima.conteudoTexto?.slice(0, 120) ||
             null
-          : ultima?.conteudoTexto?.slice(0, 120) ?? null,
+          : (ultima?.conteudoTexto?.slice(0, 120) ?? null),
       janela24hAberta,
     };
   }

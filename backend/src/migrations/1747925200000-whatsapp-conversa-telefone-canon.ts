@@ -6,7 +6,10 @@ function canonizarTelefoneWhatsappBR(raw: string): string | null {
   if (!digits) return null;
 
   let e164: string | null = null;
-  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+  if (
+    digits.startsWith('55') &&
+    (digits.length === 12 || digits.length === 13)
+  ) {
     e164 = digits;
   } else if (digits.length === 10 || digits.length === 11) {
     e164 = `55${digits}`;

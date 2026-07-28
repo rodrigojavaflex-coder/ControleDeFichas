@@ -54,7 +54,11 @@ export class CaixaItemErp {
   unidade: Unidade;
 
   @ApiProperty()
-  @Column({ type: 'date', name: 'data_operacao', transformer: dateColumnTransformer })
+  @Column({
+    type: 'date',
+    name: 'data_operacao',
+    transformer: dateColumnTransformer,
+  })
   dataOperacao: string;
 
   @ApiProperty()
@@ -78,7 +82,11 @@ export class CaixaItemErp {
   tipoItem: CaixaTipoItem;
 
   @ApiProperty({ required: false })
-  @Column({ type: 'integer', nullable: true, name: 'codigo_requisicao_produto' })
+  @Column({
+    type: 'integer',
+    nullable: true,
+    name: 'codigo_requisicao_produto',
+  })
   codigoRequisicaoProduto?: number | null;
 
   @ApiProperty({ required: false })
@@ -86,7 +94,12 @@ export class CaixaItemErp {
   numeroRequisicao?: number | null;
 
   @ApiProperty({ required: false })
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'descricao_item' })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    name: 'descricao_item',
+  })
   descricaoItem?: string | null;
 
   @ApiProperty()
@@ -144,10 +157,18 @@ export class CaixaItemErp {
   valorLiquidoLinha: number;
 
   @ApiProperty()
-  @Column({ type: 'timestamptz', name: 'importado_em', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'timestamptz',
+    name: 'importado_em',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   importadoEm: Date;
 
   @ApiProperty()
-  @Column({ type: 'timestamptz', name: 'atualizado_em', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'timestamptz',
+    name: 'atualizado_em',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   atualizadoEm: Date;
 }

@@ -62,7 +62,8 @@ export class ImportarCaixaErpResponseDto {
   totaisTerceiro: Record<string, CaixaFormaTotalDto>;
 
   @ApiProperty({
-    description: 'Totais de baixas de terceiro por forma e origem (comprado em)',
+    description:
+      'Totais de baixas de terceiro por forma e origem (comprado em)',
     type: [CaixaTerceiroOrigemTotalDto],
   })
   totaisTerceiroDetalhe: CaixaTerceiroOrigemTotalDto[];

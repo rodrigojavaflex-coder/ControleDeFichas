@@ -24,7 +24,9 @@ export class SincronizacaoSchedulerService {
       const configs = await this.configService.findAllAtivos();
 
       if (configs.length === 0) {
-        this.logger.debug('Nenhuma configuração de sincronização ativa encontrada');
+        this.logger.debug(
+          'Nenhuma configuração de sincronização ativa encontrada',
+        );
         return;
       }
 

@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
-export class WhatsappMensagemArquivoBanco1747925400000 implements MigrationInterface {
+export class WhatsappMensagemArquivoBanco1747925400000
+  implements MigrationInterface
+{
   name = 'WhatsappMensagemArquivoBanco1747925400000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

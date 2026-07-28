@@ -36,10 +36,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
     ConfigModule,
     ScheduleModule.forRoot(),
   ],
-  controllers: [
-    SincronizacaoConfigController,
-    SincronizacaoController,
-  ],
+  controllers: [SincronizacaoConfigController, SincronizacaoController],
   providers: [
     SincronizacaoConfigService,
     SincronizacaoService,

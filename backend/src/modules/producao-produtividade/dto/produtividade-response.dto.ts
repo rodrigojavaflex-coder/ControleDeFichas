@@ -143,7 +143,8 @@ export class ProdutividadeAvisosDto {
   funcionariosSemCadastro: ProdutividadeFuncionarioSemCadastroDto[];
 
   @ApiProperty({
-    description: 'Quantidade de funcionários omitidos da lista por limite de exibição',
+    description:
+      'Quantidade de funcionários omitidos da lista por limite de exibição',
   })
   funcionariosSemCadastroOcultos: number;
 

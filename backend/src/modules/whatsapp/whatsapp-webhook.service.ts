@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WhatsappConversaService } from './whatsapp-conversa.service';
 import { WhatsappMensagemDirecao } from './entities/whatsapp-mensagem.entity';
@@ -60,7 +56,9 @@ export class WhatsappWebhookService {
   ) {}
 
   verificarHandshake(mode: string, token: string): boolean {
-    const verifyToken = this.config.get<string>('WHATSAPP_WEBHOOK_VERIFY_TOKEN')?.trim();
+    const verifyToken = this.config
+      .get<string>('WHATSAPP_WEBHOOK_VERIFY_TOKEN')
+      ?.trim();
     return mode === 'subscribe' && !!verifyToken && token === verifyToken;
   }
 
@@ -85,13 +83,16 @@ export class WhatsappWebhookService {
 
   webhookHabilitado(): boolean {
     return (
-      (this.config.get<string>('WHATSAPP_WEBHOOK_ENABLED') ?? 'false') === 'true'
+      (this.config.get<string>('WHATSAPP_WEBHOOK_ENABLED') ?? 'false') ===
+      'true'
     );
   }
 
   processarPayload(payload: MetaWebhookPayload): void {
     if (!this.webhookHabilitado()) {
-      this.logger.debug('Webhook desabilitado (WHATSAPP_WEBHOOK_ENABLED=false).');
+      this.logger.debug(
+        'Webhook desabilitado (WHATSAPP_WEBHOOK_ENABLED=false).',
+      );
       return;
     }
     const phoneNumberIdEsperado = this.config

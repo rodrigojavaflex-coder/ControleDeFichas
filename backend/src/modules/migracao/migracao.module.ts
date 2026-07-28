@@ -21,4 +21,3 @@ import legacyDatabasesConfig from '../../config/legacy-database.config';
   controllers: [MigracaoController],
 })
 export class MigracaoModule {}
-

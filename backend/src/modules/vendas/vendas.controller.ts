@@ -56,7 +56,10 @@ export class VendasController {
     status: HttpStatus.CONFLICT,
     description: 'Protocolo já existe',
   })
-  create(@Body() createVendaDto: CreateVendaDto, @Req() req: any): Promise<Venda> {
+  create(
+    @Body() createVendaDto: CreateVendaDto,
+    @Req() req: any,
+  ): Promise<Venda> {
     return this.vendasService.create(createVendaDto, req?.user);
   }
 
@@ -156,7 +159,9 @@ export class VendasController {
   @Get('acompanhar')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(Permission.VENDA_ACOMPANHAR)
-  @ApiOperation({ summary: 'Listar vendas para acompanhamento por unidade de origem' })
+  @ApiOperation({
+    summary: 'Listar vendas para acompanhamento por unidade de origem',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Lista de vendas retornada com sucesso',

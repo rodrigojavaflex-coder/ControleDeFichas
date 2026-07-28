@@ -38,6 +38,9 @@ export function normalizarDataCadastroParaIso(val: unknown): string | null {
     const d = String(val.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
+  if (typeof val !== 'string' && typeof val !== 'number') {
+    return null;
+  }
   const s = String(val).trim();
   if (!s) return null;
   const head = s.match(/^(\d{4}-\d{2}-\d{2})/);

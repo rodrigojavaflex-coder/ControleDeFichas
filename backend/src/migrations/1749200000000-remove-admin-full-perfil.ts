@@ -26,15 +26,12 @@ export class RemoveAdminFullPerfil1749200000000 implements MigrationInterface {
         continue;
       }
       const next = Array.from(
-        new Set([
-          ...list.filter((p) => p !== ADMIN_FULL),
-          ...TODAS_PERMISSOES,
-        ]),
+        new Set([...list.filter((p) => p !== ADMIN_FULL), ...TODAS_PERMISSOES]),
       );
-      await queryRunner.query(`UPDATE perfil SET permissoes = $1 WHERE id = $2`, [
-        next.join(','),
-        row.id,
-      ]);
+      await queryRunner.query(
+        `UPDATE perfil SET permissoes = $1 WHERE id = $2`,
+        [next.join(','), row.id],
+      );
     }
   }
 

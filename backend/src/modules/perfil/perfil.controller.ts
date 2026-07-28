@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PerfilService } from './perfil.service';
 import { CreatePerfilDto } from './dto/create-perfil.dto';
@@ -57,16 +67,14 @@ export class PerfilController {
   remove(@Param('id') id: string) {
     return this.perfilService.remove(id);
   }
-  
+
   @Get(':id/print')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(Permission.PROFILE_READ)
   @ApiOperation({ summary: 'Buscar dados do perfil formatados para impressão' })
   @ApiResponse({ status: 200, description: 'Dados do perfil para impressão' })
   @ApiResponse({ status: 404, description: 'Perfil não encontrado' })
-  getPrintData(
-    @Param('id', ParseUUIDPipe) id: string
-  ) {
+  getPrintData(@Param('id', ParseUUIDPipe) id: string) {
     return this.perfilService.getPrintData(id);
   }
 }

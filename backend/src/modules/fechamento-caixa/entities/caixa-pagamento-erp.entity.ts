@@ -44,7 +44,11 @@ export class CaixaPagamentoErp {
   unidade: Unidade;
 
   @ApiProperty({ example: '2025-10-01' })
-  @Column({ type: 'date', name: 'data_operacao', transformer: dateColumnTransformer })
+  @Column({
+    type: 'date',
+    name: 'data_operacao',
+    transformer: dateColumnTransformer,
+  })
   dataOperacao: string;
 
   @ApiProperty()
@@ -125,15 +129,28 @@ export class CaixaPagamentoErp {
   codigoOperadorCaixa?: number | null;
 
   @ApiProperty({ required: false })
-  @Column({ type: 'varchar', length: 200, nullable: true, name: 'nome_operador_caixa' })
+  @Column({
+    type: 'varchar',
+    length: 200,
+    nullable: true,
+    name: 'nome_operador_caixa',
+  })
   nomeOperadorCaixa?: string | null;
 
   @ApiProperty()
-  @Column({ type: 'timestamptz', name: 'importado_em', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'timestamptz',
+    name: 'importado_em',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   importadoEm: Date;
 
   @ApiProperty()
-  @Column({ type: 'timestamptz', name: 'atualizado_em', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({
+    type: 'timestamptz',
+    name: 'atualizado_em',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
   atualizadoEm: Date;
 
   @OneToMany(() => CaixaItemErp, (item) => item.pagamento)

@@ -142,7 +142,9 @@ export class OrcamentosService {
     const visualizarValores = this.usuarioPodeVisualizarValores(usuario);
 
     return new PaginatedResponseDto(
-      data.map((item) => this.mascararValoresOrcamento(item, visualizarValores)),
+      data.map((item) =>
+        this.mascararValoresOrcamento(item, visualizarValores),
+      ),
       new PaginationMetaDto(page, limit, total),
     );
   }
@@ -296,9 +298,7 @@ export class OrcamentosService {
       where: { id: dto.motivoRejeicaoId, ativo: true },
     });
     if (!motivo) {
-      throw new BadRequestException(
-        'Motivo de rejeição inválido ou inativo.',
-      );
+      throw new BadRequestException('Motivo de rejeição inválido ou inativo.');
     }
 
     const orcamentos = await this.orcamentoRepo.find({
@@ -330,9 +330,7 @@ export class OrcamentosService {
   }
 
   private assertPermissaoRelatorio(usuario: Usuario): void {
-    if (
-      !getUsuarioPermissoes(usuario).includes(Permission.ORCAMENTO_PRINT)
-    ) {
+    if (!getUsuarioPermissoes(usuario).includes(Permission.ORCAMENTO_PRINT)) {
       throw new ForbiddenException(
         'Acesso negado. Permissão necessária: orcamento:print',
       );

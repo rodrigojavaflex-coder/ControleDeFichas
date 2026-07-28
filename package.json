@@ -7,16 +7,14 @@
     "start": "cd backend && npm run start:prod",
     "install-all": "cd backend && npm install && cd ../frontend && npm install",
     "build-frontend": "cd frontend && npm run build -- --configuration production",
-    "build-backend": "cd backend && npm run build"
+    "build-backend": "cd backend && npm run build",
+    "validate:backend": "cd backend && npm run lint && npm run test",
+    "validate:frontend": "cd frontend && npm run build",
+    "validate": "npm run validate:backend && npm run validate:frontend"
   },
   "engines": {
     "node": ">=24.0.0"
   },
   "author": "Rodrigo Teixeira",
-  "license": "MIT",
-  "dependencies": {
-    "pg": "^8.16.3",
-    "reflect-metadata": "^0.2.2",
-    "typeorm": "^0.3.27"
-  }
+  "license": "MIT"
 }

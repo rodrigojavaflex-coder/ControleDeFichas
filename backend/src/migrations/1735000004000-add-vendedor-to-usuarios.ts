@@ -1,11 +1,18 @@
-import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  TableColumn,
+  TableForeignKey,
+} from 'typeorm';
 
 export class AddVendedorToUsuarios1735000004000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Verificar se a tabela vendedores existe
     const vendedoresTable = await queryRunner.getTable('vendedores');
     if (!vendedoresTable) {
-      throw new Error('Tabela vendedores não existe. Execute a migration de criação de tabelas (1735000001000) primeiro.');
+      throw new Error(
+        'Tabela vendedores não existe. Execute a migration de criação de tabelas (1735000001000) primeiro.',
+      );
     }
 
     const usuariosTable = await queryRunner.getTable('usuarios');
@@ -34,8 +41,10 @@ export class AddVendedorToUsuarios1735000004000 implements MigrationInterface {
 
     // Adicionar foreign key
     const existingForeignKeys = usuariosTable.foreignKeys || [];
-    const vendedorFkExists = existingForeignKeys.some(fk => fk.name === 'FK_usuarios_vendedor');
-    
+    const vendedorFkExists = existingForeignKeys.some(
+      (fk) => fk.name === 'FK_usuarios_vendedor',
+    );
+
     if (!vendedorFkExists) {
       await queryRunner.createForeignKey(
         'usuarios',
@@ -56,8 +65,10 @@ export class AddVendedorToUsuarios1735000004000 implements MigrationInterface {
     if (usuariosTable) {
       // Remover foreign key
       const existingForeignKeys = usuariosTable.foreignKeys || [];
-      const vendedorFk = existingForeignKeys.find(fk => fk.name === 'FK_usuarios_vendedor');
-      
+      const vendedorFk = existingForeignKeys.find(
+        (fk) => fk.name === 'FK_usuarios_vendedor',
+      );
+
       if (vendedorFk) {
         await queryRunner.dropForeignKey('usuarios', vendedorFk);
         console.log('✅ Foreign key FK_usuarios_vendedor removida');

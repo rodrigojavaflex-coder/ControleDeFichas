@@ -186,7 +186,7 @@ export class Certificado extends BaseEntity {
   @Column({ type: 'varchar', length: 400 })
   perdaPorSecagem: string;
 
-  @OneToMany(() => Laudo, laudo => laudo.certificado)
+  @OneToMany(() => Laudo, (laudo) => laudo.certificado)
   laudos: Laudo[];
 
   @ApiProperty({
@@ -237,7 +237,6 @@ export class Certificado extends BaseEntity {
   @Column({ type: 'varchar', length: 400 })
   determinacaoMateriaisEstranhos: string;
 
-
   @ApiProperty({
     description: 'Umidade',
     example: '5.2%',
@@ -245,7 +244,7 @@ export class Certificado extends BaseEntity {
   })
   @Column({ type: 'varchar', length: 400 })
   umidade: string;
-  
+
   @ApiProperty({
     description: 'Pesquisas de contaminação microbiológica',
     example: 'Dentro dos limites',
@@ -253,7 +252,7 @@ export class Certificado extends BaseEntity {
   })
   @Column({ type: 'varchar', length: 400 })
   pesquisasDeContaminacaoMicrobiologica: string;
-  
+
   @ApiProperty({
     description: 'Caracteres microscópicos',
     example: 'Conforme padrão',
@@ -262,12 +261,13 @@ export class Certificado extends BaseEntity {
   @Column({ type: 'varchar', length: 400 })
   caracteresMicroscopicos: string;
 
-
   @ApiProperty({
     description: 'Ficha técnica associada ao certificado',
     type: () => FichaTecnica,
   })
-  @ManyToOne(() => FichaTecnica, fichaTecnica => fichaTecnica.certificados, { nullable: true })
+  @ManyToOne(() => FichaTecnica, (fichaTecnica) => fichaTecnica.certificados, {
+    nullable: true,
+  })
   @JoinColumn({ name: 'fichaTecnicaId' })
   fichaTecnica: FichaTecnica;
 }

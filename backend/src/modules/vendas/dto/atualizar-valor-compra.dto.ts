@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayNotEmpty, IsArray, IsBoolean, IsOptional, IsUUID } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 export class AtualizarValorCompraDto {
   @ApiProperty({
@@ -13,7 +19,8 @@ export class AtualizarValorCompraDto {
   vendaIds: string[];
 
   @ApiProperty({
-    description: 'Se true, atualiza vendas não encontradas no agente usando valor do cliente',
+    description:
+      'Se true, atualiza vendas não encontradas no agente usando valor do cliente',
     example: false,
     required: false,
   })
@@ -21,4 +28,3 @@ export class AtualizarValorCompraDto {
   @IsBoolean({ message: 'atualizarComValorCliente deve ser um valor booleano' })
   atualizarComValorCliente?: boolean;
 }
-

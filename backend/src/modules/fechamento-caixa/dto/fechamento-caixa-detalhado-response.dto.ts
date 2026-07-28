@@ -41,7 +41,8 @@ export class CaixaErpPagamentoDetalheDto {
   @ApiProperty({
     required: false,
     nullable: true,
-    description: 'Nome do produto baixado (cupons tipo PRODUTO, sem requisição)',
+    description:
+      'Nome do produto baixado (cupons tipo PRODUTO, sem requisição)',
   })
   descricaoProduto?: string | null;
 

@@ -158,11 +158,17 @@ export class ClientesService {
     await this.clienteRepository.remove(cliente);
   }
 
-  async search(nome: string, unidade?: Unidade, limit: number = 20): Promise<Cliente[]> {
+  async search(
+    nome: string,
+    unidade?: Unidade,
+    limit: number = 20,
+  ): Promise<Cliente[]> {
     const queryBuilder = this.clienteRepository.createQueryBuilder('cliente');
 
     if (nome && nome.trim()) {
-      queryBuilder.andWhere('cliente.nome ILIKE :nome', { nome: `%${nome.trim()}%` });
+      queryBuilder.andWhere('cliente.nome ILIKE :nome', {
+        nome: `%${nome.trim()}%`,
+      });
     }
 
     if (unidade) {
@@ -175,4 +181,3 @@ export class ClientesService {
       .getMany();
   }
 }
-

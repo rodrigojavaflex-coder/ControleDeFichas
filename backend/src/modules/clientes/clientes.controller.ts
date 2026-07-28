@@ -68,11 +68,27 @@ export class ClientesController {
     description: 'Lista de clientes encontrados',
     type: [Cliente],
   })
-  @ApiQuery({ name: 'nome', required: true, description: 'Nome para buscar (parcial)' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Limite de resultados (padrão: 20)' })
-  async search(@Query('nome') nome: string, @Query('limit') limit?: number, @Req() req?: any) {
+  @ApiQuery({
+    name: 'nome',
+    required: true,
+    description: 'Nome para buscar (parcial)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Limite de resultados (padrão: 20)',
+  })
+  async search(
+    @Query('nome') nome: string,
+    @Query('limit') limit?: number,
+    @Req() req?: any,
+  ) {
     const unidade = req?.user?.unidade;
-    return this.clientesService.search(nome, unidade, limit ? Number(limit) : 20);
+    return this.clientesService.search(
+      nome,
+      unidade,
+      limit ? Number(limit) : 20,
+    );
   }
 
   @Get()
@@ -86,7 +102,11 @@ export class ClientesController {
   @ApiQuery({ name: 'limit', required: false, description: 'Itens por página' })
   @ApiQuery({ name: 'nome', required: false, description: 'Filtrar por nome' })
   @ApiQuery({ name: 'cpf', required: false, description: 'Filtrar por CPF' })
-  @ApiQuery({ name: 'unidade', required: false, description: 'Filtrar por unidade' })
+  @ApiQuery({
+    name: 'unidade',
+    required: false,
+    description: 'Filtrar por unidade',
+  })
   findAll(@Query() findClientesDto: FindClientesDto) {
     return this.clientesService.findAll(findClientesDto);
   }
@@ -153,4 +173,3 @@ export class ClientesController {
     return this.clientesService.remove(id);
   }
 }
-

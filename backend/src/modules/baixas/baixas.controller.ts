@@ -64,7 +64,9 @@ export class BaixasController {
   @ApiQuery({ name: 'tipoDaBaixa', required: false, type: String })
   @ApiQuery({ name: 'dataInicial', required: false, type: String })
   @ApiQuery({ name: 'dataFinal', required: false, type: String })
-  findAll(@Query() findBaixasDto: FindBaixasDto): Promise<PaginatedResponseDto<Baixa>> {
+  findAll(
+    @Query() findBaixasDto: FindBaixasDto,
+  ): Promise<PaginatedResponseDto<Baixa>> {
     return this.baixasService.findAll(findBaixasDto);
   }
 
@@ -124,7 +126,9 @@ export class BaixasController {
   @Post('processamento-massa')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @Permissions(Permission.VENDA_BAIXAR)
-  @ApiOperation({ summary: 'Processar baixas em massa para vendas selecionadas' })
+  @ApiOperation({
+    summary: 'Processar baixas em massa para vendas selecionadas',
+  })
   processarBaixasEmMassa(
     @Body() processarDto: ProcessarBaixasEmMassaDto,
   ): Promise<{

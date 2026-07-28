@@ -17,7 +17,7 @@ async function bootstrap() {
   try {
     // Verificar se já existe um perfil ADMIN
     const perfisExistentes = await perfilService.findAll();
-    const perfilAdmin = perfisExistentes.find(p => p.nomePerfil === 'ADMIN');
+    const perfilAdmin = perfisExistentes.find((p) => p.nomePerfil === 'ADMIN');
 
     let perfilId: string;
 
@@ -29,7 +29,7 @@ async function bootstrap() {
       const todasPermissoes = Object.values(Permission);
       const novoPerfil = await perfilService.create({
         nomePerfil: 'ADMIN',
-        permissoes: todasPermissoes
+        permissoes: todasPermissoes,
       });
       console.log('✅ Perfil ADMIN criado com sucesso');
       perfilId = novoPerfil.id;
@@ -55,7 +55,9 @@ async function bootstrap() {
       });
       console.log('✅ Usuário admin criado com sucesso');
       console.log(`📧 Email: ${adminEmail}`);
-      console.log('🔐 Defina uma senha segura via variável de ambiente antes do uso em produção.');
+      console.log(
+        '🔐 Defina uma senha segura via variável de ambiente antes do uso em produção.',
+      );
     }
 
     console.log('🎉 Inicialização do banco concluída com sucesso!');
@@ -66,4 +68,4 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+void bootstrap();

@@ -35,7 +35,12 @@ export class WhatsappAtendimento1747925000000 implements MigrationInterface {
             isNullable: false,
           },
           { name: 'funcionarioId', type: 'uuid', isNullable: true },
-          { name: 'nomePerfil', type: 'varchar', length: '200', isNullable: true },
+          {
+            name: 'nomePerfil',
+            type: 'varchar',
+            length: '200',
+            isNullable: true,
+          },
           { name: 'naoLida', type: 'boolean', default: true },
           { name: 'ultimaMensagemEm', type: 'timestamptz', isNullable: true },
           {

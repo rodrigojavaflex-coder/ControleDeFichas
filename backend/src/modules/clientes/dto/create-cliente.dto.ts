@@ -54,7 +54,10 @@ export class CreateClienteDto {
     required: false,
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data de nascimento deve estar no formato YYYY-MM-DD' })
+  @IsDateString(
+    {},
+    { message: 'Data de nascimento deve estar no formato YYYY-MM-DD' },
+  )
   @Transform(({ value }) => (value === '' ? null : value))
   dataNascimento?: string;
 
@@ -86,7 +89,8 @@ export class CreateClienteDto {
     enum: Unidade,
   })
   @IsNotEmpty({ message: 'Unidade é obrigatória' })
-  @IsEnum(Unidade, { message: 'Unidade deve ser um valor válido (INHUMAS, NERÓPOLIS, UBERABA)' })
+  @IsEnum(Unidade, {
+    message: 'Unidade deve ser um valor válido (INHUMAS, NERÓPOLIS, UBERABA)',
+  })
   unidade: Unidade;
 }
-

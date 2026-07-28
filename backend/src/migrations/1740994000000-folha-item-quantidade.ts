@@ -14,6 +14,8 @@ export class FolhaItemQuantidade1740994000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "folha_item" DROP COLUMN IF EXISTS "quantidade"`);
+    await queryRunner.query(
+      `ALTER TABLE "folha_item" DROP COLUMN IF EXISTS "quantidade"`,
+    );
   }
 }

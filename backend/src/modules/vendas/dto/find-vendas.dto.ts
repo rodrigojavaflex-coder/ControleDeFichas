@@ -1,5 +1,15 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsDateString, IsArray, IsBoolean, IsNumber, IsPositive, Min, Max } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsDateString,
+  IsBoolean,
+  IsNumber,
+  IsPositive,
+  Min,
+  Max,
+} from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { VendaOrigem, VendaStatus } from '../../../common/enums/venda.enum';
 import { Unidade } from '../../../common/enums/unidade.enum';
@@ -10,7 +20,8 @@ export class FindVendasDto extends PaginationDto {
     minimum: 1,
     maximum: 1000,
     default: 10,
-    description: 'Quantidade de itens por página (máx. 1000 para listagem de vendas)',
+    description:
+      'Quantidade de itens por página (máx. 1000 para listagem de vendas)',
     required: false,
   })
   @IsOptional()
@@ -52,7 +63,10 @@ export class FindVendasDto extends PaginationDto {
     }
     return value;
   })
-  @IsEnum(VendaOrigem, { each: true, message: 'Origem deve ser um valor válido' })
+  @IsEnum(VendaOrigem, {
+    each: true,
+    message: 'Origem deve ser um valor válido',
+  })
   origem?: VendaOrigem | VendaOrigem[];
 
   @ApiPropertyOptional({
@@ -87,7 +101,10 @@ export class FindVendasDto extends PaginationDto {
     }
     return value;
   })
-  @IsEnum(VendaStatus, { each: true, message: 'Status deve ser um valor válido' })
+  @IsEnum(VendaStatus, {
+    each: true,
+    message: 'Status deve ser um valor válido',
+  })
   status?: VendaStatus | VendaStatus[];
 
   @ApiPropertyOptional({
@@ -95,7 +112,10 @@ export class FindVendasDto extends PaginationDto {
     example: '2025-01-01',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataInicial?: string;
 
   @ApiPropertyOptional({
@@ -103,7 +123,10 @@ export class FindVendasDto extends PaginationDto {
     example: '2025-12-31',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data final deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataFinal?: string;
 
   @ApiPropertyOptional({
@@ -111,7 +134,13 @@ export class FindVendasDto extends PaginationDto {
     example: '2025-01-01',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data inicial de fechamento deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    {
+      message:
+        'Data inicial de fechamento deve ter formato válido (YYYY-MM-DD)',
+    },
+  )
   dataInicialFechamento?: string;
 
   @ApiPropertyOptional({
@@ -119,11 +148,17 @@ export class FindVendasDto extends PaginationDto {
     example: '2025-12-31',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data final de fechamento deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    {
+      message: 'Data final de fechamento deve ter formato válido (YYYY-MM-DD)',
+    },
+  )
   dataFinalFechamento?: string;
 
   @ApiPropertyOptional({
-    description: 'Filtrar apenas vendas sem data de fechamento (dataFechamento IS NULL)',
+    description:
+      'Filtrar apenas vendas sem data de fechamento (dataFechamento IS NULL)',
     example: true,
   })
   @IsOptional()
@@ -136,7 +171,8 @@ export class FindVendasDto extends PaginationDto {
   semDataFechamento?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filtrar apenas vendas com data de fechamento (dataFechamento IS NOT NULL)',
+    description:
+      'Filtrar apenas vendas com data de fechamento (dataFechamento IS NOT NULL)',
     example: true,
   })
   @IsOptional()
@@ -180,7 +216,10 @@ export class FindVendasDto extends PaginationDto {
     example: '2025-01-01',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data inicial de envio deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data inicial de envio deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataInicialEnvio?: string;
 
   @ApiPropertyOptional({
@@ -188,11 +227,15 @@ export class FindVendasDto extends PaginationDto {
     example: '2025-12-31',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'Data final de envio deve ter formato válido (YYYY-MM-DD)' })
+  @IsDateString(
+    {},
+    { message: 'Data final de envio deve ter formato válido (YYYY-MM-DD)' },
+  )
   dataFinalEnvio?: string;
 
   @ApiPropertyOptional({
-    description: 'Filtrar vendas com % Lucro menor que o valor informado (ex.: 10 para 10%)',
+    description:
+      'Filtrar vendas com % Lucro menor que o valor informado (ex.: 10 para 10%)',
     example: 25,
   })
   @IsOptional()
@@ -202,7 +245,8 @@ export class FindVendasDto extends PaginationDto {
   pctLucroMenorQue?: number;
 
   @ApiPropertyOptional({
-    description: 'Filtrar vendas com % Lucro maior que o valor informado (ex.: 50 para 50%)',
+    description:
+      'Filtrar vendas com % Lucro maior que o valor informado (ex.: 50 para 50%)',
     example: 50,
   })
   @IsOptional()

@@ -125,12 +125,8 @@ export class FolhaCargoSetorFuncionarioRef1740996000000
       WHERE f."setorId" = s.id
     `);
 
-    await queryRunner.query(
-      `ALTER TABLE "funcionarios" DROP COLUMN "setorId"`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "funcionarios" DROP COLUMN "cargoId"`,
-    );
+    await queryRunner.query(`ALTER TABLE "funcionarios" DROP COLUMN "setorId"`);
+    await queryRunner.query(`ALTER TABLE "funcionarios" DROP COLUMN "cargoId"`);
 
     await queryRunner.query(`DROP TABLE "folha_setor"`);
     await queryRunner.query(`DROP TABLE "folha_cargo"`);
