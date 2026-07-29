@@ -29,10 +29,10 @@ export class ProdutividadeFuncionarioRowDto {
   nome: string;
 
   @ApiProperty()
-  codigoFuncionarioErp: number;
+  codigoUsuarioErp: number;
 
   @ApiProperty({ type: [Number], required: false })
-  codigosFuncionarioErp?: number[];
+  codigosUsuarioErp?: number[];
 
   @ApiProperty({ nullable: true })
   setor: string | null;
@@ -48,6 +48,20 @@ export class ProdutividadeFuncionarioRowDto {
 
   @ApiProperty({ type: [ProdutividadeEtapaRowDto] })
   etapas: ProdutividadeEtapaRowDto[];
+}
+
+export class ProdutividadeTotalColunaEtapaDto {
+  @ApiProperty()
+  codEtapa: string;
+
+  @ApiProperty()
+  etapa: string;
+
+  @ApiProperty({
+    description:
+      'Total de conclusões remuneradas no escopo de resumo (unidadesResumo); rodapé da grade.',
+  })
+  quantidade: number;
 }
 
 export class ProdutividadeResumoDto {
@@ -179,4 +193,7 @@ export class ProdutividadeConsultaResponseDto {
 
   @ApiProperty({ type: [ProdutividadeFuncionarioRowDto] })
   funcionarios: ProdutividadeFuncionarioRowDto[];
+
+  @ApiProperty({ type: [ProdutividadeTotalColunaEtapaDto] })
+  totaisColunaEtapas: ProdutividadeTotalColunaEtapaDto[];
 }

@@ -16,7 +16,7 @@ export interface ProducaoEtapaRemuneracaoRow {
 export interface ProducaoFuncionarioConfigRow {
   id: string;
   nome: string;
-  codigoFuncionarioErp: number | null;
+  codigoUsuarioErp: number | null;
   setor: string | null;
   cargo: string | null;
   dataDemissao: string | null;
@@ -133,7 +133,7 @@ export interface ProducaoConfigRelatorioFuncionario {
   nome: string;
   setor: string | null;
   cargo: string | null;
-  codigoFuncionarioErp: number;
+  codigoUsuarioErp: number;
   desligado: boolean;
   dataDemissao: string | null;
   etapas: ProducaoConfigRelatorioFuncionarioEtapa[];
@@ -162,6 +162,16 @@ export interface AplicarEtapasRemuneradasDto {
 export interface RemoverEtapasFuncionariosDto {
   unidade: Unidade;
   funcionarioIds: string[];
+}
+
+export interface AtualizarCodigoUsuarioErpProducaoDto {
+  unidade: Unidade;
+  codigoUsuarioErp?: number | null;
+}
+
+export interface AtualizarCodigoUsuarioErpProducaoResponse {
+  funcionarioId: string;
+  codigoUsuarioErp: number | null;
 }
 
 export type AcaoEtapasFuncionariosModal = 'aplicar' | 'remover';

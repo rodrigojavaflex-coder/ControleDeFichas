@@ -97,8 +97,11 @@ Tokens devem coincidir com `AUTH_TOKEN` de cada agente na filial.
 
 | Pacote | Status | Ação |
 |--------|--------|------|
-| Backend | **0 vulnerabilidades** | `fast-uri` corrigido via `npm audit fix` |
-| Frontend | **0 vulnerabilidades** | `@hono/node-server` forçado via `overrides` (CLI/MCP dev) |
+| Backend | **0 vulnerabilidades** | `overrides`: `brace-expansion`, `minimatch`, `glob`, `js-yaml` |
+| Frontend | **0 vulnerabilidades** | `overrides`: `ws`, `uuid`, `@hono/node-server`, `brace-expansion`, `minimatch`, `glob` |
+| Agente (`agent/`) | **0 vulnerabilidades** | `overrides` iguais ao backend (`brace-expansion`, `minimatch`, `glob`); `ts-node-dev` só em dev |
+
+Na raiz: `npm run audit` ou `npm run validate:audit` (também entra em `npm run validate`).
 
 ---
 

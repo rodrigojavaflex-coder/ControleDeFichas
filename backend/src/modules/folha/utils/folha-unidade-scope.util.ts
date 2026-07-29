@@ -5,46 +5,95 @@ import { Usuario } from '../../usuarios/entities/usuario.entity';
 export type ListaFechamentoEscopo = Unidade | 'ALL';
 
 /**
- * Unidades que o usuário pode consultar na **produtividade**.
- * `undefined` = sem `usuario.unidade` (escopo global conforme permissões).
- * Não usa fallback de `vendedor.unidade`.
+ * Unidade de cadastro do usuário para filtro de produtividade (não usa vendedor).
+ */
+export function unidadeCadastroUsuarioProducao(
+  usuario: Usuario,
+): Unidade | undefined {
+  const u = usuario.unidade;
+  if (u === undefined || u === null || String(u).trim() === '') {
+    return undefined;
+  }
+  return u;
+}
+
+/**
+ * Unidades cujo **resumo importado** e config remunerada entram na consulta.
+ * Sem `usuario.unidade`: indefinido (escopo vem da query).
+ * Com unidade, sem `unidades_produtividade`: só a unidade do usuário.
+ * Com unidade e produção: unidade do usuário + unidades de produção (únicas).
+ */
+export function unidadesResumoProdutividade(
+  usuario: Usuario,
+): Unidade[] | undefined {
+  const u = unidadeCadastroUsuarioProducao(usuario);
+  if (!u) {
+    return undefined;
+  }
+
+  const extras = (usuario.unidadesProdutividade ?? []).filter(
+    Boolean,
+  ) as Unidade[];
+  if (extras.length === 0) {
+    return [u];
+  }
+
+  const set = new Set<Unidade>([u]);
+  for (const item of extras) {
+    set.add(item);
+  }
+  return [...set];
+}
+
+/**
+ * @deprecated Preferir `unidadesResumoProdutividade`.
  */
 export function unidadesPermitidasProdutividade(
   usuario: Usuario,
 ): Unidade[] | undefined {
-  const u = usuario.unidade;
-  const hasUnidade = u !== undefined && u !== null && String(u).trim() !== '';
-  if (!hasUnidade) {
-    return undefined;
-  }
-
-  const extras = (usuario.unidadesProdutividade ?? []).filter(Boolean);
-  const unicas = [...new Set(extras)] as Unidade[];
-  if (unicas.length === 0) {
-    return [u];
-  }
-  return unicas;
+  return unidadesResumoProdutividade(usuario);
 }
 
 /**
- * @deprecated Preferir `unidadesPermitidasProdutividade`. Retorna unidade única quando o escopo tem exatamente uma.
+ * Valida unidade informada na query de produtividade.
+ * Usuário com cadastro: só aceita a própria unidade no filtro.
  */
-export function unidadeEscopoUsuarioProducao(
+export function assertUnidadeFiltroProdutividade(
   usuario: Usuario,
-): Unidade | undefined {
-  const permitidas = unidadesPermitidasProdutividade(usuario);
-  if (!permitidas || permitidas.length !== 1) {
-    return undefined;
+  unidade: Unidade,
+): void {
+  const cadastro = unidadeCadastroUsuarioProducao(usuario);
+  if (!cadastro) {
+    return;
   }
-  return permitidas[0];
+  if (cadastro !== unidade) {
+    throw new ForbiddenException(
+      'Filtro de unidade deve ser a unidade do usuário logado.',
+    );
+  }
 }
 
-/** Produtividade: valida unidade contra `unidadesPermitidasProdutividade`. */
+/**
+ * Resumo inclui unidades além do cadastro de funcionários (ex.: produção em NERÓPOLIS,
+ * cadastro só INHUMAS): linhas dessas unidades creditam no funcionário local pelo `cdusu`.
+ */
+export function creditarProducaoResumoUnidadesExtras(
+  unidadesResumo: Unidade[],
+  unidadesFuncionarios: Unidade[],
+): boolean {
+  if (unidadesFuncionarios.length === 0 || unidadesResumo.length === 0) {
+    return false;
+  }
+  const cadastro = new Set(unidadesFuncionarios);
+  return unidadesResumo.some((u) => !cadastro.has(u));
+}
+
+/** Produtividade: valida unidade contra escopo de resumo do usuário. */
 export function assertUnidadeProducao(
   usuario: Usuario,
   unidade: Unidade,
 ): void {
-  const permitidas = unidadesPermitidasProdutividade(usuario);
+  const permitidas = unidadesResumoProdutividade(usuario);
   if (!permitidas) {
     return;
   }

@@ -27,10 +27,9 @@ import {
 import { BulkSaveProducaoEtapasDto } from './dto/bulk-save-producao-etapas.dto';
 import { BulkSaveProducaoFuncionarioEtapasDto } from './dto/bulk-save-producao-funcionario-etapas.dto';
 import {
-  VinculoCodigoFuncionarioConfirmResponseDto,
-  VinculoCodigoFuncionarioPreviewResponseDto,
-} from './dto/vincular-codigo-funcionario-preview.dto';
-import { ConfirmarVinculoCodigoFuncionarioDto } from './dto/confirmar-vinculo-codigo-funcionario.dto';
+  AtualizarCodigoUsuarioErpProducaoDto,
+  AtualizarCodigoUsuarioErpProducaoResponseDto,
+} from './dto/atualizar-codigo-usuario-erp.dto';
 import {
   AplicarEtapasRemuneradasResponseDto,
   ProducaoConfigRelatorioResponseDto,
@@ -111,6 +110,28 @@ export class ProducaoConfigController {
     return this.service.salvarEtapasFuncionario(req.user, funcionarioId, dto);
   }
 
+  @Put('funcionarios/:funcionarioId/codigo-usuario-erp')
+  @Permissions(Permission.PRODUCAO_CONFIG_UPDATE_CODIGO_USUARIO_ERP)
+  @ApiOperation({
+    summary:
+      'Atualiza codigoUsuarioErp (cdusu) do funcionário na unidade (produtividade)',
+  })
+  @ApiResponse({
+    status: 200,
+    type: AtualizarCodigoUsuarioErpProducaoResponseDto,
+  })
+  atualizarCodigoUsuarioErp(
+    @Req() req: { user: Usuario },
+    @Param('funcionarioId', ParseUUIDPipe) funcionarioId: string,
+    @Body() dto: AtualizarCodigoUsuarioErpProducaoDto,
+  ): Promise<AtualizarCodigoUsuarioErpProducaoResponseDto> {
+    return this.service.atualizarCodigoUsuarioErp(
+      req.user,
+      funcionarioId,
+      dto,
+    );
+  }
+
   @Get('relatorio')
   @Permissions(Permission.PRODUCAO_CONFIG_READ)
   @ApiOperation({
@@ -154,49 +175,5 @@ export class ProducaoConfigController {
     @Body() dto: RemoverEtapasFuncionariosDto,
   ): Promise<RemoverEtapasFuncionariosResponseDto> {
     return this.service.removerEtapasFuncionarios(req.user, dto);
-  }
-
-  @Get('importacao/vincular-codigo-funcionario/preview')
-  @Permissions(Permission.PRODUCAO_CONFIG_READ, Permission.CONFIGURACAO_ACCESS)
-  @ApiOperation({
-    summary:
-      'Prévia: vincular codigoFuncionarioErp pelo nome (producao_etapas_resumo.funcSaida)',
-  })
-  @ApiResponse({
-    status: 200,
-    type: VinculoCodigoFuncionarioPreviewResponseDto,
-  })
-  previewVincularCodigoFuncionario(
-    @Req() req: { user: Usuario },
-    @Query() query: ProducaoConfigUnidadeQueryDto,
-  ): Promise<VinculoCodigoFuncionarioPreviewResponseDto> {
-    return this.service.previewVincularCodigoFuncionario(
-      req.user,
-      query.unidade,
-    );
-  }
-
-  @Post('importacao/vincular-codigo-funcionario/confirmar')
-  @Permissions(
-    Permission.PRODUCAO_CONFIG_UPDATE,
-    Permission.CONFIGURACAO_ACCESS,
-  )
-  @ApiOperation({
-    summary:
-      'Confirma vínculo seguro de codigoFuncionarioErp (match único, código ainda NULL)',
-  })
-  @ApiResponse({
-    status: 200,
-    type: VinculoCodigoFuncionarioConfirmResponseDto,
-  })
-  confirmarVincularCodigoFuncionario(
-    @Req() req: { user: Usuario },
-    @Body() dto: ConfirmarVinculoCodigoFuncionarioDto,
-  ): Promise<VinculoCodigoFuncionarioConfirmResponseDto> {
-    return this.service.confirmarVincularCodigoFuncionario(
-      req.user,
-      dto.unidade,
-      dto.funcionarioIds,
-    );
   }
 }

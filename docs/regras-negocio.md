@@ -298,7 +298,8 @@
 - **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`. Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*).
 - **Importação automática:** integrada à sync geral quando `ultimaModificacaoProducaoEtapas` estiver configurada; filtra movimentos posteriores ao watermark; ao concluir, atualiza watermark com hora do processamento (America/Sao_Paulo), alinhado ao padrão de orçamentos.
 - Registros sem entrada na etapa são excluídos pelo SQL (inner join em `evt_ent`); etapas só com saída não são importadas.
-- **Funcionário entrada/saída:** código e nome vêm sempre do **mesmo movimento** na `FC12500`. Entrada (`cdopera = 01`): **primeiro** lançamento cronológico (data/hora e funcionário). Saída (`cdopera = 02`): **primeiro** lançamento cronológico (data/hora e funcionário). Evita misturar `MIN(cdfun)` com `MIN(nomefun)` quando há lançamentos duplicados ou errados no PCP. Nome em `FC08000`: join por `cdfun + cdcon` do movimento; se ausente (ex.: `cdcon` null no PCP), **fallback** por `cdfun` (prioriza `cdcon` igual quando informado). **Mesmo segundo:** desempate no agente preferindo movimento com `cdfun` maior (evita linha automática com `cdfun` 0). **Várias linhas por `tppcp`:** o agente pode retornar mais de uma linha para o mesmo `cod_etapa`; o backend faz **merge** antes do upsert (chave única não inclui `tppcp`) e **não sobrescreve** nome/código já preenchidos com `null` vindo de outra linha.
+- **Usuário entrada/saída:** código **`cdusu`** do movimento na `FC12500`. Entrada (`cdopera = 01`): **primeiro** lançamento cronológico (data/hora). Saída (`cdopera = 02`): **primeiro** lançamento cronológico. Persistência em `producao_etapas_resumo.usuarioEntrada` / `usuarioSaida` (inteiro, sem nome no resumo). **Mesmo segundo:** desempate no agente preferindo `cdusu` maior. **Várias linhas por `tppcp`:** merge antes do upsert (chave única não inclui `tppcp`); não sobrescreve `usuario*` já preenchido com `null` vindo de outra linha.
+- **Dados históricos:** após deploy, **reimportar** períodos de fechamento (delete + importação manual ou truncar tabela e reimportar); códigos **`cdusu`** no cadastro folha (`codigoUsuarioErp`) são preenchidos **manualmente** (sem conversão automática `cdfun`→`cdusu`).
 - **Correções PCP (retorno, relançamento, «LANÇAMENTO ERRADO»):** persistem apenas na **primeira** conclusão da etapa (1º `02`); lançamentos posteriores na mesma fórmula+etapa **não** geram linha adicional em `producao_etapas_resumo`. Divergências em relação ao relatório de produtividade do ERP são esperadas — ver **RN-PCP-004**.
 - Campo `etapa` (nome da etapa, `FC12540.descricao`): padronizado em **maiúsculas pt-BR** na importação (ex.: `ENCAPSULAÇÃO`, `SACHÊ INHUMAS`, `ROTULAÇÃO`).
 - Campo `principios_ativos`: texto livre (`TEXT`), lista separada por vírgula.
@@ -319,41 +320,44 @@
 
 ### RN-PCP-003 — Etapas por funcionário (config permanente)
 
-- Mesma tela: lista funcionários do cadastro folha da unidade **com `codigoFuncionarioErp` preenchido**; modal marca etapas que o funcionário recebe.
+- Mesma tela: lista funcionários do cadastro folha da unidade **com `codigoUsuarioErp` preenchido**; modal marca etapas que o funcionário recebe.
 - Persistência: `producao_funcionario_etapa`; chave `funcionario_id + cod_etapa`.
 - Só é permitido marcar etapas com `recebe = true` na config global da unidade (RN-PCP-002).
 - Modal exibe **apenas** etapas remuneradas na unidade; etapas sem «Recebe» global não aparecem.
 - Funcionário com **`dataDemissao`** preenchida exibe badge **Desligado** + data na listagem (config ainda editável).
-- Vínculo ERP: campo **`codigoFuncionarioErp`** no cadastro de funcionário (`funcionarios`), único por unidade; usado no fechamento futuro para cruzar `codFuncSaida` do PCP.
-- **Importação — Vincular código funcionário** (Configuração → aba Importação, abaixo de «Etapas de produção»): cruza `producao_etapas_resumo.funcSaida` com `funcionarios.nome` na mesma unidade; exibe prévia com situação (preencher, já correto, conflito, ambíguo); o usuário **seleciona** quais linhas elegíveis atualizar (coluna «Atualizar», com marcar todos); confirmação grava **somente** os selecionados entre matches únicos com `codigoFuncionarioErp` ainda NULL. Permissões: prévia e confirmar **`producao-config:read`/`update`** ou **`configuracao:access`** (importação manual).
+- Vínculo ERP: campo **`codigoUsuarioErp`** (`cdusu`) no cadastro de funcionário (`funcionarios`), único por unidade; usado na produtividade para cruzar `usuarioSaida` do resumo importado. Preenchimento manual no cadastro folha ou no **modal de etapas** da config de produção (`PUT /producao/config/funcionarios/:id/codigo-usuario-erp`), permissão **`producao-config:update-codigo-usuario-erp`** (independente de editar etapas).
 - **Relatório** (barra superior da tela): imprime etapas remuneradas (nome + valor) e, em seguida, funcionários com código ERP e etapas configuradas de cada um (`GET /producao/config/relatorio`).
 - **Aplicar / remover etapas** (card Funcionários): seleção por **checkbox** na lista (com «Selecionar todos» nos funcionários visíveis no filtro); botões **Aplicar etapas** e **Remover etapas**; modal de confirmação exibe apenas a **quantidade** selecionada. Aplica etapas com `recebe = true` já **salvas** (`POST /producao/config/funcionarios/aplicar-etapas-remuneradas` com `funcionarioIds[]`); remove todas as etapas configuradas (`POST /producao/config/funcionarios/remover-etapas`). Requer **`producao-config:update`**.
 
 ### RN-PCP-005 — Consulta de produtividade (contabilização)
 
 - Tela **`/producao/produtividade`**: consulta por **uma ou mais unidades** e **período** (`dataSaida` em `producao_etapas_resumo`). Vínculo de **vendedor** não restringe produtividade.
-- **Escopo de unidades na consulta:**
-  - Usuário **sem** `usuario.unidade`: pode selecionar qualquer unidade (conforme permissão).
-  - Usuário **com** `usuario.unidade` e **`unidades_produtividade` vazio/null**: consulta apenas a unidade principal (filtro bloqueado).
-  - Usuário **com** `usuario.unidade` e **`unidades_produtividade` preenchido** (JSON array em `usuarios`): multi-select **limitado** a essa lista na tela e na API; a unidade principal sempre faz parte do escopo efetivo.
+- **Escopo duplo (resumo × funcionários):**
+  - **`unidadesResumo`:** unidades cujo resumo importado e remuneração por etapa entram na contabilização (inclui total da etapa base para **GESTÃO** — RN-PCP-006).
+  - **`unidadesFuncionarios`:** unidades de **cadastro** consideradas na grade, vínculos `producao_funcionario_etapa` e resolução de `codigoUsuarioErp` (`cdusu` **por unidade**).
+- **Filtro na tela e parâmetro `unidades` na API:**
+  - Usuário **sem** `usuario.unidade`: multi-select conforme permissão; escopo resumo e funcionários = unidade(s) selecionada(s) na query.
+  - Usuário **com** `usuario.unidade`: filtro **fixo** na própria unidade de cadastro (única opção); a API deriva `unidadesResumo` do perfil (`unidades_produtividade` + unidade principal quando preenchido; senão só a unidade principal) e `unidadesFuncionarios` = **apenas** a unidade de cadastro.
 - Contabiliza linha do resumo quando:
-  1. `codFuncSaida` corresponde a `funcionarios.codigoFuncionarioErp` em **qualquer unidade selecionada** na consulta (ex.: cadastro em INHUMAS contabiliza saída em NERÓPOLIS com o mesmo código ERP);
+  1. `usuarioSaida` corresponde a `funcionarios.codigoUsuarioErp` do escopo de cadastro (`unidadesFuncionarios`). Se o resumo inclui **unidades extras** (`unidades_produtividade`), credita também linhas dessas unidades no cadastro local com o mesmo código (**sem** usar cadastro de funcionário da outra unidade). Se o filtro inclui **várias unidades de cadastro** (usuário sem vínculo), exige cadastro na **mesma unidade da linha**;
   2. `codEtapa` está remunerada na **unidade da linha** (`producao_etapa_remuneracao.recebe = true`);
-  3. etapa está configurada para o funcionário no **cadastro onde ele foi encontrado** (`producao_funcionario_etapa.recebe = true`).
-- Valor: `quantidade × valor` da etapa remunerada **da unidade da linha**; agrupamento por `codigoFuncionarioErp` e etapa (fechamento unificado quando há várias unidades).
-- Linhas ignoradas (sem cadastro ERP): exibidas na consulta com **nome** e **código ERP** agrupados (até 50 funcionários distintos), **somente** para usuários com **`producao-produtividade:read-alertas`**.
-- Linhas ignoradas (cadastro ERP ok, etapa remunerada na unidade, mas **sem vínculo** em `producao_funcionario_etapa`): exibidas com **nome**, **código ERP**, unidades e **etapas** do resumo não vinculadas (até 50 funcionários distintos), para apoio ao fechamento, **somente** com **`producao-produtividade:read-alertas`**.
+  3. etapa está configurada para o funcionário na **unidade de cadastro** (`producao_funcionario_etapa.recebe = true`).
+- **Demissão:** funcionário **não aparece** na grade quando possui `dataDemissao` e o mês/ano da demissão é **anterior** ao mês/ano de `dataInicio` do filtro (ex.: desligamento 30/06/2026 não listado em consulta de julho/2026). Linhas do resumo desse código no período também **não** entram na contabilização nem em Gestão desse cadastro.
+- Valor: `quantidade × valor` da etapa remunerada **da unidade da linha**; agrupamento por `codigoUsuarioErp` e etapa na grade do escopo de cadastro.
+- **Rodapé da grade (totais por coluna de etapa):** quantidade = conclusões **remuneradas** no escopo **`unidadesResumo`** (etapas ERP), **sem** restringir ao cadastro de funcionários da grade; coluna **GESTÃO** = soma das quantidades GESTÃO dos gestores listados (`unidadesFuncionarios`). Pode ser **maior** que a soma das células da coluna (produção de outras unidades / sem cadastro local).
+- Linhas ignoradas (sem cadastro ERP na unidade da linha): exibidas na consulta com **nome** e **código ERP** agrupados (até 50 funcionários distintos), **somente** para usuários com **`producao-produtividade:read-alertas`**.
+- Linhas ignoradas (cadastro ERP ok na unidade da linha, etapa remunerada, mas **sem vínculo** em `producao_funcionario_etapa`): exibidas com **nome**, **código ERP**, unidades e **etapas** do resumo não vinculadas (até 50 funcionários distintos), para apoio ao fechamento, **somente** com **`producao-produtividade:read-alertas`**.
 - Demais etapas não remuneradas na unidade **não** geram alerta na tela (volume alto, baixa ação imediata).
-- API: `GET /producao/produtividade?unidades=&dataInicio=&dataFim=` (parâmetro `unidades` repetido por unidade); permissão **`producao-produtividade:read`** (independente de `producao-config:read`); alertas detalhados exigem **`producao-produtividade:read-alertas`**.
+- API: `GET /producao/produtividade?unidades=&dataInicio=&dataFim=` (parâmetro `unidades` repetido por unidade; resposta `unidades` = escopo **resumo** efetivo); permissão **`producao-produtividade:read`** (independente de `producao-config:read`); alertas detalhados exigem **`producao-produtividade:read-alertas`**.
 - Menu **Produção**: Configuração de produção (`producao-config:read`/`update`), Produtividade (`producao-produtividade:read`) e alertas de produtividade (`producao-produtividade:read-alertas`) — permissões independentes no perfil.
 
 ### RN-PCP-006 — Cálculo Gestão (etapa manual consolidada)
 
 - **Etapa manual GESTÃO** (`codEtapa = GESTAO`, `tipo_calculo = gestao`): única etapa remunerada fora do ERP; valor unitário configurado em **Etapas remuneradas** da unidade.
 - **Configuração por funcionário (modal):** checkbox «Recebe gestão» + seleção da **etapa ERP base** (`cod_etapa_referencia` em `producao_funcionario_etapa`). Gestão é **independente** das etapas ERP do mesmo funcionário (ex.: pode ter PESAGEM própria e GESTÃO pelo total da base).
-- **Produtividade:** para cada gestor com GESTÃO ativa e etapa base definida:
-  - `quantidade` = total de conclusões (`dataSaida`) da **etapa base** no período e unidades da consulta em que a etapa está **remunerada** na unidade da linha, **sem exigir** vínculo em `producao_funcionario_etapa` (inclui produção de quem só recebe GESTÃO e não a etapa base individualmente, e de quem ainda não tem cadastro/vínculo);
-  - **não** precisa coincidir com o total da coluna da etapa base na grade (a coluna soma apenas etapas **contabilizadas** por funcionário — RN-PCP-005);
+- **Produtividade:** para cada gestor com GESTÃO ativa e etapa base definida na **unidade de cadastro do gestor** (escopo `unidadesFuncionarios` — RN-PCP-005):
+  - `quantidade` = total de conclusões (`dataSaida`) da **etapa base** no período e **`unidadesResumo`** da consulta em que a etapa está **remunerada** na unidade da linha, **sem exigir** vínculo em `producao_funcionario_etapa` (inclui produção de quem só recebe GESTÃO e não a etapa base individualmente, e de quem ainda não tem cadastro/vínculo);
+  - **não** precisa coincidir com a soma das células da coluna da etapa base na grade (rodapé usa total remunerado no resumo — RN-PCP-005; células só funcionários contabilizados);
   - `valor` = `quantidade × valor unitário` da etapa GESTÃO na unidade do cadastro do gestor;
   - vários gestores podem receber o **mesmo total inteiro** × valor (não rateio).
 - **Aplicar etapas** (ação em lote): replica apenas etapas ERP remuneradas; **não** inclui GESTÃO.

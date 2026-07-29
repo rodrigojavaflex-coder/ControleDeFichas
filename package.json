@@ -8,9 +8,14 @@
     "install-all": "cd backend && npm install && cd ../frontend && npm install",
     "build-frontend": "cd frontend && npm run build -- --configuration production",
     "build-backend": "cd backend && npm run build",
-    "validate:backend": "cd backend && npm run lint && npm run test",
+    "validate:backend": "cd backend && npm run lint && npm run test && npm run build:nest",
     "validate:frontend": "cd frontend && npm run build",
-    "validate": "npm run validate:backend && npm run validate:frontend"
+    "validate:audit": "npm run audit:backend && npm run audit:frontend && npm run audit:agent",
+    "validate": "npm run validate:backend && npm run validate:frontend && npm run validate:audit",
+    "audit:backend": "cd backend && npm audit",
+    "audit:frontend": "cd frontend && npm audit",
+    "audit:agent": "cd agent && npm audit",
+    "audit": "npm run validate:audit"
   },
   "engines": {
     "node": ">=24.0.0"

@@ -87,10 +87,8 @@ export interface ProducaoEtapaResumoRow {
   cod_etapa: string;
   etapa: string;
   posicao_etapa: number;
-  cod_func_entrada?: number | null;
-  func_entrada?: string | null;
-  cod_func_saida?: number | null;
-  func_saida?: string | null;
+  usuario_entrada?: number | null;
+  usuario_saida?: number | null;
   data_entrada?: string | null;
   hora_entrada?: string | null;
   data_saida?: string | null;

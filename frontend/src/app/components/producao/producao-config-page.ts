@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, Observable, of } from 'rxjs';
 import { PageContextService } from '../../services/page-context.service';
 import { AuthService } from '../../services/auth.service';
 import { ErrorModalService } from '../../services/error-modal.service';
@@ -62,6 +63,8 @@ export class ProducaoConfigPage implements OnInit {
   modalGestao: ProducaoFuncionarioGestaoConfig | null = null;
   modalCarregando = false;
   modalSalvando = false;
+  modalCodigoUsuarioErpInput = '';
+  private modalCodigoUsuarioErpOriginal: number | null = null;
 
   relatorioCarregando = false;
   funcionariosSelecionados = new Set<string>();
@@ -91,6 +94,20 @@ export class ProducaoConfigPage implements OnInit {
 
   podeEditar(): boolean {
     return this.auth.hasPermission(Permission.PRODUCAO_CONFIG_UPDATE);
+  }
+
+  podeEditarCodigoUsuarioErp(): boolean {
+    return this.auth.hasPermission(
+      Permission.PRODUCAO_CONFIG_UPDATE_CODIGO_USUARIO_ERP,
+    );
+  }
+
+  podeSalvarModalFuncionario(): boolean {
+    if (!this.modalFuncionario || this.modalCarregando) return false;
+    if (this.podeEditar()) return true;
+    return (
+      this.podeEditarCodigoUsuarioErp() && this.modalCodigoUsuarioErpDirty()
+    );
   }
 
   onUnidadeChange(): void {
@@ -467,6 +484,9 @@ export class ProducaoConfigPage implements OnInit {
     this.modalCarregando = true;
     this.modalEtapas = [];
     this.modalGestao = null;
+    this.modalCodigoUsuarioErpOriginal = f.codigoUsuarioErp ?? null;
+    this.modalCodigoUsuarioErpInput =
+      f.codigoUsuarioErp != null ? String(f.codigoUsuarioErp) : '';
     this.producaoConfig
       .listarEtapasFuncionario(this.unidadeFiltro, f.id)
       .subscribe({
@@ -491,6 +511,8 @@ export class ProducaoConfigPage implements OnInit {
     this.modalFuncionario = null;
     this.modalEtapas = [];
     this.modalGestao = null;
+    this.modalCodigoUsuarioErpInput = '';
+    this.modalCodigoUsuarioErpOriginal = null;
   }
 
   alternarRecebeModal(row: ProducaoFuncionarioEtapaModalRow): void {
@@ -546,45 +568,101 @@ export class ProducaoConfigPage implements OnInit {
     };
   }
 
+  onModalCodigoUsuarioErpInput(value: string | number): void {
+    this.modalCodigoUsuarioErpInput =
+      value === null || value === undefined ? '' : String(value);
+  }
+
+  modalCodigoUsuarioErpDirty(): boolean {
+    return (
+      this.parseModalCodigoUsuarioErp() !== this.modalCodigoUsuarioErpOriginal
+    );
+  }
+
+  modalCodigoUsuarioErpInvalido(): boolean {
+    if (!this.podeEditarCodigoUsuarioErp()) return false;
+    const raw = this.modalCodigoUsuarioErpInput.trim();
+    if (!raw) return false;
+    const n = Number(raw);
+    return !Number.isInteger(n) || n < 1;
+  }
+
+  formatarCodigoUsuarioErp(cod: number | null | undefined): string {
+    if (cod == null) return 'Não informado';
+    return String(cod);
+  }
+
+  private parseModalCodigoUsuarioErp(): number | null {
+    const raw = this.modalCodigoUsuarioErpInput.trim();
+    if (!raw) return null;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1) return null;
+    return n;
+  }
+
   salvarModalFuncionario(): void {
     if (
-      !this.podeEditar() ||
+      !this.podeSalvarModalFuncionario() ||
       !this.unidadeFiltro ||
       !this.modalFuncionario ||
       this.modalSalvando ||
-      this.modalGestaoInvalido()
+      this.modalGestaoInvalido() ||
+      this.modalCodigoUsuarioErpInvalido()
     ) {
       return;
     }
+
+    const salvarCodigo =
+      this.podeEditarCodigoUsuarioErp() && this.modalCodigoUsuarioErpDirty();
+    const salvarEtapas = this.podeEditar();
+
+    const requests: Observable<unknown>[] = [];
+
+    if (salvarCodigo) {
+      requests.push(
+        this.producaoConfig.atualizarCodigoUsuarioErp(
+          this.modalFuncionario.id,
+          {
+            unidade: this.unidadeFiltro,
+            codigoUsuarioErp: this.parseModalCodigoUsuarioErp(),
+          },
+        ),
+      );
+    }
+
+    if (salvarEtapas) {
+      requests.push(
+        this.producaoConfig.salvarEtapasFuncionario(this.modalFuncionario.id, {
+          unidade: this.unidadeFiltro,
+          itens: this.modalEtapas.map((e) => ({
+            codEtapa: e.codEtapa,
+            recebe: e.recebe,
+          })),
+          gestao: this.modalGestao
+            ? {
+                recebe: this.modalGestao.recebe,
+                codEtapaReferencia: this.modalGestao.codEtapaReferencia,
+              }
+            : undefined,
+        }),
+      );
+    }
+
     this.modalSalvando = true;
-    this.producaoConfig
-      .salvarEtapasFuncionario(this.modalFuncionario.id, {
-        unidade: this.unidadeFiltro,
-        itens: this.modalEtapas.map((e) => ({
-          codEtapa: e.codEtapa,
-          recebe: e.recebe,
-        })),
-        gestao: this.modalGestao
-          ? {
-              recebe: this.modalGestao.recebe,
-              codEtapaReferencia: this.modalGestao.codEtapaReferencia,
-            }
-          : undefined,
-      })
-      .subscribe({
-        next: () => {
-          this.modalSalvando = false;
-          this.fecharModal();
-          this.carregarFuncionarios();
-        },
-        error: (e) => {
-          this.modalSalvando = false;
-          this.errors.show(
-            e?.error?.message ?? 'Erro ao salvar etapas do funcionário.',
-            'Produção',
-          );
-        },
-      });
+    forkJoin(requests.length > 0 ? requests : [of(null)]).subscribe({
+      next: () => {
+        this.modalSalvando = false;
+        this.fecharModal();
+        this.carregarFuncionarios();
+      },
+      error: (e) => {
+        this.modalSalvando = false;
+        this.errors.show(
+          e?.error?.message ?? 'Erro ao salvar configuração do funcionário.',
+          'Produção',
+        );
+      },
+    });
   }
 
   formatarData(iso: string | null | undefined): string {
@@ -714,7 +792,7 @@ export class ProducaoConfigPage implements OnInit {
             <div class="func-card-header">
               <p class="func-identidade">
                 <strong>${this.escapeHtml(f.nome)}</strong>
-                ${setor} ${cargo} (Cód. ERP: ${f.codigoFuncionarioErp})
+                ${setor} ${cargo} (Cód. ERP: ${f.codigoUsuarioErp})
               </p>
               <p class="func-etapas-titulo">${qtdLabel}</p>
               ${desligado}

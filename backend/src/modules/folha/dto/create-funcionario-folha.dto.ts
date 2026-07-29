@@ -33,14 +33,14 @@ export class CreateFuncionarioFolhaDto {
   unidade: Unidade;
 
   @ApiPropertyOptional({
-    description: 'Código do funcionário no ERP/PCP (cdfun) para produtividade.',
-    example: 42,
+    description: 'Código de usuário no ERP (cdusu) para produtividade.',
+    example: 1110,
   })
   @IsOptional()
   @ValidateIf((_o, v) => v != null && v !== '')
-  @IsInt({ message: 'Código funcionário ERP deve ser um número inteiro.' })
-  @Min(1, { message: 'Código funcionário ERP deve ser maior que zero.' })
-  codigoFuncionarioErp?: number | null;
+  @IsInt({ message: 'Código usuário ERP deve ser um número inteiro.' })
+  @Min(1, { message: 'Código usuário ERP deve ser maior que zero.' })
+  codigoUsuarioErp?: number | null;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -37,7 +37,7 @@ interface FolhaFuncFormValue {
   setorId: string | null;
   dataAdmissao: string;
   dataDemissao: string;
-  codigoFuncionarioErp: string | number;
+  codigoUsuarioErp: string | number;
   ativo: boolean;
   naoReceberReciboWhatsapp: boolean;
   tipoPix: TipoChavePixFolha | null;
@@ -130,7 +130,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
         setorId: [null as string | null],
         dataAdmissao: ['', [Validators.required]],
         dataDemissao: [''],
-        codigoFuncionarioErp: [
+        codigoUsuarioErp: [
           '',
           [
             Validators.min(1),
@@ -748,8 +748,8 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           dataNascimento: this.patchDateField(f.dataNascimento),
           dataAdmissao: this.patchDateField(f.dataAdmissao),
           dataDemissao: this.patchDateField(f.dataDemissao),
-          codigoFuncionarioErp:
-            f.codigoFuncionarioErp != null ? String(f.codigoFuncionarioErp) : '',
+          codigoUsuarioErp:
+            f.codigoUsuarioErp != null ? String(f.codigoUsuarioErp) : '',
           cargoId: f.cargo?.id ?? f.cargoId ?? null,
           setorId: f.setor?.id ?? f.setorId ?? null,
           ativo: f.ativo ?? true,
@@ -803,13 +803,13 @@ export class FolhaFuncionarioFormComponent implements OnInit {
     if (dd) payload['dataDemissao'] = dd;
 
     const codErp =
-      v.codigoFuncionarioErp != null && v.codigoFuncionarioErp !== ''
-        ? String(v.codigoFuncionarioErp).trim()
+      v.codigoUsuarioErp != null && v.codigoUsuarioErp !== ''
+        ? String(v.codigoUsuarioErp).trim()
         : '';
     if (codErp) {
-      payload['codigoFuncionarioErp'] = Number(codErp);
+      payload['codigoUsuarioErp'] = Number(codErp);
     } else if (this.isEditMode) {
-      payload['codigoFuncionarioErp'] = null;
+      payload['codigoUsuarioErp'] = null;
     }
 
     const cid = v.cargoId != null ? String(v.cargoId).trim() : '';

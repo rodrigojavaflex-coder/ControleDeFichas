@@ -16,10 +16,8 @@ export interface AgenteProducaoEtapa {
   cod_etapa: string;
   etapa: string;
   posicao_etapa: number;
-  cod_func_entrada?: number | null;
-  func_entrada?: string | null;
-  cod_func_saida?: number | null;
-  func_saida?: string | null;
+  usuario_entrada?: number | null;
+  usuario_saida?: number | null;
   data_entrada?: string | null;
   hora_entrada?: string | null;
   data_saida?: string | null;
@@ -232,10 +230,8 @@ export class ProducaoEtapasService {
       codEtapa,
       etapa: padronizarDescricaoLegado(registro.etapa || ''),
       posicaoEtapa: Number(registro.posicao_etapa ?? 0),
-      codFuncEntrada: registro.cod_func_entrada ?? null,
-      funcEntrada: padronizarNomeLegadoNullable(registro.func_entrada),
-      codFuncSaida: registro.cod_func_saida ?? null,
-      funcSaida: padronizarNomeLegadoNullable(registro.func_saida),
+      usuarioEntrada: registro.usuario_entrada ?? null,
+      usuarioSaida: registro.usuario_saida ?? null,
       dataEntrada: registro.data_entrada || null,
       horaEntrada: registro.hora_entrada || null,
       dataSaida: registro.data_saida || null,
@@ -267,7 +263,7 @@ export class ProducaoEtapasService {
     if (!etapa) {
       etapa = this.etapaRepository.create(payload);
     } else {
-      this.preservarFuncionariosNoPayload(payload, etapa);
+      this.preservarUsuariosNoPayload(payload, etapa);
       Object.assign(etapa, payload);
     }
 
@@ -285,7 +281,7 @@ export class ProducaoEtapasService {
     ].join('|');
   }
 
-  private codFuncValido(cod: number | null | undefined): boolean {
+  private usuarioValido(cod: number | null | undefined): boolean {
     return cod != null && Number(cod) > 0;
   }
 
@@ -310,8 +306,8 @@ export class ProducaoEtapasService {
     a: AgenteProducaoEtapa,
     b: AgenteProducaoEtapa,
   ): AgenteProducaoEtapa {
-    const entrada = this.escolherParFuncionario(a, b, 'entrada');
-    const saida = this.escolherParFuncionario(a, b, 'saida');
+    const entrada = this.escolherParUsuario(a, b, 'entrada');
+    const saida = this.escolherParUsuario(a, b, 'saida');
     const posicao = Math.max(
       Number(a.posicao_etapa ?? 0),
       Number(b.posicao_etapa ?? 0),
@@ -324,12 +320,10 @@ export class ProducaoEtapasService {
       ...b,
       etapa: etapaNome,
       posicao_etapa: posicao,
-      cod_func_entrada: entrada.cod,
-      func_entrada: entrada.func,
+      usuario_entrada: entrada.usuario,
       data_entrada: entrada.data,
       hora_entrada: entrada.hora,
-      cod_func_saida: saida.cod,
-      func_saida: saida.func,
+      usuario_saida: saida.usuario,
       data_saida: saida.data,
       hora_saida: saida.hora,
       tempo_etapa:
@@ -337,81 +331,55 @@ export class ProducaoEtapasService {
     };
   }
 
-  private escolherParFuncionario(
+  private escolherParUsuario(
     a: AgenteProducaoEtapa,
     b: AgenteProducaoEtapa,
     tipo: 'entrada' | 'saida',
   ): {
-    cod: number | null | undefined;
-    func: string | null | undefined;
+    usuario: number | null | undefined;
     data: string | null | undefined;
     hora: string | null | undefined;
   } {
-    const codKey = tipo === 'entrada' ? 'cod_func_entrada' : 'cod_func_saida';
-    const funcKey = tipo === 'entrada' ? 'func_entrada' : 'func_saida';
+    const usuarioKey =
+      tipo === 'entrada' ? 'usuario_entrada' : 'usuario_saida';
     const dataKey = tipo === 'entrada' ? 'data_entrada' : 'data_saida';
     const horaKey = tipo === 'entrada' ? 'hora_entrada' : 'hora_saida';
 
-    const score = (r: AgenteProducaoEtapa): number => {
-      let s = 0;
-      if (this.codFuncValido(r[codKey])) {
-        s += 4;
-      }
-      if (String(r[funcKey] ?? '').trim()) {
-        s += 2;
-      }
-      return s;
-    };
+    const fonte = this.usuarioValido(a[usuarioKey])
+      ? a
+      : this.usuarioValido(b[usuarioKey])
+        ? b
+        : a;
 
-    const sa = score(a);
-    const sb = score(b);
-    const best = sa >= sb ? a : b;
-    const other = best === a ? b : a;
-
-    const codBest = best[codKey];
-    const codOther = other[codKey];
-    const cod = this.codFuncValido(codBest)
-      ? codBest
-      : this.codFuncValido(codOther)
-        ? codOther
-        : (codBest ?? codOther ?? null);
-
-    const func =
-      String(best[funcKey] ?? '').trim() ||
-      String(other[funcKey] ?? '').trim() ||
-      null;
-
-    const fonteDatas = score(best) > 0 ? best : score(other) > 0 ? other : best;
+    const other = fonte === a ? b : a;
+    const usuario = this.usuarioValido(fonte[usuarioKey])
+      ? fonte[usuarioKey]
+      : this.usuarioValido(other[usuarioKey])
+        ? other[usuarioKey]
+        : (fonte[usuarioKey] ?? other[usuarioKey] ?? null);
 
     return {
-      cod,
-      func,
-      data: fonteDatas[dataKey] ?? null,
-      hora: fonteDatas[horaKey] ?? null,
+      usuario,
+      data: fonte[dataKey] ?? other[dataKey] ?? null,
+      hora: fonte[horaKey] ?? other[horaKey] ?? null,
     };
   }
 
-  private preservarFuncionariosNoPayload(
+  private preservarUsuariosNoPayload(
     payload: Partial<ProducaoEtapaResumo>,
     existente: ProducaoEtapaResumo,
   ): void {
     if (
-      !this.codFuncValido(payload.codFuncEntrada) &&
-      this.codFuncValido(existente.codFuncEntrada)
+      !this.usuarioValido(payload.usuarioEntrada) &&
+      this.usuarioValido(existente.usuarioEntrada)
     ) {
-      payload.codFuncEntrada = existente.codFuncEntrada;
-    }
-    if (!payload.funcEntrada?.trim() && existente.funcEntrada?.trim()) {
-      payload.funcEntrada = existente.funcEntrada;
+      payload.usuarioEntrada = existente.usuarioEntrada;
     }
     if (
-      !this.codFuncValido(payload.codFuncSaida) &&
-      this.codFuncValido(existente.codFuncSaida)
+      !this.usuarioValido(payload.usuarioSaida) &&
+      this.usuarioValido(existente.usuarioSaida)
     ) {
-      payload.codFuncSaida = existente.codFuncSaida;
-    }
-    if (!payload.funcSaida?.trim() && existente.funcSaida?.trim()) {
-      payload.funcSaida = existente.funcSaida;
+      payload.usuarioSaida = existente.usuarioSaida;
     }
   }
 }

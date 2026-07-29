@@ -11,14 +11,13 @@ import {
   ProducaoFuncionarioEtapaModalRow,
   ProducaoFuncionarioEtapasResponse,
   ProducaoFuncionarioGestaoConfig,
-  ConfirmarVinculoCodigoFuncionarioDto,
-  VinculoCodigoFuncionarioConfirmResponse,
-  VinculoCodigoFuncionarioPreviewResponse,
   ProducaoConfigRelatorio,
   AplicarEtapasRemuneradasResponse,
   AplicarEtapasRemuneradasDto,
   RemoverEtapasFuncionariosResponse,
   RemoverEtapasFuncionariosDto,
+  AtualizarCodigoUsuarioErpProducaoDto,
+  AtualizarCodigoUsuarioErpProducaoResponse,
 } from '../models/producao-config.model';
 
 const base = `${environment.apiUrl}/producao/config`;
@@ -74,21 +73,12 @@ export class ProducaoConfigService {
     );
   }
 
-  previewVincularCodigoFuncionario(
-    unidade: Unidade,
-  ): Observable<VinculoCodigoFuncionarioPreviewResponse> {
-    const params = new HttpParams().set('unidade', unidade);
-    return this.http.get<VinculoCodigoFuncionarioPreviewResponse>(
-      `${base}/importacao/vincular-codigo-funcionario/preview`,
-      { params },
-    );
-  }
-
-  confirmarVincularCodigoFuncionario(
-    dto: ConfirmarVinculoCodigoFuncionarioDto,
-  ): Observable<VinculoCodigoFuncionarioConfirmResponse> {
-    return this.http.post<VinculoCodigoFuncionarioConfirmResponse>(
-      `${base}/importacao/vincular-codigo-funcionario/confirmar`,
+  atualizarCodigoUsuarioErp(
+    funcionarioId: string,
+    dto: AtualizarCodigoUsuarioErpProducaoDto,
+  ): Observable<AtualizarCodigoUsuarioErpProducaoResponse> {
+    return this.http.put<AtualizarCodigoUsuarioErpProducaoResponse>(
+      `${base}/funcionarios/${funcionarioId}/codigo-usuario-erp`,
       dto,
     );
   }

@@ -40,7 +40,7 @@ export class ProducaoConfigRelatorioFuncionarioDto {
   cargo: string | null;
 
   @ApiProperty()
-  codigoFuncionarioErp: number;
+  codigoUsuarioErp: number;
 
   @ApiProperty()
   desligado: boolean;

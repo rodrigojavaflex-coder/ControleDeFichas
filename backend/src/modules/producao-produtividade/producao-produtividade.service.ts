@@ -8,9 +8,13 @@ import { Funcionario } from '../folha/entities/funcionario.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import {
+  assertUnidadeFiltroProdutividade,
   assertUnidadeProducao,
-  unidadesPermitidasProdutividade,
+  creditarProducaoResumoUnidadesExtras,
+  unidadeCadastroUsuarioProducao,
+  unidadesResumoProdutividade,
 } from '../folha/utils/folha-unidade-scope.util';
+import { funcionarioElegivelProdutividadeNoPeriodo } from '../folha/utils/folha-competencia.util';
 import {
   PRODUCAO_COD_ETAPA_GESTAO,
   isCodEtapaGestao,
@@ -26,6 +30,7 @@ import {
   ProdutividadeFuncionarioRowDto,
   ProdutividadeFuncionarioSemCadastroDto,
   ProdutividadeFuncionarioSemEtapaVinculadaDto,
+  ProdutividadeTotalColunaEtapaDto,
 } from './dto/produtividade-response.dto';
 
 interface AggEtapaConsolidada {
@@ -64,6 +69,13 @@ const LIMITE_AVISOS_SEM_CADASTRO = 50;
 const LIMITE_AVISOS_SEM_ETAPA = 50;
 const LIMITE_AMOSTRAS_REQUISICAO_AVISO = 5;
 
+interface EscopoProdutividadeConsulta {
+  /** Resumo importado + remuneração por etapa. */
+  unidadesResumo: Unidade[];
+  /** Cadastro de funcionários exibido/contabilizado (`cdusu` por unidade). */
+  unidadesFuncionarios: Unidade[];
+}
+
 @Injectable()
 export class ProducaoProdutividadeService {
   constructor(
@@ -84,7 +96,7 @@ export class ProducaoProdutividadeService {
     dataFim: string,
     unidadeLegado?: Unidade,
   ): Promise<ProdutividadeConsultaResponseDto> {
-    const unidades = this.resolverUnidadesConsulta(
+    const escopo = this.resolverEscopoConsulta(
       usuario,
       unidadesQuery,
       unidadeLegado,
@@ -96,7 +108,7 @@ export class ProducaoProdutividadeService {
       );
     }
 
-    return this.consultarConsolidado(usuario, unidades, dataInicio, dataFim);
+    return this.consultarConsolidado(usuario, escopo, dataInicio, dataFim);
   }
 
   async consultarAnalitico(
@@ -106,7 +118,7 @@ export class ProducaoProdutividadeService {
     dataFim: string,
     unidadeLegado?: Unidade,
   ): Promise<ProdutividadeAnaliticoResponseDto> {
-    const unidades = this.resolverUnidadesConsulta(
+    const escopo = this.resolverEscopoConsulta(
       usuario,
       unidadesQuery,
       unidadeLegado,
@@ -120,17 +132,17 @@ export class ProducaoProdutividadeService {
 
     return this.consultarAnaliticoLinhas(
       usuario,
-      unidades,
+      escopo,
       dataInicio,
       dataFim,
     );
   }
 
-  private resolverUnidadesConsulta(
+  private resolverEscopoConsulta(
     usuario: Usuario,
     unidadesQuery: Unidade[] | undefined,
     unidadeLegado?: Unidade,
-  ): Unidade[] {
+  ): EscopoProdutividadeConsulta {
     const solicitadas =
       unidadesQuery?.length && unidadesQuery.length > 0
         ? unidadesQuery
@@ -138,38 +150,56 @@ export class ProducaoProdutividadeService {
           ? [unidadeLegado]
           : [];
 
-    const permitidas = unidadesPermitidasProdutividade(usuario);
-    const alvo = solicitadas.length > 0 ? solicitadas : (permitidas ?? []);
+    const unidadeUsuario = unidadeCadastroUsuarioProducao(usuario);
 
-    if (alvo.length === 0) {
-      throw new BadRequestException('Informe ao menos uma unidade.');
+    if (unidadeUsuario) {
+      for (const un of solicitadas) {
+        assertUnidadeFiltroProdutividade(usuario, un);
+      }
+
+      const unidadesResumo = unidadesResumoProdutividade(usuario);
+      if (!unidadesResumo?.length) {
+        throw new BadRequestException('Escopo de produção indisponível.');
+      }
+
+      return {
+        unidadesResumo,
+        unidadesFuncionarios: [unidadeUsuario],
+      };
     }
+
+    const alvo =
+      solicitadas.length > 0
+        ? solicitadas
+        : (() => {
+            throw new BadRequestException('Informe ao menos uma unidade.');
+          })();
 
     const unicas = [...new Set(alvo)];
-    for (const unidade of unicas) {
-      assertUnidadeProducao(usuario, unidade);
-    }
-    return unicas;
+    return {
+      unidadesResumo: unicas,
+      unidadesFuncionarios: unicas,
+    };
   }
 
   /**
-   * Contabilização consolidada: resumo de cada unidade selecionada pode ser atribuído
-   * a funcionário cadastrado em **qualquer** unidade do escopo (mesmo `codigoFuncionarioErp`).
-   * Remuneração usa valores da unidade **da linha do resumo**; etapas do funcionário usam
-   * o cadastro onde ele está configurado.
+   * Contabilização: resumo das `unidadesResumo`; funcionários só de
+   * `unidadesFuncionarios` (`codigoUsuarioErp` único por unidade de cadastro).
    */
   private async consultarConsolidado(
     usuario: Usuario,
-    unidades: Unidade[],
+    escopo: EscopoProdutividadeConsulta,
     dataInicio: string,
     dataFim: string,
   ): Promise<ProdutividadeConsultaResponseDto> {
-    for (const unidade of unidades) {
+    const { unidadesResumo, unidadesFuncionarios } = escopo;
+
+    for (const unidade of unidadesResumo) {
       assertUnidadeProducao(usuario, unidade);
     }
 
     const remuneradas = await this.etapaRemuneracaoRepo.find({
-      where: { unidade: In(unidades), recebe: true },
+      where: { unidade: In(unidadesResumo), recebe: true },
     });
     const remuneracaoPorUnidadeEtapa = new Map<
       string,
@@ -186,35 +216,41 @@ export class ProducaoProdutividadeService {
       .createQueryBuilder('f')
       .leftJoinAndSelect('f.cargo', 'cargo')
       .leftJoinAndSelect('f.setor', 'setor')
-      .where('f.unidade IN (:...unidades)', { unidades })
-      .andWhere('f.codigoFuncionarioErp IS NOT NULL')
+      .where('f.unidade IN (:...unidadesFuncionarios)', {
+        unidadesFuncionarios,
+      })
+      .andWhere('f.codigoUsuarioErp IS NOT NULL')
       .getMany();
 
     const funcionariosPorCodErp = new Map<number, Funcionario[]>();
     for (const funcionario of funcionarios) {
-      if (funcionario.codigoFuncionarioErp == null) continue;
-      const cod = funcionario.codigoFuncionarioErp;
+      if (funcionario.codigoUsuarioErp == null) continue;
+      const cod = funcionario.codigoUsuarioErp;
       const lista = funcionariosPorCodErp.get(cod) ?? [];
       lista.push(funcionario);
       funcionariosPorCodErp.set(cod, lista);
     }
 
     const funcEtapas = await this.funcionarioEtapaRepo.find({
-      where: { unidade: In(unidades), recebe: true },
+      where: { unidade: In(unidadesFuncionarios), recebe: true },
       relations: ['funcionario'],
     });
     const funcEtapaSet = new Set(
       funcEtapas
-        .filter((fe) => fe.funcionario?.id)
-        .map((fe) => `${fe.funcionario.id}:${fe.codEtapa}`),
+        .filter(
+          (fe) =>
+            fe.funcionario?.id &&
+            unidadesFuncionarios.includes(fe.funcionario.unidade),
+        )
+        .map((fe) => `${fe.funcionario!.id}:${fe.codEtapa}`),
     );
 
     const linhasResumo = await this.resumoRepo
       .createQueryBuilder('r')
-      .where('r.unidade IN (:...unidades)', { unidades })
+      .where('r.unidade IN (:...unidadesResumo)', { unidadesResumo })
       .andWhere('r.dataSaida >= :dataInicio', { dataInicio })
       .andWhere('r.dataSaida <= :dataFim', { dataFim })
-      .andWhere('r.codFuncSaida IS NOT NULL')
+      .andWhere('r.usuarioSaida IS NOT NULL')
       .getMany();
 
     const aggPorCodErp = new Map<number, AccFuncionarioConsolidado>();
@@ -224,11 +260,20 @@ export class ProducaoProdutividadeService {
     let linhasSemFuncionario = 0;
     let linhasEtapaNaoConfigurada = 0;
     const totalContabilizadoPorCodEtapa = new Map<string, number>();
-    /** Total da etapa base para GESTÃO: remunerada no resumo, sem exigir vínculo por funcionário. */
+    /** Conclusões remuneradas no resumo (escopo unidadesResumo), sem filtro de cadastro de funcionário. */
+    const totalRemuneradoResumoPorCodEtapa = new Map<string, number>();
+    const nomeEtapaPorCodEtapa = new Map<string, string>();
+    /** Total da etapa base para GESTÃO: mesmo universo que `totalRemuneradoResumoPorCodEtapa`. */
     const totalBaseGestaoPorCodEtapa = new Map<string, number>();
 
+    const creditarResumoOutrasUnidades = creditarProducaoResumoUnidadesExtras(
+      unidadesResumo,
+      unidadesFuncionarios,
+    );
+    const consultaMultiplasUnidadesResumo = unidadesResumo.length > 1;
+
     for (const row of linhasResumo) {
-      const codFunc = row.codFuncSaida;
+      const codFunc = row.usuarioSaida;
       if (codFunc == null) continue;
 
       if (!isCodEtapaGestao(row.codEtapa)) {
@@ -236,10 +281,16 @@ export class ProducaoProdutividadeService {
           `${row.unidade}:${row.codEtapa}`,
         );
         if (remBase) {
-          totalBaseGestaoPorCodEtapa.set(
-            row.codEtapa,
-            (totalBaseGestaoPorCodEtapa.get(row.codEtapa) ?? 0) + 1,
-          );
+          const qtd =
+            (totalRemuneradoResumoPorCodEtapa.get(row.codEtapa) ?? 0) + 1;
+          totalRemuneradoResumoPorCodEtapa.set(row.codEtapa, qtd);
+          totalBaseGestaoPorCodEtapa.set(row.codEtapa, qtd);
+          if (!nomeEtapaPorCodEtapa.has(row.codEtapa)) {
+            nomeEtapaPorCodEtapa.set(
+              row.codEtapa,
+              remBase.etapa || row.etapa,
+            );
+          }
         }
       }
 
@@ -247,10 +298,17 @@ export class ProducaoProdutividadeService {
         codFunc,
         row.unidade,
         funcionariosPorCodErp,
+        creditarResumoOutrasUnidades,
+        consultaMultiplasUnidadesResumo,
       );
-      if (!funcionario) {
-        linhasSemFuncionario += 1;
-        this.registrarSemCadastro(semCadastroPorCodErp, codFunc, row);
+      if (
+        !funcionario ||
+        !funcionarioElegivelProdutividadeNoPeriodo(funcionario, dataInicio)
+      ) {
+        if (!funcionario) {
+          linhasSemFuncionario += 1;
+          this.registrarSemCadastro(semCadastroPorCodErp, codFunc, row);
+        }
         continue;
       }
 
@@ -283,7 +341,7 @@ export class ProducaoProdutividadeService {
         (totalContabilizadoPorCodEtapa.get(row.codEtapa) ?? 0) + 1,
       );
 
-      const chaveAgg = funcionario.codigoFuncionarioErp as number;
+      const chaveAgg = funcionario.codigoUsuarioErp as number;
       let acc = aggPorCodErp.get(chaveAgg);
       if (!acc) {
         acc = {
@@ -300,7 +358,7 @@ export class ProducaoProdutividadeService {
       const candidatos = funcionariosPorCodErp.get(chaveAgg) ?? [funcionario];
       for (const c of candidatos) {
         acc.unidadesCadastro.add(c.unidade);
-        acc.codigosErp.add(c.codigoFuncionarioErp as number);
+        acc.codigosErp.add(c.codigoUsuarioErp as number);
       }
 
       const existente = acc.etapas.get(row.codEtapa);
@@ -318,7 +376,9 @@ export class ProducaoProdutividadeService {
     }
 
     await this.aplicarGestaoConsolidada(
-      unidades,
+      unidadesFuncionarios,
+      unidadesResumo,
+      dataInicio,
       aggPorCodErp,
       remuneracaoPorUnidadeEtapa,
       totalBaseGestaoPorCodEtapa,
@@ -327,6 +387,11 @@ export class ProducaoProdutividadeService {
     const funcionariosRows: ProdutividadeFuncionarioRowDto[] = [];
 
     for (const acc of aggPorCodErp.values()) {
+      if (
+        !funcionarioElegivelProdutividadeNoPeriodo(acc.funcionario, dataInicio)
+      ) {
+        continue;
+      }
       const etapas = [...acc.etapas.values()]
         .map((e) => ({
           codEtapa: e.codEtapa,
@@ -348,8 +413,8 @@ export class ProducaoProdutividadeService {
         funcionarioId: acc.funcionario.id,
         unidades: unidadesFuncionario,
         nome: acc.funcionario.nome,
-        codigoFuncionarioErp: codigos[0],
-        codigosFuncionarioErp: codigos.length > 1 ? codigos : undefined,
+        codigoUsuarioErp: codigos[0],
+        codigosUsuarioErp: codigos.length > 1 ? codigos : undefined,
         setor: acc.funcionario.setor?.descricao?.trim() || null,
         cargo: acc.funcionario.cargo?.descricao?.trim() || null,
         totalQuantidade,
@@ -365,6 +430,13 @@ export class ProducaoProdutividadeService {
       0,
     );
     const totalValor = funcionariosRows.reduce((s, f) => s + f.totalValor, 0);
+    const totaisColunaEtapas = this.montarTotaisColunaEtapas(
+      totalRemuneradoResumoPorCodEtapa,
+      nomeEtapaPorCodEtapa,
+      aggPorCodErp,
+      remuneracaoPorUnidadeEtapa,
+    );
+
     const podeVerAlertas = this.usuarioPodeVerAlertas(usuario);
     const avisos = podeVerAlertas
       ? this.montarAvisos(
@@ -375,7 +447,7 @@ export class ProducaoProdutividadeService {
       : this.avisosVazios();
 
     return {
-      unidades,
+      unidades: unidadesResumo,
       dataInicio,
       dataFim,
       resumo: {
@@ -391,21 +463,73 @@ export class ProducaoProdutividadeService {
       },
       avisos,
       funcionarios: funcionariosRows,
+      totaisColunaEtapas,
     };
+  }
+
+  private montarTotaisColunaEtapas(
+    totalRemuneradoResumoPorCodEtapa: Map<string, number>,
+    nomeEtapaPorCodEtapa: Map<string, string>,
+    aggPorCodErp: Map<number, AccFuncionarioConsolidado>,
+    remuneracaoPorUnidadeEtapa: Map<string, { valor: number; etapa: string }>,
+  ): ProdutividadeTotalColunaEtapaDto[] {
+    const itens: ProdutividadeTotalColunaEtapaDto[] = [];
+
+    for (const [codEtapa, quantidade] of totalRemuneradoResumoPorCodEtapa) {
+      if (quantidade <= 0 || isCodEtapaGestao(codEtapa)) continue;
+      itens.push({
+        codEtapa,
+        etapa: nomeEtapaPorCodEtapa.get(codEtapa) ?? codEtapa,
+        quantidade,
+      });
+    }
+
+    let qtdGestao = 0;
+    let nomeGestao = 'GESTÃO';
+    for (const acc of aggPorCodErp.values()) {
+      const g = acc.etapas.get(PRODUCAO_COD_ETAPA_GESTAO);
+      if (g) {
+        qtdGestao += g.quantidade;
+        if (g.etapa?.trim()) nomeGestao = g.etapa.trim();
+      }
+    }
+    if (qtdGestao > 0) {
+      for (const [key, rem] of remuneracaoPorUnidadeEtapa) {
+        if (key.endsWith(`:${PRODUCAO_COD_ETAPA_GESTAO}`)) {
+          if (rem.etapa?.trim()) nomeGestao = rem.etapa.trim();
+          break;
+        }
+      }
+      itens.push({
+        codEtapa: PRODUCAO_COD_ETAPA_GESTAO,
+        etapa: nomeGestao,
+        quantidade: qtdGestao,
+      });
+    }
+
+    itens.sort((a, b) => {
+      if (a.codEtapa === PRODUCAO_COD_ETAPA_GESTAO) return 1;
+      if (b.codEtapa === PRODUCAO_COD_ETAPA_GESTAO) return -1;
+      return a.etapa.localeCompare(b.etapa, 'pt-BR');
+    });
+
+    return itens;
   }
 
   private async consultarAnaliticoLinhas(
     usuario: Usuario,
-    unidades: Unidade[],
+    escopo: EscopoProdutividadeConsulta,
     dataInicio: string,
     dataFim: string,
   ): Promise<ProdutividadeAnaliticoResponseDto> {
-    for (const unidade of unidades) {
+    const { unidadesResumo, unidadesFuncionarios } = escopo;
+
+    for (const unidade of unidadesResumo) {
       assertUnidadeProducao(usuario, unidade);
     }
 
     const remuneradas = await this.etapaRemuneracaoRepo.find({
-      where: { unidade: In(unidades), recebe: true },
+      where: { unidade: In(unidadesResumo), recebe: true },
     });
     const remuneracaoPorUnidadeEtapa = new Map<
       string,
@@ -422,49 +546,68 @@ export class ProducaoProdutividadeService {
       .createQueryBuilder('f')
       .leftJoinAndSelect('f.cargo', 'cargo')
       .leftJoinAndSelect('f.setor', 'setor')
-      .where('f.unidade IN (:...unidades)', { unidades })
-      .andWhere('f.codigoFuncionarioErp IS NOT NULL')
+      .where('f.unidade IN (:...unidadesFuncionarios)', {
+        unidadesFuncionarios,
+      })
+      .andWhere('f.codigoUsuarioErp IS NOT NULL')
       .getMany();
 
     const funcionariosPorCodErp = new Map<number, Funcionario[]>();
     for (const funcionario of funcionarios) {
-      if (funcionario.codigoFuncionarioErp == null) continue;
-      const cod = funcionario.codigoFuncionarioErp;
+      if (funcionario.codigoUsuarioErp == null) continue;
+      const cod = funcionario.codigoUsuarioErp;
       const lista = funcionariosPorCodErp.get(cod) ?? [];
       lista.push(funcionario);
       funcionariosPorCodErp.set(cod, lista);
     }
 
     const funcEtapas = await this.funcionarioEtapaRepo.find({
-      where: { unidade: In(unidades), recebe: true },
+      where: { unidade: In(unidadesFuncionarios), recebe: true },
       relations: ['funcionario'],
     });
     const funcEtapaSet = new Set(
       funcEtapas
-        .filter((fe) => fe.funcionario?.id)
-        .map((fe) => `${fe.funcionario.id}:${fe.codEtapa}`),
+        .filter(
+          (fe) =>
+            fe.funcionario?.id &&
+            unidadesFuncionarios.includes(fe.funcionario.unidade),
+        )
+        .map((fe) => `${fe.funcionario!.id}:${fe.codEtapa}`),
     );
 
     const linhasResumo = await this.resumoRepo
       .createQueryBuilder('r')
-      .where('r.unidade IN (:...unidades)', { unidades })
+      .where('r.unidade IN (:...unidadesResumo)', { unidadesResumo })
       .andWhere('r.dataSaida >= :dataInicio', { dataInicio })
       .andWhere('r.dataSaida <= :dataFim', { dataFim })
-      .andWhere('r.codFuncSaida IS NOT NULL')
+      .andWhere('r.usuarioSaida IS NOT NULL')
       .getMany();
 
     const linhas: ProdutividadeAnaliticoLinhaDto[] = [];
 
+    const creditarResumoOutrasUnidades = creditarProducaoResumoUnidadesExtras(
+      unidadesResumo,
+      unidadesFuncionarios,
+    );
+    const consultaMultiplasUnidadesResumo = unidadesResumo.length > 1;
+
     for (const row of linhasResumo) {
-      const codFunc = row.codFuncSaida;
+      const codFunc = row.usuarioSaida;
       if (codFunc == null) continue;
 
       const funcionario = this.resolverFuncionarioPorCodErp(
         codFunc,
         row.unidade,
         funcionariosPorCodErp,
+        creditarResumoOutrasUnidades,
+        consultaMultiplasUnidadesResumo,
       );
-      if (!funcionario) continue;
+      if (
+        !funcionario ||
+        !funcionarioElegivelProdutividadeNoPeriodo(funcionario, dataInicio)
+      ) {
+        continue;
+      }
 
       const rem = remuneracaoPorUnidadeEtapa.get(
         `${row.unidade}:${row.codEtapa}`,
@@ -497,7 +640,7 @@ export class ProducaoProdutividadeService {
     });
 
     return {
-      unidades,
+      unidades: unidadesResumo,
       dataInicio,
       dataFim,
       linhas,
@@ -522,10 +665,6 @@ export class ProducaoProdutividadeService {
     }
     acc.totalLinhas += 1;
     acc.unidades.set(row.unidade, (acc.unidades.get(row.unidade) ?? 0) + 1);
-    const nomeResumo = row.funcSaida?.trim();
-    if (nomeResumo) {
-      acc.nomes.set(nomeResumo, (acc.nomes.get(nomeResumo) ?? 0) + 1);
-    }
     if (acc.amostrasRequisicoes.size < LIMITE_AMOSTRAS_REQUISICAO_AVISO) {
       const amostra = this.formatarAmostraRequisicao(row);
       if (amostra) {
@@ -540,7 +679,7 @@ export class ProducaoProdutividadeService {
     row: ProducaoEtapaResumo,
     nomeEtapa: string,
   ): void {
-    const codigoErp = funcionario.codigoFuncionarioErp as number;
+    const codigoErp = funcionario.codigoUsuarioErp as number;
     let acc = mapa.get(codigoErp);
     if (!acc) {
       acc = {
@@ -567,14 +706,16 @@ export class ProducaoProdutividadeService {
   }
 
   private async aplicarGestaoConsolidada(
-    unidades: Unidade[],
+    unidadesFuncionarios: Unidade[],
+    unidadesResumo: Unidade[],
+    dataInicio: string,
     aggPorCodErp: Map<number, AccFuncionarioConsolidado>,
     remuneracaoPorUnidadeEtapa: Map<string, { valor: number; etapa: string }>,
     totalBaseGestaoPorCodEtapa: Map<string, number>,
   ): Promise<void> {
     const gestaoConfigs = await this.funcionarioEtapaRepo.find({
       where: {
-        unidade: In(unidades),
+        unidade: In(unidadesFuncionarios),
         codEtapa: PRODUCAO_COD_ETAPA_GESTAO,
         recebe: true,
       },
@@ -590,9 +731,16 @@ export class ProducaoProdutividadeService {
     for (const gc of gestaoConfigs) {
       const ref = gc.codEtapaReferencia?.trim();
       const funcionario = gc.funcionario;
-      if (!ref || funcionario?.codigoFuncionarioErp == null) continue;
+      if (
+        !ref ||
+        funcionario?.codigoUsuarioErp == null ||
+        !unidadesFuncionarios.includes(funcionario.unidade) ||
+        !funcionarioElegivelProdutividadeNoPeriodo(funcionario, dataInicio)
+      ) {
+        continue;
+      }
 
-      const codErp = funcionario.codigoFuncionarioErp;
+      const codErp = funcionario.codigoUsuarioErp;
       const chaveDedupe = `${codErp}:${ref}`;
       if (gestaoAplicada.has(chaveDedupe)) continue;
 
@@ -711,7 +859,7 @@ export class ProducaoProdutividadeService {
   ): ProdutividadeFuncionarioSemCadastroDto {
     return {
       codigoErp: acc.codigoErp,
-      nome: this.nomeMaisFrequente(acc.nomes),
+      nome: this.nomeMaisFrequente(acc.nomes) || `Usuário ERP ${acc.codigoErp}`,
       unidades: [...acc.unidades.entries()]
         .map(([unidade, linhas]) => ({ unidade, linhas }))
         .sort((a, b) => a.unidade.localeCompare(b.unidade, 'pt-BR')),
@@ -767,16 +915,25 @@ export class ProducaoProdutividadeService {
   }
 
   /**
-   * Preferência: cadastro na mesma unidade da linha; senão qualquer unidade do escopo
-   * (ex.: funcionário só em INHUMAS contabiliza saída registrada em NERÓPOLIS).
+   * Cadastro por unidade; com resumo ampliado credita pelo `cdusu` no cadastro local.
    */
   private resolverFuncionarioPorCodErp(
-    codFuncSaida: number,
+    usuarioSaida: number,
     unidadeResumo: Unidade,
     funcionariosPorCodErp: Map<number, Funcionario[]>,
+    creditarResumoOutrasUnidades: boolean,
+    consultaMultiplasUnidadesResumo: boolean,
   ): Funcionario | undefined {
-    const candidatos = funcionariosPorCodErp.get(codFuncSaida);
+    const candidatos = funcionariosPorCodErp.get(usuarioSaida);
     if (!candidatos?.length) return undefined;
-    return candidatos.find((f) => f.unidade === unidadeResumo) ?? candidatos[0];
+
+    const porUnidade = candidatos.find((f) => f.unidade === unidadeResumo);
+    if (porUnidade) return porUnidade;
+
+    if (creditarResumoOutrasUnidades || consultaMultiplasUnidadesResumo) {
+      if (candidatos.length === 1) return candidatos[0];
+    }
+
+    return undefined;
   }
 }

@@ -12,8 +12,8 @@ export interface ProdutividadeFuncionarioRow {
   funcionarioId: string;
   unidades: Unidade[];
   nome: string;
-  codigoFuncionarioErp: number;
-  codigosFuncionarioErp?: number[];
+  codigoUsuarioErp: number;
+  codigosUsuarioErp?: number[];
   setor: string | null;
   cargo: string | null;
   totalQuantidade: number;
@@ -68,6 +68,12 @@ export interface ProdutividadeAvisos {
   funcionariosSemEtapaVinculadaOcultos: number;
 }
 
+export interface ProdutividadeTotalColunaEtapa {
+  codEtapa: string;
+  etapa: string;
+  quantidade: number;
+}
+
 export interface ProdutividadeConsultaResponse {
   unidades: Unidade[];
   dataInicio: string;
@@ -75,6 +81,7 @@ export interface ProdutividadeConsultaResponse {
   resumo: ProdutividadeResumo;
   avisos: ProdutividadeAvisos;
   funcionarios: ProdutividadeFuncionarioRow[];
+  totaisColunaEtapas: ProdutividadeTotalColunaEtapa[];
 }
 
 export interface ProdutividadeQuery {

@@ -36,7 +36,7 @@ Encerrar o Agent nesta fase **somente** quando **todos** os blocos abaixo estive
 
 | # | Critério |
 |---|----------|
-| A1 | `npm run validate` na **raiz** terminou com **código 0** (`validate:backend` = lint + test; `validate:frontend` = build). |
+| A1 | `npm run validate` na **raiz** terminou com **código 0** (`validate:backend` = lint + test + **`nest build`**; `validate:frontend` = build Angular; **`validate:audit`** = `npm audit` em backend, frontend e agent). O build Nest ajuda a pegar erros de compilação/DI de módulo que o lint não vê; **não** substitui `start:dev` com banco/API. |
 | A2 | Nenhuma migration altera `perfil.permissoes` nem concede permissão automaticamente. |
 | A3 | Endpoints novos/alterados: DTOs + `class-validator` + Swagger; GET sensível com `@Permissions` quando aplicável. |
 | A4 | Agent **não** executou `git commit` / `git push` (salvo pedido explícito). |
@@ -56,7 +56,7 @@ Encerrar o Agent nesta fase **somente** quando **todos** os blocos abaixo estive
 |---|----------|
 | C1 | `docs/GUIA_DESENVOLVIMENTO.md`: rota com `authGuard` + `permissionGuard` + `data.permissions`; menu alinhado; atalho home se aplicável. |
 | C2 | `.cursor/rules/regras-ui.mdc`: tema claro e escuro; tokens de tema (evitar cores fixas novas sem necessidade); hover/focus/disabled quando houver interação. |
-| C3 | Listagem principal: padrão `vendas-page` (filtros, tabela, estados vazio/loading/erro conforme a tela). |
+| C3 | Listagem principal: padrão `vendas-page` (filtros, tabela, estados vazio/loading/erro conforme a tela). **Formatação:** tokens globais (`--cor-primaria`, `--cor-superficie`, `--border-color`, `--text-primary`) + referência **`producao-produtividade-page`** (filtros/unidades/modal) para telas **Produção**; ver `docs/GUIA_DESENVOLVIMENTO.md` e `.cursorrules` (vendas-page). |
 | C4 | Agent marca checklist C **OK / corrigido nesta rodada** item a item. |
 
 **Nota:** RN/UI no Portão A são **revisão e implementação pelo Agent** com base nos docs; o que já estiver coberto por **Jest** entra também via `validate`.
@@ -110,12 +110,16 @@ NÃO commitar até Portão B assinado pelo desenvolvedor.
 ## Comandos de validação (raiz do monorepo)
 
 ```bash
-npm run validate:backend   # lint (erros bloqueiam; no-unsafe-* = warn) + test
+npm run validate:backend   # lint + test + nest build (backend/, sem rebuild do frontend)
 npm run validate:frontend  # build (frontend/)
-npm run validate             # backend + frontend
+npm run validate:audit     # npm audit (backend/, frontend/, agent/)
+npm run validate             # backend + frontend + audit
+npm run audit                # alias de validate:audit
 ```
 
 `lint:strict` no backend exige **zero warnings** (lint padrão). Dívida `no-unsafe-*`: `npm run lint:type-debt` no `backend/`.
+
+**Portão B (humano):** após validate verde, subir `npm run start:dev` (backend) + smoke da rota/tela; opcional `GET /api/health` ou login se existir health check.
 
 Pré-requisito: dependências instaladas (`npm run install-all` na raiz).
 

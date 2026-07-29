@@ -64,12 +64,12 @@ export class FolhaFuncionariosService {
     await this.assertCargoSetorIds(dto.cargoId, dto.setorId);
     await this.assertCodigoFuncionarioErpUnico(
       dto.unidade,
-      dto.codigoFuncionarioErp ?? null,
+      dto.codigoUsuarioErp ?? null,
     );
     const payload: Partial<Funcionario> = {
       nome: dto.nome,
       unidade: dto.unidade,
-      codigoFuncionarioErp: dto.codigoFuncionarioErp ?? null,
+      codigoUsuarioErp: dto.codigoUsuarioErp ?? null,
       cpf: dto.cpf?.trim() ? dto.cpf.trim() : undefined,
       telefone: dto.telefone?.trim() || null,
       endereco: dto.endereco?.trim() || null,
@@ -344,14 +344,14 @@ export class FolhaFuncionariosService {
     if (dto.cpf !== undefined) {
       entity.cpf = dto.cpf?.trim() ? dto.cpf.trim() : null;
     }
-    if (dto.codigoFuncionarioErp !== undefined) {
+    if (dto.codigoUsuarioErp !== undefined) {
       const unidadeAlvo = dto.unidade ?? entity.unidade;
       await this.assertCodigoFuncionarioErpUnico(
         unidadeAlvo,
-        dto.codigoFuncionarioErp ?? null,
+        dto.codigoUsuarioErp ?? null,
         id,
       );
-      entity.codigoFuncionarioErp = dto.codigoFuncionarioErp ?? null;
+      entity.codigoUsuarioErp = dto.codigoUsuarioErp ?? null;
     }
 
     if (patchCargoId !== undefined) {
@@ -575,7 +575,7 @@ export class FolhaFuncionariosService {
     const qb = this.funcionarioRepo
       .createQueryBuilder('f')
       .where('f.unidade = :unidade', { unidade })
-      .andWhere('f.codigoFuncionarioErp = :codigo', { codigo });
+      .andWhere('f.codigoUsuarioErp = :codigo', { codigo });
     if (ignorarFuncionarioId) {
       qb.andWhere('f.id != :id', { id: ignorarFuncionarioId });
     }

@@ -1408,6 +1408,29 @@ export class DatabaseService {
     });
   }
 
+  /** `cdusu` pode ser VARCHAR com espaço; evita COALESCE(..., 0) que quebra conversão. */
+  private sqlCdusuInteiro(alias: string): string {
+    const txt = `NULLIF(TRIM(CAST(${alias}.cdusu AS VARCHAR(32))), '')`;
+    return `
+      CASE
+        WHEN ${txt} IS NOT NULL AND ${txt} SIMILAR TO '[0-9]+' ESCAPE '\\'
+        THEN CAST(${txt} AS INTEGER)
+        ELSE NULL
+      END
+    `.trim();
+  }
+
+  private sqlCdusuInteiroOuZero(alias: string): string {
+    const txt = `NULLIF(TRIM(CAST(${alias}.cdusu AS VARCHAR(32))), '')`;
+    return `
+      CASE
+        WHEN ${txt} IS NOT NULL AND ${txt} SIMILAR TO '[0-9]+' ESCAPE '\\'
+        THEN CAST(${txt} AS INTEGER)
+        ELSE 0
+      END
+    `.trim();
+  }
+
   private buildProducaoEtapasResumoQuery(
     unit: number,
     options: {
@@ -1441,6 +1464,10 @@ export class DatabaseService {
 
     params.push(unit, unit, unit, unit);
 
+    const cdusuInt = this.sqlCdusuInteiro('p');
+    const cdusuCmp = (a: string, b: string) =>
+      `${this.sqlCdusuInteiroOuZero(a)} > ${this.sqlCdusuInteiroOuZero(b)}`;
+
     const sql = `
       SELECT
         stage.cdfil                                               AS filial,
@@ -1449,10 +1476,8 @@ export class DatabaseService {
         TRIM(stage.cdetapa)                                       AS cod_etapa,
         TRIM(e.descricao)                                         AS etapa,
         e.posicao                                                 AS posicao_etapa,
-        evt_ent.cod_func_entrada                                  AS cod_func_entrada,
-        evt_ent.func_entrada                                      AS func_entrada,
-        evt_sai.cod_func_saida                                    AS cod_func_saida,
-        evt_sai.func_saida                                        AS func_saida,
+        evt_ent.usuario_entrada                                   AS usuario_entrada,
+        evt_sai.usuario_saida                                     AS usuario_saida,
         evt_ent.data_entrada                                      AS data_entrada,
         evt_ent.hora_entrada                                      AS hora_entrada,
         evt_sai.data_saida                                        AS data_saida,
@@ -1526,28 +1551,10 @@ export class DatabaseService {
           p.serier,
           p.cdetapa,
           p.tppcp,
-          p.cdfun AS cod_func_entrada,
-          COALESCE(
-            TRIM(f.nomefun),
-            (
-              SELECT FIRST 1 TRIM(fb.nomefun)
-              FROM fc08000 fb
-              WHERE fb.cdfun = p.cdfun
-                AND COALESCE(p.cdfun, 0) > 0
-              ORDER BY
-                CASE
-                  WHEN COALESCE(p.cdcon, 0) > 0 AND fb.cdcon = p.cdcon THEN 0
-                  ELSE 1
-                END,
-                fb.cdcon
-            )
-          ) AS func_entrada,
+          ${cdusuInt} AS usuario_entrada,
           p.data AS data_entrada,
           p.hora AS hora_entrada
         FROM fc12500 p
-        LEFT JOIN fc08000 f
-          ON f.cdfun = p.cdfun
-         AND f.cdcon = p.cdcon
         WHERE p.cdopera = '01'
           AND p.cdfil = ?
           AND NOT EXISTS (
@@ -1565,7 +1572,7 @@ export class DatabaseService {
                 OR (
                   p_ant.data = p.data
                   AND p_ant.hora = p.hora
-                  AND COALESCE(p_ant.cdfun, 0) > COALESCE(p.cdfun, 0)
+                  AND ${cdusuCmp('p_ant', 'p')}
                 )
               )
           )
@@ -1582,28 +1589,10 @@ export class DatabaseService {
           p.serier,
           p.cdetapa,
           p.tppcp,
-          p.cdfun AS cod_func_saida,
-          COALESCE(
-            TRIM(f.nomefun),
-            (
-              SELECT FIRST 1 TRIM(fb.nomefun)
-              FROM fc08000 fb
-              WHERE fb.cdfun = p.cdfun
-                AND COALESCE(p.cdfun, 0) > 0
-              ORDER BY
-                CASE
-                  WHEN COALESCE(p.cdcon, 0) > 0 AND fb.cdcon = p.cdcon THEN 0
-                  ELSE 1
-                END,
-                fb.cdcon
-            )
-          ) AS func_saida,
+          ${cdusuInt} AS usuario_saida,
           p.data AS data_saida,
           p.hora AS hora_saida
         FROM fc12500 p
-        LEFT JOIN fc08000 f
-          ON f.cdfun = p.cdfun
-         AND f.cdcon = p.cdcon
         WHERE p.cdopera = '02'
           AND p.cdfil = ?
           AND NOT EXISTS (
@@ -1621,7 +1610,7 @@ export class DatabaseService {
                 OR (
                   p_ant.data = p.data
                   AND p_ant.hora = p.hora
-                  AND COALESCE(p_ant.cdfun, 0) > COALESCE(p.cdfun, 0)
+                  AND ${cdusuCmp('p_ant', 'p')}
                 )
               )
           )
@@ -1743,8 +1732,8 @@ export class DatabaseService {
     const get = (key: string) =>
       row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
 
-    const codFuncEntrada = get('cod_func_entrada');
-    const codFuncSaida = get('cod_func_saida');
+    const usuarioEntrada = get('usuario_entrada');
+    const usuarioSaida = get('usuario_saida');
     const quantidade = get('quantidade');
     const tempoEtapa = get('tempo_etapa');
 
@@ -1755,16 +1744,14 @@ export class DatabaseService {
       cod_etapa: String(get('cod_etapa') ?? '').trim(),
       etapa: padronizarDescricaoLegado(String(get('etapa') ?? '').trim()),
       posicao_etapa: Number(get('posicao_etapa') ?? 0),
-      cod_func_entrada:
-        codFuncEntrada != null && codFuncEntrada !== ''
-          ? Number(codFuncEntrada)
+      usuario_entrada:
+        usuarioEntrada != null && usuarioEntrada !== ''
+          ? Number(usuarioEntrada)
           : null,
-      func_entrada: this.normalizarCampoTextoFirebird(get('func_entrada')),
-      cod_func_saida:
-        codFuncSaida != null && codFuncSaida !== ''
-          ? Number(codFuncSaida)
+      usuario_saida:
+        usuarioSaida != null && usuarioSaida !== ''
+          ? Number(usuarioSaida)
           : null,
-      func_saida: this.normalizarCampoTextoFirebird(get('func_saida')),
       data_entrada: get('data_entrada')
         ? this.formatDateField(get('data_entrada'))
         : null,

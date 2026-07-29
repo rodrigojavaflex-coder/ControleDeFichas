@@ -141,6 +141,7 @@ export enum Permission {
 
   PRODUCAO_CONFIG_READ = 'producao-config:read',
   PRODUCAO_CONFIG_UPDATE = 'producao-config:update',
+  PRODUCAO_CONFIG_UPDATE_CODIGO_USUARIO_ERP = 'producao-config:update-codigo-usuario-erp',
   PRODUCAO_PRODUTIVIDADE_READ = 'producao-produtividade:read',
   PRODUCAO_PRODUTIVIDADE_READ_ALERTAS = 'producao-produtividade:read-alertas',
 }

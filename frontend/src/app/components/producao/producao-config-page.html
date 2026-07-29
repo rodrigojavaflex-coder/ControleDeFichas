@@ -271,7 +271,7 @@
                         · Cargo: {{ f.cargo || '—' }}
                       </span>
                       <span class="producao-func-meta">
-                        Cód. ERP: {{ f.codigoFuncionarioErp }}
+                        Cód. usuário: {{ f.codigoUsuarioErp ?? '—' }}
                         · {{ f.qtdEtapasConfiguradas }} etapa(s)
                       </span>
                       @if (f.desligado) {
@@ -291,7 +291,7 @@
   }
 
   @if (modalAberto && modalFuncionario) {
-    <div class="producao-modal-overlay" (click)="fecharModal()">
+    <div class="producao-modal-overlay">
       <div
         class="producao-modal-box"
         role="dialog"
@@ -319,6 +319,42 @@
             <p class="producao-modal-help">
               Marque as etapas que este funcionário recebe na produtividade (somente etapas remuneradas na unidade).
             </p>
+
+            <section
+              class="producao-modal-codigo-usuario"
+              aria-labelledby="producao-modal-codigo-usuario-titulo">
+              <h4 id="producao-modal-codigo-usuario-titulo" class="producao-modal-codigo-usuario-titulo">
+                Código usuário ERP
+              </h4>
+              <p class="producao-modal-codigo-usuario-help">
+                Código <strong>cdusu</strong> no ERP, usado para cruzar saídas importadas na produtividade.
+              </p>
+              @if (podeEditarCodigoUsuarioErp()) {
+                <div class="producao-modal-codigo-usuario-field">
+                  <label class="form-label" for="producao-modal-codigo-usuario-input">cdusu</label>
+                  <input
+                    id="producao-modal-codigo-usuario-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="form-control"
+                    [class.input-invalid]="modalCodigoUsuarioErpInvalido()"
+                    [disabled]="modalSalvando"
+                    [ngModel]="modalCodigoUsuarioErpInput"
+                    (ngModelChange)="onModalCodigoUsuarioErpInput($event)"
+                    placeholder="Ex.: 1110" />
+                  @if (modalCodigoUsuarioErpInvalido()) {
+                    <p class="producao-modal-codigo-usuario-erro" role="alert">
+                      Informe um código inteiro maior que zero ou deixe vazio para limpar.
+                    </p>
+                  }
+                </div>
+              } @else {
+                <p class="producao-modal-codigo-usuario-readonly">
+                  {{ formatarCodigoUsuarioErp(modalFuncionario.codigoUsuarioErp) }}
+                </p>
+              }
+            </section>
 
             @if (modalEtapas.length === 0 && !modalGestao?.disponivel) {
               <div class="no-data-inline">
@@ -406,11 +442,11 @@
 
         <footer class="producao-modal-footer">
           <button type="button" class="btn btn-cancelar" (click)="fecharModal()">Cancelar</button>
-          @if (podeEditar()) {
+          @if (podeSalvarModalFuncionario()) {
             <button
               type="button"
               class="btn btn-salvar"
-              [disabled]="modalSalvando || modalCarregando || modalGestaoInvalido()"
+              [disabled]="modalSalvando || modalCarregando || modalGestaoInvalido() || modalCodigoUsuarioErpInvalido()"
               (click)="salvarModalFuncionario()">
               {{ modalSalvando ? 'Salvando…' : 'Salvar' }}
             </button>

@@ -151,6 +151,8 @@ export enum Permission {
   /** Produção — configuração de etapas remuneradas e vínculo por funcionário. */
   PRODUCAO_CONFIG_READ = 'producao-config:read',
   PRODUCAO_CONFIG_UPDATE = 'producao-config:update',
+  /** Produção — alterar codigoUsuarioErp (cdusu) no modal de etapas do funcionário. */
+  PRODUCAO_CONFIG_UPDATE_CODIGO_USUARIO_ERP = 'producao-config:update-codigo-usuario-erp',
   /** Produção — consulta de produtividade (contabilização por etapas). */
   PRODUCAO_PRODUTIVIDADE_READ = 'producao-produtividade:read',
   /** Produção — visualizar alertas da consulta de produtividade. */
@@ -443,6 +445,10 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.PRODUCAO_CONFIG_UPDATE,
       label: 'Editar configuração de produção (etapas remuneradas)',
+    },
+    {
+      key: Permission.PRODUCAO_CONFIG_UPDATE_CODIGO_USUARIO_ERP,
+      label: 'Atualizar código usuário ERP (cdusu) na config de produção',
     },
   ],
   'Produção — Produtividade': [

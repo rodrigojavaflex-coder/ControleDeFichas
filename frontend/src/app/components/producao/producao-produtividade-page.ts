@@ -298,6 +298,10 @@ export class ProducaoProdutividadePage implements OnInit {
 
   totalColunaEtapa(codEtapa: string): number {
     if (!this.resultado) return 0;
+    const api = this.resultado.totaisColunaEtapas?.find(
+      (t) => t.codEtapa === codEtapa,
+    );
+    if (api) return api.quantidade;
     return this.resultado.funcionarios.reduce((acc, f) => {
       const qtd = this.quantidadeCelula(f, codEtapa);
       return acc + (qtd ?? 0);
@@ -331,10 +335,10 @@ export class ProducaoProdutividadePage implements OnInit {
   }
 
   formatarCodigosErp(f: ProdutividadeFuncionarioRow): string {
-    if (f.codigosFuncionarioErp?.length) {
-      return f.codigosFuncionarioErp.join(' / ');
+    if (f.codigosUsuarioErp?.length) {
+      return f.codigosUsuarioErp.join(' / ');
     }
-    return String(f.codigoFuncionarioErp);
+    return String(f.codigoUsuarioErp);
   }
 
   formatarUnidadesAviso(item: {
@@ -421,13 +425,8 @@ export class ProducaoProdutividadePage implements OnInit {
     const permitidas = this.resolverUnidadesPermitidasUsuario();
     if (permitidas) {
       this.unidades = permitidas;
-      if (permitidas.length === 1) {
-        this.selectedUnidades = new Set(permitidas);
-        this.unidadeDisabled = true;
-      } else {
-        this.selectedUnidades = new Set(permitidas);
-        this.unidadeDisabled = false;
-      }
+      this.selectedUnidades = new Set(permitidas);
+      this.unidadeDisabled = true;
       return;
     }
 
@@ -436,17 +435,13 @@ export class ProducaoProdutividadePage implements OnInit {
     this.unidadeDisabled = false;
   }
 
-  /** Escopo de produtividade conforme cadastro (`unidadesProdutividade`). */
+  /** Filtro na tela: só a unidade de cadastro quando o usuário tem vínculo. */
   private resolverUnidadesPermitidasUsuario(): Unidade[] | null {
     const u = this.auth.getCurrentUser();
     if (!u?.unidade || String(u.unidade).trim() === '') {
       return null;
     }
-    const extras = (u.unidadesProdutividade ?? []).filter(Boolean) as Unidade[];
-    if (!extras.length) {
-      return [u.unidade as Unidade];
-    }
-    return [...new Set(extras)].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return [u.unidade as Unidade];
   }
 
   private inicializarAnosOpcoes(): void {
@@ -520,6 +515,11 @@ export class ProducaoProdutividadePage implements OnInit {
     res: ProdutividadeConsultaResponse,
   ): ProdutividadeColunaEtapa[] {
     const map = new Map<string, string>();
+    for (const total of res.totaisColunaEtapas ?? []) {
+      if (!map.has(total.codEtapa)) {
+        map.set(total.codEtapa, total.etapa);
+      }
+    }
     for (const funcionario of res.funcionarios) {
       for (const etapa of funcionario.etapas) {
         if (!map.has(etapa.codEtapa)) {

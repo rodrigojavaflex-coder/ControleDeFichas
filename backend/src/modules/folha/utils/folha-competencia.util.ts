@@ -90,6 +90,27 @@ export function funcionarioElegivelNovaCapaNaCompetencia(
   }
 }
 
+/**
+ * Produtividade (RN-PCP-005): exibe funcionário na competência do período consultado
+ * quando não há demissão ou o mês/ano da demissão é **≥** mês/ano de `dataInicio`
+ * (ex.: demissão 30/06/2026 não aparece em consulta com início em 01/07/2026).
+ */
+export function funcionarioElegivelProdutividadeNoPeriodo(
+  f: Pick<FolhaCadastroDatasParaElegibilidade, 'dataDemissao'>,
+  dataInicio: string,
+): boolean {
+  if (!f.dataDemissao) return true;
+  const demIso = normalizarDataCadastroParaIso(f.dataDemissao);
+  if (!demIso) return true;
+  try {
+    const demIndice = periodoApartirDaDataIso(demIso);
+    const alvoIndice = periodoApartirDaDataIso(dataInicio);
+    return demIndice >= alvoIndice;
+  } catch {
+    return false;
+  }
+}
+
 /** Espera string de data ISO YYYY-MM-DD (ou com hora ISO). */
 export function periodoApartirDaDataIso(isoDate: string): number {
   const dia = isoDate.includes('T')

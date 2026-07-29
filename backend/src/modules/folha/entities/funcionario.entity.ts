@@ -23,11 +23,11 @@ export class Funcionario extends BaseEntity {
 
   @ApiProperty({
     required: false,
-    description: 'Código do funcionário no ERP/PCP (cdfun) para produtividade.',
-    example: 42,
+    description: 'Código de usuário no ERP (cdusu) para produtividade.',
+    example: 1110,
   })
   @Column({ type: 'integer', nullable: true })
-  codigoFuncionarioErp?: number | null;
+  codigoUsuarioErp?: number | null;
 
   @ApiProperty({ required: false })
   @Column({ type: 'varchar', length: 14, nullable: true })
