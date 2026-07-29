@@ -48,10 +48,11 @@
 - **Ao clicar em Carregar** com lote **aberto**, a API retorna a lista das **`folha_capa`** da tripleta **unidade + competência + tipo**: para cada **funcionário elegível** que **ainda não** tenha capa, **criar** a capa; capas já existentes são **obtidas** e retornadas (unicidade RN-001). Endpoint canônico: **`POST …/folha/capas/carregar-competencia`**. O caminho **`POST …/folha/capas/carregar-mensal`** permanece como **alias** com o mesmo corpo (legado).
 - **Ao clicar em Carregar** com lote **fechado**, a UI chama **`GET …/folha/capas?comDetalhe=true`** (somente leitura; **não** cria capas). Botões de **incluir**, **editar**, **congelar**, **liberar**, **remover** (item) e **Excluir** (capa) ficam **ocultos**; **Recibo** e **Enviar recibo** permanecem disponíveis após expandir uma capa (RN-015).
 - Na **primeira criação** de cada `folha_capa`, a API inclui automaticamente os **`folha_item`** previstos nos **eventos fixos** do cadastro do funcionário (**RN-013**), respeitando a unicidade de verba por capa (**RN-002**) e ignorando verbas **inativas**.
-- **Elegibilidade para incluir um funcionário nesse processamento** (índice de competência = **ano×12+mês** da competência alvo, idem para datas de admissão/demissão a partir do ISO **YYYY-MM-DD**):
+- **Elegibilidade para incluir um funcionário nesse processamento** (índice de competência = **ano×12+mês** da competência alvo, idem para datas de admissão/demissão a partir do ISO **YYYY-MM-DD**); validação centralizada em `avaliarElegibilidadeNovaCapaNaCompetencia` / `mensagemErroNovaCapaNaCompetencia` (API ao criar capa):
   - funcionário **ativo**;
+  - **`participaFolhaPagamento = true`** (default no cadastro; quando **false**, o funcionário permanece no cadastro e na **produção**, mas **não** entra no Carregar nem em `POST …/folha/capas` para **nova** capa);
   - **mês/ano da data de admissão ≤ mês/ano da competência**;
-  - se houver **data de demissão**: **mês/ano da demissão > mês/ano da competência** (a competência deve ser **estritamente anterior** ao mês/ano da demissão; o **mês da demissão** não recebe nova capa).
+  - se houver **data de demissão**: **mês/ano da competência &lt; mês/ano da demissão** (a competência deve ser **estritamente anterior** ao mês/ano da demissão; o **mês da demissão** não recebe nova capa).
 - **`GET …/folha/funcionarios/lancamento`** com **`ano`** e **`mes`** devolve apenas funcionários que atendem **estes mesmos critérios** (útil para integrações e consistência com o carregamento em lote).
 - O campo **`folhaMensal`** em **`folha_tipo`** pode permanecer no cadastro como **metadado**; **não** restringe mais o uso de **`carregar-competencia`** na API.
 - **`POST …/folha/capas`** com um **`funcionarioId`** segue disponível para **obter ou criar** a capa de **um** funcionário, sujeito às mesmas validações de elegibilidade e de lote (RN-005, RN-006).
@@ -102,6 +103,7 @@
 ### RN-013 — Eventos fixos do funcionário
 
 - O cadastro do funcionário (**`POST` / `PATCH …/folha/funcionarios`**) pode enviar opcionalmente **`eventosFixos`**: lista de objetos **`folhaVerbaId`**, **`quantidade`** (referência, &gt; 0; padrão 1 na API quando omitida) e **`valor`**. Os dados ficam na tabela **`folha_funcionario_evento_fixo`**, **uma linha por verba** por funcionário (única combinação funcionário + verba).
+- Campo **`participaFolhaPagamento`** (default **true**): quando **false**, não gera **nova** capa via RN-011; **não** impede configuração de etapas de produção (**RN-PCP-003**).
 - Em **`PATCH`**, se **`eventosFixos`** vier no JSON, substitui **todo** o conjunto (**lista vazia** remove todos os eventos fixos). Se **`eventosFixos`** não for enviada, os eventos fixos **permanecem** como estão.
 - Somente **`folha_verba` ativa** aceita inclusão/atualização na lista (`400` caso contrário).
 - Ao **criar pela primeira vez** a **`folha_capa`** (fluxo **`obterOuCriar`** — inclusive **`carregar-competencia`**), a replicação para **`folha_item`** usa **valor e quantidade** salvos nos eventos fixos; não cria segunda linha se já existir item da mesma verba na capa; **verbas inativas** cadastradas no fixo antes de inativação são **ignoradas** na cópia.

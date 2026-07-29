@@ -27,10 +27,9 @@ import { UpdateFuncionarioFolhaDto } from './dto/update-funcionario-folha.dto';
 import { FindFuncionariosLancamentoFolhaDto } from './dto/find-funcionarios-lancamento-folha.dto';
 import { FuncionarioEventoFixoLinhaDto } from './dto/funcionario-evento-fixo-linha.dto';
 import {
-  competenciaParaIndice,
   nomeMesPt,
-  periodoApartirDaDataIso,
   funcionarioElegivelNovaCapaNaCompetencia,
+  mensagemErroNovaCapaNaCompetencia,
   normalizarDataCadastroParaIso,
 } from './utils/folha-competencia.util';
 import { Unidade } from '../../common/enums/unidade.enum';
@@ -80,6 +79,7 @@ export class FolhaFuncionariosService {
       cargo: dto.cargoId ? ({ id: dto.cargoId } as FolhaCargo) : null,
       setor: dto.setorId ? ({ id: dto.setorId } as FolhaSetor) : null,
       ativo: dto.ativo ?? true,
+      participaFolhaPagamento: dto.participaFolhaPagamento ?? true,
       naoReceberReciboWhatsapp: dto.naoReceberReciboWhatsapp ?? false,
       tipoPix: dto.tipoPix ?? null,
       chavePix: dto.chavePix?.trim() ? dto.chavePix.trim() : null,
@@ -419,45 +419,9 @@ export class FolhaFuncionariosService {
     ano: number,
     mes: number,
   ): void {
-    if (!funcionario.ativo) {
-      throw new BadRequestException(
-        'Funcionário inativo não pode ter nova folha nesta competência.',
-      );
-    }
-    const daNorm = normalizarDataCadastroParaIso(funcionario.dataAdmissao);
-    if (!daNorm) {
-      throw new BadRequestException(
-        'Data de admissão obrigatória para lançamento de folha.',
-      );
-    }
-    let alvoIndice: number;
-    try {
-      alvoIndice = competenciaParaIndice(ano, mes);
-      const ia = periodoApartirDaDataIso(daNorm);
-      if (ia > alvoIndice) {
-        throw new BadRequestException(
-          'A competência é anterior ao mês/ano de admissão do funcionário. Não é permitido novo lançamento.',
-        );
-      }
-      if (funcionario.dataDemissao) {
-        const demIso = normalizarDataCadastroParaIso(funcionario.dataDemissao);
-        if (!demIso) {
-          throw new BadRequestException(
-            'Não foi possível validar a data de demissão para esta competência.',
-          );
-        }
-        const dem = periodoApartirDaDataIso(demIso);
-        if (alvoIndice >= dem) {
-          throw new BadRequestException(
-            'Este funcionário possui demissão neste mês ou em mês anterior à competência. Não é permitido novo lançamento.',
-          );
-        }
-      }
-    } catch (e) {
-      if (e instanceof BadRequestException) throw e;
-      throw new BadRequestException(
-        'Não foi possível validar datas de admissão/demissão para esta competência.',
-      );
+    const msg = mensagemErroNovaCapaNaCompetencia(funcionario, ano, mes);
+    if (!funcionarioElegivelNovaCapaNaCompetencia(funcionario, ano, mes)) {
+      throw new BadRequestException(msg);
     }
   }
 

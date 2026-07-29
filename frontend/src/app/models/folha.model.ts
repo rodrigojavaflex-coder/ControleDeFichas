@@ -39,6 +39,8 @@ export interface FuncionarioFolha {
   cargo?: FolhaCadastroSimples | null;
   setor?: FolhaCadastroSimples | null;
   ativo: boolean;
+  /** RN-011: false = só produção (etapas), sem Carregar folha. */
+  participaFolhaPagamento?: boolean;
   /** Opt-out de recibo de folha por WhatsApp (RN-015). */
   naoReceberReciboWhatsapp?: boolean;
   tipoPix?: TipoChavePixFolha | null;

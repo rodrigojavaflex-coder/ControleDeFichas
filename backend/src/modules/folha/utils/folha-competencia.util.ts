@@ -58,36 +58,133 @@ export function normalizarDataCadastroParaIso(val: unknown): string | null {
 /** Dados do cadastro mínimos para elegibilidade de nova capa (RN-011 / RN-005). */
 export type FolhaCadastroDatasParaElegibilidade = {
   ativo: boolean;
+  participaFolhaPagamento?: boolean;
   dataAdmissao?: unknown;
   dataDemissao?: unknown;
 };
 
+export enum FolhaMotivoInelegivelNovaCapa {
+  ELEGIVEL = 'ELEGIVEL',
+  INATIVO = 'INATIVO',
+  NAO_PARTICIPA_FOLHA = 'NAO_PARTICIPA_FOLHA',
+  ADMISSAO_AUSENTE = 'ADMISSAO_AUSENTE',
+  ADMISSAO_POSTERIOR = 'ADMISSAO_POSTERIOR',
+  DEMISSAO_NA_COMPETENCIA_OU_POSTERIOR = 'DEMISSAO_NA_COMPETENCIA_OU_POSTERIOR',
+  DEMISSAO_INVALIDA = 'DEMISSAO_INVALIDA',
+  ERRO_DATAS = 'ERRO_DATAS',
+}
+
+export type FolhaAvaliacaoElegibilidadeNovaCapa = {
+  elegivel: boolean;
+  motivo: FolhaMotivoInelegivelNovaCapa;
+};
+
+function participaFolhaPagamentoEfetivo(f: FolhaCadastroDatasParaElegibilidade): boolean {
+  return f.participaFolhaPagamento !== false;
+}
+
 /**
- * Critérios para **criar/listar capa** na competência (RN-011):
- * - funcionário **ativo**
- * - **admissão** com índice (ano×12+mês) **≤ competência**
- * - se houver **demissão**, índice da competência deve ser **menor** que o índice (mês/ano) da demissão.
+ * Avalia critérios para **criar/listar capa** na competência (RN-011 / RN-005).
  */
+export function avaliarElegibilidadeNovaCapaNaCompetencia(
+  f: FolhaCadastroDatasParaElegibilidade,
+  ano: number,
+  mes: number,
+): FolhaAvaliacaoElegibilidadeNovaCapa {
+  if (!f.ativo) {
+    return { elegivel: false, motivo: FolhaMotivoInelegivelNovaCapa.INATIVO };
+  }
+  if (!participaFolhaPagamentoEfetivo(f)) {
+    return {
+      elegivel: false,
+      motivo: FolhaMotivoInelegivelNovaCapa.NAO_PARTICIPA_FOLHA,
+    };
+  }
+  const da = normalizarDataCadastroParaIso(f.dataAdmissao);
+  if (!da) {
+    return {
+      elegivel: false,
+      motivo: FolhaMotivoInelegivelNovaCapa.ADMISSAO_AUSENTE,
+    };
+  }
+  const alvoIndice = competenciaParaIndice(ano, mes);
+  try {
+    const ia = periodoApartirDaDataIso(da);
+    if (ia > alvoIndice) {
+      return {
+        elegivel: false,
+        motivo: FolhaMotivoInelegivelNovaCapa.ADMISSAO_POSTERIOR,
+      };
+    }
+    if (!f.dataDemissao) {
+      return { elegivel: true, motivo: FolhaMotivoInelegivelNovaCapa.ELEGIVEL };
+    }
+    const demIso = normalizarDataCadastroParaIso(f.dataDemissao);
+    if (!demIso) {
+      return {
+        elegivel: false,
+        motivo: FolhaMotivoInelegivelNovaCapa.DEMISSAO_INVALIDA,
+      };
+    }
+    const dem = periodoApartirDaDataIso(demIso);
+    if (alvoIndice >= dem) {
+      return {
+        elegivel: false,
+        motivo: FolhaMotivoInelegivelNovaCapa.DEMISSAO_NA_COMPETENCIA_OU_POSTERIOR,
+      };
+    }
+    return { elegivel: true, motivo: FolhaMotivoInelegivelNovaCapa.ELEGIVEL };
+  } catch {
+    return { elegivel: false, motivo: FolhaMotivoInelegivelNovaCapa.ERRO_DATAS };
+  }
+}
+
 export function funcionarioElegivelNovaCapaNaCompetencia(
   f: FolhaCadastroDatasParaElegibilidade,
   ano: number,
   mes: number,
 ): boolean {
-  if (!f.ativo) return false;
-  const da = normalizarDataCadastroParaIso(f.dataAdmissao);
-  if (!da) return false;
-  const alvoIndice = competenciaParaIndice(ano, mes);
-  try {
-    const ia = periodoApartirDaDataIso(da);
-    if (ia > alvoIndice) return false;
-    if (!f.dataDemissao) return true;
-    const demIso = normalizarDataCadastroParaIso(f.dataDemissao);
-    if (!demIso) return false;
-    const dem = periodoApartirDaDataIso(demIso);
-    return alvoIndice < dem;
-  } catch {
-    return false;
+  return avaliarElegibilidadeNovaCapaNaCompetencia(f, ano, mes).elegivel;
+}
+
+const MENSAGENS_INELEGIVEL: Record<
+  Exclude<FolhaMotivoInelegivelNovaCapa, FolhaMotivoInelegivelNovaCapa.ELEGIVEL>,
+  string
+> = {
+  [FolhaMotivoInelegivelNovaCapa.INATIVO]:
+    'Funcionário inativo não pode ter nova folha nesta competência.',
+  [FolhaMotivoInelegivelNovaCapa.NAO_PARTICIPA_FOLHA]:
+    'Funcionário marcado como não participante da folha de pagamento. Não é permitido novo lançamento.',
+  [FolhaMotivoInelegivelNovaCapa.ADMISSAO_AUSENTE]:
+    'Data de admissão obrigatória para lançamento de folha.',
+  [FolhaMotivoInelegivelNovaCapa.ADMISSAO_POSTERIOR]:
+    'A competência é anterior ao mês/ano de admissão do funcionário. Não é permitido novo lançamento.',
+  [FolhaMotivoInelegivelNovaCapa.DEMISSAO_NA_COMPETENCIA_OU_POSTERIOR]:
+    'A competência é igual ou posterior ao mês/ano da demissão. Não é permitido novo lançamento.',
+  [FolhaMotivoInelegivelNovaCapa.DEMISSAO_INVALIDA]:
+    'Não foi possível validar a data de demissão para esta competência.',
+  [FolhaMotivoInelegivelNovaCapa.ERRO_DATAS]:
+    'Não foi possível validar datas de admissão/demissão para esta competência.',
+};
+
+/** Mensagem funcional para API ao bloquear criação de `folha_capa`. */
+export function mensagemErroNovaCapaNaCompetencia(
+  f: FolhaCadastroDatasParaElegibilidade,
+  ano: number,
+  mes: number,
+): string {
+  const { elegivel, motivo } = avaliarElegibilidadeNovaCapaNaCompetencia(
+    f,
+    ano,
+    mes,
+  );
+  if (elegivel) {
+    return 'Funcionário elegível para nova folha nesta competência.';
   }
+  if (motivo === FolhaMotivoInelegivelNovaCapa.ELEGIVEL) {
+    return MENSAGENS_INELEGIVEL[FolhaMotivoInelegivelNovaCapa.ERRO_DATAS];
+  }
+  return MENSAGENS_INELEGIVEL[motivo];
 }
 
 /**

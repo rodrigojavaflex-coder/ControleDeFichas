@@ -40,6 +40,7 @@ interface FolhaFuncFormValue {
   codigoUsuarioErp: string | number;
   ativo: boolean;
   naoReceberReciboWhatsapp: boolean;
+  participaFolhaPagamento: boolean;
   tipoPix: TipoChavePixFolha | null;
   chavePix: string;
 }
@@ -146,6 +147,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           ],
         ],
         ativo: [true],
+        participaFolhaPagamento: [true],
         naoReceberReciboWhatsapp: [false],
         cpf: ['', [Validators.maxLength(14)]],
         tipoPix: [null as TipoChavePixFolha | null],
@@ -753,6 +755,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           cargoId: f.cargo?.id ?? f.cargoId ?? null,
           setorId: f.setor?.id ?? f.setorId ?? null,
           ativo: f.ativo ?? true,
+          participaFolhaPagamento: f.participaFolhaPagamento ?? true,
           naoReceberReciboWhatsapp: f.naoReceberReciboWhatsapp ?? false,
           tipoPix: tipo,
           chavePix: f.chavePix ?? '',
@@ -774,6 +777,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       nome: v.nome.trim(),
       unidade: v.unidade,
       ativo: v.ativo !== false,
+      participaFolhaPagamento: v.participaFolhaPagamento !== false,
       naoReceberReciboWhatsapp: v.naoReceberReciboWhatsapp === true,
       dataNascimento: (v.dataNascimento || '').trim(),
       dataAdmissao: (v.dataAdmissao || '').trim(),

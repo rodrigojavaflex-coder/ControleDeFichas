@@ -86,6 +86,14 @@ export class Funcionario extends BaseEntity {
   ativo: boolean;
 
   @ApiProperty({
+    default: true,
+    description:
+      'Quando false, o funcionário não entra no Carregar da folha (RN-011); produção usa codigoUsuarioErp.',
+  })
+  @Column({ default: true })
+  participaFolhaPagamento: boolean;
+
+  @ApiProperty({
     default: false,
     description:
       'Quando true, bloqueia envio de recibo de folha por WhatsApp (individual e em massa, RN-015).',

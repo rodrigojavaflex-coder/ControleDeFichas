@@ -206,6 +206,23 @@
 
         <div class="form-row form-row-2">
           <div class="form-group">
+            <label class="form-label" for="ff-participa-folha">Participa da folha de pagamento</label>
+            <select
+              id="ff-participa-folha"
+              class="form-control"
+              formControlName="participaFolhaPagamento"
+            >
+              <option [ngValue]="true">Sim</option>
+              <option [ngValue]="false">Não</option>
+            </select>
+            <div class="form-help">
+              Desmarque para quem só entra na produção (etapas). Exige código usuário ERP na config de produção.
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row form-row-2">
+          <div class="form-group">
             <label class="form-label" for="ff-tipo-pix">Tipo do Pix</label>
             <select
               id="ff-tipo-pix"

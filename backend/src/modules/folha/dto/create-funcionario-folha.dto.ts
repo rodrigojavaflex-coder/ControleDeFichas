@@ -113,6 +113,16 @@ export class CreateFuncionarioFolhaDto {
   ativo?: boolean;
 
   @ApiPropertyOptional({
+    default: true,
+    description:
+      'Quando false, não entra no Carregar da folha (RN-011); produção inalterada.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  participaFolhaPagamento?: boolean;
+
+  @ApiPropertyOptional({
     default: false,
     description:
       'Quando true, o funcionário não recebe recibo de folha por WhatsApp (RN-015).',
