@@ -485,6 +485,7 @@ Responder formalmente antes de alterar importação ou fechamento oficial:
 - Itens: `{unidade}-{codigo_terminal}-{data_operacao}-{id_operacao}-{numero_cupom}-{sequencia_item}`.
 - Requisições pagas: `{unidade}-{numero_requisicao}-{numero_cupom}-{data_pagamento}`.
 - Reimportar o mesmo dia **sempre atualiza** registros existentes (upsert por `chave_erp`); não duplica linhas.
+- **Sync do período importado:** após buscar pagamentos, itens e requisições no agente, o backend **remove** de `caixa_pagamentos_erp`, `caixa_itens_erp` e `caixa_requisicoes_pagas` os registros da `(unidade, data)` do segmento cuja `chave_erp` **não** veio no snapshot (ex.: movimento excluído e recriado no ERP com novo cupom/`operid`). Em seguida faz upsert das linhas retornadas. **Não** altera baixas de terceiro.
 - **`caixa_requisicoes_pagas`:** orçamento (`NRORC`), qtd/valor de fórmulas e prescritor usam **fallback agregado** em `FC12100` por requisição (prioriza série `0`, depois outras fórmulas e requisição-fonte `NRRQUFON`). Considera apenas `NRORC > 0`. **Não altera** `valor_pago_requisicao` nem totais de `caixa_pagamentos_erp`.
 
 ### RN-CXA-004 — Valor líquido e formas de pagamento (ERP)

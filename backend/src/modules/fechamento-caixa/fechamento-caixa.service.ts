@@ -358,9 +358,28 @@ export class FechamentoCaixaService {
       requisicoes: AgenteCaixaRequisicaoRow[];
     }>(agente, '/api/v1/caixa/requisicoes-pagas', body, 'requisicoes-pagas');
 
-    const qtdPagamentos = pagamentosResp.pagamentos?.length ?? 0;
-    const qtdItens = itensResp.itens?.length ?? 0;
-    const qtdRequisicoes = requisicoesResp.requisicoes?.length ?? 0;
+    const pagamentosRows = pagamentosResp.pagamentos ?? [];
+    const itensRows = itensResp.itens ?? [];
+    const requisicoesRows = requisicoesResp.requisicoes ?? [];
+
+    const qtdPagamentos = pagamentosRows.length;
+    const qtdItens = itensRows.length;
+    const qtdRequisicoes = requisicoesRows.length;
+
+    this.importacaoProgressService.atualizar({
+      fase: 'gravando_postgres',
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: sincronizando snapshot ERP (${dataInicio}..${dataFim})...`,
+      percentual: pctBase + Math.round(pctSlice * 0.4),
+    });
+
+    await this.removerCaixaErpAusentesNoAgente(
+      unidade,
+      dataInicio,
+      dataFim,
+      pagamentosRows,
+      itensRows,
+      requisicoesRows,
+    );
 
     this.importacaoProgressService.atualizar({
       fase: 'gravando_postgres',
@@ -369,12 +388,12 @@ export class FechamentoCaixaService {
     });
 
     const pagamentosStats = await this.upsertPagamentos(
-      pagamentosResp.pagamentos ?? [],
+      pagamentosRows,
       unidade,
       true,
     );
 
-    const pagamentoChaves = (pagamentosResp.pagamentos ?? []).map((p) =>
+    const pagamentoChaves = pagamentosRows.map((p) =>
       this.buildChavePagamento(unidade, p),
     );
     const pagamentoMap = await this.carregarMapaPagamentos(pagamentoChaves);
@@ -386,7 +405,7 @@ export class FechamentoCaixaService {
     });
 
     const itensStats = await this.upsertItens(
-      itensResp.itens ?? [],
+      itensRows,
       unidade,
       dataInicio,
       dataFim,
@@ -401,7 +420,7 @@ export class FechamentoCaixaService {
     });
 
     const requisicoesStats = await this.upsertRequisicoes(
-      requisicoesResp.requisicoes ?? [],
+      requisicoesRows,
       unidade,
       true,
     );
@@ -1304,6 +1323,92 @@ export class FechamentoCaixaService {
       0,
     );
     return Math.round(total * 100) / 100;
+  }
+
+  /**
+   * Remove do PostgreSQL registros ERP do período que não constam no snapshot
+   * retornado pelo agente (ex.: requisição excluída e baixada de novo no ERP).
+   */
+  private async removerCaixaErpAusentesNoAgente(
+    unidade: Unidade,
+    dataInicio: string,
+    dataFim: string,
+    pagamentosRows: AgenteCaixaPagamentoRow[],
+    itensRows: AgenteCaixaItemRow[],
+    requisicoesRows: AgenteCaixaRequisicaoRow[],
+  ): Promise<void> {
+    const chavesPagamentos = [
+      ...new Set(
+        pagamentosRows.map((r) => this.buildChavePagamento(unidade, r)),
+      ),
+    ];
+    const chavesItens = [
+      ...new Set(itensRows.map((r) => this.buildChaveItem(unidade, r))),
+    ];
+    const chavesRequisicoes = [
+      ...new Set(
+        requisicoesRows.map((r) => this.buildChaveRequisicao(unidade, r)),
+      ),
+    ];
+
+    const itensRemovidos = await this.excluirCaixaErpPorPeriodoExcetoChaves(
+      this.itemRepo,
+      'data_operacao',
+      unidade,
+      dataInicio,
+      dataFim,
+      chavesItens,
+    );
+    const pagamentosRemovidos = await this.excluirCaixaErpPorPeriodoExcetoChaves(
+      this.pagamentoRepo,
+      'data_operacao',
+      unidade,
+      dataInicio,
+      dataFim,
+      chavesPagamentos,
+    );
+    const requisicoesRemovidas =
+      await this.excluirCaixaErpPorPeriodoExcetoChaves(
+        this.requisicaoRepo,
+        'data_pagamento',
+        unidade,
+        dataInicio,
+        dataFim,
+        chavesRequisicoes,
+      );
+
+    const total =
+      itensRemovidos + pagamentosRemovidos + requisicoesRemovidas;
+    if (total > 0) {
+      this.logger.log(
+        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: removidos ${pagamentosRemovidos} pagamento(s), ${itensRemovidos} item(ns), ${requisicoesRemovidas} requisição(ões) ausentes no agente`,
+      );
+    }
+  }
+
+  private async excluirCaixaErpPorPeriodoExcetoChaves(
+    repo: Repository<CaixaItemErp | CaixaPagamentoErp | CaixaRequisicaoPaga>,
+    colunaData: 'data_operacao' | 'data_pagamento',
+    unidade: Unidade,
+    dataInicio: string,
+    dataFim: string,
+    chavesManter: string[],
+  ): Promise<number> {
+    const qb = repo
+      .createQueryBuilder()
+      .delete()
+      .where('unidade = :unidade', { unidade })
+      .andWhere(`${colunaData} BETWEEN :dataInicio AND :dataFim`, {
+        dataInicio,
+        dataFim,
+      });
+
+    if (chavesManter.length > 0) {
+      qb.andWhere('chave_erp NOT IN (:...chavesManter)', { chavesManter });
+    }
+
+    const result = await qb.execute();
+    return result.affected ?? 0;
   }
 
   private buildChavePagamento(

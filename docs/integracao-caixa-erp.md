@@ -365,7 +365,7 @@ Backend chama o agente **somente quando o operador clica no botão** (não job a
 4. Recalcular view `caixa_fechamento_dia`
 5. Atualizar `orcamentos.status` → **BAIXADO** quando `nrorc` existir em `caixa_requisicoes_pagas`
 
-Registros que **sumiram** no Firebird após rebusca: tratar com política explícita (soft-delete `ativo=false` ou manter histórico) — definir na implementação.
+Registros que **sumiram** no Firebird após rebusca: **removidos** do PostgreSQL no sync do segmento importado (período + unidade), desde que não constem no snapshot retornado pelo agente na mesma importação.
 
 ---
 
