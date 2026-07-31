@@ -76,3 +76,45 @@ export function dividirPeriodoEmSegmentosMensais(
 
   return segmentos;
 }
+
+/** Divide intervalo ISO em blocos de até `tamanhoDias` (evita timeout HTTP/Cloudflare no agente). */
+export function dividirPeriodoEmSegmentosPorDias(
+  inicio: string,
+  fim: string,
+  tamanhoDias: number,
+): Array<{ inicio: string; fim: string }> {
+  if (
+    !ISO_DATE_REGEX.test(inicio) ||
+    !ISO_DATE_REGEX.test(fim) ||
+    inicio > fim ||
+    tamanhoDias < 1
+  ) {
+    return [];
+  }
+
+  const segmentos: Array<{ inicio: string; fim: string }> = [];
+  let cursor = inicio;
+
+  while (cursor <= fim) {
+    const [year, month, day] = cursor.split('-').map(Number);
+    const fimBloco = new Date(
+      Date.UTC(year, month - 1, day + tamanhoDias - 1),
+    )
+      .toISOString()
+      .slice(0, 10);
+    const fimSegmento = fimBloco < fim ? fimBloco : fim;
+    segmentos.push({ inicio: cursor, fim: fimSegmento });
+
+    if (fimSegmento >= fim) {
+      break;
+    }
+
+    const proximo = proximoDiaIso(fimSegmento);
+    if (!proximo) {
+      break;
+    }
+    cursor = proximo;
+  }
+
+  return segmentos;
+}

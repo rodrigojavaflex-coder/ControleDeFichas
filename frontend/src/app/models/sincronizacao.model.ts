@@ -44,6 +44,8 @@ export interface SincronizacaoResult {
   producaoEtapasProcessados: number;
   producaoEtapasCriados: number;
   producaoEtapasAtualizados: number;
+  producaoEtapasFormulasExcluidas: number;
+  producaoEtapasRemovidas: number;
   erros: string[];
 }
 

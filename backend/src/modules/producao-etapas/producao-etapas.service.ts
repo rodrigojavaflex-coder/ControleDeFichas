@@ -39,12 +39,32 @@ export interface AgenteProducaoEtapa {
   nome_prescritor?: string | null;
   data_retirada?: string | null;
   hora_retirada?: string | null;
+  em_andamento_fila?: boolean;
+  usuario_entrada_fila?: number | null;
+  data_entrada_fila?: string | null;
+  hora_entrada_fila?: string | null;
 }
 
 export interface ProducaoEtapasSyncResult {
   processados: number;
   criados: number;
   atualizados: number;
+}
+
+export interface AgenteProducaoExclusaoReceita {
+  filial: number;
+  requisicao: number;
+  formula: string;
+  data_exclusao: string;
+  hora_exclusao?: string | null;
+  cdusu?: number | null;
+  motivo?: string | null;
+  evento: string;
+}
+
+export interface ProducaoEtapasExclusaoResult {
+  formulasProcessadas: number;
+  linhasRemovidas: number;
 }
 
 export type ProducaoEtapasProgressCallback = (
@@ -96,7 +116,7 @@ export class ProducaoEtapasService {
     end: string,
     agente: string,
   ): Promise<AgenteProducaoEtapa[]> {
-    return this.postAgente(url, token, agente, {
+    return this.postAgenteEtapas(url, token, agente, {
       unit,
       start,
       end,
@@ -110,10 +130,111 @@ export class ProducaoEtapasService {
     dataMinimaMovimento: string,
     agente: string,
   ): Promise<AgenteProducaoEtapa[]> {
-    return this.postAgente(url, token, agente, {
+    return this.postAgenteEtapas(url, token, agente, {
       unit,
       dataMinimaMovimento,
     });
+  }
+
+  async buscarExclusoesReceitasDoAgente(
+    url: string,
+    token: string,
+    unit: number,
+    start: string,
+    end: string,
+    agente: string,
+  ): Promise<AgenteProducaoExclusaoReceita[]> {
+    const urlCompleta = `${url}/api/v1/producao/exclusoes-receitas`;
+    this.logger.log(
+      `[${agente}] Consultando exclusões RECEITAS: ${urlCompleta} (${start}..${end}, unit=${unit})`,
+    );
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+    try {
+      const response = await fetch(urlCompleta, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ unit, start, end }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Erro ao buscar exclusões do agente: ${response.status} - ${errorText}`,
+        );
+      }
+
+      const data = (await response.json()) as {
+        exclusoes?: AgenteProducaoExclusaoReceita[];
+      };
+      const exclusoes = data.exclusoes ?? [];
+      this.logger.log(
+        `[${agente}] Agente retornou ${exclusoes.length} exclusão(ões) confirmada(s) (FC12100 ausente)`,
+      );
+      return exclusoes;
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Timeout ao buscar exclusões do agente');
+      }
+      throw error;
+    }
+  }
+
+  /** RN-PCP-008: remove todas as etapas da fórmula excluída no ERP (sem histórico local). */
+  async aplicarExclusoesFormulas(
+    unidade: Unidade,
+    exclusoes: AgenteProducaoExclusaoReceita[],
+    agente: string,
+  ): Promise<ProducaoEtapasExclusaoResult> {
+    const resultado: ProducaoEtapasExclusaoResult = {
+      formulasProcessadas: 0,
+      linhasRemovidas: 0,
+    };
+
+    const vistos = new Set<string>();
+    for (const item of exclusoes) {
+      const formula = this.normalizarFormulaImportacao(String(item.formula ?? ''));
+      const key = `${Number(item.filial)}|${Number(item.requisicao)}|${formula}`;
+      if (vistos.has(key)) {
+        continue;
+      }
+      vistos.add(key);
+      resultado.formulasProcessadas += 1;
+
+      const deleteResult = await this.etapaRepository.delete({
+        unidade,
+        filial: Number(item.filial),
+        requisicao: Number(item.requisicao),
+        formula,
+      });
+      const afetadas = deleteResult.affected ?? 0;
+      resultado.linhasRemovidas += afetadas;
+
+      if (afetadas > 0) {
+        this.logger.log(
+          `[${agente}] Exclusão ERP: req.${item.requisicao} fórmula ${formula} — ${afetadas} linha(s) removida(s)${item.motivo ? ` (motivo: ${item.motivo})` : ''}`,
+        );
+      }
+    }
+
+    return resultado;
+  }
+
+  private async postAgenteEtapas(
+    url: string,
+    token: string,
+    agente: string,
+    body: Record<string, unknown>,
+  ): Promise<AgenteProducaoEtapa[]> {
+    return this.postAgente(url, token, agente, body);
   }
 
   private async postAgente(
@@ -149,8 +270,12 @@ export class ProducaoEtapasService {
         );
       }
 
-      const data = await response.json();
-      return data.etapas || [];
+      const data = (await response.json()) as { etapas?: AgenteProducaoEtapa[] };
+      const etapas = data.etapas ?? [];
+      this.logger.log(
+        `[${agente}] Agente retornou ${etapas.length} etapa(s) (unit=${body.unit}, período=${body.start ?? body.dataMinimaMovimento}-${body.end ?? ''})`,
+      );
+      return etapas;
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
@@ -204,11 +329,20 @@ export class ProducaoEtapasService {
     return resultado;
   }
 
+  private normalizarFormulaImportacao(formula: string): string {
+    const t = formula.trim();
+    if (!t) return t;
+    if (/^\d+$/.test(t)) return String(Number(t));
+    return t;
+  }
+
   private async upsertRegistro(
     registro: AgenteProducaoEtapa,
     unidade: Unidade,
   ): Promise<boolean> {
-    const formula = String(registro.formula ?? '').trim();
+    const formula = this.normalizarFormulaImportacao(
+      String(registro.formula ?? ''),
+    );
     const codEtapa = String(registro.cod_etapa ?? '').trim();
 
     let etapa = await this.etapaRepository.findOne({
@@ -258,12 +392,16 @@ export class ProducaoEtapasService {
       nomePrescritor: padronizarNomeLegadoNullable(registro.nome_prescritor),
       dataRetirada: registro.data_retirada || null,
       horaRetirada: registro.hora_retirada || null,
+      emAndamentoFila: Boolean(registro.em_andamento_fila),
+      usuarioEntradaFila: registro.usuario_entrada_fila ?? null,
+      dataEntradaFila: registro.data_entrada_fila || null,
+      horaEntradaFila: registro.hora_entrada_fila || null,
     };
 
     if (!etapa) {
       etapa = this.etapaRepository.create(payload);
     } else {
-      this.preservarUsuariosNoPayload(payload, etapa);
+      this.preservarFechamentoNoPayload(payload, etapa);
       Object.assign(etapa, payload);
     }
 
@@ -276,7 +414,7 @@ export class ProducaoEtapasService {
     return [
       Number(registro.filial ?? 0),
       Number(registro.requisicao ?? 0),
-      String(registro.formula ?? '').trim(),
+      String(this.normalizarFormulaImportacao(String(registro.formula ?? ''))),
       String(registro.cod_etapa ?? '').trim(),
     ].join('|');
   }
@@ -306,8 +444,9 @@ export class ProducaoEtapasService {
     a: AgenteProducaoEtapa,
     b: AgenteProducaoEtapa,
   ): AgenteProducaoEtapa {
-    const entrada = this.escolherParUsuario(a, b, 'entrada');
-    const saida = this.escolherParUsuario(a, b, 'saida');
+    const entrada = this.escolherPrimeiroCronologico(a, b, 'entrada');
+    const saida = this.escolherPrimeiroCronologico(a, b, 'saida');
+    const fila = this.mesclarCamposFila(a, b);
     const posicao = Math.max(
       Number(a.posicao_etapa ?? 0),
       Number(b.posicao_etapa ?? 0),
@@ -328,10 +467,15 @@ export class ProducaoEtapasService {
       hora_saida: saida.hora,
       tempo_etapa:
         a.tempo_etapa != null ? a.tempo_etapa : (b.tempo_etapa ?? null),
+      em_andamento_fila: fila.em_andamento_fila,
+      usuario_entrada_fila: fila.usuario_entrada_fila,
+      data_entrada_fila: fila.data_entrada_fila,
+      hora_entrada_fila: fila.hora_entrada_fila,
     };
   }
 
-  private escolherParUsuario(
+  /** RN-PCP-001: 1º 01 / 1º 02 entre linhas `tppcp` distintas. */
+  private escolherPrimeiroCronologico(
     a: AgenteProducaoEtapa,
     b: AgenteProducaoEtapa,
     tipo: 'entrada' | 'saida',
@@ -345,27 +489,79 @@ export class ProducaoEtapasService {
     const dataKey = tipo === 'entrada' ? 'data_entrada' : 'data_saida';
     const horaKey = tipo === 'entrada' ? 'hora_entrada' : 'hora_saida';
 
-    const fonte = this.usuarioValido(a[usuarioKey])
-      ? a
-      : this.usuarioValido(b[usuarioKey])
-        ? b
-        : a;
-
-    const other = fonte === a ? b : a;
-    const usuario = this.usuarioValido(fonte[usuarioKey])
-      ? fonte[usuarioKey]
-      : this.usuarioValido(other[usuarioKey])
-        ? other[usuarioKey]
-        : (fonte[usuarioKey] ?? other[usuarioKey] ?? null);
-
+    const candidatos = [a, b].filter((r) => r[dataKey]);
+    if (candidatos.length === 0) {
+      return {
+        usuario: a[usuarioKey] ?? b[usuarioKey] ?? null,
+        data: null,
+        hora: null,
+      };
+    }
+    candidatos.sort((x, y) =>
+      this.compararDataHora(
+        x[dataKey] as string,
+        x[horaKey] as string | null | undefined,
+        y[dataKey] as string,
+        y[horaKey] as string | null | undefined,
+      ),
+    );
+    const escolhido = candidatos[0];
     return {
-      usuario,
-      data: fonte[dataKey] ?? other[dataKey] ?? null,
-      hora: fonte[horaKey] ?? other[horaKey] ?? null,
+      usuario: escolhido[usuarioKey],
+      data: escolhido[dataKey],
+      hora: escolhido[horaKey],
     };
   }
 
-  private preservarUsuariosNoPayload(
+  /** RN-PCP-007: em andamento se qualquer `tppcp` está com último movimento = 01. */
+  private mesclarCamposFila(
+    a: AgenteProducaoEtapa,
+    b: AgenteProducaoEtapa,
+  ): Pick<
+    AgenteProducaoEtapa,
+    | 'em_andamento_fila'
+    | 'usuario_entrada_fila'
+    | 'data_entrada_fila'
+    | 'hora_entrada_fila'
+  > {
+    const abertos = [a, b].filter((r) => r.em_andamento_fila);
+    if (abertos.length === 0) {
+      return {
+        em_andamento_fila: false,
+        usuario_entrada_fila: null,
+        data_entrada_fila: null,
+        hora_entrada_fila: null,
+      };
+    }
+    abertos.sort((x, y) =>
+      this.compararDataHora(
+        x.data_entrada_fila ?? '',
+        x.hora_entrada_fila,
+        y.data_entrada_fila ?? '',
+        y.hora_entrada_fila,
+      ),
+    );
+    const ultimo = abertos[abertos.length - 1];
+    return {
+      em_andamento_fila: true,
+      usuario_entrada_fila: ultimo.usuario_entrada_fila ?? null,
+      data_entrada_fila: ultimo.data_entrada_fila ?? null,
+      hora_entrada_fila: ultimo.hora_entrada_fila ?? null,
+    };
+  }
+
+  private compararDataHora(
+    dataA: string,
+    horaA: string | null | undefined,
+    dataB: string,
+    horaB: string | null | undefined,
+  ): number {
+    const ta = `${dataA}T${(horaA ?? '00:00:00').slice(0, 8)}`;
+    const tb = `${dataB}T${(horaB ?? '00:00:00').slice(0, 8)}`;
+    return ta.localeCompare(tb);
+  }
+
+  private preservarFechamentoNoPayload(
     payload: Partial<ProducaoEtapaResumo>,
     existente: ProducaoEtapaResumo,
   ): void {
@@ -380,6 +576,43 @@ export class ProducaoEtapasService {
       this.usuarioValido(existente.usuarioSaida)
     ) {
       payload.usuarioSaida = existente.usuarioSaida;
+    }
+
+    if (!payload.dataSaida?.trim() && existente.dataSaida) {
+      payload.dataSaida = existente.dataSaida;
+      payload.horaSaida = existente.horaSaida ?? payload.horaSaida;
+      payload.usuarioSaida = existente.usuarioSaida ?? payload.usuarioSaida;
+    }
+
+    if (payload.dataEntrada && existente.dataEntrada) {
+      const payloadPrimeiro =
+        this.compararDataHora(
+          payload.dataEntrada,
+          payload.horaEntrada,
+          existente.dataEntrada,
+          existente.horaEntrada,
+        ) > 0;
+      if (payloadPrimeiro) {
+        payload.dataEntrada = existente.dataEntrada;
+        payload.horaEntrada = existente.horaEntrada;
+        payload.usuarioEntrada =
+          existente.usuarioEntrada ?? payload.usuarioEntrada;
+      }
+    }
+
+    if (payload.dataSaida && existente.dataSaida) {
+      const payloadPrimeiro =
+        this.compararDataHora(
+          payload.dataSaida,
+          payload.horaSaida,
+          existente.dataSaida,
+          existente.horaSaida,
+        ) > 0;
+      if (payloadPrimeiro) {
+        payload.dataSaida = existente.dataSaida;
+        payload.horaSaida = existente.horaSaida;
+        payload.usuarioSaida = existente.usuarioSaida ?? payload.usuarioSaida;
+      }
     }
   }
 }

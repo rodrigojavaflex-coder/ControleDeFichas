@@ -16,6 +16,10 @@ import {
   padronizarDescricaoLegado,
   precisaCorrecaoEncoding,
 } from '../common/encoding.util';
+import {
+  deduplicarExclusoesPorFormula,
+  parseExclusaoReceitaEvento,
+} from '../common/producao-exclusoes.util';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const Firebird = require('node-firebird');
@@ -1381,8 +1385,12 @@ export class DatabaseService {
           );
         }
 
+        const consultaInicioMs = Date.now();
         db.query(sql, params, (queryErr: Error, result: any[]) => {
           db.detach();
+          this.logger.log(
+            `Etapas produção: Firebird respondeu em ${Date.now() - consultaInicioMs}ms (${(result ?? []).length} linha(s) brutas)`,
+          );
 
           if (queryErr) {
             this.logger.error(
@@ -1396,12 +1404,68 @@ export class DatabaseService {
             );
           }
 
-          const rows = (result ?? []).map((row) =>
-            this.mapProducaoEtapaResumoRow(
-              converterObjetoFirebird(row, charset),
-            ),
-          );
+          const rows: import('./database.types').ProducaoEtapaResumoRow[] = [];
+          let mapErros = 0;
+          for (const row of result ?? []) {
+            try {
+              rows.push(
+                this.mapProducaoEtapaResumoRow(
+                  converterObjetoFirebird(row, charset),
+                ),
+              );
+            } catch (mapErr: unknown) {
+              mapErros += 1;
+              const msg =
+                mapErr instanceof Error ? mapErr.message : String(mapErr);
+              this.logger.warn(
+                `Etapas produção: falha ao mapear linha (${mapErros}): ${msg}`,
+              );
+            }
+          }
+          if (mapErros > 0) {
+            this.logger.warn(
+              `Etapas produção: ${mapErros} linha(s) ignorada(s) no mapeamento`,
+            );
+          }
+
+          rows.sort((a, b) => {
+            const req = a.requisicao - b.requisicao;
+            if (req !== 0) return req;
+            const fa = Number(String(a.formula).trim()) || 0;
+            const fb = Number(String(b.formula).trim()) || 0;
+            if (fa !== fb) return fa - fb;
+            const pa = a.posicao_etapa ?? 0;
+            const pb = b.posicao_etapa ?? 0;
+            if (pa !== pb) return pa - pb;
+            return String(a.cod_etapa).localeCompare(String(b.cod_etapa));
+          });
+
+          const diagRaw97875 = (result ?? []).filter((row) => {
+            const req = Number(
+              row.requisicao ?? row.REQUISICAO ?? row.nrrqu ?? row.NRRQU ?? 0,
+            );
+            return req === 97875;
+          });
+          const diagRawF9 = diagRaw97875.filter((row) => {
+            const f = String(row.formula ?? row.FORMULA ?? '').trim();
+            return f === '9' || Number(f) === 9;
+          });
+          if (
+            diagRaw97875.length > 0 ||
+            (!options.dataMinimaMovimento &&
+              options.start?.startsWith('2026-07'))
+          ) {
+            this.logger.log(
+              `Etapas produção [diag 97875]: SQL bruto=${diagRaw97875.length}, formula9=${diagRawF9.length}, mapeadas=${rows.filter((r) => r.requisicao === 97875).length}, formula9_map=${rows.filter((r) => r.requisicao === 97875 && String(r.formula).trim() === '9').length}`,
+            );
+          }
+
           this.logger.log(`Etapas produção: ${rows.length} registros`);
+          if (rows.length === 0 && !options.dataMinimaMovimento) {
+            this.logger.warn(
+              `Etapas produção: 0 registros (unit=${unit}, start=${options.start}, end=${options.end}). Verifique período, cdfil do agente e logs Firebird.`,
+            );
+          }
           resolve(rows);
         });
       });
@@ -1413,7 +1477,7 @@ export class DatabaseService {
     const txt = `NULLIF(TRIM(CAST(${alias}.cdusu AS VARCHAR(32))), '')`;
     return `
       CASE
-        WHEN ${txt} IS NOT NULL AND ${txt} SIMILAR TO '[0-9]+' ESCAPE '\\'
+        WHEN ${txt} IS NOT NULL AND ${txt} SIMILAR TO '[0-9]+'
         THEN CAST(${txt} AS INTEGER)
         ELSE NULL
       END
@@ -1424,11 +1488,43 @@ export class DatabaseService {
     const txt = `NULLIF(TRIM(CAST(${alias}.cdusu AS VARCHAR(32))), '')`;
     return `
       CASE
-        WHEN ${txt} IS NOT NULL AND ${txt} SIMILAR TO '[0-9]+' ESCAPE '\\'
+        WHEN ${txt} IS NOT NULL AND ${txt} SIMILAR TO '[0-9]+'
         THEN CAST(${txt} AS INTEGER)
         ELSE 0
       END
     `.trim();
+  }
+
+  private sqlCdoperaEntrada(alias: string): string {
+    return `TRIM(${alias}.cdopera) IN ('01', '1')`;
+  }
+
+  private sqlCdoperaSaida(alias: string): string {
+    return `TRIM(${alias}.cdopera) IN ('02', '2')`;
+  }
+
+  private sqlCdoperaNaoEntrada(alias: string): string {
+    return `TRIM(${alias}.cdopera) NOT IN ('01', '1')`;
+  }
+
+  /** Fórmula no ERP pode vir como '9' / '09'; une chaves em formula_touch apenas. */
+  private sqlSerierNumerico(alias: string): string {
+    return `TRIM(${alias}.serier) SIMILAR TO '[0-9]+'`;
+  }
+
+  private sqlSerierInt(alias: string): string {
+    return `
+      CASE
+        WHEN ${this.sqlSerierNumerico(alias)}
+        THEN CAST(TRIM(${alias}.serier) AS INTEGER)
+        ELSE NULL
+      END
+    `.trim();
+  }
+
+  /** Join por valor bruto — usa índice composto; mesmo tppcp mantém serier consistente. */
+  private sqlSerierRawEq(a: string, b: string): string {
+    return `${a}.serier = ${b}.serier`;
   }
 
   private buildProducaoEtapasResumoQuery(
@@ -1440,17 +1536,25 @@ export class DatabaseService {
     },
   ): { sql: string; params: Array<string | number> } {
     const params: Array<string | number> = [unit];
-    let filtroMovimento = 'AND p.data BETWEEN ? AND ?';
+    const cdopEnt = (alias: string) => this.sqlCdoperaEntrada(alias);
+    const cdopSai = (alias: string) => this.sqlCdoperaSaida(alias);
+    const cdopNaoEnt = (alias: string) => this.sqlCdoperaNaoEntrada(alias);
+    const serierInt = (alias: string) => this.sqlSerierInt(alias);
+    const serierEq = (a: string, b: string) => this.sqlSerierRawEq(a, b);
+    const formulaSelect = `CAST(${serierInt('stage')} AS VARCHAR(10))`;
 
+    let filtroFormulaTouch = 'AND t.data BETWEEN ? AND ?';
     if (options.dataMinimaMovimento) {
-      const { data, hora } = this.parseDataHoraMinima(options.dataMinimaMovimento);
-      filtroMovimento = `
+      const { data, hora } = this.parseDataHoraMinima(
+        options.dataMinimaMovimento,
+      );
+      filtroFormulaTouch = `
         AND EXISTS (
           SELECT 1
           FROM fc12500 p_evt
-          WHERE p_evt.cdfil = p.cdfil
-            AND p_evt.nrrqu = p.nrrqu
-            AND p_evt.serier = p.serier
+          WHERE p_evt.cdfil = t.cdfil
+            AND p_evt.nrrqu = t.nrrqu
+            AND p_evt.serier = t.serier
             AND (
               p_evt.data > CAST(? AS DATE)
               OR (p_evt.data = CAST(? AS DATE) AND p_evt.hora > CAST(? AS TIME))
@@ -1472,7 +1576,7 @@ export class DatabaseService {
       SELECT
         stage.cdfil                                               AS filial,
         stage.nrrqu                                               AS requisicao,
-        TRIM(stage.serier)                                        AS formula,
+        ${formulaSelect}                                            AS formula,
         TRIM(stage.cdetapa)                                       AS cod_etapa,
         TRIM(e.descricao)                                         AS etapa,
         e.posicao                                                 AS posicao_etapa,
@@ -1480,8 +1584,41 @@ export class DatabaseService {
         evt_sai.usuario_saida                                     AS usuario_saida,
         evt_ent.data_entrada                                      AS data_entrada,
         evt_ent.hora_entrada                                      AS hora_entrada,
-        evt_sai.data_saida                                        AS data_saida,
-        evt_sai.hora_saida                                        AS hora_saida,
+        COALESCE(
+          evt_sai.data_saida,
+          (
+            SELECT FIRST 1 p_enc.data
+            FROM fc12500 p_enc
+            WHERE p_enc.cdfil = stage.cdfil
+              AND p_enc.nrrqu = stage.nrrqu
+              AND ${serierEq('p_enc', 'stage')}
+              AND p_enc.cdetapa = stage.cdetapa
+              AND p_enc.tppcp = stage.tppcp
+              AND ${cdopNaoEnt('p_enc')}
+            ORDER BY p_enc.data, p_enc.hora
+          )
+        )                                                         AS data_saida,
+        COALESCE(
+          evt_sai.hora_saida,
+          (
+            SELECT FIRST 1 p_enc.hora
+            FROM fc12500 p_enc
+            WHERE p_enc.cdfil = stage.cdfil
+              AND p_enc.nrrqu = stage.nrrqu
+              AND ${serierEq('p_enc', 'stage')}
+              AND p_enc.cdetapa = stage.cdetapa
+              AND p_enc.tppcp = stage.tppcp
+              AND ${cdopNaoEnt('p_enc')}
+            ORDER BY p_enc.data, p_enc.hora
+          )
+        )                                                         AS hora_saida,
+        CASE
+          WHEN TRIM(evt_ult.ult_cdopera) IN ('01', '1') THEN 1
+          ELSE 0
+        END                                                       AS em_andamento_fila,
+        evt_ult.usuario_entrada_fila                              AS usuario_entrada_fila,
+        evt_ult.data_entrada_fila                                 AS data_entrada_fila,
+        evt_ult.hora_entrada_fila                                 AS hora_entrada_fila,
         CASE
           WHEN evt_ent.data_entrada IS NOT NULL
            AND evt_sai.data_saida IS NOT NULL
@@ -1508,29 +1645,20 @@ export class DatabaseService {
         TRIM(ff.forma_farmaceutica)                               AS forma_farmaceutica,
         req.volume                                                AS quantidade,
         TRIM(req.univol)                                          AS unidade_medida,
-        lab.descrlab                                              AS laboratorio,
-        TRIM(cap.descricao)                                       AS tipo_formula,
-        COALESCE(pa.qtd_principios_ativos, 0)                     AS qtd_principios_ativos,
-        pa.principios_ativos                                      AS principios_ativos,
-        TRIM(emb.descrprd)                                        AS embalagem,
+        CAST(NULL AS VARCHAR(200))                                AS laboratorio,
+        CAST(NULL AS VARCHAR(200))                                AS tipo_formula,
+        0                                                         AS qtd_principios_ativos,
+        CAST(NULL AS VARCHAR(8000))                               AS principios_ativos,
+        CAST(NULL AS VARCHAR(500))                                AS embalagem,
         TRIM(req.nomepa)                                          AS paciente,
         CASE
-          WHEN COALESCE(req.cdcli, req_cli.cdcli_fallback, 0) > 0
-          THEN COALESCE(req.cdcli, req_cli.cdcli_fallback)
+          WHEN COALESCE(req.cdcli, 0) > 0 THEN req.cdcli
           ELSE NULL
         END                                                       AS codigo_cliente,
-        (
-          SELECT TRIM(COALESCE(
-            MAX(CASE WHEN c.cdfil = stage.cdfil THEN c.nomecli END),
-            MAX(c.nomecli)
-          ))
-          FROM fc07000 c
-          WHERE c.cdcli = COALESCE(req.cdcli, req_cli.cdcli_fallback)
-            AND COALESCE(req.cdcli, req_cli.cdcli_fallback, 0) > 0
-        )                                                         AS cliente,
-        CAST(COALESCE(req.nrcrm, req_presc.nrcrm_fallback) AS VARCHAR(20)) AS crf,
-        TRIM(COALESCE(req.ufcrm, req_presc.ufcrm_fallback))       AS uf_crf,
-        TRIM(m.nomemed)                                           AS nome_prescritor,
+        CAST(NULL AS VARCHAR(500))                                 AS cliente,
+        CAST(req.nrcrm AS VARCHAR(20))                            AS crf,
+        TRIM(req.ufcrm)                                           AS uf_crf,
+        CAST(NULL AS VARCHAR(500))                                AS nome_prescritor,
         req.dtentr                                                AS data_retirada,
         req.hrret                                                 AS hora_retirada
       FROM (
@@ -1541,8 +1669,21 @@ export class DatabaseService {
           p.cdetapa,
           p.tppcp
         FROM fc12500 p
+        INNER JOIN (
+          SELECT DISTINCT
+            t.cdfil,
+            t.nrrqu,
+            ${serierInt('t')} AS serier_int
+          FROM fc12500 t
+          WHERE t.cdfil = ?
+            AND ${this.sqlSerierNumerico('t')}
+            ${filtroFormulaTouch}
+        ) formula_touch
+          ON formula_touch.cdfil = p.cdfil
+         AND formula_touch.nrrqu = p.nrrqu
+         AND ${serierInt('p')} = formula_touch.serier_int
         WHERE p.cdfil = ?
-          ${filtroMovimento}
+          AND ${this.sqlSerierNumerico('p')}
       ) stage
       INNER JOIN (
         SELECT
@@ -1555,17 +1696,17 @@ export class DatabaseService {
           p.data AS data_entrada,
           p.hora AS hora_entrada
         FROM fc12500 p
-        WHERE p.cdopera = '01'
+        WHERE ${cdopEnt('p')}
           AND p.cdfil = ?
           AND NOT EXISTS (
             SELECT 1
             FROM fc12500 p_ant
             WHERE p_ant.cdfil = p.cdfil
               AND p_ant.nrrqu = p.nrrqu
-              AND p_ant.serier = p.serier
+              AND ${serierEq('p_ant', 'p')}
               AND p_ant.cdetapa = p.cdetapa
               AND p_ant.tppcp = p.tppcp
-              AND p_ant.cdopera = '01'
+              AND ${cdopEnt('p_ant')}
               AND (
                 p_ant.data < p.data
                 OR (p_ant.data = p.data AND p_ant.hora < p.hora)
@@ -1579,7 +1720,7 @@ export class DatabaseService {
       ) evt_ent
         ON evt_ent.cdfil = stage.cdfil
        AND evt_ent.nrrqu = stage.nrrqu
-       AND evt_ent.serier = stage.serier
+       AND ${serierEq('evt_ent', 'stage')}
        AND evt_ent.cdetapa = stage.cdetapa
        AND evt_ent.tppcp = stage.tppcp
       LEFT JOIN (
@@ -1593,17 +1734,17 @@ export class DatabaseService {
           p.data AS data_saida,
           p.hora AS hora_saida
         FROM fc12500 p
-        WHERE p.cdopera = '02'
+        WHERE ${cdopSai('p')}
           AND p.cdfil = ?
           AND NOT EXISTS (
             SELECT 1
             FROM fc12500 p_ant
             WHERE p_ant.cdfil = p.cdfil
               AND p_ant.nrrqu = p.nrrqu
-              AND p_ant.serier = p.serier
+              AND ${serierEq('p_ant', 'p')}
               AND p_ant.cdetapa = p.cdetapa
               AND p_ant.tppcp = p.tppcp
-              AND p_ant.cdopera = '02'
+              AND ${cdopSai('p_ant')}
               AND (
                 p_ant.data < p.data
                 OR (p_ant.data = p.data AND p_ant.hora < p.hora)
@@ -1617,101 +1758,72 @@ export class DatabaseService {
       ) evt_sai
         ON evt_sai.cdfil = stage.cdfil
        AND evt_sai.nrrqu = stage.nrrqu
-       AND evt_sai.serier = stage.serier
+       AND ${serierEq('evt_sai', 'stage')}
        AND evt_sai.cdetapa = stage.cdetapa
        AND evt_sai.tppcp = stage.tppcp
-      INNER JOIN fc12100 req
-        ON req.cdfil  = stage.cdfil
-       AND req.nrrqu  = stage.nrrqu
-       AND req.serier = stage.serier
       LEFT JOIN (
         SELECT
-          cdfil,
-          nrrqu,
-          MIN(cdcli) AS cdcli_fallback
-        FROM fc12100
-        WHERE cdfil = ?
-          AND COALESCE(cdcli, 0) > 0
-        GROUP BY cdfil, nrrqu
-      ) req_cli
-        ON req_cli.cdfil = req.cdfil
-       AND req_cli.nrrqu = req.nrrqu
+          p.cdfil,
+          p.nrrqu,
+          p.serier,
+          p.cdetapa,
+          p.tppcp,
+          TRIM(p.cdopera)                                           AS ult_cdopera,
+          CASE
+            WHEN ${cdopEnt('p')} THEN ${cdusuInt}
+            ELSE NULL
+          END                                                       AS usuario_entrada_fila,
+          CASE
+            WHEN ${cdopEnt('p')} THEN p.data
+            ELSE NULL
+          END                                                       AS data_entrada_fila,
+          CASE
+            WHEN ${cdopEnt('p')} THEN p.hora
+            ELSE NULL
+          END                                                       AS hora_entrada_fila
+        FROM fc12500 p
+        WHERE p.cdfil = ?
+          AND NOT EXISTS (
+            SELECT 1
+            FROM fc12500 p2
+            WHERE p2.cdfil = p.cdfil
+              AND p2.nrrqu = p.nrrqu
+              AND ${serierEq('p2', 'p')}
+              AND p2.cdetapa = p.cdetapa
+              AND p2.tppcp = p.tppcp
+              AND (
+                p2.data > p.data
+                OR (p2.data = p.data AND p2.hora > p.hora)
+                OR (
+                  p2.data = p.data
+                  AND p2.hora = p.hora
+                  AND ${cdusuCmp('p2', 'p')}
+                )
+              )
+          )
+      ) evt_ult
+        ON evt_ult.cdfil = stage.cdfil
+       AND evt_ult.nrrqu = stage.nrrqu
+       AND ${serierEq('evt_ult', 'stage')}
+       AND evt_ult.cdetapa = stage.cdetapa
+       AND evt_ult.tppcp = stage.tppcp
+      LEFT JOIN fc12100 req
+        ON req.cdfil  = stage.cdfil
+       AND req.nrrqu  = stage.nrrqu
+       AND ${serierInt('req')} = ${serierInt('stage')}
       LEFT JOIN fc12540 e
         ON e.cdetapa = stage.cdetapa
        AND e.tppcp   = stage.tppcp
-      LEFT JOIN fc0h000 cap
-        ON cap.tpcapsula = req.tpcap
-      LEFT JOIN fc03000 emb
-        ON emb.cdpro = req.cdemb
-      LEFT JOIN (
-        SELECT
-          cdfil,
-          nrrqu,
-          COALESCE(
-            MAX(CASE WHEN TRIM(serier) = '0' AND nrcrm IS NOT NULL THEN pfcrm END),
-            MAX(CASE WHEN nrcrm IS NOT NULL THEN pfcrm END)
-          ) AS pfcrm_fallback,
-          COALESCE(
-            MAX(CASE WHEN TRIM(serier) = '0' AND nrcrm IS NOT NULL THEN ufcrm END),
-            MAX(CASE WHEN nrcrm IS NOT NULL THEN ufcrm END)
-          ) AS ufcrm_fallback,
-          COALESCE(
-            MAX(CASE WHEN TRIM(serier) = '0' AND nrcrm IS NOT NULL THEN nrcrm END),
-            MIN(CASE WHEN nrcrm IS NOT NULL THEN nrcrm END)
-          ) AS nrcrm_fallback
-        FROM fc12100
-        WHERE cdfil = ?
-        GROUP BY cdfil, nrrqu
-      ) req_presc
-        ON req_presc.cdfil = req.cdfil
-       AND req_presc.nrrqu = req.nrrqu
-      LEFT JOIN fc04000 m
-        ON m.pfcrm = COALESCE(req.pfcrm, req_presc.pfcrm_fallback)
-       AND m.ufcrm = COALESCE(req.ufcrm, req_presc.ufcrm_fallback)
-       AND m.nrcrm = COALESCE(req.nrcrm, req_presc.nrcrm_fallback)
       LEFT JOIN fc12004 ff
         ON ff.codigo = req.tpformafarma
-      LEFT JOIN (
-        SELECT
-          d.tpformafarma,
-          MIN(TRIM(lab.descrlab)) AS descrlab
-        FROM fc0d100 d
-        INNER JOIN fc0d000 lab
-          ON lab.tplab = d.tplab
-        GROUP BY d.tpformafarma
-      ) lab
-        ON lab.tpformafarma = req.tpformafarma
-      LEFT JOIN (
-        SELECT
-          base.cdfil,
-          base.nrrqu,
-          base.serier,
-          COUNT(*) AS qtd_principios_ativos,
-          (
-            SELECT LIST(x.descr, ', ')
-            FROM (
-              SELECT TRIM(i.descr) AS descr
-              FROM fc12110 i
-              WHERE i.cdfil  = base.cdfil
-                AND i.nrrqu  = base.nrrqu
-                AND i.serier = base.serier
-                AND TRIM(i.tpcmp) = 'C'
-              ORDER BY i.itemid
-            ) x
-          ) AS principios_ativos
-        FROM fc12110 base
-        WHERE TRIM(base.tpcmp) = 'C'
-        GROUP BY base.cdfil, base.nrrqu, base.serier
-      ) pa
-        ON pa.cdfil  = req.cdfil
-       AND pa.nrrqu  = req.nrrqu
-       AND pa.serier = req.serier
-      ORDER BY
-        stage.nrrqu,
-        stage.serier,
-        e.posicao,
-        stage.cdetapa
     `;
+
+    const placeholders = sql.match(/\?/g)?.length ?? 0;
+    if (placeholders !== params.length) {
+      throw new Error(
+        `producao_etapas_resumo SQL: placeholders=${placeholders} params=${params.length}`,
+      );
+    }
 
     return { sql, params };
   }
@@ -1798,6 +1910,20 @@ export class DatabaseService {
       hora_retirada: get('hora_retirada')
         ? this.formatTimeField(get('hora_retirada'))
         : null,
+      em_andamento_fila:
+        get('em_andamento_fila') === 1 ||
+        get('em_andamento_fila') === true ||
+        get('em_andamento_fila') === '1',
+      usuario_entrada_fila: (() => {
+        const v = get('usuario_entrada_fila');
+        return v != null && v !== '' ? Number(v) : null;
+      })(),
+      data_entrada_fila: get('data_entrada_fila')
+        ? this.formatDateField(get('data_entrada_fila'))
+        : null,
+      hora_entrada_fila: get('hora_entrada_fila')
+        ? this.formatTimeField(get('hora_entrada_fila'))
+        : null,
     };
   }
 
@@ -1842,5 +1968,131 @@ export class DatabaseService {
       return `${timeStr}:00`;
     }
     return timeStr.slice(0, 8);
+  }
+
+  /** RN-PCP-008: exclusões de fórmula (módulo RECEITAS) na janela de datas. */
+  async buscarExclusoesReceitas(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<import('./database.types').ProducaoExclusaoReceitaRow[]> {
+    const sql = `
+      SELECT
+        m.data AS data_exclusao,
+        m.hora AS hora_exclusao,
+        TRIM(m.cdusu) AS cdusu,
+        m.evento AS evento
+      FROM fc01m20 m
+      WHERE m.data BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
+        AND m.classificacao = 'EXCLUSAO'
+        AND m.modulo = 'RECEITAS'
+        AND m.evento CONTAINING 'REQUISICAO:'
+      ORDER BY m.data, m.hora
+    `;
+    const params = [start, end];
+    const connectOptions = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    return new Promise((resolve, reject) => {
+      Firebird.attach(connectOptions, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        const t0 = Date.now();
+        db.query(sql, params, async (queryErr: Error, result: any[]) => {
+          if (queryErr) {
+            db.detach();
+            return reject(
+              new InternalServerErrorException(
+                `Erro ao consultar exclusões RECEITAS: ${queryErr.message}`,
+              ),
+            );
+          }
+
+          const parsed: import('./database.types').ProducaoExclusaoReceitaRow[] =
+            [];
+          for (const row of result ?? []) {
+            const converted = converterObjetoFirebird(row, charset);
+            const item = parseExclusaoReceitaEvento(
+              converted as Record<string, unknown>,
+            );
+            if (!item || item.filial !== unit) {
+              continue;
+            }
+            parsed.push({
+              filial: item.filial,
+              requisicao: item.requisicao,
+              formula: item.formula,
+              data_exclusao: item.data_exclusao,
+              hora_exclusao: item.hora_exclusao,
+              cdusu: item.cdusu,
+              motivo: item.motivo,
+              evento: item.evento,
+            });
+          }
+
+          const dedup = deduplicarExclusoesPorFormula(
+            parsed.map((p) => ({
+              ...p,
+              hora_exclusao: p.hora_exclusao ?? null,
+              cdusu: p.cdusu ?? null,
+              motivo: p.motivo ?? null,
+            })),
+          );
+
+          const confirmadas: import('./database.types').ProducaoExclusaoReceitaRow[] =
+            [];
+          for (const item of dedup) {
+            const existe = await this.existeFormulaFc12100(
+              db,
+              item.filial,
+              item.requisicao,
+              item.formula,
+            );
+            if (!existe) {
+              confirmadas.push(item);
+            }
+          }
+
+          db.detach();
+          this.logger.log(
+            `Exclusões RECEITAS: ${confirmadas.length} fórmula(s) confirmada(s) sem FC12100 (bruto parse=${parsed.length}, dedup=${dedup.length}, ${Date.now() - t0}ms, unit=${unit}, ${start}..${end})`,
+          );
+          resolve(confirmadas);
+        });
+      });
+    });
+  }
+
+  private existeFormulaFc12100(
+    db: any,
+    cdfil: number,
+    nrrqu: number,
+    formula: string,
+  ): Promise<boolean> {
+    const sql = `
+      SELECT FIRST 1 1 AS ok
+      FROM fc12100 req
+      WHERE req.cdfil = ?
+        AND req.nrrqu = ?
+        AND CAST(TRIM(req.serier) AS INTEGER) = ?
+    `;
+    const formulaInt = Number(formula);
+    return new Promise((resolve, reject) => {
+      db.query(
+        sql,
+        [cdfil, nrrqu, formulaInt],
+        (err: Error, rows: { OK?: number; ok?: number }[]) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve((rows?.length ?? 0) > 0);
+        },
+      );
+    });
   }
 }

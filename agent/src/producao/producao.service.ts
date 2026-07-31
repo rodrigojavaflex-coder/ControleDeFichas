@@ -5,6 +5,8 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { ProducaoEtapaResumoRow } from '../database/database.types';
 import { ProducaoEtapasResumoDto } from './dto/producao-etapas-resumo.dto';
+import { ProducaoExclusoesReceitasDto } from './dto/producao-exclusoes-receitas.dto';
+import { ProducaoExclusaoReceitaRow } from '../database/database.types';
 
 @Injectable()
 export class ProducaoService {
@@ -36,5 +38,23 @@ export class ProducaoService {
     );
 
     return { etapas: rows };
+  }
+
+  async buscarExclusoesReceitas(
+    dto: ProducaoExclusoesReceitasDto,
+  ): Promise<{ exclusoes: ProducaoExclusaoReceitaRow[] }> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dto.start) || !/^\d{4}-\d{2}-\d{2}$/.test(dto.end)) {
+      throw new BadRequestException('start e end devem estar no formato YYYY-MM-DD');
+    }
+    if (dto.start > dto.end) {
+      throw new BadRequestException('start não pode ser posterior a end');
+    }
+
+    const exclusoes = await this.databaseService.buscarExclusoesReceitas(
+      dto.unit,
+      dto.start,
+      dto.end,
+    );
+    return { exclusoes };
   }
 }

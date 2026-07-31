@@ -127,6 +127,7 @@ const PERMS = {
     Permission.PRODUCAO_CONFIG_UPDATE,
   ],
   producaoProdutividade: [Permission.PRODUCAO_PRODUTIVIDADE_READ],
+  producaoAcompanhamento: [Permission.PRODUCAO_ACOMPANHAMENTO_READ],
 } as const;
 
 /** Guards padrão: autenticado + permissão da rota (`data.permissions`). */
@@ -497,6 +498,15 @@ export const routes: Routes = [
       ),
     canActivate: guarded,
     data: { permissions: [...PERMS.producaoConfig] },
+  },
+  {
+    path: 'producao/acompanhamento',
+    loadComponent: () =>
+      import('./components/producao/producao-acompanhamento-page').then(
+        (m) => m.ProducaoAcompanhamentoPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.producaoAcompanhamento] },
   },
   {
     path: 'producao/produtividade',

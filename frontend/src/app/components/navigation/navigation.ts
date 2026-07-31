@@ -302,6 +302,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
           ],
         },
         {
+          label: 'Acompanhamento',
+          route: '/producao/acompanhamento',
+          icon: 'feather-activity',
+          requiredPermissions: [Permission.PRODUCAO_ACOMPANHAMENTO_READ],
+        },
+        {
           label: 'Produtividade',
           route: '/producao/produtividade',
           icon: 'feather-bar-chart-2',

@@ -1,0 +1,271 @@
+<div class="vendas-page producao-acompanhamento-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar acompanhamento (producao-acompanhamento:read).
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="filters-panel-top">
+        <div class="filters-inline producao-prod-filters producao-prod-filters-compact">
+          @if (unidadeDisabled) {
+            <div class="filter-field filter-field-unidade-fixa">
+              <label class="form-label" for="pa-unidade-fixa">Unidade</label>
+              <select
+                id="pa-unidade-fixa"
+                class="form-control"
+                [ngModel]="unidadeFixa"
+                disabled>
+                @if (unidadeFixa; as u) {
+                  <option [ngValue]="u">{{ u }}</option>
+                }
+              </select>
+            </div>
+          } @else {
+            <div
+              class="filter-field filter-field-unidades"
+              role="button"
+              tabindex="0"
+              title="Clique para marcar/desmarcar todas as unidades"
+              (click)="onUnidadesContainerClick($event)"
+              (keydown.enter)="toggleTodasUnidades()"
+              (keydown.space)="toggleTodasUnidades(); $event.preventDefault()">
+              <div class="filter-section-header">
+                <label>
+                  <i class="fas fa-map-marker-alt filter-title-icon"></i>
+                  Unidades
+                </label>
+                <div class="filter-section-actions">
+                  <button
+                    type="button"
+                    class="btn-filter-action btn-filter-muted btn-filter-icon-only"
+                    title="Remove todas as unidades selecionadas"
+                    aria-label="Limpar unidades"
+                    (click)="limparUnidades(); $event.stopPropagation()">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="unidades-grid">
+                @for (u of unidades; track u) {
+                  <label
+                    class="unidade-item"
+                    [class.is-selected]="selectedUnidades.has(u)">
+                    <input
+                      type="checkbox"
+                      [checked]="selectedUnidades.has(u)"
+                      (change)="toggleUnidade(u, $any($event.target).checked)" />
+                    <span>{{ u }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="filter-field filter-field-req-formula">
+            <label class="form-label" for="pa-req-formula">Req-fórmula</label>
+            <div class="producao-acomp-req-busca">
+              <input
+                id="pa-req-formula"
+                type="text"
+                class="form-control"
+                [(ngModel)]="filtroReqFormula"
+                placeholder="96605-0"
+                autocomplete="off"
+                (keydown.enter)="buscarRequisicaoFormula()" />
+              <button
+                type="button"
+                class="btn btn-secondary producao-acomp-btn-busca"
+                title="Localizar etapa na fila"
+                [disabled]="
+                  buscandoReqFormula || carregando || selectedUnidades.size === 0
+                "
+                (click)="buscarRequisicaoFormula()">
+                @if (buscandoReqFormula) {
+                  <i class="fas fa-spinner fa-spin"></i>
+                } @else {
+                  <i class="fas fa-search"></i>
+                }
+              </button>
+              @if (codEtapaFiltro) {
+                <button
+                  type="button"
+                  class="btn btn-secondary producao-acomp-btn-limpar"
+                  title="Mostrar todas as etapas"
+                  (click)="limparFiltroReqFormula()">
+                  <i class="fas fa-times"></i>
+                </button>
+              }
+            </div>
+          </div>
+
+          <div class="filter-field filter-field-acao">
+            <label class="form-label">&nbsp;</label>
+            <button
+              type="button"
+              class="btn btn-primary producao-prod-btn-relatorio"
+              [disabled]="carregando || selectedUnidades.size === 0"
+              (click)="atualizar()">
+              @if (carregando) {
+                <i class="fas fa-spinner fa-spin"></i>
+              } @else {
+                <i class="fas fa-sync-alt"></i>
+              }
+              Atualizar fila
+            </button>
+          </div>
+        </div>
+      </section>
+
+      @if (carregando) {
+        <div class="producao-acomp-state">
+          <i class="fas fa-spinner fa-spin"></i> Carregando resumo…
+        </div>
+      } @else if (selectedUnidades.size === 0) {
+        <div class="producao-acomp-state">
+          <i class="fas fa-filter"></i> Selecione ao menos uma unidade.
+        </div>
+      } @else if (!etapasVisiveis.length) {
+        <div class="producao-acomp-state">
+          @if (codEtapaFiltro) {
+            <i class="fas fa-search"></i> Nenhuma etapa visível para o filtro aplicado.
+            <button
+              type="button"
+              class="btn btn-link producao-acomp-link-limpar"
+              (click)="limparFiltroReqFormula()">
+              Limpar busca
+            </button>
+          } @else {
+            <i class="fas fa-inbox"></i> Nenhuma etapa com requisições em andamento.
+          }
+        </div>
+      } @else {
+        <div class="producao-acomp-cards">
+          @for (e of etapasVisiveis; track e.codEtapa) {
+            <button
+              type="button"
+              class="producao-acomp-card"
+              [class.producao-acomp-card-destaque]="codEtapaFiltro === e.codEtapa"
+              (click)="selecionarEtapa(e)">
+              <span class="producao-acomp-card-pos">{{ e.posicaoEtapa }}</span>
+              <h3 class="producao-acomp-card-title">{{ e.etapa }}</h3>
+              <p class="producao-acomp-card-cod">{{ e.codEtapa }}</p>
+              <dl class="producao-acomp-card-stats">
+                <div>
+                  <dt>Requisições</dt>
+                  <dd>{{ e.totalRequisicoesFormulas }}</dd>
+                </div>
+                <div>
+                  <dt>Tempo médio</dt>
+                  <dd>{{ formatarMinutos(e.tempoMedioMinutos) }}</dd>
+                </div>
+              </dl>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (modalDetalheAberto && etapaSelecionada) {
+  <div
+    class="producao-prod-modal-overlay"
+    role="presentation">
+    <div
+      class="producao-prod-modal-box producao-acomp-modal-detalhe"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="'pa-modal-titulo-' + etapaSelecionada.codEtapa">
+      <header class="producao-prod-modal-header">
+        <div class="producao-prod-modal-header-text">
+          <h3 [id]="'pa-modal-titulo-' + etapaSelecionada.codEtapa">
+            {{ etapaSelecionada.etapa }}
+          </h3>
+          <p class="producao-prod-modal-subtitulo">
+            {{ etapaSelecionada.codEtapa }} · posição
+            {{ etapaSelecionada.posicaoEtapa }} ·
+            {{ totalRequisicoesModal }} requisição(ões) na fila
+            @if (reqFormulaFiltroAtivo) {
+              <span class="producao-acomp-modal-filtro">
+                · filtro {{ reqFormulaFiltroAtivo.requisicao }}-{{
+                  reqFormulaFiltroAtivo.formula
+                }}
+              </span>
+            }
+          </p>
+        </div>
+        <button
+          type="button"
+          class="producao-prod-modal-close"
+          aria-label="Fechar"
+          (click)="fecharDetalhe()">
+          ×
+        </button>
+      </header>
+
+      <div class="producao-prod-modal-body">
+        @if (carregandoDetalhe) {
+          <div class="producao-acomp-state">
+            <i class="fas fa-spinner fa-spin"></i> Carregando detalhe…
+          </div>
+        } @else if (detalhe) {
+          <h4 class="producao-acomp-section-title">Requisições e fórmulas</h4>
+          <div class="table-responsive">
+            <table class="vendas-table producao-acomp-table">
+              <thead>
+                <tr>
+                  <th>Req-fórmula</th>
+                  <th>Unidade</th>
+                  <th>Funcionário</th>
+                  <th>Entrada</th>
+                  <th class="text-end">Tempo</th>
+                  <th>Cliente / Paciente</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (lin of linhasDetalheModal; track $index) {
+                  <tr [class.producao-acomp-linha-atrasada]="tempoMaisDe24Horas(lin.tempoDecorridoMinutos)">
+                    <td>{{ labelRequisicaoFormula(lin.requisicao, lin.formula, lin.filial) }}</td>
+                    <td>{{ lin.unidade }}</td>
+                    <td>{{ lin.funcionario ?? '—' }}</td>
+                    <td>
+                      {{ formatarData(lin.dataEntrada) }}
+                      @if (lin.horaEntrada) {
+                        <span class="producao-acomp-hora">{{ lin.horaEntrada }}</span>
+                      }
+                    </td>
+                    <td class="text-end">{{ formatarMinutos(lin.tempoDecorridoMinutos) }}</td>
+                    <td>
+                      @if (lin.cliente) {
+                        <span>{{ lin.cliente }}</span>
+                      }
+                      @if (lin.paciente) {
+                        <span class="producao-acomp-paciente">{{ lin.paciente }}</span>
+                      }
+                      @if (!lin.cliente && !lin.paciente) {
+                        —
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr class="no-data">
+                    <td colspan="6">
+                      <i class="fas fa-inbox"></i> Nenhuma fórmula em andamento nesta etapa.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <footer class="producao-prod-modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="fecharDetalhe()">
+          Fechar
+        </button>
+      </footer>
+    </div>
+  </div>
+}

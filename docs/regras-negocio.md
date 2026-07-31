@@ -203,6 +203,7 @@
 
 - Na sincronização incremental de orçamentos (`processarOrcamento`), o upsert **preserva** `motivoRejeicaoId` e `observacaoRejeicao` enquanto o registro permanece **REJEITADO** (ou muda de APROVADO para REJEITADO).
 - Se o status mudar de **REJEITADO** para **APROVADO**, `motivoRejeicaoId` e `observacaoRejeicao` são **limpos** (`null`).
+- **Exclusão de fórmula no ERP (RECEITAS):** a linha correspondente em **FC15100** permanece; o ERP atualiza **`QTAPROV = 0`** (status **REJEITADO**) e **`dtmodificacao`**. A sync incremental de orçamentos já reflete isso no PostgreSQL — **não** implementar purge nem fluxo paralelo de exclusão de orçamento (diferente do caixa ERP e das etapas **RN-PCP-008**). Validado em produção/local (ex.: req. **97875**, fórmula **9**, filial **2**).
 
 ### RN-ORC-005 — Atualização manual de orçamentos (listagem)
 
@@ -296,13 +297,13 @@
 
 - Origem: SQL validado `producao_etapas_sla_resumo.sql` via agente (`POST /api/v1/producao/etapas-resumo`).
 - Persistência: tabela `producao_etapas_resumo`; chave upsert: `unidade + filial + requisicao + formula + cod_etapa`.
-- Filtro de movimentos: data do evento PCP (`p.data` na FC12500), não `dtentr` (data de retirada é apenas informativa).
-- **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`. Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*).
-- **Importação automática:** integrada à sync geral quando `ultimaModificacaoProducaoEtapas` estiver configurada; filtra movimentos posteriores ao watermark; ao concluir, atualiza watermark com hora do processamento (America/Sao_Paulo), alinhado ao padrão de orçamentos.
-- Registros sem entrada na etapa são excluídos pelo SQL (inner join em `evt_ent`); etapas só com saída não são importadas.
-- **Usuário entrada/saída:** código **`cdusu`** do movimento na `FC12500`. Entrada (`cdopera = 01`): **primeiro** lançamento cronológico (data/hora). Saída (`cdopera = 02`): **primeiro** lançamento cronológico. Persistência em `producao_etapas_resumo.usuarioEntrada` / `usuarioSaida` (inteiro, sem nome no resumo). **Mesmo segundo:** desempate no agente preferindo `cdusu` maior. **Várias linhas por `tppcp`:** merge antes do upsert (chave única não inclui `tppcp`); não sobrescreve `usuario*` já preenchido com `null` vindo de outra linha.
+- Filtro de movimentos: data do evento PCP (`p.data` na FC12500), não `dtentr` (data de retirada é apenas informativa). O filtro (período ou watermark) define **quais fórmulas** entram no lote (`formula_touch`: requisição + série com ao menos um movimento no intervalo); para cada fórmula selecionada, o agente importa **todas** as etapas (`cdetapa`) com movimento na `FC12500`, calculando **1º `01` / 1º `02` / encerramento ≠ `01` entre todos os `tppcp`** da mesma etapa (uma linha por `cod_etapa` no payload). Fila (`emAndamentoFila`): último movimento **por `tppcp`**; merge OR no backend quando houver mais de um ciclo. Série (`serier`): normalização numérica (`9` = `09`) **apenas** em `formula_touch` e coluna `formula` exportada; joins internos usam `serier` bruto (desempenho Firebird).
+- **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`; **não** consulta exclusões FC01M20 (carga em tabela limpa ou reimportação completa). Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*).
+- **Importação automática:** integrada à sync geral quando `ultimaModificacaoProducaoEtapas` estiver configurada; filtra movimentos posteriores ao watermark; **antes** do upsert incremental, aplica **RN-PCP-008** (remoção de fórmulas excluídas no ERP); ao concluir, atualiza watermark com hora do processamento (America/Sao_Paulo), alinhado ao padrão de orçamentos.
+- Registros sem **nenhum** `01` na etapa são excluídos (`WHERE EXISTS` entrada); etapas só com saída não são importadas.
+- **Usuário entrada/saída:** código **`cdusu`** do movimento na `FC12500`. Entrada (`cdopera = 01`, aceita `1` com trim): **primeiro** lançamento cronológico entre **todos os `tppcp`**. **`usuarioSaida`:** **primeiro** `02` (`2`). **`dataSaida` / `horaSaida`:** **primeiro** `02`; se não houver, **primeiro movimento com `cdopera ≠ 01`** na mesma etapa (todos os `tppcp`) — encerramento operacional. Persistência em `producao_etapas_resumo.usuarioEntrada` / `usuarioSaida`. **Mesmo segundo:** desempate preferindo `cdusu` maior. Upsert: chave sem `tppcp`; não sobrescreve `usuario*` preenchido com `null`.
 - **Dados históricos:** após deploy, **reimportar** períodos de fechamento (delete + importação manual ou truncar tabela e reimportar); códigos **`cdusu`** no cadastro folha (`codigoUsuarioErp`) são preenchidos **manualmente** (sem conversão automática `cdfun`→`cdusu`).
-- **Correções PCP (retorno, relançamento, «LANÇAMENTO ERRADO»):** persistem apenas na **primeira** conclusão da etapa (1º `02`); lançamentos posteriores na mesma fórmula+etapa **não** geram linha adicional em `producao_etapas_resumo`. Divergências em relação ao relatório de produtividade do ERP são esperadas — ver **RN-PCP-004**.
+- **Correções PCP (retorno, relançamento, «LANÇAMENTO ERRADO»):** persistem apenas na **primeira** conclusão da etapa (1º `02`) nos campos de **fechamento** (`dataSaida`, `usuarioSaida`); lançamentos posteriores na mesma fórmula+etapa **não** geram segunda remuneração. **Fila operacional** (`emAndamentoFila`, `dataEntradaFila`, …): último movimento na etapa (`FC12500` por `tppcp`); **em andamento** somente se o último evento for **`01`** (retorno/`02`/demais operações **fecham** o ciclo na fila). Divergências de fechamento vs ERP — **RN-PCP-004**.
 - Campo `etapa` (nome da etapa, `FC12540.descricao`): padronizado em **maiúsculas pt-BR** na importação (ex.: `ENCAPSULAÇÃO`, `SACHÊ INHUMAS`, `ROTULAÇÃO`).
 - Campo `principios_ativos`: texto livre (`TEXT`), lista separada por vírgula.
 - Campo `tempo_etapa`: minutos (inteiro) entre entrada (primeiro 01) e saída (primeiro 02); `NULL` quando saída incompleta.
@@ -310,6 +311,16 @@
 - Campo `codigoCliente` / `cliente`: `req.cdcli` + `FC07000`; com **fallback** do `CDCLI` de outra fórmula da mesma requisição. Nome do cliente: prioriza `FC07000` da **mesma filial** da requisição; se ausente, usa cadastro do mesmo `CDCLI` em **outra filial**.
 - Escopo inicial: importação e persistência; painéis/relatórios são demandas posteriores.
 - Permissão importação manual: **`configuracao:access`**.
+
+### RN-PCP-008 — Exclusão de fórmula no ERP (sync incremental)
+
+- **Contexto:** quando uma fórmula é **excluída do processo** no ERP (módulo **RECEITAS**), deixa de existir em `FC12100`/`FC12500`; o upsert incremental **não** remove linhas antigas em `producao_etapas_resumo`.
+- **Auditoria oficial:** tabela **`FC01M20`**, `CLASSIFICACAO = EXCLUSAO`, `MODULO = RECEITAS`, evento contendo `REQUISICAO: {cdfil}-{nrrqu}-{serier}` (ex.: `2-97875-9`).
+- **Agente:** `POST /api/v1/producao/exclusoes-receitas` com `unit`, `start`, `end` (`YYYY-MM-DD`); consulta `FC01M20` na janela; deduplica por fórmula; **confirma** exclusão somente se **não** existir linha correspondente em `FC12100` (fórmula realmente ausente no ERP).
+- **Backend (sync automática):** a cada ciclo com `ultimaModificacaoProducaoEtapas` configurada, **ordem:** (1) exclusões na janela **data do watermark → hoje (America/Sao_Paulo)** → `DELETE` físico em PG por `unidade + filial + requisicao + formula`; (2) upsert incremental de etapas (RN-PCP-001). Executa exclusões **mesmo** quando o agente não retorna etapas novas.
+- **Importação manual / massa:** **não** chama exclusões; assume tabela limpa ou reimportação idempotente do período.
+- **Persistência local:** **sem** histórico de exclusão no PostgreSQL; remoção física (`DELETE`); rastreio operacional permanece no ERP (`FC01M20`).
+- **Orçamentos:** fora do escopo desta RN — ver **RN-ORC-004** (rejeição via FC15100 + sync existente).
 
 ### RN-PCP-002 — Remuneração por etapa (config permanente)
 
@@ -351,7 +362,7 @@
 - Linhas ignoradas (cadastro ERP ok na unidade da linha, etapa remunerada, mas **sem vínculo** em `producao_funcionario_etapa`): exibidas com **nome**, **código ERP**, unidades e **etapas** do resumo não vinculadas (até 50 funcionários distintos), para apoio ao fechamento, **somente** com **`producao-produtividade:read-alertas`**.
 - Demais etapas não remuneradas na unidade **não** geram alerta na tela (volume alto, baixa ação imediata).
 - API: `GET /producao/produtividade?unidades=&dataInicio=&dataFim=` (parâmetro `unidades` repetido por unidade; resposta `unidades` = escopo **resumo** efetivo); permissão **`producao-produtividade:read`** (independente de `producao-config:read`); alertas detalhados exigem **`producao-produtividade:read-alertas`**.
-- Menu **Produção**: Configuração de produção (`producao-config:read`/`update`), Produtividade (`producao-produtividade:read`) e alertas de produtividade (`producao-produtividade:read-alertas`) — permissões independentes no perfil.
+- Menu **Produção**: Configuração de produção (`producao-config:read`/`update`), **Acompanhamento** (`producao-acompanhamento:read`), Produtividade (`producao-produtividade:read`) e alertas de produtividade (`producao-produtividade:read-alertas`) — permissões independentes no perfil.
 
 ### RN-PCP-006 — Cálculo Gestão (etapa manual consolidada)
 
@@ -366,6 +377,17 @@
 - **Relatório de configuração:** exibe vínculo como `Gestão → {nome da etapa base}`; tela de produtividade e demais relatórios operacionais mostram apenas a coluna **GESTÃO** com quantidade/valor (sem expor a etapa base).
 - **Contagem** `qtdEtapasConfiguradas`: inclui GESTÃO somente quando `cod_etapa_referencia` estiver preenchido.
 - **Demanda futura:** relatório de detalhamento por etapa/funcionário e bloco de **etapas órfãs** na Gestão (conferência entre total da coluna base, total GESTÃO e linhas não contabilizadas) — ver `docs/anotacoes.md` (Pendente).
+
+### RN-PCP-007 — Acompanhamento da fila de produção (operacional)
+
+- Tela **`/producao/acompanhamento`**, menu **Produção → Acompanhamento**; permissão **`producao-acompanhamento:read`** (independente de produtividade e config).
+- **Escopo de unidades:** idêntico à produtividade (RN-PCP-005): `unidadesPermitidasProdutividade` / campo **`usuarios.unidades_produtividade`** + unidade principal; API valida com `assertUnidadeProducao`.
+- **Somente fila (MVP):** não há filtro de período histórico; exibe etapas com **`emAndamentoFila = true`** e `dataEntradaFila` preenchida (não usa `dataSaida IS NULL` do fechamento).
+- **Em andamento na etapa:** último movimento PCP na etapa (`tppcp`) é **`01`**; retorno/correção com operação posterior **`≠ 01`** remove a fórmula da fila naquela etapa.
+- **Resumo (cards):** uma card por `codEtapa` distinto **com ao menos uma requisição-fórmula em andamento** (`totalRequisicoesFormulas > 0`), ordenadas por **`posicaoEtapa`** ascendente; etapas sem fila **não** aparecem no resumo; **tempo médio** = média dos minutos decorridos desde entrada até `consultadoEm`.
+- **Detalhe (clique na card):** abre em **modal** (não inline; fecha só em **Fechar** ou **×**, sem clique no overlay); lista analítica das linhas da etapa (req, fórmula, unidade, filial, **funcionário** — nome via `funcionarios.codigoUsuarioErp` na unidade da linha, cliente/paciente opcional, retirada); **tempo** = minutos decorridos por fórmula.
+- **Dados:** snapshot PostgreSQL pós-import/sync (RN-PCP-001); não substitui fila ao vivo do ERP; divergências possíveis (RN-PCP-004) — mensagem informativa na tela.
+- API: `GET /producao/acompanhamento/resumo?unidades=` e `GET /producao/acompanhamento/detalhe?codEtapa=&unidades=`.
 
 ### RN-PCP-004 — Reconciliação ERP × fechamento de produtividade (decisão com gestão)
 

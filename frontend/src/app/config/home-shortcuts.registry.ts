@@ -322,6 +322,14 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     ],
   },
   {
+    id: 'producao-acompanhamento',
+    label: 'Acompanhamento',
+    route: '/producao/acompanhamento',
+    icon: 'feather-activity',
+    category: 'Produção',
+    requiredPermissions: [Permission.PRODUCAO_ACOMPANHAMENTO_READ],
+  },
+  {
     id: 'producao-produtividade',
     label: 'Produtividade',
     route: '/producao/produtividade',

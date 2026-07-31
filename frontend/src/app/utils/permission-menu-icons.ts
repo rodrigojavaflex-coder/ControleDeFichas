@@ -38,6 +38,7 @@ export const PERMISSION_GROUP_ICON_KEYS: Record<string, string> = {
   Orçamentos: 'feather-file-text',
   'Orçamentos — Dashboard': 'feather-bar-chart-2',
   'Produção — Configuração': 'feather-settings',
+  'Produção — Acompanhamento': 'feather-activity',
   'Produção — Produtividade': 'feather-bar-chart-2',
 };
 

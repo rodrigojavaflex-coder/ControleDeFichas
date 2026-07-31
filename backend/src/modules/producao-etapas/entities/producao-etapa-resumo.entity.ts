@@ -150,4 +150,21 @@ export class ProducaoEtapaResumo extends BaseEntity {
   @ApiProperty({ required: false })
   @Column({ type: 'varchar', length: 8, nullable: true })
   horaRetirada?: string | null;
+
+  /** Fila operacional (último movimento na etapa ≠ entrada 01). RN-PCP-007. */
+  @ApiProperty()
+  @Column({ type: 'boolean', default: false })
+  emAndamentoFila: boolean;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'integer', nullable: true })
+  usuarioEntradaFila?: number | null;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'date', nullable: true, transformer: dateTransformer })
+  dataEntradaFila?: string | null;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 8, nullable: true })
+  horaEntradaFila?: string | null;
 }

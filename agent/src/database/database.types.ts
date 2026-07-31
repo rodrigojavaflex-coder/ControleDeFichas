@@ -110,6 +110,22 @@ export interface ProducaoEtapaResumoRow {
   nome_prescritor?: string | null;
   data_retirada?: string | null;
   hora_retirada?: string | null;
+  em_andamento_fila?: boolean | number | null;
+  usuario_entrada_fila?: number | null;
+  data_entrada_fila?: string | null;
+  hora_entrada_fila?: string | null;
+}
+
+/** Fórmula excluída no ERP (FC01M20 RECEITAS) — RN-PCP-008 */
+export interface ProducaoExclusaoReceitaRow {
+  filial: number;
+  requisicao: number;
+  formula: string;
+  data_exclusao: string;
+  hora_exclusao?: string | null;
+  cdusu?: number | null;
+  motivo?: string | null;
+  evento: string;
 }
 
 export interface OrcamentoRow {

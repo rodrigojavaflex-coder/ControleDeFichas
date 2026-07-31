@@ -53,6 +53,10 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
   {
     key: 'producao',
     label: 'Produção',
-    groupKeys: ['Produção — Configuração', 'Produção — Produtividade'],
+    groupKeys: [
+      'Produção — Configuração',
+      'Produção — Acompanhamento',
+      'Produção — Produtividade',
+    ],
   },
 ];

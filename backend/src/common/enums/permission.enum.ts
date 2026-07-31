@@ -157,6 +157,8 @@ export enum Permission {
   PRODUCAO_PRODUTIVIDADE_READ = 'producao-produtividade:read',
   /** Produção — visualizar alertas da consulta de produtividade. */
   PRODUCAO_PRODUTIVIDADE_READ_ALERTAS = 'producao-produtividade:read-alertas',
+  /** Produção — fila operacional em andamento por etapa. */
+  PRODUCAO_ACOMPANHAMENTO_READ = 'producao-acompanhamento:read',
 }
 
 export const PERMISSION_GROUPS = {
@@ -459,6 +461,12 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.PRODUCAO_PRODUTIVIDADE_READ_ALERTAS,
       label: 'Visualizar alertas da produtividade',
+    },
+  ],
+  'Produção — Acompanhamento': [
+    {
+      key: Permission.PRODUCAO_ACOMPANHAMENTO_READ,
+      label: 'Visualizar acompanhamento da fila de produção',
     },
   ],
 };

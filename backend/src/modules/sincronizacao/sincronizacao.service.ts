@@ -22,7 +22,10 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PainelMedicosService } from '../painel-medicos/painel-medicos.service';
 import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.service';
 import { parsePainelContratoRepresentantes } from '../../common/utils/painel-config.util';
-import { dividirPeriodoEmSegmentosMensais } from '../../common/utils/data-date.util';
+import {
+  dividirPeriodoEmSegmentosPorDias,
+  normalizarDataIso,
+} from '../../common/utils/data-date.util';
 import {
   ImportarProducaoEtapasDto,
   ImportarProducaoEtapasResponseDto,
@@ -89,6 +92,9 @@ export interface SincronizacaoResult {
   producaoEtapasProcessados: number;
   producaoEtapasCriados: number;
   producaoEtapasAtualizados: number;
+  /** RN-PCP-008: fórmulas com exclusão ERP confirmada (FC12100 ausente). */
+  producaoEtapasFormulasExcluidas: number;
+  producaoEtapasRemovidas: number;
   erros: string[];
 }
 
@@ -210,6 +216,8 @@ export class SincronizacaoService {
       producaoEtapasProcessados: 0,
       producaoEtapasCriados: 0,
       producaoEtapasAtualizados: 0,
+      producaoEtapasFormulasExcluidas: 0,
+      producaoEtapasRemovidas: 0,
       erros,
     };
   }
@@ -981,7 +989,7 @@ export class SincronizacaoService {
     await this.configRepository.update(config.id, updateData);
 
     this.logger.log(
-      `Sincronização concluída para agente ${config.agente}: ${resultado.clientesCriados} clientes, ${resultado.prescritoresCriados} prescritores, ${resultado.orcamentosCriados} orçamentos, ${resultado.painelCriados} painel, ${resultado.producaoEtapasCriados} etapas criados`,
+      `Sincronização concluída para agente ${config.agente}: ${resultado.clientesCriados} clientes, ${resultado.prescritoresCriados} prescritores, ${resultado.orcamentosCriados} orçamentos, ${resultado.painelCriados} painel, ${resultado.producaoEtapasCriados} etapas criados, ${resultado.producaoEtapasRemovidas} linha(s) etapas removidas (exclusão ERP)`,
     );
 
     return resultado;
@@ -1176,9 +1184,54 @@ export class SincronizacaoService {
       throw new Error(`Unidade não mapeada para o agente: ${config.agente}`);
     }
 
+    const unidade = this.producaoEtapasService.getUnidadePorAgente(
+      config.agente,
+    );
+
     const dataMinimaMovimento = this.formatDateTimeForAgent(
       config.ultimaModificacaoProducaoEtapas,
     );
+
+    const inicioExclusoes = normalizarDataIso(
+      config.ultimaModificacaoProducaoEtapas,
+    );
+    const fimExclusoes = this.dataIsoHojeBrasilia();
+
+    if (inicioExclusoes && inicioExclusoes <= fimExclusoes) {
+      this.atualizarProgresso({
+        etapa: 'producao_etapas',
+        message: `Verificando exclusões de fórmulas (${config.agente}, ${inicioExclusoes}..${fimExclusoes})...`,
+        fase: 0.86,
+      });
+
+      const exclusoes =
+        await this.producaoEtapasService.buscarExclusoesReceitasDoAgente(
+          url,
+          token,
+          unit,
+          inicioExclusoes,
+          fimExclusoes,
+          config.agente,
+        );
+
+      const purge = await this.producaoEtapasService.aplicarExclusoesFormulas(
+        unidade,
+        exclusoes,
+        config.agente,
+      );
+      resultado.producaoEtapasFormulasExcluidas = purge.formulasProcessadas;
+      resultado.producaoEtapasRemovidas = purge.linhasRemovidas;
+
+      if (purge.formulasProcessadas > 0) {
+        this.logger.log(
+          `[${config.agente}] RN-PCP-008: ${purge.formulasProcessadas} fórmula(s) excluída(s) no ERP — ${purge.linhasRemovidas} linha(s) removida(s) do resumo`,
+        );
+      }
+    } else {
+      this.logger.warn(
+        `[${config.agente}] Janela de exclusões RECEITAS ignorada (início=${inicioExclusoes ?? 'null'}, fim=${fimExclusoes})`,
+      );
+    }
 
     this.atualizarProgresso({
       etapa: 'producao_etapas',
@@ -1201,10 +1254,6 @@ export class SincronizacaoService {
       this.atualizarWatermarkProducaoEtapas(config);
       return;
     }
-
-    const unidade = this.producaoEtapasService.getUnidadePorAgente(
-      config.agente,
-    );
 
     this.atualizarProgresso({
       etapa: 'producao_etapas',
@@ -1266,9 +1315,10 @@ export class SincronizacaoService {
     const erros: string[] = [];
 
     try {
-      const segmentos = dividirPeriodoEmSegmentosMensais(
+      const segmentos = dividirPeriodoEmSegmentosPorDias(
         dto.dataInicio,
         dto.dataFim,
+        7,
       );
       if (!segmentos.length) {
         throw new BadRequestException(
@@ -1298,6 +1348,10 @@ export class SincronizacaoService {
           segmento.inicio,
           segmento.fim,
           agente,
+        );
+
+        this.logger.log(
+          `[${agente}] Segmento ${rotuloSegmento}: agente retornou ${etapas.length} etapa(s) (cdfil=${unit})`,
         );
 
         if (!etapas.length) {
@@ -1340,7 +1394,20 @@ export class SincronizacaoService {
         processados > 0
           ? `Importação concluída: ${processados} processados (${criados} criados, ${atualizados} atualizados) em ${segmentos.length} segmento(s).`
           : 'Nenhuma etapa retornada pelo agente para o período informado.';
-      this.importacaoProgressService.finalizar('completed', mensagemFinal);
+      this.importacaoProgressService.finalizar(
+        processados > 0 ? 'completed' : 'error',
+        mensagemFinal,
+      );
+
+      if (erros.length > 0) {
+        throw new BadRequestException(erros.join(' | '));
+      }
+
+      if (processados === 0) {
+        throw new BadRequestException(
+          `${mensagemFinal} Confira unidade/cdfil do agente, período informado, serviço do agente atualizado e estrutura de producao_etapas_resumo (incl. emAndamentoFila).`,
+        );
+      }
 
       return {
         unidade: dto.unidade,
@@ -1356,13 +1423,12 @@ export class SincronizacaoService {
         erros: erros.length,
       });
       this.importacaoProgressService.finalizar('error', msg);
-      return {
-        unidade: dto.unidade,
-        processados: 0,
-        criados: 0,
-        atualizados: 0,
-        erros,
-      };
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        erros.length ? erros.join(' | ') : msg,
+      );
     }
   }
 
@@ -1502,6 +1568,10 @@ export class SincronizacaoService {
       parts.find((part) => part.type === type)?.value ?? '00';
 
     return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}`;
+  }
+
+  private dataIsoHojeBrasilia(date: Date = new Date()): string {
+    return this.formatarDataHoraBrasilia(date).slice(0, 10);
   }
 
   private async buscarOrcamentosPeriodoDoAgente(
