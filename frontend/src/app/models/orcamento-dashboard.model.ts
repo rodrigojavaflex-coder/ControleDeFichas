@@ -62,7 +62,9 @@ export interface DashboardUnidadePerformanceDetalhe {
   quantidadeTotal: number;
   quantidadeAprovada: number;
   quantidadeRejeitada: number;
+  valorTotal: number;
   valorAprovado: number;
+  valorRejeitado: number;
   taxaConversao: number;
 }
 

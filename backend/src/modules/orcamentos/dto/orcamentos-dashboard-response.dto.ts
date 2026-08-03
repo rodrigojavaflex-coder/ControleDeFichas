@@ -103,7 +103,13 @@ export class DashboardUnidadePerformanceDetalheDto {
   quantidadeRejeitada: number;
 
   @ApiProperty()
+  valorTotal: number;
+
+  @ApiProperty()
   valorAprovado: number;
+
+  @ApiProperty()
+  valorRejeitado: number;
 
   @ApiProperty()
   taxaConversao: number;

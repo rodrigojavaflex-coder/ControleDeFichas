@@ -240,7 +240,9 @@ export class OrcamentosDashboardService {
       ...performance,
       detalhes: performance.detalhes.map((item) => ({
         ...item,
+        valorTotal: 0,
         valorAprovado: 0,
+        valorRejeitado: 0,
       })),
     };
   }
@@ -536,9 +538,14 @@ export class OrcamentosDashboardService {
         `COUNT(*) FILTER (WHERE o.status = :rejeitado)`,
         'quantidadeRejeitada',
       )
+      .addSelect('COALESCE(SUM(o.precoVenda), 0)', 'valorTotal')
       .addSelect(
         `COALESCE(SUM(o.precoVenda) FILTER (WHERE o.status = :aprovado), 0)`,
         'valorAprovado',
+      )
+      .addSelect(
+        `COALESCE(SUM(o.precoVenda) FILTER (WHERE o.status = :rejeitado), 0)`,
+        'valorRejeitado',
       )
       .setParameter('aprovado', OrcamentoStatus.APROVADO)
       .setParameter('rejeitado', OrcamentoStatus.REJEITADO)
@@ -551,7 +558,9 @@ export class OrcamentosDashboardService {
       quantidadeTotal: string;
       quantidadeAprovada: string;
       quantidadeRejeitada: string;
+      valorTotal: string;
       valorAprovado: string;
+      valorRejeitado: string;
     }>();
 
     const detalhes = rows
@@ -568,7 +577,9 @@ export class OrcamentosDashboardService {
           quantidadeTotal,
           quantidadeAprovada,
           quantidadeRejeitada,
+          valorTotal: this.toNumber(r.valorTotal),
           valorAprovado: this.toNumber(r.valorAprovado),
+          valorRejeitado: this.toNumber(r.valorRejeitado),
           taxaConversao,
         };
       })

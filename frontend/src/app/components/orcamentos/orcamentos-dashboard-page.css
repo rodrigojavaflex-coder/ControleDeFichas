@@ -915,6 +915,16 @@ body:not(.theme-dark) .orcamentos-dashboard-page .unidade-item {
   gap: 0.45rem;
 }
 
+.orcamentos-dashboard-page .bar-list-compact .bar-value {
+  flex-shrink: 0;
+  max-width: 58%;
+  text-align: right;
+  line-height: 1.25;
+  font-size: 0.75rem;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .orcamentos-dashboard-page .bar-list-compact .bar-header {
   font-size: 0.74rem;
 }
@@ -1079,14 +1089,36 @@ body:not(.theme-dark) .orcamentos-dashboard-page .performance-metric-col {
 }
 
 @media (max-width: 900px) {
+  /* Permite rolagem via .layout-content (vendas-page fixa altura + overflow hidden no desktop) */
+  .orcamentos-dashboard-page.vendas-page {
+    height: auto;
+    min-height: calc((100vh - 64px) / var(--app-zoom-factor, 1));
+    overflow: visible;
+  }
+
+  .orcamentos-dashboard-page .results-card {
+    flex: 1 1 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
   .orcamentos-dashboard-page .dashboard-layout {
     grid-template-columns: 1fr;
+    height: auto;
+    min-height: auto;
   }
 
   .orcamentos-dashboard-page .dashboard-filters-sidebar {
     position: static;
     height: auto;
+    max-height: none;
     width: auto;
+    overflow: visible;
+  }
+
+  .orcamentos-dashboard-page .dashboard-filters-sidebar-body {
+    max-height: none;
+    overflow: visible;
   }
 
   .orcamentos-dashboard-page .dashboard-charts-grid {

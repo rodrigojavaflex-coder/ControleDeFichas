@@ -717,6 +717,34 @@ export class OrcamentosDashboardPage implements OnInit, OnDestroy {
       : this.formatarInteiro(valor);
   }
 
+  formatarValorColunaPerformanceUnidade(
+    item: DashboardUnidadePerformanceDetalhe,
+    coluna: (typeof this.performanceMetricColunas)[number],
+  ): string {
+    const quantidade = this.formatarValorColunaPerformance(item, coluna);
+    if (!this.canViewValores() || coluna.key === 'taxaConversao') {
+      return quantidade;
+    }
+
+    const valorMonetario: Partial<
+      Record<
+        (typeof this.performanceMetricColunas)[number]['key'],
+        number
+      >
+    > = {
+      quantidadeTotal: item.valorTotal,
+      quantidadeAprovada: item.valorAprovado,
+      quantidadeRejeitada: item.valorRejeitado,
+    };
+
+    const valor = valorMonetario[coluna.key];
+    if (valor === undefined) {
+      return quantidade;
+    }
+
+    return `${quantidade} · ${this.formatarMoeda(valor)}`;
+  }
+
   formatarNomeVendedorResumo(valor: string | null): string {
     return this.formatarNomeComUnidadeResumo(valor, 'Sem vendedor');
   }
