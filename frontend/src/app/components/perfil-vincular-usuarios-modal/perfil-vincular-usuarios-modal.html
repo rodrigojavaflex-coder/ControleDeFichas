@@ -1,0 +1,123 @@
+@if (visible) {
+  <div
+    class="pvu-overlay"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="'pvu-title'"
+  >
+    <div class="pvu-dialog" (click)="$event.stopPropagation()">
+      <header class="pvu-header">
+        <h2 id="pvu-title" class="pvu-title">
+          Vincular usuários ao perfil: {{ perfilNome }}
+        </h2>
+        <button
+          type="button"
+          class="pvu-close"
+          aria-label="Fechar"
+          (click)="onClose()"
+          [disabled]="saving"
+        >
+          ×
+        </button>
+      </header>
+
+      <div class="pvu-toolbar">
+        <label class="pvu-search-label" for="pvu-filtro">Buscar</label>
+        <input
+          id="pvu-filtro"
+          type="search"
+          class="form-control"
+          [(ngModel)]="filtro"
+          placeholder="Nome ou e-mail"
+          [disabled]="loadingUsers || saving"
+        />
+      </div>
+
+      @if (inlineError) {
+        <div class="pvu-alert pvu-alert-error" role="alert">
+          {{ inlineError }}
+        </div>
+      }
+
+      @if (loadUsersError) {
+        <div class="pvu-alert pvu-alert-error" role="alert">
+          {{ loadUsersError }}
+        </div>
+      }
+
+      <div class="pvu-body">
+        @if (loadingUsers) {
+          <div class="pvu-state">
+            <div class="spinner"></div>
+            <p>Carregando usuários...</p>
+          </div>
+        } @else if (loadUsersError) {
+          <p class="pvu-state-text">Corrija o erro acima e feche o modal.</p>
+        } @else if (filteredRows.length === 0) {
+          <p class="pvu-state-text">Nenhum usuário encontrado.</p>
+        } @else {
+          <ul class="pvu-list">
+            @for (row of filteredRows; track row.id) {
+              <li
+                class="pvu-row"
+                [class.pvu-row-remove]="row.markedRemove"
+                [class.pvu-row-disabled]="row.checkboxDisabled"
+                (click)="onRowClick(row, $event)"
+              >
+                <label class="pvu-row-label" (click)="$event.stopPropagation()">
+                  <input
+                    type="checkbox"
+                    [checked]="row.checked"
+                    [disabled]="row.checkboxDisabled || saving"
+                    (change)="onCheckboxChange(row, $event)"
+                  />
+                  <span class="pvu-row-text">
+                    <span class="pvu-row-nome">{{ row.nome }}</span>
+                    <span class="pvu-row-meta"
+                      >{{ row.email }} · {{ formatUnidade(row.unidade) }}</span
+                    >
+                  </span>
+                </label>
+                @if (row.markedRemove) {
+                  <span class="pvu-badge-remove">Remover vínculo</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <footer class="pvu-footer">
+        <span class="pvu-footer-summary">
+          @if (hasChanges) {
+            {{ footerSummary }}
+          }
+        </span>
+        <div class="pvu-footer-actions">
+          <button
+            type="button"
+            class="btn btn-cancelar pvu-btn-fechar"
+            (click)="onClose()"
+            [disabled]="saving"
+          >
+            Fechar
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar pvu-btn-confirm"
+            (click)="onConfirmClick()"
+            [disabled]="!hasChanges || saving || loadingUsers || !!loadUsersError"
+          >
+            @if (saving) {
+              <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+              Salvando...
+            } @else {
+              <i class="fas fa-link" aria-hidden="true"></i>
+              {{ confirmLabel }}
+            }
+          </button>
+        </div>
+      </footer>
+    </div>
+  </div>
+}

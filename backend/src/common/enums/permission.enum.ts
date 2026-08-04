@@ -23,6 +23,8 @@ export enum Permission {
   PROFILE_READ = 'perfil:read',
   PROFILE_UPDATE = 'perfil:update',
   PROFILE_DELETE = 'perfil:delete',
+  PROFILE_ASSIGN_USERS = 'perfil:assign_users',
+  PROFILE_UNASSIGN_USERS = 'perfil:unassign_users',
 
   // Certificados
   CERTIFICADO_CREATE = 'certificado:create',
@@ -192,6 +194,14 @@ export const PERMISSION_GROUPS = {
     { key: Permission.PROFILE_READ, label: 'Visualizar perfis' },
     { key: Permission.PROFILE_UPDATE, label: 'Editar perfis' },
     { key: Permission.PROFILE_DELETE, label: 'Excluir perfis' },
+    {
+      key: Permission.PROFILE_ASSIGN_USERS,
+      label: 'Vincular usuários ao perfil (lista de perfis)',
+    },
+    {
+      key: Permission.PROFILE_UNASSIGN_USERS,
+      label: 'Remover vínculo de usuários ao perfil (lista de perfis)',
+    },
   ],
   Certificados: [
     { key: Permission.CERTIFICADO_CREATE, label: 'Criar certificados' },

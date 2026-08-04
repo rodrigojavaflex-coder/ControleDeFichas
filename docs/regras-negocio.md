@@ -124,6 +124,8 @@
 - **Permissões efetivas** = **união** das permissões de todos os perfis vinculados (OR). Cada ação exige a permissão explícita correspondente — não há bypass global.
 - **`usuario.unidade`** e **`vendedor`** continuam no cadastro do usuário (não vêm do perfil).
 - **API:** create/update de usuário usam `perfilIds[]`; login e `/auth/profile` retornam `perfis` e `permissions` (lista unificada).
+- **Lista de perfis:** vincular/desvincular usuários ao perfil via `POST /perfil/:id/vincular-usuarios` (`perfil:assign_users`) e `POST /perfil/:id/desvincular-usuarios` (`perfil:unassign_users`); vincular é **adição** idempotente; desvincular remove **somente** aquele perfil; após desvincular o usuário deve manter **≥ 1** perfil — senão API `400`: `O usuário "{nome}" deve permanecer com ao menos um perfil`.
+- **Permissões novas** entram no catálogo (enum); atribuição ao perfil ADMIN é **manual** na tela de Perfis (sem migration automática).
 - **Mensagem ao usuário:** «Um ou mais perfis informados não foram encontrados»; «perfilIds deve ter ao menos um perfil».
 
 ### RN-PERM — Checagem de permissões na API

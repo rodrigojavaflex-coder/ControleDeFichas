@@ -180,6 +180,16 @@
             @for (perfil of displayedItems; track perfil.id) {
               <tr>
                 <td class="actions-cell">
+                  @if (canShowVincularUsuarios()) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-secondary"
+                      (click)="openVincularModal(perfil)"
+                      title="Vincular ou remover usuários deste perfil"
+                    >
+                      Vincular
+                    </button>
+                  }
                   @if (authService.hasPermission(Permission.PROFILE_UPDATE)) {
                     <button
                       type="button"
@@ -304,3 +314,15 @@
   (confirmed)="onDeleteConfirmed()"
   (cancelled)="onDeleteCancelled()"
 ></app-confirmation-modal>
+
+@if (vincularModalPerfil) {
+  <app-perfil-vincular-usuarios-modal
+    [visible]="vincularModalVisible"
+    [perfilNome]="vincularModalPerfil.nomePerfil"
+    [alreadyLinkedIds]="vincularAlreadyLinkedIds"
+    [canAssignUsers]="authService.hasPermission(Permission.PROFILE_ASSIGN_USERS)"
+    [canUnassignUsers]="authService.hasPermission(Permission.PROFILE_UNASSIGN_USERS)"
+    (closed)="closeVincularModal()"
+    (confirm)="onVincularConfirm($event)"
+  ></app-perfil-vincular-usuarios-modal>
+}

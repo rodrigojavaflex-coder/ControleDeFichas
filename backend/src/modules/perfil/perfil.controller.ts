@@ -13,6 +13,8 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { PerfilService } from './perfil.service';
 import { CreatePerfilDto } from './dto/create-perfil.dto';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
+import { VincularUsuariosPerfilDto } from './dto/vincular-usuarios-perfil.dto';
+import { DesvincularUsuariosPerfilDto } from './dto/desvincular-usuarios-perfil.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
@@ -34,11 +36,46 @@ export class PerfilController {
 
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-  @Permissions(Permission.PROFILE_READ)
+  @Permissions(
+    Permission.PROFILE_READ,
+    Permission.PROFILE_ASSIGN_USERS,
+    Permission.PROFILE_UNASSIGN_USERS,
+  )
   @ApiOperation({ summary: 'Listar todos os perfis' })
   @ApiResponse({ status: 200, description: 'Perfis listados' })
   findAll() {
     return this.perfilService.findAll();
+  }
+
+  @Post(':id/vincular-usuarios')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.PROFILE_ASSIGN_USERS)
+  @ApiOperation({ summary: 'Vincular usuários ao perfil' })
+  @ApiResponse({ status: 200, description: 'Perfil atualizado com estatísticas' })
+  @ApiResponse({ status: 400, description: 'Usuário inválido ou não encontrado' })
+  @ApiResponse({ status: 404, description: 'Perfil não encontrado' })
+  vincularUsuarios(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: VincularUsuariosPerfilDto,
+  ) {
+    return this.perfilService.vincularUsuarios(id, dto.usuarioIds);
+  }
+
+  @Post(':id/desvincular-usuarios')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.PROFILE_UNASSIGN_USERS)
+  @ApiOperation({ summary: 'Desvincular usuários do perfil' })
+  @ApiResponse({ status: 200, description: 'Perfil atualizado com estatísticas' })
+  @ApiResponse({
+    status: 400,
+    description: 'Usuário não vinculado ou último perfil do usuário',
+  })
+  @ApiResponse({ status: 404, description: 'Perfil não encontrado' })
+  desvincularUsuarios(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DesvincularUsuariosPerfilDto,
+  ) {
+    return this.perfilService.desvincularUsuarios(id, dto.usuarioIds);
   }
 
   @Get(':id')

@@ -88,7 +88,11 @@ export class UsuariosController {
 
   @Get()
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
-  @Permissions(Permission.USER_READ)
+  @Permissions(
+    Permission.USER_READ,
+    Permission.PROFILE_ASSIGN_USERS,
+    Permission.PROFILE_UNASSIGN_USERS,
+  )
   @ApiOperation({ summary: 'Listar usuários com paginação e filtros' })
   @ApiResponse({
     status: HttpStatus.OK,

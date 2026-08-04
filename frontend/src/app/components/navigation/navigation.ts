@@ -71,7 +71,9 @@ export class NavigationComponent implements OnInit, OnDestroy {
             Permission.PROFILE_CREATE,
             Permission.PROFILE_READ,
             Permission.PROFILE_UPDATE,
-            Permission.PROFILE_DELETE
+            Permission.PROFILE_DELETE,
+            Permission.PROFILE_ASSIGN_USERS,
+            Permission.PROFILE_UNASSIGN_USERS,
           ]
         },
         {

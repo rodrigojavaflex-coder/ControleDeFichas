@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Permission } from '../../common/enums/permission.enum';
 import { buildPermissionCatalog } from '../../common/utils/permission-catalog.util';
 import { Usuario } from '../usuarios/entities/usuario.entity';
@@ -11,6 +15,7 @@ import { UpdatePerfilDto } from './dto/update-perfil.dto';
 export type PerfilUsuarioVinculado = {
   id: string;
   nome: string;
+  email: string;
   unidade: Usuario['unidade'] | null;
 };
 
@@ -39,20 +44,115 @@ export class PerfilService {
       relations: ['usuarios'],
     });
 
-    return perfis.map(({ usuarios, ...perfil }) => {
-      const usuariosVinculados = (usuarios ?? [])
-        .map((u) => ({
-          id: u.id,
-          nome: u.nome,
-          unidade: u.unidade ?? null,
-        }))
-        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-      return {
-        ...perfil,
-        totalUsuarios: usuariosVinculados.length,
-        usuariosVinculados,
-      };
+    return perfis.map((perfil) => this.toPerfilComEstatisticas(perfil));
+  }
+
+  private toPerfilComEstatisticas(
+    perfil: Perfil & { usuarios?: Usuario[] },
+  ): PerfilComEstatisticas {
+    const { usuarios, ...rest } = perfil;
+    const usuariosVinculados = (usuarios ?? [])
+      .map((u) => ({
+        id: u.id,
+        nome: u.nome,
+        email: u.email,
+        unidade: u.unidade ?? null,
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return {
+      ...rest,
+      totalUsuarios: usuariosVinculados.length,
+      usuariosVinculados,
+    };
+  }
+
+  private async findOneComEstatisticas(
+    id: string,
+  ): Promise<PerfilComEstatisticas> {
+    const perfil = await this.perfilRepository.findOne({
+      where: { id },
+      relations: ['usuarios'],
     });
+    if (!perfil) {
+      throw new NotFoundException(`Perfil com id ${id} não encontrado`);
+    }
+    return this.toPerfilComEstatisticas(perfil);
+  }
+
+  async vincularUsuarios(
+    perfilId: string,
+    usuarioIds: string[],
+  ): Promise<PerfilComEstatisticas> {
+    const perfil = await this.perfilRepository.findOne({
+      where: { id: perfilId },
+    });
+    if (!perfil) {
+      throw new NotFoundException(`Perfil com id ${perfilId} não encontrado`);
+    }
+
+    const uniqueIds = Array.from(new Set(usuarioIds.filter(Boolean)));
+    const usuarios = await this.usuarioRepository.find({
+      where: { id: In(uniqueIds) },
+      relations: ['perfis'],
+    });
+    if (usuarios.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        'Um ou mais usuários informados não foram encontrados',
+      );
+    }
+
+    for (const usuario of usuarios) {
+      const perfisAtuais = usuario.perfis ?? [];
+      if (perfisAtuais.some((p) => p.id === perfilId)) {
+        continue;
+      }
+      usuario.perfis = [...perfisAtuais, perfil];
+      await this.usuarioRepository.save(usuario);
+    }
+
+    return this.findOneComEstatisticas(perfilId);
+  }
+
+  async desvincularUsuarios(
+    perfilId: string,
+    usuarioIds: string[],
+  ): Promise<PerfilComEstatisticas> {
+    const perfil = await this.perfilRepository.findOne({
+      where: { id: perfilId },
+    });
+    if (!perfil) {
+      throw new NotFoundException(`Perfil com id ${perfilId} não encontrado`);
+    }
+
+    const uniqueIds = Array.from(new Set(usuarioIds.filter(Boolean)));
+    const usuarios = await this.usuarioRepository.find({
+      where: { id: In(uniqueIds) },
+      relations: ['perfis'],
+    });
+    if (usuarios.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        'Um ou mais usuários informados não foram encontrados',
+      );
+    }
+
+    for (const usuario of usuarios) {
+      const perfisAtuais = usuario.perfis ?? [];
+      if (!perfisAtuais.some((p) => p.id === perfilId)) {
+        throw new BadRequestException(
+          `Usuário "${usuario.nome}" não está vinculado a este perfil`,
+        );
+      }
+      const restantes = perfisAtuais.filter((p) => p.id !== perfilId);
+      if (restantes.length === 0) {
+        throw new BadRequestException(
+          `O usuário "${usuario.nome}" deve permanecer com ao menos um perfil`,
+        );
+      }
+      usuario.perfis = restantes;
+      await this.usuarioRepository.save(usuario);
+    }
+
+    return this.findOneComEstatisticas(perfilId);
   }
 
   async findOne(id: string): Promise<Perfil> {

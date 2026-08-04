@@ -32,6 +32,8 @@ export enum Permission {
   PROFILE_READ = 'perfil:read',
   PROFILE_UPDATE = 'perfil:update',
   PROFILE_DELETE = 'perfil:delete',
+  PROFILE_ASSIGN_USERS = 'perfil:assign_users',
+  PROFILE_UNASSIGN_USERS = 'perfil:unassign_users',
 
   // Certificados
   CERTIFICADO_CREATE = 'certificado:create',
@@ -179,6 +181,7 @@ export interface PermissionCatalog {
 export interface PerfilUsuarioVinculado {
   id: string;
   nome: string;
+  email: string;
   unidade?: Unidade | null;
 }
 

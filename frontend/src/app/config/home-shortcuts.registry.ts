@@ -53,6 +53,8 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
       Permission.PROFILE_READ,
       Permission.PROFILE_UPDATE,
       Permission.PROFILE_DELETE,
+      Permission.PROFILE_ASSIGN_USERS,
+      Permission.PROFILE_UNASSIGN_USERS,
     ],
   },
   {

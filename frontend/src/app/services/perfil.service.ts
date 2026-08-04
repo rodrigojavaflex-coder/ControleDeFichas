@@ -30,4 +30,16 @@ export class PerfilService {
     // Retorna any para capturar corpo JSON de erro com message
     return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
+
+  vincularUsuarios(id: string, usuarioIds: string[]): Observable<Perfil> {
+    return this.http.post<Perfil>(`${this.apiUrl}/${id}/vincular-usuarios`, {
+      usuarioIds,
+    });
+  }
+
+  desvincularUsuarios(id: string, usuarioIds: string[]): Observable<Perfil> {
+    return this.http.post<Perfil>(`${this.apiUrl}/${id}/desvincular-usuarios`, {
+      usuarioIds,
+    });
+  }
 }

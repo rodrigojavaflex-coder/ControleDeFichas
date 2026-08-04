@@ -15,9 +15,13 @@ import {
   Unidade,
   Usuario,
 } from '../../models/usuario.model';
-import { Subject, takeUntil, Observable } from 'rxjs';
+import { Subject, takeUntil, Observable, forkJoin } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+import {
+  PerfilVincularUsuariosModalComponent,
+  PerfilVincularUsuariosConfirm,
+} from '../perfil-vincular-usuarios-modal/perfil-vincular-usuarios-modal';
 import { ErrorModalService } from '../../services';
 import { environment } from '../../../environments/environment';
 import { BaseListComponent } from '../base-list.component';
@@ -47,6 +51,7 @@ export type FiltroVinculoPerfil = 'todos' | 'com' | 'sem';
     ConfirmationModalComponent,
     AutocompleteComponent,
     MenuIconComponent,
+    PerfilVincularUsuariosModalComponent,
   ],
   templateUrl: './perfil-list.html',
   styleUrls: ['./perfil-list.css'],
@@ -62,6 +67,14 @@ export class PerfilListComponent
   private router = inject(Router);
   private destroy$ = new Subject<void>();
   private errorModal: ErrorModalService = inject(ErrorModalService);
+
+  vincularModalVisible = false;
+  vincularModalPerfil: Perfil | null = null;
+  /** Snapshot ao abrir o modal — evita novo array a cada change detection. */
+  vincularAlreadyLinkedIds: string[] = [];
+
+  @ViewChild(PerfilVincularUsuariosModalComponent)
+  vincularModal?: PerfilVincularUsuariosModalComponent;
 
   permissionCatalog: PermissionCatalog | null = null;
   moduleChipsByPerfil: Record<string, PerfilModuleChip[]> = {};
@@ -308,7 +321,78 @@ export class PerfilListComponent
   }
 
   formatUsuarioVinculadoLabel(usuario: PerfilUsuarioVinculado): string {
-    return `${usuario.nome} (${this.formatUnidadeUsuario(usuario.unidade)})`;
+    const unidade = this.formatUnidadeUsuario(usuario.unidade);
+    if (usuario.email) {
+      return `${usuario.nome} (${usuario.email} · ${unidade})`;
+    }
+    return `${usuario.nome} (${unidade})`;
+  }
+
+  canShowVincularUsuarios(): boolean {
+    return (
+      this.authService.hasPermission(Permission.PROFILE_ASSIGN_USERS) ||
+      this.authService.hasPermission(Permission.PROFILE_UNASSIGN_USERS)
+    );
+  }
+
+  openVincularModal(perfil: Perfil): void {
+    this.vincularModalPerfil = perfil;
+    this.vincularAlreadyLinkedIds =
+      perfil.usuariosVinculados?.map((u) => u.id) ?? [];
+    this.vincularModalVisible = true;
+  }
+
+  closeVincularModal(): void {
+    this.vincularModalVisible = false;
+    this.vincularModalPerfil = null;
+    this.vincularAlreadyLinkedIds = [];
+  }
+
+  onVincularConfirm(payload: PerfilVincularUsuariosConfirm): void {
+    const perfil = this.vincularModalPerfil;
+    if (!perfil) {
+      return;
+    }
+
+    const calls: Observable<Perfil>[] = [];
+    if (payload.adicionar.length > 0) {
+      calls.push(
+        this.perfilService.vincularUsuarios(perfil.id, payload.adicionar),
+      );
+    }
+    if (payload.remover.length > 0) {
+      calls.push(
+        this.perfilService.desvincularUsuarios(perfil.id, payload.remover),
+      );
+    }
+
+    if (calls.length === 0) {
+      this.vincularModal?.setSaving(false);
+      return;
+    }
+
+    forkJoin(calls)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.closeVincularModal();
+          this.loadItems();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.vincularModal?.setError(this.extractApiErrorMessage(err));
+        },
+      });
+  }
+
+  private extractApiErrorMessage(err: HttpErrorResponse): string {
+    const raw = err.error?.message;
+    if (Array.isArray(raw)) {
+      return raw.join(' ');
+    }
+    if (typeof raw === 'string' && raw.trim()) {
+      return raw;
+    }
+    return 'Não foi possível aplicar as alterações de vínculo.';
   }
 
   getChips(perfil: Perfil): PerfilModuleChip[] {

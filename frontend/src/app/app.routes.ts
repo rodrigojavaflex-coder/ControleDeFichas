@@ -25,6 +25,8 @@ const PERMS = {
     Permission.PROFILE_READ,
     Permission.PROFILE_UPDATE,
     Permission.PROFILE_DELETE,
+    Permission.PROFILE_ASSIGN_USERS,
+    Permission.PROFILE_UNASSIGN_USERS,
   ],
   configuracao: [Permission.CONFIGURACAO_ACCESS],
   fichas: [
