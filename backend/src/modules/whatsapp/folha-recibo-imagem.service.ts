@@ -204,6 +204,7 @@ export class FolhaReciboImagemService {
             rowY,
             bg,
             it.folhaVerba?.descricao ?? 'Evento',
+            it.quantidade,
             it.valor,
             false,
           ),
@@ -223,6 +224,7 @@ export class FolhaReciboImagemService {
         rowY,
         LAYOUT.totalRowBg,
         rotuloTotal,
+        null,
         total,
         true,
       ),
@@ -235,6 +237,7 @@ export class FolhaReciboImagemService {
     rowY: number,
     bg: string,
     descricao: string,
+    quantidade: unknown,
     valor: unknown,
     isTotal: boolean,
   ): string[] {
@@ -242,17 +245,44 @@ export class FolhaReciboImagemService {
     const bx = LAYOUT.blocosX;
     const bw = LAYOUT.blocosWidth;
     const valX = bx + bw - LAYOUT.padX;
+    const refX = bx + bw * 0.62;
+    const descMaxW = bw * 0.42;
     const descX = bx + LAYOUT.padX;
     const weight = isTotal ? '800' : '500';
     const valWeight = '700';
     const textY = rowY + 25;
+    const refTxt = isTotal ? '' : this.rotuloReferencia(quantidade);
 
     return [
       `<rect x="${bx + 1}" y="${rowY}" width="${bw - 2}" height="${LAYOUT.rowH}" fill="${bg}"/>`,
       `<line x1="${bx}" y1="${rowY + LAYOUT.rowH}" x2="${bx + bw}" y2="${rowY + LAYOUT.rowH}" stroke="${LAYOUT.rowBorder}" stroke-width="1"/>`,
-      `<text x="${descX}" y="${textY}" font-family="${font}" font-size="16" font-weight="${weight}" fill="${LAYOUT.text}">${this.escapeXml(descricao)}</text>`,
+      `<text x="${descX}" y="${textY}" font-family="${font}" font-size="16" font-weight="${weight}" fill="${LAYOUT.text}">${this.escapeXml(this.truncarDescricaoRecibo(descricao, descMaxW))}</text>`,
+      refTxt
+        ? `<text x="${refX}" y="${textY}" font-family="${font}" font-size="13" font-weight="600" fill="${LAYOUT.text}" text-anchor="middle">${this.escapeXml(refTxt)}</text>`
+        : '',
       `<text x="${valX}" y="${textY}" font-family="${font}" font-size="16" font-weight="${valWeight}" fill="${LAYOUT.text}" text-anchor="end">${this.escapeXml(this.moeda(valor))}</text>`,
-    ];
+    ].filter(Boolean);
+  }
+
+  /** Referência / quantidade do evento — ex.: REFERÊNCIA(30). */
+  private rotuloReferencia(q: unknown): string {
+    return `REFERÊNCIA(${this.formatReferencia(q)})`;
+  }
+
+  private formatReferencia(q: unknown): string {
+    const n = Number.parseFloat(String(q ?? '1').replace(',', '.'));
+    const x = Number.isFinite(n) ? n : 1;
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 4,
+    }).format(x);
+  }
+
+  private truncarDescricaoRecibo(descricao: string, maxWidthPx: number): string {
+    const s = String(descricao ?? '').trim() || 'Evento';
+    const approxChar = Math.max(12, Math.floor(maxWidthPx / 8.5));
+    if (s.length <= approxChar) return s;
+    return `${s.slice(0, approxChar - 1)}…`;
   }
 
   private desenharLinhaVazia(rowY: number, msg: string): string[] {

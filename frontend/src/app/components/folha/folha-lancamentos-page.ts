@@ -1173,8 +1173,12 @@ export class FolhaLancamentosPage implements OnInit {
           .sec-banner-desc { background: var(--r-banner-desc); }
           .sec-tabela-mini { width: 100%; border-collapse: collapse; font-size: 11px; }
           .sec-tabela-mini td { padding: 8px 14px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; overflow-wrap:anywhere;}
-          .sec-tabela-mini .cell-desc { text-align: left; font-weight: 500; width: 65%; }
-          .sec-tabela-mini .cell-val { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 700; min-width: 120px; }
+          .sec-tabela-mini .cell-desc { text-align: left; font-weight: 500; width: 48%; }
+          .sec-tabela-mini .cell-ref {
+            text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap;
+            font-weight: 600; width: 28%; font-size: 10px; color: var(--r-text);
+          }
+          .sec-tabela-mini .cell-val { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 700; min-width: 100px; width: 24%; }
           .stripe-a td { background: #fff; }
           .stripe-b td { background: var(--r-stripe-b); }
           .sem-itens-msg { color: #64748b; font-style: italic; text-align: center; }
@@ -1230,9 +1234,10 @@ export class FolhaLancamentosPage implements OnInit {
       ),
     );
 
-    const linhasDuasColunasSecao = <
+    const linhasReciboSecao = <
       U extends {
         valor: unknown;
+        quantidade?: string;
         folhaVerba: { descricao: string };
       },
     >(
@@ -1240,7 +1245,7 @@ export class FolhaLancamentosPage implements OnInit {
       msgVazio: string,
     ): string => {
       if (!itens.length) {
-        return `<tr class="stripe-a"><td colspan="2" class="sem-itens-msg">${this.escapeHtml(
+        return `<tr class="stripe-a"><td colspan="3" class="sem-itens-msg">${this.escapeHtml(
           msgVazio,
         )}</td></tr>`;
       }
@@ -1248,18 +1253,21 @@ export class FolhaLancamentosPage implements OnInit {
         .map((it, idx) => {
           const stripe = idx % 2 === 0 ? 'stripe-a' : 'stripe-b';
           const valorEsc = this.escapeHtml(this.moedaListaCapa(it.valor));
+          const refEsc = this.escapeHtml(
+            FolhaLancamentosPage.rotuloReferenciaRecibo(it.quantidade),
+          );
           return `<tr class="${stripe}"><td class="cell-desc">${this.escapeHtml(
             it.folhaVerba.descricao,
-          )}</td><td class="cell-val">${valorEsc}</td></tr>`;
+          )}</td><td class="cell-ref">${refEsc}</td><td class="cell-val">${valorEsc}</td></tr>`;
         })
         .join('');
     };
 
-    const bodyReceitas = linhasDuasColunasSecao(
+    const bodyReceitas = linhasReciboSecao(
       itensReceitas,
       'Nenhuma receita nesta folha.',
     );
-    const bodyDespesas = linhasDuasColunasSecao(
+    const bodyDespesas = linhasReciboSecao(
       itensDespesas,
       'Nenhum desconto nesta folha.',
     );
@@ -1282,6 +1290,7 @@ export class FolhaLancamentosPage implements OnInit {
                 ${bodyReceitas}
                 <tr class="row-total-mini">
                   <td class="cell-desc">${this.escapeHtml('TOTAL')}</td>
+                  <td class="cell-ref"></td>
                   <td class="cell-val">${moedaTotRec}</td>
                 </tr>
               </tbody>
@@ -1294,6 +1303,7 @@ export class FolhaLancamentosPage implements OnInit {
                 ${bodyDespesas}
                 <tr class="row-total-mini">
                   <td class="cell-desc">${this.escapeHtml('TOTAL DOS DESCONTOS')}</td>
+                  <td class="cell-ref"></td>
                   <td class="cell-val">${moedaTotDesc}</td>
                 </tr>
               </tbody>
@@ -1829,6 +1839,11 @@ export class FolhaLancamentosPage implements OnInit {
     const n = Number.parseFloat(String(q ?? '1').replace(',', '.'));
     const x = Number.isFinite(n) ? n : 1;
     return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 4 }).format(x);
+  }
+
+  /** Rótulo da referência no recibo (impressão / recibo geral). */
+  private static rotuloReferenciaRecibo(q: unknown): string {
+    return `REFERÊNCIA(${FolhaLancamentosPage.quantidadeFormatadaInicial(q)})`;
   }
 
   private formatarCampoValorTextoBlur(set: (s: string) => void, get: () => string): void {
