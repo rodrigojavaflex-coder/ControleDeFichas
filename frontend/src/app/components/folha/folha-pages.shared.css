@@ -790,6 +790,48 @@ body.theme-dark .folha-lancamentos-funcionario-card-congelada .folha-lancamentos
   background: color-mix(in srgb, rgba(224, 168, 0, 0.28) 55%, rgba(96, 165, 250, 0.18));
 }
 
+/* Capa fora do Carregar (inativo / inelegível) — visualização e Excluir */
+.folha-lancamentos-funcionario-card-fora-elegibilidade:not(.folha-lancamentos-funcionario-card-congelada) {
+  background: color-mix(
+    in srgb,
+    var(--text-muted, #64748b) 8%,
+    var(--bg-secondary, #f8fafc)
+  );
+  box-shadow: inset 3px 0 0 var(--text-muted, #94a3b8);
+}
+
+[data-theme='dark'] .folha-lancamentos-funcionario-card-fora-elegibilidade:not(.folha-lancamentos-funcionario-card-congelada),
+body.theme-dark
+  .folha-lancamentos-funcionario-card-fora-elegibilidade:not(.folha-lancamentos-funcionario-card-congelada) {
+  background: color-mix(in srgb, var(--text-muted, #94a3b8) 12%, var(--bg-secondary, #1e293b));
+  box-shadow: inset 3px 0 0 var(--text-muted, #64748b);
+}
+
+.folha-lancamentos-capa-chip-fora-elegibilidade {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+  vertical-align: middle;
+  border-radius: 4px;
+  color: var(--text-secondary, #475569);
+  background: color-mix(in srgb, var(--text-muted, #94a3b8) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-muted, #94a3b8) 35%, transparent);
+}
+
+[data-theme='dark'] .folha-lancamentos-capa-chip-fora-elegibilidade,
+body.theme-dark .folha-lancamentos-capa-chip-fora-elegibilidade {
+  color: var(--text-secondary, #cbd5e1);
+  background: rgba(148, 163, 184, 0.15);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.folha-lancamentos-capa-fora-elegibilidade-msg {
+  margin-bottom: 0.5rem;
+}
+
 .folha-lancamentos-funcionario-row {
   flex: 0 0 auto;
   display: grid;

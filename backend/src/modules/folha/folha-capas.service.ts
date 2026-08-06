@@ -21,6 +21,7 @@ import { CreateFolhaItemDto } from './dto/create-folha-item.dto';
 import { UpdateFolhaItemDto } from './dto/update-folha-item.dto';
 import { FolhaMovimentoTipo } from '../../common/enums/folha-movimento-tipo.enum';
 import { CarregarFolhaCompetenciaDto } from './dto/carregar-folha-competencia.dto';
+import { funcionarioElegivelNovaCapaNaCompetencia } from './utils/folha-competencia.util';
 
 /** Resposta útil ao frontend para totais e bloqueios */
 export interface FolhaCapaDetalheDto {
@@ -28,6 +29,11 @@ export interface FolhaCapaDetalheDto {
   totalReceitas: number;
   totalDespesas: number;
   liquido: number;
+  /**
+   * false = capa existente fora do Carregar (inativo, demissão posterior à competência, etc.);
+   * somente visualização e Excluir capa (RN-011 / RN-016).
+   */
+  elegivelCarregarCompetencia: boolean;
 }
 
 @Injectable()
@@ -88,6 +94,17 @@ export class FolhaCapasService {
     }
   }
 
+  /** Capas fora da elegibilidade (ex.: inativo) permanecem listáveis; edição/congelamento vedados (RN-011). */
+  private assertCapaElegivelParaEdicaoLancamento(capa: FolhaCapa): void {
+    const f = capa.funcionario;
+    if (!f) return;
+    if (!funcionarioElegivelNovaCapaNaCompetencia(f, capa.ano, capa.mes)) {
+      throw new BadRequestException(
+        'Funcionário inativo ou fora da elegibilidade nesta competência. Exclua a folha (capa) se ela não deve constar no lote.',
+      );
+    }
+  }
+
   /** Cria a capa se não existir; retorna sempre com funcionário, tipo e itens/carregável. */
   async obterOuCriar(
     usuario: Usuario,
@@ -111,12 +128,6 @@ export class FolhaCapasService {
       dto.unidade,
     );
 
-    this.funcionariosSvc.podeCriarCapaParaFuncionario(
-      funcionario,
-      dto.ano,
-      dto.mes,
-    );
-
     let capa = await this.capaRepo.findOne({
       where: {
         funcionario: { id: dto.funcionarioId },
@@ -135,6 +146,11 @@ export class FolhaCapasService {
     });
 
     if (!capa) {
+      this.funcionariosSvc.podeCriarCapaParaFuncionario(
+        funcionario,
+        dto.ano,
+        dto.mes,
+      );
       capa = this.capaRepo.create({
         funcionario,
         ano: dto.ano,
@@ -160,8 +176,8 @@ export class FolhaCapasService {
   }
 
   /**
-   * Para **cada funcionário elegível** (RN-011), obtém ou cria `folha_capa` na unidade,
-   * competência e tipo informados (`POST …/carregar-competencia`).
+   * Lista capas da competência (inclui inelegíveis/desligados com capa já gravada — RN-011/RN-005)
+   * e cria capa faltante só para funcionários elegíveis.
    */
   async carregarCompetenciaLancamento(
     usuario: Usuario,
@@ -171,6 +187,27 @@ export class FolhaCapasService {
       where: { id: dto.folhaTipoId },
     });
     if (!tipo) throw new NotFoundException('Tipo de folha não encontrado');
+
+    await this.fechamentoSvc.assertLoteAberto(
+      dto.unidade,
+      dto.ano,
+      dto.mes,
+      dto.folhaTipoId,
+    );
+
+    const resultados = (await this.listar(usuario, {
+      unidade: dto.unidade,
+      ano: dto.ano,
+      mes: dto.mes,
+      folhaTipoId: dto.folhaTipoId,
+      comDetalhe: true,
+    })) as FolhaCapaDetalheDto[];
+
+    const idsComCapa = new Set(
+      resultados
+        .map((r) => r.capa.funcionario?.id)
+        .filter((id): id is string => !!id),
+    );
 
     const funcionarios = await this.funcionariosSvc.listarParaLancamento(
       usuario,
@@ -182,8 +219,10 @@ export class FolhaCapasService {
       },
     );
 
-    const resultados: FolhaCapaDetalheDto[] = [];
     for (const func of funcionarios) {
+      if (idsComCapa.has(func.id)) {
+        continue;
+      }
       const d = await this.obterOuCriar(usuario, {
         funcionarioId: func.id,
         unidade: dto.unidade,
@@ -192,6 +231,7 @@ export class FolhaCapasService {
         folhaTipoId: dto.folhaTipoId,
       });
       resultados.push(d);
+      idsComCapa.add(func.id);
     }
 
     resultados.sort((a, b) =>
@@ -302,6 +342,7 @@ export class FolhaCapasService {
     );
 
     this.assertCapaItensEditaveis(capa);
+    this.assertCapaElegivelParaEdicaoLancamento(capa);
 
     const verba = await this.verbaRepo.findOne({
       where: { id: dto.folhaVerbaId },
@@ -378,6 +419,7 @@ export class FolhaCapasService {
     );
 
     this.assertCapaItensEditaveis(item.folhaCapa);
+    this.assertCapaElegivelParaEdicaoLancamento(item.folhaCapa);
 
     if (dto.valor === undefined && dto.quantidade === undefined) {
       throw new BadRequestException('Informe valor e/ou quantidade.');
@@ -434,6 +476,7 @@ export class FolhaCapasService {
     );
 
     this.assertCapaItensEditaveis(item.folhaCapa);
+    this.assertCapaElegivelParaEdicaoLancamento(item.folhaCapa);
 
     await this.itemRepo.remove(item);
 
@@ -473,6 +516,8 @@ export class FolhaCapasService {
     if (capa.congelada) {
       throw new BadRequestException('Esta folha já está congelada.');
     }
+
+    this.assertCapaElegivelParaEdicaoLancamento(capa);
 
     capa.congelada = true;
     capa.congeladaEm = new Date();
@@ -581,11 +626,16 @@ export class FolhaCapasService {
       if (tipo === FolhaMovimentoTipo.RECEITA) totalReceitas += v;
       else if (tipo === FolhaMovimentoTipo.DESPESA) totalDespesas += v;
     }
+    const f = capa.funcionario;
+    const elegivelCarregarCompetencia = f
+      ? funcionarioElegivelNovaCapaNaCompetencia(f, capa.ano, capa.mes)
+      : false;
     return {
       capa,
       totalReceitas,
       totalDespesas,
       liquido: totalReceitas - totalDespesas,
+      elegivelCarregarCompetencia,
     };
   }
 }

@@ -804,7 +804,11 @@ export class FolhaFuncionarioFormComponent implements OnInit {
     if (em) payload['email'] = em;
 
     const dd = (v.dataDemissao || '').trim();
-    if (dd) payload['dataDemissao'] = dd;
+    if (dd) {
+      payload['dataDemissao'] = dd;
+    } else if (this.isEditMode) {
+      payload['dataDemissao'] = null;
+    }
 
     const codErp =
       v.codigoUsuarioErp != null && v.codigoUsuarioErp !== ''

@@ -324,6 +324,7 @@ export class FolhaFuncionariosService {
       cargoId: patchCargoId,
       setorId: patchSetorId,
       eventosFixos: patchEventosFixos,
+      dataDemissao: patchDataDemissao,
       ...restPatch
     } = dto;
 
@@ -340,6 +341,10 @@ export class FolhaFuncionariosService {
     }
     if (dto.email !== undefined) {
       entity.email = dto.email?.trim() ? dto.email.trim().toLowerCase() : null;
+    }
+    if (patchDataDemissao !== undefined) {
+      const dem = patchDataDemissao?.trim?.() ?? '';
+      entity.dataDemissao = dem ? dem : null;
     }
     if (dto.cpf !== undefined) {
       entity.cpf = dto.cpf?.trim() ? dto.cpf.trim() : null;

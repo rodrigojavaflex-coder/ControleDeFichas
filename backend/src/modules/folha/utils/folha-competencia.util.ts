@@ -127,7 +127,8 @@ export function avaliarElegibilidadeNovaCapaNaCompetencia(
       };
     }
     const dem = periodoApartirDaDataIso(demIso);
-    if (alvoIndice >= dem) {
+    /** Competência **posterior** ao mês/ano da demissão não recebe nova capa; o mês da demissão ainda recebe (RN-005). */
+    if (alvoIndice > dem) {
       return {
         elegivel: false,
         motivo: FolhaMotivoInelegivelNovaCapa.DEMISSAO_NA_COMPETENCIA_OU_POSTERIOR,
@@ -160,7 +161,7 @@ const MENSAGENS_INELEGIVEL: Record<
   [FolhaMotivoInelegivelNovaCapa.ADMISSAO_POSTERIOR]:
     'A competência é anterior ao mês/ano de admissão do funcionário. Não é permitido novo lançamento.',
   [FolhaMotivoInelegivelNovaCapa.DEMISSAO_NA_COMPETENCIA_OU_POSTERIOR]:
-    'A competência é igual ou posterior ao mês/ano da demissão. Não é permitido novo lançamento.',
+    'A competência é posterior ao mês/ano da demissão. Não é permitido novo lançamento.',
   [FolhaMotivoInelegivelNovaCapa.DEMISSAO_INVALIDA]:
     'Não foi possível validar a data de demissão para esta competência.',
   [FolhaMotivoInelegivelNovaCapa.ERRO_DATAS]:

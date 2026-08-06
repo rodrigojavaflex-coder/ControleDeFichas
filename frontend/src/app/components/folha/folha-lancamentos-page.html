@@ -166,18 +166,27 @@
               class="folha-lancamentos-funcionario-card"
               [class.folha-lancamentos-funcionario-card-expandido]="detalhe?.capa?.id === row.capa.id"
               [class.folha-lancamentos-funcionario-card-congelada]="row.capa.congelada"
+              [class.folha-lancamentos-funcionario-card-fora-elegibilidade]="!capaElegivelCarregar(row)"
             >
               <button
                 type="button"
                 class="folha-lancamentos-funcionario-row"
                 [class.folha-lancamentos-funcionario-row-ativo]="capaEhSelecionadaNaGrade(row)"
                 [class.folha-lancamentos-funcionario-row-congelada]="row.capa.congelada"
+                [class.folha-lancamentos-funcionario-row-fora-elegibilidade]="!capaElegivelCarregar(row)"
                 [attr.aria-expanded]="detalhe?.capa?.id === row.capa.id"
                 [attr.aria-controls]="'lac-func-card-body-' + row.capa.id"
                 [attr.aria-label]="ariaLabelListaCapa(row)"
                 (click)="selecionarCapaParaEdicao(row)"
               >
-                <span class="folha-lancamentos-func-col-nome">{{ nomeParaCapa(row) }}</span>
+                <span class="folha-lancamentos-func-col-nome">
+                  {{ nomeParaCapa(row) }}
+                  @if (!capaElegivelCarregar(row)) {
+                    <span class="folha-lancamentos-capa-chip-fora-elegibilidade" title="Fora do Carregar automático (ex.: inativo ou demissão posterior à competência). Use Excluir se a folha não deve constar no lote.">
+                      Fora do carregamento
+                    </span>
+                  }
+                </span>
                 <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(row.totalReceitas) }}</span>
                 <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(row.totalDespesas) }}</span>
                 <span class="folha-lancamentos-func-col-num folha-lancamentos-func-col-liquido">{{
@@ -378,6 +387,12 @@
                         <div class="alert alert-warning folha-lancamentos-capa-congelada-msg" role="status">
                           Folha <strong>congelada</strong> — não é possível alterar eventos nem o cadastro do funcionário até
                           <strong>Liberar</strong>.
+                        </div>
+                      }
+                      @if (!capaElegivelCarregar(detalhe) && !loteFechadoParaCompetencia()) {
+                        <div class="alert alert-warning folha-lancamentos-capa-fora-elegibilidade-msg" role="status">
+                          Folha <strong>fora do carregamento automático</strong> (funcionário inativo ou inelegível nesta competência).
+                          Visualize os eventos e use <strong>Excluir</strong> para remover esta capa do lote, se aplicável.
                         </div>
                       }
                       <div class="folha-lancamentos-itens-congelar-slot">

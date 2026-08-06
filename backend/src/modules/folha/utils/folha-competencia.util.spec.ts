@@ -36,9 +36,19 @@ describe('folha-competencia.util — elegibilidade nova capa (RN-011)', () => {
     ).toContain('não participante');
   });
 
-  it('rejeita competência no mês da demissão', () => {
+  it('aceita competência no mês da demissão (ex.: demissão 30/07/2026 em jul/2026)', () => {
+    expect(
+      funcionarioElegivelNovaCapaNaCompetencia(
+        { ...base, dataDemissao: '2026-07-30' },
+        2026,
+        7,
+      ),
+    ).toBe(true);
+  });
+
+  it('rejeita competência posterior ao mês da demissão (ex.: demissão 30/06/2026 em jul/2026)', () => {
     const r = avaliarElegibilidadeNovaCapaNaCompetencia(
-      { ...base, dataDemissao: '2026-07-30' },
+      { ...base, dataDemissao: '2026-06-30' },
       2026,
       7,
     );
@@ -48,10 +58,10 @@ describe('folha-competencia.util — elegibilidade nova capa (RN-011)', () => {
     );
   });
 
-  it('aceita competência antes do mês da demissão', () => {
+  it('aceita competência no mês da demissão (ex.: demissão 30/06/2026 em jun/2026)', () => {
     expect(
       funcionarioElegivelNovaCapaNaCompetencia(
-        { ...base, dataDemissao: '2026-07-30' },
+        { ...base, dataDemissao: '2026-06-30' },
         2026,
         6,
       ),

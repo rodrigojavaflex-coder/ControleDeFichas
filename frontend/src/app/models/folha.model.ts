@@ -110,6 +110,8 @@ export interface FolhaCapaDetalheResponse {
   totalReceitas: number;
   totalDespesas: number;
   liquido: number;
+  /** false = inativo ou fora da elegibilidade; somente visualizar/excluir capa (RN-011). */
+  elegivelCarregarCompetencia?: boolean;
 }
 
 export interface FolhaFechamentoStatus {

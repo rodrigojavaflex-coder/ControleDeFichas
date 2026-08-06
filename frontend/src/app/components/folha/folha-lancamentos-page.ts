@@ -60,7 +60,7 @@ export class FolhaLancamentosPage implements OnInit {
   tipoId = '';
   verbasAtivas: FolhaVerba[] = [];
   detalhe: FolhaCapaDetalheResponse | null = null;
-  /** Após Carregar: uma entrada por funcionário elegível na competência + tipo (RN-011). */
+  /** Após Carregar: capas da competência + tipo (elegíveis e capas já existentes de inelegíveis — RN-011). */
   capasNaCompetencia: FolhaCapaDetalheResponse[] = [];
   statusLote: FolhaFechamentoStatus | null = null;
   carregando = false;
@@ -252,8 +252,15 @@ export class FolhaLancamentosPage implements OnInit {
   /** Competência com lote aberto e capa expandida não congelada (edição de eventos). */
   podeAlterarEventosNaCapaSelecionada(): boolean {
     if (!this.detalhe?.capa) return false;
+    if (!this.capaElegivelCarregar(this.detalhe)) return false;
     if (this.detalhe.capa.congelada) return false;
     return this.podeEditarLoteNaCompetencia();
+  }
+
+  /** Capa entra no Carregar automático (ativo + RN-011); false = legada — só visualizar/excluir. */
+  capaElegivelCarregar(row: FolhaCapaDetalheResponse | null | undefined): boolean {
+    if (!row) return false;
+    return row.elegivelCarregarCompetencia !== false;
   }
 
   podeExcluirCapa(): boolean {
@@ -278,6 +285,7 @@ export class FolhaLancamentosPage implements OnInit {
       podePerm &&
       this.podeEditarLoteNaCompetencia() &&
       !!this.detalhe &&
+      this.capaElegivelCarregar(this.detalhe) &&
       !this.detalhe.capa.congelada &&
       !this.carregando &&
       !this.salvandoCongelacaoCapa
@@ -1698,7 +1706,7 @@ export class FolhaLancamentosPage implements OnInit {
         next: (rows) => {
           this.finalizarCargaCapas(rows, {
             vazioAberta:
-              'Nenhum funcionário elegível nesta competência (ativo; admissão até o mês/ano vigente; se demitido, competência antes do mês da demissão — RN-011).',
+              'Nenhuma folha (capa) nesta competência. Elegíveis: ativo, admissão até o mês/ano vigente; se demitido, competência até o mês da demissão inclusive (RN-011).',
           });
         },
         error: (e) => {

@@ -81,10 +81,13 @@ export class CreateFuncionarioFolhaDto {
   })
   dataAdmissao: string;
 
-  @ApiPropertyOptional({ description: 'YYYY-MM-DD' })
+  @ApiPropertyOptional({ description: 'YYYY-MM-DD; null limpa a demissão.', nullable: true })
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  dataDemissao?: string;
+  @ValidateIf((_o, v) => v != null && v !== '')
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'Data de demissão deve estar no formato YYYY-MM-DD.',
+  })
+  dataDemissao?: string | null;
 
   @ApiPropertyOptional({
     format: 'uuid',
