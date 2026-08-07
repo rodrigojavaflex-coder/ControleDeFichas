@@ -1,0 +1,124 @@
+.producao-painel-page .producao-filtros-botoes-linha,
+.producao-acompanhamento-page .producao-filtros-botoes-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.producao-painel-page .producao-filtros-barra-compacta,
+.producao-acompanhamento-page .producao-filtros-barra-compacta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem 0.75rem;
+  width: 100%;
+}
+
+.producao-painel-page .producao-filtros-acao--compacto,
+.producao-acompanhamento-page .producao-filtros-acao--compacto {
+  flex: 1 1 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: center;
+}
+
+.producao-painel-page .producao-filtros-barra-compacta .producao-painel-ultima-atualizacao,
+.producao-acompanhamento-page .producao-filtros-barra-compacta .producao-painel-ultima-atualizacao {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  margin-right: 0;
+  text-align: left;
+}
+
+.producao-painel-page .filters-panel-top--corpo-fechado,
+.producao-acompanhamento-page .filters-panel-top--corpo-fechado {
+  padding: 0.4rem 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.producao-painel-page .producao-painel-atualizar-wrap .producao-painel-ultima-atualizacao,
+.producao-acompanhamento-page .producao-painel-atualizar-wrap .producao-painel-ultima-atualizacao {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--cor-texto-secundario, var(--text-secondary, #64748b));
+  text-align: left;
+  width: 100%;
+}
+
+body.theme-dark .producao-painel-page .producao-painel-atualizar-wrap .producao-painel-ultima-atualizacao,
+[data-theme='dark'] .producao-painel-page .producao-painel-atualizar-wrap .producao-painel-ultima-atualizacao,
+body.theme-dark .producao-acompanhamento-page .producao-painel-atualizar-wrap .producao-painel-ultima-atualizacao,
+[data-theme='dark'] .producao-acompanhamento-page .producao-painel-atualizar-wrap .producao-painel-ultima-atualizacao {
+  color: var(--cor-texto-secundario, #94a3b8);
+}
+
+.producao-painel-page .btn-toggle-filtros,
+.producao-acompanhamento-page .btn-toggle-filtros {
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary, #1e293b);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.producao-painel-page .btn-toggle-filtros:hover,
+.producao-acompanhamento-page .btn-toggle-filtros:hover,
+.producao-painel-page .btn-toggle-filtros:focus-visible,
+.producao-acompanhamento-page .btn-toggle-filtros:focus-visible {
+  border-color: var(--cor-primaria, #2563eb);
+  background: color-mix(
+    in srgb,
+    var(--cor-primaria, #2563eb) 8%,
+    var(--bg-secondary, #f8fafc)
+  );
+  outline: none;
+}
+
+.producao-painel-page .btn-toggle-filtros .filters-count,
+.producao-acompanhamento-page .btn-toggle-filtros .filters-count {
+  background: color-mix(
+    in srgb,
+    var(--cor-primaria, #2563eb) 14%,
+    transparent
+  );
+  color: var(--cor-primaria, #2563eb);
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+body.theme-dark .producao-painel-page .btn-toggle-filtros,
+[data-theme='dark'] .producao-painel-page .btn-toggle-filtros,
+body.theme-dark .producao-acompanhamento-page .btn-toggle-filtros,
+[data-theme='dark'] .producao-acompanhamento-page .btn-toggle-filtros {
+  background: var(--cor-superficie, #1e293b);
+  border-color: var(--border-color, #334155);
+  color: var(--text-primary, #f1f5f9);
+}
+
+body.theme-dark .producao-painel-page .btn-toggle-filtros:hover,
+[data-theme='dark'] .producao-painel-page .btn-toggle-filtros:hover,
+body.theme-dark .producao-acompanhamento-page .btn-toggle-filtros:hover,
+[data-theme='dark'] .producao-acompanhamento-page .btn-toggle-filtros:hover {
+  border-color: var(--cor-primaria, #60a5fa);
+  background: color-mix(
+    in srgb,
+    var(--cor-primaria, #60a5fa) 12%,
+    var(--cor-superficie, #1e293b)
+  );
+}

@@ -124,7 +124,7 @@ export class ProducaoAcompanhamentoService {
   async localizarRequisicaoFormula(
     usuario: Usuario,
     requisicao: number,
-    formula: string,
+    formula: string | undefined,
     unidadesQuery: Unidade[] | undefined,
     unidadeLegado?: Unidade,
     filial?: number,
@@ -134,22 +134,40 @@ export class ProducaoAcompanhamentoService {
       unidadesQuery,
       unidadeLegado,
     );
-    const formulaNorm = this.normalizarFormulaConsulta(formula);
-    if (!formulaNorm) {
+    const formulaNorm =
+      formula != null && formula.trim() !== ''
+        ? this.normalizarFormulaConsulta(formula)
+        : null;
+    if (formula != null && formula.trim() !== '' && !formulaNorm) {
       throw new BadRequestException('Informe a fórmula.');
     }
 
     const linhas = await this.buscarFilaEmAndamento(unidades);
-    const match = linhas.find(
+    const candidatos = linhas.filter(
       (row) =>
         row.requisicao === requisicao &&
-        this.normalizarFormulaConsulta(row.formula) === formulaNorm &&
         (filial == null || row.filial === filial),
     );
 
+    let match: (typeof linhas)[number] | undefined;
+    if (formulaNorm) {
+      match = candidatos.find(
+        (row) => this.normalizarFormulaConsulta(row.formula) === formulaNorm,
+      );
+    } else {
+      match = [...candidatos].sort(
+        (a, b) =>
+          b.posicaoEtapa - a.posicaoEtapa ||
+          a.requisicao - b.requisicao ||
+          a.formula.localeCompare(b.formula, 'pt-BR'),
+      )[0];
+    }
+
     if (!match) {
       throw new NotFoundException(
-        'Requisição-fórmula não está em andamento na fila de nenhuma etapa (unidades selecionadas).',
+        formulaNorm
+          ? 'Requisição-fórmula não está em andamento na fila de nenhuma etapa (unidades selecionadas).'
+          : 'Requisição não está em andamento na fila de nenhuma etapa (unidades selecionadas).',
       );
     }
 

@@ -5,8 +5,11 @@
     </div>
   } @else {
     <div class="results-card">
-      <section class="filters-panel-top">
+      <section
+        class="filters-panel-top"
+        [class.filters-panel-top--corpo-fechado]="!filtrosContainerAberto">
         <div class="filters-inline producao-prod-filters producao-prod-filters-compact">
+        @if (filtrosContainerAberto) {
           @if (unidadeDisabled) {
             <div class="filter-field filter-field-unidade-fixa">
               <label class="form-label" for="pa-unidade-fixa">Unidade</label>
@@ -62,57 +65,119 @@
           }
 
           <div class="filter-field filter-field-req-formula">
-            <label class="form-label" for="pa-req-formula">Req-fórmula</label>
-            <div class="producao-acomp-req-busca">
-              <input
-                id="pa-req-formula"
-                type="text"
-                class="form-control"
-                [(ngModel)]="filtroReqFormula"
-                placeholder="96605-0"
-                autocomplete="off"
-                (keydown.enter)="buscarRequisicaoFormula()" />
-              <button
-                type="button"
-                class="btn btn-secondary producao-acomp-btn-busca"
-                title="Localizar etapa na fila"
-                [disabled]="
-                  buscandoReqFormula || carregando || selectedUnidades.size === 0
-                "
-                (click)="buscarRequisicaoFormula()">
-                @if (buscandoReqFormula) {
-                  <i class="fas fa-spinner fa-spin"></i>
-                } @else {
-                  <i class="fas fa-search"></i>
-                }
-              </button>
-              @if (codEtapaFiltro) {
+            <div class="producao-painel-resumo-geral producao-painel-filtro-formula">
+              <label class="producao-painel-resumo-geral-titulo" for="pa-req-formula"
+                >Filtrar fórmula</label
+              >
+              <div class="producao-painel-req-busca">
+                <input
+                  id="pa-req-formula"
+                  type="text"
+                  class="form-control"
+                  [(ngModel)]="filtroReqFormula"
+                  autocomplete="off"
+                  (keydown.enter)="buscarRequisicaoFormula()" />
                 <button
                   type="button"
-                  class="btn btn-secondary producao-acomp-btn-limpar"
-                  title="Mostrar todas as etapas"
-                  (click)="limparFiltroReqFormula()">
-                  <i class="fas fa-times"></i>
+                  class="btn btn-secondary producao-painel-btn-busca"
+                  title="Localizar etapa na fila"
+                  [disabled]="
+                    buscandoReqFormula || carregando || selectedUnidades.size === 0
+                  "
+                  (click)="buscarRequisicaoFormula()">
+                  @if (buscandoReqFormula) {
+                    <i class="fas fa-spinner fa-spin"></i>
+                  } @else {
+                    <i class="fas fa-search"></i>
+                  }
                 </button>
-              }
+                @if (
+                  reqFormulaFiltroAtivo || codEtapaFiltro || filtroReqFormula.trim()
+                ) {
+                  <button
+                    type="button"
+                    class="btn btn-secondary producao-painel-btn-limpar"
+                    title="Limpar busca"
+                    (click)="limparFiltroReqFormula()">
+                    <i class="fas fa-times"></i>
+                  </button>
+                }
+              </div>
             </div>
           </div>
+        }
 
-          <div class="filter-field filter-field-acao">
-            <label class="form-label">&nbsp;</label>
-            <button
-              type="button"
-              class="btn btn-primary producao-prod-btn-relatorio"
-              [disabled]="carregando || selectedUnidades.size === 0"
-              (click)="atualizar()">
-              @if (carregando) {
-                <i class="fas fa-spinner fa-spin"></i>
-              } @else {
-                <i class="fas fa-sync-alt"></i>
-              }
-              Atualizar fila
-            </button>
+          <div
+            class="filter-field filter-field-acao producao-painel-atualizar-col"
+            [class.producao-filtros-acao--compacto]="!filtrosContainerAberto">
+            @if (filtrosContainerAberto) {
+              <label class="form-label">&nbsp;</label>
+              <div class="producao-painel-atualizar-wrap">
+                <div class="producao-filtros-botoes-linha">
+                  <button
+                    type="button"
+                    class="btn btn-primary producao-prod-btn-relatorio"
+                    [disabled]="carregando || selectedUnidades.size === 0"
+                    (click)="atualizar()">
+                    @if (carregando) {
+                      <i class="fas fa-spinner fa-spin"></i>
+                    } @else {
+                      <i class="fas fa-sync-alt"></i>
+                    }
+                    Atualizar
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-toggle-filtros"
+                    [attr.aria-expanded]="filtrosContainerAberto"
+                    (click)="toggleFiltrosContainer()">
+                    <span>Ocultar filtros</span>
+                    @if (contadorFiltrosAtivos(); as qtd) {
+                      @if (qtd > 0) {
+                        <span class="filters-count">{{ qtd }}</span>
+                      }
+                    }
+                    <i class="fas fa-chevron-up" aria-hidden="true"></i>
+                  </button>
+                </div>
+                @if (carregando && !resumo) {
+                  <p class="producao-painel-ultima-atualizacao" aria-live="polite">
+                    Carregando resumo…
+                  </p>
+                } @else if (descricaoUltimaAtualizacao(); as ultima) {
+                  <p class="producao-painel-ultima-atualizacao" aria-live="polite">
+                    {{ ultima }}
+                  </p>
+                }
+              </div>
+            } @else {
+              <div class="producao-filtros-barra-compacta">
+                <button
+                  type="button"
+                  class="btn btn-toggle-filtros"
+                  [attr.aria-expanded]="filtrosContainerAberto"
+                  (click)="toggleFiltrosContainer()">
+                  <span>Mostrar filtros</span>
+                  @if (contadorFiltrosAtivos(); as qtd) {
+                    @if (qtd > 0) {
+                      <span class="filters-count">{{ qtd }}</span>
+                    }
+                  }
+                  <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                @if (carregando && !resumo) {
+                  <p class="producao-painel-ultima-atualizacao" aria-live="polite">
+                    Carregando resumo…
+                  </p>
+                } @else if (descricaoUltimaAtualizacao(); as ultima) {
+                  <p class="producao-painel-ultima-atualizacao" aria-live="polite">
+                    {{ ultima }}
+                  </p>
+                }
+              </div>
+            }
           </div>
+
         </div>
       </section>
 
@@ -139,27 +204,27 @@
           }
         </div>
       } @else {
-        <div class="producao-acomp-cards">
+        <div class="producao-painel-cards">
           @for (e of etapasVisiveis; track e.codEtapa) {
-            <button
-              type="button"
-              class="producao-acomp-card"
-              [class.producao-acomp-card-destaque]="codEtapaFiltro === e.codEtapa"
-              (click)="selecionarEtapa(e)">
-              <span class="producao-acomp-card-pos">{{ e.posicaoEtapa }}</span>
-              <h3 class="producao-acomp-card-title">{{ e.etapa }}</h3>
-              <p class="producao-acomp-card-cod">{{ e.codEtapa }}</p>
-              <dl class="producao-acomp-card-stats">
-                <div>
-                  <dt>Requisições</dt>
-                  <dd>{{ e.totalRequisicoesFormulas }}</dd>
-                </div>
-                <div>
-                  <dt>Tempo médio</dt>
-                  <dd>{{ formatarMinutos(e.tempoMedioMinutos) }}</dd>
-                </div>
-              </dl>
-            </button>
+            <div
+              class="producao-painel-card"
+              [class.producao-painel-card-destaque]="codEtapaFiltro === e.codEtapa"
+              role="button"
+              tabindex="0"
+              (click)="selecionarEtapa(e)"
+              (keydown)="onCardKeydown($event, () => selecionarEtapa(e))">
+              <p class="producao-painel-card-nome">{{ e.etapa }}</p>
+              <ul
+                class="producao-painel-card-linhas"
+                [attr.aria-label]="'Resumo ' + e.etapa">
+                <li class="producao-painel-card-linha producao-painel-card-linha--total">
+                  {{ e.totalRequisicoesFormulas }} requisições
+                </li>
+                <li class="producao-painel-card-linha producao-painel-card-linha--info">
+                  Tempo médio {{ formatarMinutos(e.tempoMedioMinutos) }}
+                </li>
+              </ul>
+            </div>
           }
         </div>
       }
@@ -188,9 +253,7 @@
             {{ totalRequisicoesModal }} requisição(ões) na fila
             @if (reqFormulaFiltroAtivo) {
               <span class="producao-acomp-modal-filtro">
-                · filtro {{ reqFormulaFiltroAtivo.requisicao }}-{{
-                  reqFormulaFiltroAtivo.formula
-                }}
+                · filtro {{ rotuloFiltroReqFormula(reqFormulaFiltroAtivo) }}
               </span>
             }
           </p>

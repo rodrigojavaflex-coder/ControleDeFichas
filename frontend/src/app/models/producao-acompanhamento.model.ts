@@ -10,7 +10,7 @@ export interface AcompanhamentoDetalheQuery extends AcompanhamentoQuery {
 
 export interface AcompanhamentoLocalizarQuery extends AcompanhamentoQuery {
   requisicao: number;
-  formula: string;
+  formula?: string;
   filial?: number;
 }
 

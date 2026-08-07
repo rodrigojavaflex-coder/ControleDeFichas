@@ -15,13 +15,24 @@ import {
 import { rotuloClientePaciente } from './utils/producao-cliente-paciente.util';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  FiltroReqFormula,
+  linhaAtendeFiltroReqFormula,
+  MENSAGEM_FORMATO_FILTRO_REQ_FORMULA,
+  parseFiltroReqFormula,
+  rotuloFiltroReqFormula,
+} from './utils/producao-req-formula-filtro.util';
 
 @Component({
   selector: 'app-producao-acompanhamento-page',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './producao-acompanhamento-page.html',
-  styleUrls: ['./producao-acompanhamento-page.css'],
+  styleUrls: [
+    './producao-acompanhamento-page.css',
+    './producao-filtros-collapsible.css',
+    './producao-etapa-cards.css',
+  ],
 })
 export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
   private pageCtx = inject(PageContextService);
@@ -44,12 +55,9 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
   filtroReqFormula = '';
   codEtapaFiltro: string | null = null;
   buscandoReqFormula = false;
+  filtrosContainerAberto = true;
   /** Preenchido ao buscar req-fórmula; restringe linhas no modal. */
-  reqFormulaFiltroAtivo: {
-    requisicao: number;
-    formula: string;
-    filial?: number;
-  } | null = null;
+  reqFormulaFiltroAtivo: FiltroReqFormula | null = null;
 
   ngOnInit(): void {
     this.pageCtx.setContext({
@@ -125,13 +133,7 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
     if (!f) {
       return linhas;
     }
-    return linhas.filter(
-      (lin) =>
-        lin.requisicao === f.requisicao &&
-        this.normalizarFormula(lin.formula) ===
-          this.normalizarFormula(f.formula) &&
-        (f.filial == null || lin.filial === f.filial),
-    );
+    return linhas.filter((lin) => linhaAtendeFiltroReqFormula(lin, f));
   }
 
   get totalRequisicoesModal(): number {
@@ -143,7 +145,7 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
 
   selecionarEtapa(
     etapa: AcompanhamentoEtapaResumo,
-    filtroReq?: { requisicao: number; formula: string; filial?: number },
+    filtroReq?: FiltroReqFormula,
   ): void {
     if (this.selectedUnidades.size === 0 || etapa.totalRequisicoesFormulas <= 0) {
       return;
@@ -213,10 +215,10 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
     if (!this.podeLer() || this.selectedUnidades.size === 0) {
       return;
     }
-    const parsed = this.parseFiltroReqFormula(this.filtroReqFormula);
+    const parsed = parseFiltroReqFormula(this.filtroReqFormula);
     if (!parsed) {
       this.errors.show(
-        'Informe req-fórmula no formato 96605-0 ou 2-96605-0 (filial opcional).',
+        MENSAGEM_FORMATO_FILTRO_REQ_FORMULA,
         'Acompanhamento',
       );
       return;
@@ -226,7 +228,7 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
       .localizar({
         unidades: Array.from(this.selectedUnidades),
         requisicao: parsed.requisicao,
-        formula: parsed.formula,
+        formula: parsed.formula ?? undefined,
         filial: parsed.filial,
       })
       .subscribe({
@@ -249,7 +251,9 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
           this.codEtapaFiltro = null;
           this.errors.show(
             e?.error?.message ??
-              'Requisição-fórmula não encontrada na fila em andamento.',
+              (parsed.formula == null
+                ? 'Requisição não encontrada na fila em andamento.'
+                : 'Requisição-fórmula não encontrada na fila em andamento.'),
             'Acompanhamento',
           );
         },
@@ -264,41 +268,60 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
     }
   }
 
-  private normalizarFormula(formula: string): string {
-    const t = String(formula ?? '').trim();
-    if (!t) {
-      return '';
-    }
-    if (/^\d+$/.test(t)) {
-      return String(Number(t));
-    }
-    return t;
+  rotuloFiltroReqFormula(filtro: FiltroReqFormula): string {
+    return rotuloFiltroReqFormula(filtro);
   }
 
-  private parseFiltroReqFormula(
-    raw: string,
-  ): { requisicao: number; formula: string; filial?: number } | null {
-    const text = raw.trim();
-    if (!text) {
+  contadorFiltrosAtivos(): number {
+    let n = 0;
+    if (this.selectedUnidades.size > 0 && this.selectedUnidades.size < this.unidades.length) {
+      n += 1;
+    }
+    if (this.reqFormulaFiltroAtivo) {
+      n += 1;
+    }
+    if (this.codEtapaFiltro) {
+      n += 1;
+    }
+    if (this.filtroReqFormula.trim()) {
+      n += 1;
+    }
+    return n;
+  }
+
+  toggleFiltrosContainer(): void {
+    this.filtrosContainerAberto = !this.filtrosContainerAberto;
+  }
+
+  descricaoUltimaAtualizacao(): string | null {
+    const iso = this.resumo?.consultadoEm;
+    if (!iso) {
       return null;
     }
-    const erp = /^(\d+)\s*-\s*(\d+)\s*-\s*(\d+)\s*$/.exec(text);
-    if (erp) {
-      return {
-        filial: Number(erp[1]),
-        requisicao: Number(erp[2]),
-        formula: String(Number(erp[3])),
-      };
+    return `Última atualização: ${this.formatarDataHoraConsulta(iso)}`;
+  }
+
+  formatarDataHoraConsulta(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) {
+      return iso;
     }
-    const withFilial =
-      /^(\d+)\s*-\s*(\d+)\s*(?:\(\s*filial\s*(\d+)\s*\))?\s*$/i.exec(text);
-    if (withFilial) {
-      const requisicao = Number(withFilial[1]);
-      const formula = String(Number(withFilial[2]));
-      const filial = withFilial[3] ? Number(withFilial[3]) : undefined;
-      return { requisicao, formula, filial };
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  }
+
+  onCardKeydown(event: KeyboardEvent, acao: () => void): void {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
     }
-    return null;
+    event.preventDefault();
+    acao();
   }
 
   private agendarAtualizarAposFiltro(): void {

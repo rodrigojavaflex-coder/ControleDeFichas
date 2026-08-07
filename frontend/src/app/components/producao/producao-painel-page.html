@@ -7,8 +7,11 @@
     </div>
   } @else {
     <div class="results-card">
-      <section class="filters-panel-top">
+      <section
+        class="filters-panel-top"
+        [class.filters-panel-top--corpo-fechado]="!filtrosContainerAberto">
         <div class="filters-inline producao-prod-filters producao-prod-filters-compact">
+        @if (filtrosContainerAberto) {
           @if (unidadeDisabled) {
             <div class="filter-field filter-field-unidade-fixa">
               <label class="form-label" for="pp-unidade-fixa">Unidade</label>
@@ -74,7 +77,6 @@
                   type="text"
                   class="form-control"
                   [(ngModel)]="filtroReqFormula"
-                  placeholder="96605-0"
                   autocomplete="off"
                   (keydown.enter)="buscarRequisicaoFormula()" />
                 <button
@@ -99,32 +101,77 @@
               </div>
             </div>
           </div>
+        }
 
-          <div class="filter-field filter-field-acao producao-painel-atualizar-col">
-            <label class="form-label">&nbsp;</label>
-            <div class="producao-painel-atualizar-wrap">
-              <button
-                type="button"
-                class="btn btn-primary producao-prod-btn-relatorio"
-                [disabled]="carregando || selectedUnidades.size === 0"
-                (click)="atualizar()">
-                @if (carregando) {
-                  <i class="fas fa-spinner fa-spin"></i>
-                } @else {
-                  <i class="fas fa-sync-alt"></i>
+          <div
+            class="filter-field filter-field-acao producao-painel-atualizar-col"
+            [class.producao-filtros-acao--compacto]="!filtrosContainerAberto">
+            @if (filtrosContainerAberto) {
+              <label class="form-label">&nbsp;</label>
+              <div class="producao-painel-atualizar-wrap">
+                <div class="producao-filtros-botoes-linha">
+                  <button
+                    type="button"
+                    class="btn btn-primary producao-prod-btn-relatorio"
+                    [disabled]="carregando || selectedUnidades.size === 0"
+                    (click)="atualizar()">
+                    @if (carregando) {
+                      <i class="fas fa-spinner fa-spin"></i>
+                    } @else {
+                      <i class="fas fa-sync-alt"></i>
+                    }
+                    Atualizar
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-toggle-filtros"
+                    [attr.aria-expanded]="filtrosContainerAberto"
+                    (click)="toggleFiltrosContainer()">
+                    <span>Ocultar filtros</span>
+                    @if (contadorFiltrosAtivos(); as qtd) {
+                      @if (qtd > 0) {
+                        <span class="filters-count">{{ qtd }}</span>
+                      }
+                    }
+                    <i class="fas fa-chevron-up" aria-hidden="true"></i>
+                  </button>
+                </div>
+                @if (carregando && !dados()) {
+                  <p class="producao-painel-ultima-atualizacao" aria-live="polite">
+                    Carregando painel…
+                  </p>
+                } @else if (descricaoUltimaAtualizacao(); as ultima) {
+                  <p class="producao-painel-ultima-atualizacao" aria-live="polite">
+                    {{ ultima }}
+                  </p>
                 }
-                Atualizar
-              </button>
-              @if (carregando && !dados()) {
-                <p class="producao-painel-ultima-atualizacao" aria-live="polite">
-                  Carregando painel…
-                </p>
-              } @else if (descricaoUltimaAtualizacao(); as ultima) {
-                <p class="producao-painel-ultima-atualizacao" aria-live="polite">
-                  {{ ultima }}
-                </p>
-              }
-            </div>
+              </div>
+            } @else {
+              <div class="producao-filtros-barra-compacta">
+                <button
+                  type="button"
+                  class="btn btn-toggle-filtros"
+                  [attr.aria-expanded]="filtrosContainerAberto"
+                  (click)="toggleFiltrosContainer()">
+                  <span>Mostrar filtros</span>
+                  @if (contadorFiltrosAtivos(); as qtd) {
+                    @if (qtd > 0) {
+                      <span class="filters-count">{{ qtd }}</span>
+                    }
+                  }
+                  <i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                @if (carregando && !dados()) {
+                  <p class="producao-painel-ultima-atualizacao" aria-live="polite">
+                    Carregando painel…
+                  </p>
+                } @else if (descricaoUltimaAtualizacao(); as ultima) {
+                  <p class="producao-painel-ultima-atualizacao" aria-live="polite">
+                    {{ ultima }}
+                  </p>
+                }
+              </div>
+            }
           </div>
 
         </div>
@@ -145,52 +192,48 @@
       } @else {
         <div class="producao-painel-scroll">
         <div class="producao-painel-cards">
-          <button
-            type="button"
+          <div
             class="producao-painel-card producao-painel-card-total"
             [class.producao-painel-card-destaque]="!codEtapaFiltro()"
+            role="button"
+            tabindex="0"
+            aria-live="polite"
             (click)="selecionarCardTotal()"
-            aria-live="polite">
-            <span
-              class="producao-painel-resumo-geral-titulo producao-painel-resumo-geral-titulo-caps"
-              >Total em produção</span
-            >
-            <div class="producao-painel-resumo-geral-badges">
-              <span class="producao-painel-resumo-geral-total">
-                {{ resumoGeral().total }} fórmula{{
-                  resumoGeral().total === 1 ? '' : 's'
-                }}
-              </span>
-              @if (resumoGeral().atrasadas > 0) {
-                <span class="producao-painel-resumo-geral-atrasadas">
-                  {{ resumoGeral().atrasadas }} atrasada{{
-                    resumoGeral().atrasadas === 1 ? '' : 's'
-                  }}
-                </span>
-              }
-            </div>
-          </button>
+            (keydown)="onCardKeydown($event, () => selecionarCardTotal())">
+            <p class="producao-painel-card-nome">Total em produção</p>
+            <ul class="producao-painel-card-linhas" aria-label="Resumo total">
+              <li class="producao-painel-card-linha producao-painel-card-linha--total">
+                {{ resumoGeral().total }} fórmulas
+              </li>
+              <li class="producao-painel-card-linha producao-painel-card-linha--atrasadas">
+                {{ resumoGeral().atrasadas }} atrasadas
+              </li>
+              <li class="producao-painel-card-linha producao-painel-card-linha--prazo">
+                {{ rotuloDentroPrazoCard(resumoGeral().dentroPrazo) }}
+              </li>
+            </ul>
+          </div>
           @for (c of cardsEtapa(); track c.codEtapa) {
-            <button
-              type="button"
+            <div
               class="producao-painel-card"
               [class.producao-painel-card-destaque]="codEtapaFiltro() === c.codEtapa"
-              (click)="selecionarCardEtapa(c.codEtapa)">
-              <span
-                class="producao-painel-resumo-geral-titulo producao-painel-resumo-geral-titulo-caps"
-                >{{ c.etapa }}</span
-              >
-              <div class="producao-painel-resumo-geral-badges">
-                <span class="producao-painel-resumo-geral-total">
-                  {{ c.total }} fórmula{{ c.total === 1 ? '' : 's' }}
-                </span>
-                @if (c.atrasadas > 0) {
-                  <span class="producao-painel-resumo-geral-atrasadas">
-                    {{ c.atrasadas }} atrasada{{ c.atrasadas === 1 ? '' : 's' }}
-                  </span>
-                }
-              </div>
-            </button>
+              role="button"
+              tabindex="0"
+              (click)="selecionarCardEtapa(c.codEtapa)"
+              (keydown)="onCardKeydown($event, () => selecionarCardEtapa(c.codEtapa))">
+              <p class="producao-painel-card-nome">{{ c.etapa }}</p>
+              <ul class="producao-painel-card-linhas" [attr.aria-label]="'Resumo ' + c.etapa">
+                <li class="producao-painel-card-linha producao-painel-card-linha--total">
+                  {{ c.total }} fórmulas
+                </li>
+                <li class="producao-painel-card-linha producao-painel-card-linha--atrasadas">
+                  {{ c.atrasadas }} atrasadas
+                </li>
+                <li class="producao-painel-card-linha producao-painel-card-linha--prazo">
+                  {{ rotuloDentroPrazoCard(c.dentroPrazo) }}
+                </li>
+              </ul>
+            </div>
           }
         </div>
 
@@ -199,11 +242,7 @@
             <span>
               @if (reqFormulaFiltroAtivo(); as reqF) {
                 Filtrando
-                <strong
-                  >{{ reqF.requisicao }}-{{
-                    reqF.formula
-                  }}</strong
-                >
+                <strong>{{ rotuloFiltroReqFormula(reqF) }}</strong>
                 @if (codEtapaFiltro()) {
                   · etapa <strong>{{ labelEtapaFiltro() }}</strong>
                 }

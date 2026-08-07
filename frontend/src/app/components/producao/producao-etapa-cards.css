@@ -1,0 +1,135 @@
+.producao-painel-page .producao-painel-cards,
+.producao-acompanhamento-page .producao-painel-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+  align-content: start;
+}
+
+.producao-painel-page .producao-painel-card,
+.producao-acompanhamento-page .producao-painel-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.65rem 0.55rem;
+  box-sizing: border-box;
+  text-align: center;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary, #1e293b);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+
+.producao-painel-page .producao-painel-card:hover,
+.producao-painel-page .producao-painel-card:focus-visible,
+.producao-acompanhamento-page .producao-painel-card:hover,
+.producao-acompanhamento-page .producao-painel-card:focus-visible {
+  border-color: var(--cor-primaria, #2563eb);
+  box-shadow: 0 4px 14px
+    color-mix(in srgb, var(--cor-primaria, #2563eb) 18%, transparent);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.producao-painel-page .producao-painel-card.producao-painel-card-destaque,
+.producao-acompanhamento-page .producao-painel-card.producao-painel-card-destaque {
+  border-color: var(--cor-primaria, #2563eb);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--cor-primaria, #2563eb) 28%, transparent);
+}
+
+.producao-painel-page .producao-painel-card-nome,
+.producao-acompanhamento-page .producao-painel-card-nome {
+  margin: 0;
+  width: 100%;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.producao-painel-page .producao-painel-card-linhas,
+.producao-acompanhamento-page .producao-painel-card-linhas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.producao-painel-page .producao-painel-card-linha,
+.producao-acompanhamento-page .producao-painel-card-linha {
+  display: block;
+  margin: 0;
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.producao-painel-page .producao-painel-card-linha--total,
+.producao-acompanhamento-page .producao-painel-card-linha--total {
+  color: var(--cor-primaria, #2563eb);
+  background: color-mix(in srgb, var(--cor-primaria, #2563eb) 12%, transparent);
+}
+
+.producao-painel-page .producao-painel-card-linha--atrasadas,
+.producao-acompanhamento-page .producao-painel-card-linha--atrasadas {
+  color: var(--cor-erro, #dc2626);
+  background: color-mix(in srgb, var(--cor-erro, #dc2626) 12%, transparent);
+}
+
+.producao-painel-page .producao-painel-card-linha--prazo,
+.producao-acompanhamento-page .producao-painel-card-linha--prazo {
+  color: var(--cor-sucesso-texto, var(--cor-sucesso, #155724));
+  background: color-mix(
+    in srgb,
+    var(--cor-sucesso, #28a745) 14%,
+    transparent
+  );
+}
+
+.producao-painel-page .producao-painel-card-linha--info,
+.producao-acompanhamento-page .producao-painel-card-linha--info {
+  color: var(--cor-texto-secundario, var(--text-secondary, #475569));
+  background: color-mix(
+    in srgb,
+    var(--cor-texto-secundario, #64748b) 14%,
+    transparent
+  );
+}
+
+body.theme-dark .producao-painel-page .producao-painel-card,
+[data-theme='dark'] .producao-painel-page .producao-painel-card,
+body.theme-dark .producao-acompanhamento-page .producao-painel-card,
+[data-theme='dark'] .producao-acompanhamento-page .producao-painel-card {
+  background: var(--cor-superficie, #1e293b);
+  border-color: var(--border-color, #334155);
+}

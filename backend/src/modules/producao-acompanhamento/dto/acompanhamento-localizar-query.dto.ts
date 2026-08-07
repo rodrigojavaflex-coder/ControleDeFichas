@@ -33,10 +33,14 @@ export class AcompanhamentoLocalizarQueryDto {
   @Min(1)
   requisicao: number;
 
-  @ApiProperty({ example: '0' })
+  @ApiPropertyOptional({ example: '0', description: 'Omitir para localizar qualquer fórmula da requisição' })
+  @IsOptional()
   @IsString()
-  @Transform(({ value }) => String(value ?? '').trim())
-  formula: string;
+  @Transform(({ value }) => {
+    const t = String(value ?? '').trim();
+    return t === '' ? undefined : t;
+  })
+  formula?: string;
 
   @ApiPropertyOptional({ example: 2 })
   @IsOptional()

@@ -38,9 +38,10 @@ export class ProducaoAcompanhamentoService {
     query: AcompanhamentoLocalizarQuery,
   ): Observable<AcompanhamentoLocalizarResponse> {
     let params = this.montarParams(query.unidades);
-    params = params
-      .set('requisicao', String(query.requisicao))
-      .set('formula', query.formula);
+    params = params.set('requisicao', String(query.requisicao));
+    if (query.formula != null && query.formula.trim() !== '') {
+      params = params.set('formula', query.formula.trim());
+    }
     if (query.filial != null) {
       params = params.set('filial', String(query.filial));
     }
