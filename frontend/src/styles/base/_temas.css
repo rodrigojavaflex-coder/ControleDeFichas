@@ -463,3 +463,46 @@ body.theme-dark .form-input::placeholder {
 body.theme-dark .form-label {
   color: var(--cor-texto-primario);
 }
+
+/* ========== Configuração de produção (sem encapsulation Angular) ========== */
+[data-theme='dark'] app-producao-config-page .producao-config-page,
+body.theme-dark app-producao-config-page .producao-config-page {
+  background: var(--cor-fundo, #020617);
+}
+
+[data-theme='dark'] app-producao-config-page .results-card,
+body.theme-dark app-producao-config-page .results-card {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme='dark'] app-producao-config-page .filters-panel-top,
+body.theme-dark app-producao-config-page .filters-panel-top {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+[data-theme='dark'] app-producao-config-page .producao-config-shell,
+body.theme-dark app-producao-config-page .producao-config-shell {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+[data-theme='dark'] app-producao-config-page .producao-config-panel,
+body.theme-dark app-producao-config-page .producao-config-panel {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+[data-theme='dark'] app-producao-config-page .producao-config-tabs .tab-button:hover,
+body.theme-dark app-producao-config-page .producao-config-tabs .tab-button:hover {
+  background: rgba(30, 41, 59, 0.6);
+  color: var(--cor-texto-primario, #e2e8f0);
+}
+
+[data-theme='dark'] app-producao-config-page .producao-config-shell .producao-config-tabs,
+body.theme-dark app-producao-config-page .producao-config-shell .producao-config-tabs {
+  background: transparent;
+  border-bottom-color: rgba(148, 163, 184, 0.22);
+}

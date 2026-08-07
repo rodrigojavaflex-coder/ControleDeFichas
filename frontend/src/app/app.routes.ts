@@ -127,9 +127,13 @@ const PERMS = {
   producaoConfig: [
     Permission.PRODUCAO_CONFIG_READ,
     Permission.PRODUCAO_CONFIG_UPDATE,
+    Permission.PRODUCAO_JORNADA_READ,
+    Permission.PRODUCAO_FERIADO_READ,
+    Permission.PRODUCAO_PAINEL_CONFIG_READ,
   ],
   producaoProdutividade: [Permission.PRODUCAO_PRODUTIVIDADE_READ],
   producaoAcompanhamento: [Permission.PRODUCAO_ACOMPANHAMENTO_READ],
+  producaoPainel: [Permission.PRODUCAO_PAINEL_READ],
 } as const;
 
 /** Guards padrão: autenticado + permissão da rota (`data.permissions`). */
@@ -518,6 +522,15 @@ export const routes: Routes = [
       ),
     canActivate: guarded,
     data: { permissions: [...PERMS.producaoProdutividade] },
+  },
+  {
+    path: 'producao/painel',
+    loadComponent: () =>
+      import('./components/producao/producao-painel-page').then(
+        (m) => m.ProducaoPainelPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.producaoPainel] },
   },
   {
     path: 'orcamentos/dashboard',

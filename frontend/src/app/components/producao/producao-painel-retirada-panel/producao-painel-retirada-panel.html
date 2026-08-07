@@ -1,0 +1,255 @@
+@if (carregando) {
+  <div class="producao-painel-ret-loading">
+    <i class="fas fa-spinner fa-spin"></i> Carregando…
+  </div>
+} @else {
+  <div class="producao-painel-ret-layout">
+    <section class="producao-config-panel producao-painel-ret-card producao-painel-ret-card--etapas">
+      <header class="producao-config-panel-header producao-painel-ret-card-header">
+        <div class="producao-painel-ret-header-text">
+          <h3 class="producao-painel-ret-title">Etapas que finalizam a produção</h3>
+          @if (etapasFinalizacaoVisiveis().length > 0) {
+            <span class="producao-painel-ret-count" aria-live="polite">
+              {{ etapasFinalizacaoVisiveis().length }}
+              {{ etapasFinalizacaoVisiveis().length === 1 ? 'etapa' : 'etapas' }}
+            </span>
+          }
+        </div>
+      </header>
+      <div class="producao-painel-ret-etapas-body">
+        <div
+          class="producao-painel-ret-etapas-selecionadas"
+          [class.is-empty]="etapasFinalizacaoVisiveis().length === 0">
+          @for (e of etapasFinalizacaoVisiveis(); track e.codEtapa) {
+            <span class="producao-painel-ret-etapa-chip">
+              <span class="producao-painel-ret-etapa-nome">{{ e.etapa }}</span>
+              @if (podeEditar()) {
+                <button
+                  type="button"
+                  class="producao-painel-ret-etapa-remove"
+                  title="Remover"
+                  (click)="removerEtapaFinal(e.codEtapa)">
+                  ×
+                </button>
+              }
+            </span>
+          } @empty {
+            <p class="producao-painel-ret-empty-inline">
+              Nenhuma etapa selecionada.
+              @if (podeEditar()) {
+                Clique em <strong>Selecionar etapas</strong> ao lado.
+              }
+            </p>
+          }
+        </div>
+        @if (podeEditar()) {
+          <button
+            type="button"
+            class="btn btn-auditoria producao-painel-ret-etapas-pick"
+            (click)="abrirModalEtapas()">
+            <i class="fas fa-list-check"></i> Selecionar etapas
+          </button>
+        }
+      </div>
+    </section>
+
+    <section class="producao-config-panel producao-painel-ret-card producao-painel-ret-card--alertas">
+      <header class="producao-config-panel-header producao-painel-ret-card-header">
+        <div class="producao-painel-ret-header-text">
+          <h3 class="producao-painel-ret-title">Alertas até a retirada</h3>
+          <span class="producao-painel-ret-count">{{ alertas.length }} faixa(s)</span>
+        </div>
+        @if (podeEditar()) {
+          <div class="header-actions producao-painel-ret-header-actions">
+            <button type="button" class="btn btn-auditoria" (click)="aplicarPadraoAlertas()">
+              <i class="fas fa-undo"></i> Restaurar padrão
+            </button>
+            <button type="button" class="btn btn-novo" (click)="adicionarFaixaAntes()">
+              <i class="fas fa-plus"></i> Adicionar faixa
+            </button>
+          </div>
+        }
+      </header>
+      <div class="table-responsive producao-painel-ret-table-wrap">
+        <table class="vendas-table producao-painel-ret-table">
+          <colgroup>
+            <col class="producao-painel-ret-col-tipo" />
+            <col class="producao-painel-ret-col-horas" />
+            <col class="producao-painel-ret-col-cor" />
+            <col class="producao-painel-ret-col-rotulo" />
+            @if (podeEditar()) {
+              <col class="producao-painel-ret-col-acao" />
+            }
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th class="producao-painel-ret-th-horas">Horas antes</th>
+              <th>Cor</th>
+              <th>Rótulo</th>
+              @if (podeEditar()) {
+                <th class="producao-painel-ret-th-acao" aria-label="Ações"></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of alertas; track $index) {
+              <tr>
+                <td>
+                  @if (a.tipo === 'ATRASADO') {
+                    <span class="producao-painel-ret-tipo producao-painel-ret-tipo--atrasado">
+                      Retirada atrasada
+                    </span>
+                  } @else {
+                    <span class="producao-painel-ret-tipo producao-painel-ret-tipo--antes">
+                      Antes da retirada
+                    </span>
+                  }
+                </td>
+                <td class="producao-painel-ret-td-horas">
+                  @if (a.tipo === 'ANTES') {
+                    <input
+                      type="number"
+                      class="form-control form-control-sm producao-painel-ret-horas"
+                      min="0.05"
+                      step="0.25"
+                      inputmode="decimal"
+                      aria-label="Horas antes da retirada"
+                      [disabled]="!podeEditar()"
+                      [(ngModel)]="a.horasAntes"
+                      (ngModelChange)="marcarDirty()" />
+                  } @else {
+                    <span class="producao-painel-ret-horas-na" aria-hidden="true">—</span>
+                  }
+                </td>
+                <td>
+                  <div class="producao-painel-ret-cor-cell">
+                    <label
+                      class="producao-painel-ret-cor-swatch"
+                      [title]="podeEditar() ? 'Escolher cor' : a.cor">
+                      <input
+                        type="color"
+                        class="producao-painel-ret-cor-input"
+                        [value]="corInputValue(a.cor)"
+                        [disabled]="!podeEditar()"
+                        (input)="onCorPickerChange(a, $event)" />
+                      <span
+                        class="producao-painel-ret-cor-preview"
+                        [style.background]="corInputValue(a.cor)"></span>
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm producao-painel-ret-cor-hex"
+                      maxlength="7"
+                      spellcheck="false"
+                      aria-label="Cor em hexadecimal"
+                      [disabled]="!podeEditar()"
+                      [(ngModel)]="a.cor"
+                      (blur)="onCorHexChange(a)" />
+                  </div>
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    class="form-control form-control-sm producao-painel-ret-rotulo"
+                    maxlength="120"
+                    placeholder="Ex.: Crítico"
+                    [disabled]="!podeEditar()"
+                    [(ngModel)]="a.rotulo"
+                    (ngModelChange)="marcarDirty()" />
+                </td>
+                @if (podeEditar()) {
+                  <td class="producao-painel-ret-col-acao">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-excluir"
+                      title="Remover faixa"
+                      aria-label="Remover faixa"
+                      (click)="removerAlerta($index)">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    @if (podeEditar()) {
+      <footer class="producao-painel-ret-footer">
+        @if (dirty) {
+          <span class="producao-painel-ret-dirty-hint">
+            <i class="fas fa-circle"></i> Alterações não salvas
+          </span>
+        }
+        <button
+          type="button"
+          class="btn btn-salvar"
+          [disabled]="salvando || !dirty"
+          (click)="salvar()">
+          @if (salvando) {
+            <i class="fas fa-spinner fa-spin"></i>
+          } @else {
+            <i class="fas fa-save"></i>
+          }
+          {{ salvando ? 'Salvando…' : 'Salvar configuração do painel' }}
+        </button>
+      </footer>
+    }
+  </div>
+}
+
+@if (modalEtapasAberto) {
+  <div class="producao-modal-overlay" (click)="fecharModalEtapas()">
+    <div
+      class="producao-modal-box producao-modal-box-compact producao-painel-ret-modal-etapas"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pp-modal-etapas-titulo"
+      (click)="$event.stopPropagation()">
+      <header class="producao-modal-header">
+        <div class="producao-modal-header-text">
+          <h3 id="pp-modal-etapas-titulo">Etapas que finalizam a produção</h3>
+        </div>
+        <button
+          type="button"
+          class="producao-modal-close"
+          (click)="fecharModalEtapas()"
+          aria-label="Fechar">
+          ×
+        </button>
+      </header>
+      <div class="producao-modal-body">
+        <p class="producao-modal-help">
+          Marque as etapas usadas para considerar a produção <strong>concluída</strong>: basta
+          <strong>data de saída</strong> em <strong>uma</strong> delas para a requisição sair do
+          painel.
+        </p>
+        <div class="producao-painel-ret-modal-lista">
+          @for (e of etapasDisponiveis; track e.codEtapa) {
+            <label class="producao-painel-ret-modal-item">
+              <input
+                type="checkbox"
+                [checked]="etapasModalDraft.has(normalizarCodEtapa(e.codEtapa))"
+                (change)="toggleEtapaModal(e.codEtapa, $any($event.target).checked)" />
+              <span class="producao-painel-ret-modal-etapa-nome">{{ e.etapa }}</span>
+              <span class="producao-painel-ret-etapa-cod visually-hidden">{{ e.codEtapa }}</span>
+            </label>
+          } @empty {
+            <p class="producao-painel-ret-empty">Nenhuma etapa importada para esta unidade.</p>
+          }
+        </div>
+      </div>
+      <footer class="producao-modal-footer">
+        <button type="button" class="btn btn-cancelar" (click)="fecharModalEtapas()">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-salvar" (click)="confirmarModalEtapas()">
+          Aplicar e salvar
+        </button>
+      </footer>
+    </div>
+  </div>
+}

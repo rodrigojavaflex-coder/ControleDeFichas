@@ -39,13 +39,33 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
 import { Usuario } from '../usuarios/entities/usuario.entity';
+import { ProducaoCalendarioService } from './producao-calendario.service';
+import { ProducaoPainelRetiradaConfigService } from './producao-painel-retirada-config.service';
+import {
+  ImportarFeriadosNacionaisDto,
+  ImportarFeriadosNacionaisResponseDto,
+  ProducaoFeriadoToggleDto,
+  ProducaoFeriadosMesResponseDto,
+  ProducaoJornadaResponseDto,
+  SalvarProducaoJornadaDto,
+} from './dto/producao-jornada-feriado.dto';
+import { ProducaoFeriadosQueryDto } from './dto/producao-feriados-query.dto';
+import {
+  ProducaoPainelRetiradaConfigResponseDto,
+  SalvarProducaoPainelRetiradaDto,
+} from './dto/producao-painel-retirada.dto';
+import { Unidade } from '../../common/enums/unidade.enum';
 
 @ApiTags('Produção — Configuração')
 @Controller('producao/config')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 export class ProducaoConfigController {
-  constructor(private readonly service: ProducaoConfigService) {}
+  constructor(
+    private readonly service: ProducaoConfigService,
+    private readonly calendarioService: ProducaoCalendarioService,
+    private readonly painelRetiradaConfigService: ProducaoPainelRetiradaConfigService,
+  ) {}
 
   @Get('etapas')
   @Permissions(Permission.PRODUCAO_CONFIG_READ)
@@ -175,5 +195,112 @@ export class ProducaoConfigController {
     @Body() dto: RemoverEtapasFuncionariosDto,
   ): Promise<RemoverEtapasFuncionariosResponseDto> {
     return this.service.removerEtapasFuncionarios(req.user, dto);
+  }
+
+  @Get('jornada')
+  @Permissions(Permission.PRODUCAO_JORNADA_READ)
+  @ApiOperation({ summary: 'Jornada de produção da unidade' })
+  @ApiResponse({ status: 200, type: ProducaoJornadaResponseDto })
+  obterJornada(
+    @Req() req: { user: Usuario },
+    @Query() query: ProducaoConfigUnidadeQueryDto,
+  ): Promise<ProducaoJornadaResponseDto> {
+    return this.calendarioService.obterJornada(req.user, query.unidade);
+  }
+
+  @Put('jornada')
+  @Permissions(Permission.PRODUCAO_JORNADA_UPDATE)
+  @ApiOperation({ summary: 'Salva jornada de produção da unidade' })
+  @ApiResponse({ status: 200, type: ProducaoJornadaResponseDto })
+  salvarJornada(
+    @Req() req: { user: Usuario },
+    @Body() dto: SalvarProducaoJornadaDto,
+  ): Promise<ProducaoJornadaResponseDto> {
+    return this.calendarioService.salvarJornada(req.user, dto);
+  }
+
+  @Get('feriados')
+  @Permissions(Permission.PRODUCAO_FERIADO_READ)
+  @ApiOperation({ summary: 'Lista feriados da unidade por ano (mês opcional)' })
+  @ApiResponse({ status: 200, type: ProducaoFeriadosMesResponseDto })
+  listarFeriados(
+    @Req() req: { user: Usuario },
+    @Query() query: ProducaoFeriadosQueryDto,
+  ): Promise<ProducaoFeriadosMesResponseDto> {
+    if (query.mes != null) {
+      return this.calendarioService.listarFeriadosMes(
+        req.user,
+        query.unidade,
+        query.ano,
+        query.mes,
+      );
+    }
+    return this.calendarioService.listarFeriados(
+      req.user,
+      query.unidade,
+      query.ano,
+    );
+  }
+
+  @Post('feriados/incluir')
+  @Permissions(Permission.PRODUCAO_FERIADO_UPDATE)
+  @ApiOperation({ summary: 'Inclui feriado manual na unidade' })
+  @ApiResponse({ status: 200, type: ProducaoFeriadosMesResponseDto })
+  incluirFeriado(
+    @Req() req: { user: Usuario },
+    @Body() dto: ProducaoFeriadoToggleDto,
+  ): Promise<ProducaoFeriadosMesResponseDto> {
+    return this.calendarioService.incluirFeriado(req.user, dto);
+  }
+
+  @Post('feriados/remover')
+  @Permissions(Permission.PRODUCAO_FERIADO_DELETE)
+  @ApiOperation({ summary: 'Remove feriado da unidade' })
+  @ApiResponse({ status: 200, type: ProducaoFeriadosMesResponseDto })
+  removerFeriado(
+    @Req() req: { user: Usuario },
+    @Body() dto: ProducaoFeriadoToggleDto,
+  ): Promise<ProducaoFeriadosMesResponseDto> {
+    return this.calendarioService.removerFeriado(req.user, dto);
+  }
+
+  @Post('feriados/importar-nacionais')
+  @Permissions(Permission.PRODUCAO_FERIADO_IMPORT)
+  @ApiOperation({ summary: 'Importa feriados nacionais (Brasil API)' })
+  @ApiResponse({ status: 200, type: ImportarFeriadosNacionaisResponseDto })
+  importarFeriadosNacionais(
+    @Req() req: { user: Usuario },
+    @Body() dto: ImportarFeriadosNacionaisDto,
+  ): Promise<ImportarFeriadosNacionaisResponseDto> {
+    return this.calendarioService.importarFeriadosNacionais(
+      req.user,
+      dto.unidade as Unidade,
+      dto.ano,
+    );
+  }
+
+  @Get('painel-retirada')
+  @Permissions(Permission.PRODUCAO_PAINEL_CONFIG_READ)
+  @ApiOperation({ summary: 'Configuração do painel de retirada da unidade' })
+  @ApiResponse({ status: 200, type: ProducaoPainelRetiradaConfigResponseDto })
+  obterPainelRetirada(
+    @Req() req: { user: Usuario },
+    @Query() query: ProducaoConfigUnidadeQueryDto,
+  ): Promise<ProducaoPainelRetiradaConfigResponseDto> {
+    return this.painelRetiradaConfigService.obterConfig(
+      req.user,
+      query.unidade,
+    );
+  }
+
+  @Put('painel-retirada')
+  @Permissions(Permission.PRODUCAO_PAINEL_CONFIG_UPDATE)
+  @ApiOperation({ summary: 'Salva configuração do painel de retirada' })
+  @ApiResponse({ status: 200, type: ProducaoPainelRetiradaConfigResponseDto })
+  salvarPainelRetirada(
+    @Req() req: { user: Usuario },
+    @Body() dto: SalvarProducaoPainelRetiradaDto,
+  ): Promise<ProducaoPainelRetiradaConfigResponseDto> {
+    return this.painelRetiradaConfigService.salvarConfig(req.user, dto);
   }
 }

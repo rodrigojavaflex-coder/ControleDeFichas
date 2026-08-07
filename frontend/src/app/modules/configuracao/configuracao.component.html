@@ -659,15 +659,25 @@
             <h3 class="section-title">Etapas de produção</h3>
             <p class="section-description">
               Importe etapas de produção (SLA) do Firebird por unidade e período. Não altera o watermark da sincronização automática.
+              Use a limpeza para remover registros antigos (abertos, fila e fórmulas sem etapa final) antes de reimportar.
             </p>
           </div>
-          <button
-            type="button"
-            class="btn-migracao btn-importacao-etapas"
-            (click)="abrirModalImportarProducaoEtapas()">
-            <i class="fas fa-industry"></i>
-            Buscar etapas por período
-          </button>
+          <div class="importacao-etapas-acoes">
+            <button
+              type="button"
+              class="btn-migracao btn-importacao-etapas"
+              (click)="abrirModalImportarProducaoEtapas()">
+              <i class="fas fa-industry"></i>
+              Buscar etapas por período
+            </button>
+            <button
+              type="button"
+              class="btn-migracao btn-limpeza-etapas"
+              (click)="abrirModalLimparProducaoEtapas()">
+              <i class="fas fa-broom"></i>
+              Limpar etapas antigas
+            </button>
+          </div>
         </div>
       </div>
 
@@ -756,6 +766,11 @@
   #etapasModal
   (importacaoConcluida)="onImportacaoEtapasConcluida()">
 </app-importar-producao-etapas-modal>
+
+<app-limpar-producao-etapas-modal
+  #limparEtapasModal
+  (limpezaConcluida)="onLimpezaEtapasConcluida()">
+</app-limpar-producao-etapas-modal>
 
 <app-importar-orcamentos-modal
   #orcamentosModal

@@ -468,6 +468,48 @@ export class SincronizacaoService {
   }
 
   /**
+   * Sincronização de um agente pelo scheduler (expõe progresso como a sync manual).
+   */
+  async executarSincronizacaoAgendada(
+    config: SincronizacaoConfig,
+  ): Promise<SincronizacaoResult> {
+    if (this.isRunning) {
+      this.logger.warn(
+        `Sync agendada ignorada para ${config.agente}: sincronização já em execução`,
+      );
+      return this.criarResultadoVazio(config.agente, [
+        'Sincronização já em execução',
+      ]);
+    }
+
+    this.isRunning = true;
+    try {
+      this.iniciarProgresso(1);
+      this.definirAgenteProgresso(0, config.agente);
+      const resultado = await this.sincronizarAgente(config);
+      if (this.syncProgress) {
+        this.syncProgress.erros += resultado.erros.length;
+      }
+      this.finalizarProgresso(
+        'completed',
+        `Sincronização agendada concluída (${config.agente})`,
+      );
+      return resultado;
+    } catch (error: unknown) {
+      const msg =
+        error instanceof Error ? error.message : 'Erro na sincronização agendada';
+      this.logger.error(
+        `Erro na sincronização agendada (${config.agente}):`,
+        error,
+      );
+      this.finalizarProgresso('error', msg);
+      return this.criarResultadoVazio(config.agente, [msg]);
+    } finally {
+      this.isRunning = false;
+    }
+  }
+
+  /**
    * Sincroniza somente orçamentos. Usuário com unidade: agente correspondente;
    * sem unidade: todos os agentes ativos com watermark configurado.
    */

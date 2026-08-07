@@ -147,6 +147,15 @@ export enum Permission {
   PRODUCAO_PRODUTIVIDADE_READ = 'producao-produtividade:read',
   PRODUCAO_PRODUTIVIDADE_READ_ALERTAS = 'producao-produtividade:read-alertas',
   PRODUCAO_ACOMPANHAMENTO_READ = 'producao-acompanhamento:read',
+  PRODUCAO_JORNADA_READ = 'producao-jornada:read',
+  PRODUCAO_JORNADA_UPDATE = 'producao-jornada:update',
+  PRODUCAO_FERIADO_READ = 'producao-feriado:read',
+  PRODUCAO_FERIADO_UPDATE = 'producao-feriado:update',
+  PRODUCAO_FERIADO_IMPORT = 'producao-feriado:import',
+  PRODUCAO_FERIADO_DELETE = 'producao-feriado:delete',
+  PRODUCAO_PAINEL_READ = 'producao-painel:read',
+  PRODUCAO_PAINEL_CONFIG_READ = 'producao-painel-config:read',
+  PRODUCAO_PAINEL_CONFIG_UPDATE = 'producao-painel-config:update',
 }
 
 export interface PermissionGroup {

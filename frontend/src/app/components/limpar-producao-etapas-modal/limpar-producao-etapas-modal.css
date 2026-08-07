@@ -1,0 +1,238 @@
+.modal-limpeza-etapas {
+  max-width: 780px;
+  width: min(96vw, 780px);
+}
+
+.limpeza-hint {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.45;
+}
+
+.limpeza-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 560px) {
+  .limpeza-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.limpeza-field-help {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.limpeza-etapas-block {
+  margin-bottom: 1rem;
+}
+
+.limpeza-etapas-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.limpeza-etapas-head h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.botao-sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.limpeza-etapas-lista {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  padding: 0.35rem;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.limpeza-etapa-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.limpeza-etapa-item:hover {
+  background: var(--bg-card, #fff);
+}
+
+.limpeza-etapa-pos {
+  min-width: 1.5rem;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.75rem;
+}
+
+.limpeza-etapa-nome {
+  flex: 1;
+  min-width: 0;
+}
+
+.limpeza-etapa-cod {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+  font-family: ui-monospace, monospace;
+}
+
+.limpeza-empty,
+.limpeza-loading-inline {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.limpeza-resultado {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.limpeza-resultado h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.limpeza-stats {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.limpeza-lista-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.limpeza-lista-titulo {
+  margin: 0;
+}
+
+.limpeza-amostra {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+  max-height: 120px;
+  overflow: auto;
+}
+
+.limpeza-amostra-completa {
+  padding: 0;
+  max-height: 280px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg-card, #fff);
+}
+
+.limpeza-formulas-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.limpeza-formulas-table th,
+.limpeza-formulas-table td {
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  white-space: nowrap;
+}
+
+.limpeza-formulas-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary, #f8fafc);
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  z-index: 1;
+}
+
+.limpeza-formulas-table td {
+  color: var(--text-secondary, #64748b);
+}
+
+body.theme-dark .limpeza-amostra-completa,
+[data-theme='dark'] .limpeza-amostra-completa {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+body.theme-dark .limpeza-formulas-table th,
+[data-theme='dark'] .limpeza-formulas-table th {
+  background: rgba(30, 41, 59, 0.95);
+  color: var(--text-primary, #e2e8f0);
+}
+
+.limpeza-confirm {
+  margin-top: 0.85rem;
+}
+
+.botao-perigo {
+  background: var(--color-danger, #dc2626);
+  color: #fff;
+  border: none;
+}
+
+.botao-perigo:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.botao-perigo:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.importacao-periodo-erro {
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}
+
+body.theme-dark .limpeza-etapas-lista,
+body.theme-dark .limpeza-resultado,
+[data-theme='dark'] .limpeza-etapas-lista,
+[data-theme='dark'] .limpeza-resultado {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+body.theme-dark .limpeza-etapa-item:hover,
+[data-theme='dark'] .limpeza-etapa-item:hover {
+  background: rgba(30, 41, 59, 0.8);
+}
+
+body.theme-dark .importacao-periodo-erro,
+[data-theme='dark'] .importacao-periodo-erro {
+  background: rgba(127, 29, 29, 0.35);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fecaca;
+}

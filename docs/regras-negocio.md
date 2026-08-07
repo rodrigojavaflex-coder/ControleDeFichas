@@ -301,7 +301,7 @@
 - Origem: SQL validado `producao_etapas_sla_resumo.sql` via agente (`POST /api/v1/producao/etapas-resumo`).
 - Persistência: tabela `producao_etapas_resumo`; chave upsert: `unidade + filial + requisicao + formula + cod_etapa`.
 - Filtro de movimentos: data do evento PCP (`p.data` na FC12500), não `dtentr` (data de retirada é apenas informativa). O filtro (período ou watermark) define **quais fórmulas** entram no lote (`formula_touch`: requisição + série com ao menos um movimento no intervalo); para cada fórmula selecionada, o agente importa **todas** as etapas (`cdetapa`) com movimento na `FC12500`, calculando **1º `01` / 1º `02` / encerramento ≠ `01` entre todos os `tppcp`** da mesma etapa (uma linha por `cod_etapa` no payload). Fila (`emAndamentoFila`): último movimento **por `tppcp`**; merge OR no backend quando houver mais de um ciclo. Série (`serier`): normalização numérica (`9` = `09`) **apenas** em `formula_touch` e coluna `formula` exportada; joins internos usam `serier` bruto (desempenho Firebird).
-- **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`; **não** consulta exclusões FC01M20 (carga em tabela limpa ou reimportação completa). Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*).
+- **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`; **não** consulta exclusões FC01M20 (carga em tabela limpa ou reimportação completa). Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*). Para remover restos locais antes de reimportar, ver **RN-PCP-011**.
 - **Importação automática:** integrada à sync geral quando `ultimaModificacaoProducaoEtapas` estiver configurada; filtra movimentos posteriores ao watermark; **antes** do upsert incremental, aplica **RN-PCP-008** (remoção de fórmulas excluídas no ERP); ao concluir, atualiza watermark com hora do processamento (America/Sao_Paulo), alinhado ao padrão de orçamentos.
 - Registros sem **nenhum** `01` na etapa são excluídos (`WHERE EXISTS` entrada); etapas só com saída não são importadas.
 - **Usuário entrada/saída:** código **`cdusu`** do movimento na `FC12500`. Entrada (`cdopera = 01`, aceita `1` com trim): **primeiro** lançamento cronológico entre **todos os `tppcp`**. **`usuarioSaida`:** **primeiro** `02` (`2`). **`dataSaida` / `horaSaida`:** **primeiro** `02`; se não houver, **primeiro movimento com `cdopera ≠ 01`** na mesma etapa (todos os `tppcp`) — encerramento operacional. Persistência em `producao_etapas_resumo.usuarioEntrada` / `usuarioSaida`. **Mesmo segundo:** desempate preferindo `cdusu` maior. Upsert: chave sem `tppcp`; não sobrescreve `usuario*` preenchido com `null`.
@@ -314,6 +314,20 @@
 - Campo `codigoCliente` / `cliente`: `req.cdcli` + `FC07000`; com **fallback** do `CDCLI` de outra fórmula da mesma requisição. Nome do cliente: prioriza `FC07000` da **mesma filial** da requisição; se ausente, usa cadastro do mesmo `CDCLI` em **outra filial**.
 - Escopo inicial: importação e persistência; painéis/relatórios são demandas posteriores.
 - Permissão importação manual: **`configuracao:access`**.
+
+### RN-PCP-011 — Limpeza manual de etapas antigas (reimportação)
+
+- **Objetivo:** remover de `producao_etapas_resumo` registros locais antigos/inconsistentes para permitir reimportação limpa e evitar fórmulas “fantasma” no painel de retirada (RN-PCP-010).
+- **Disparo:** aba **Configuração → Importação** → *Limpar etapas antigas* (modal). Permissão **`configuracao:access`**.
+- **Parâmetros:** `unidade`, `dataLimite` (`YYYY-MM-DD`), `etapasFinais` (`codEtapa[]` — etapas que definem o fim da produção).
+- **Não** altera `ultimaModificacaoProducaoEtapas` (watermark da sync automática).
+- **Fluxo obrigatório na UI:** pré-visualizar contagens → confirmar digitando `LIMPAR` → executar. Operação irreversível.
+- **Regras (transação, escopo = unidade informada):**
+  1. **Abertos:** `dataEntrada IS NOT NULL` + `dataSaida IS NULL` + `dataEntrada <= dataLimite`.
+  2. **Fila operacional:** `emAndamentoFila = true` + `dataEntradaFila IS NOT NULL` + `dataEntradaFila <= dataLimite`.
+  3. **Fórmulas sem fim:** apaga **todas as linhas** de cada `filial + requisicao + formula` com `MIN(dataEntrada) <= dataLimite` e **sem** `dataSaida` em nenhuma das `etapasFinais` informadas (mesmo critério conceitual da RN-PCP-010, com etapas escolhidas na limpeza).
+- **API:** `GET /sincronizacao/producao-etapas/etapas-disponiveis?unidade=`; `POST /sincronizacao/producao-etapas/limpar-antigas/preview`; `POST /sincronizacao/producao-etapas/limpar-antigas/formulas-sem-fim` (lista completa sob demanda); `POST /sincronizacao/producao-etapas/limpar-antigas`.
+- **Uso típico:** limpar até data X com etapas finais (ex. ROT) → *Buscar etapas por período* → conferir painel/acompanhamento.
 
 ### RN-PCP-008 — Exclusão de fórmula no ERP (sync incremental)
 
@@ -387,10 +401,21 @@
 - **Escopo de unidades:** idêntico à produtividade (RN-PCP-005): `unidadesPermitidasProdutividade` / campo **`usuarios.unidades_produtividade`** + unidade principal; API valida com `assertUnidadeProducao`.
 - **Somente fila (MVP):** não há filtro de período histórico; exibe etapas com **`emAndamentoFila = true`** e `dataEntradaFila` preenchida (não usa `dataSaida IS NULL` do fechamento).
 - **Em andamento na etapa:** último movimento PCP na etapa (`tppcp`) é **`01`**; retorno/correção com operação posterior **`≠ 01`** remove a fórmula da fila naquela etapa.
-- **Resumo (cards):** uma card por `codEtapa` distinto **com ao menos uma requisição-fórmula em andamento** (`totalRequisicoesFormulas > 0`), ordenadas por **`posicaoEtapa`** ascendente; etapas sem fila **não** aparecem no resumo; **tempo médio** = média dos minutos decorridos desde entrada até `consultadoEm`.
-- **Detalhe (clique na card):** abre em **modal** (não inline; fecha só em **Fechar** ou **×**, sem clique no overlay); lista analítica das linhas da etapa (req, fórmula, unidade, filial, **funcionário** — nome via `funcionarios.codigoUsuarioErp` na unidade da linha, cliente/paciente opcional, retirada); **tempo** = minutos decorridos por fórmula.
+- **Resumo (cards):** uma card por `codEtapa` distinto **com ao menos uma requisição-fórmula em andamento** (`totalRequisicoesFormulas > 0`), ordenadas por **`posicaoEtapa`** ascendente; etapas sem fila **não** aparecem no resumo; **tempo médio** = média dos minutos desde entrada até `consultadoEm` (**corrido** se a unidade não tiver jornada de produção com faixas ativas; **tempo útil** dentro das faixas e exc. feriados quando configurado — mesma regra do calendário em **Configuração de produção → Horários/Feriados**).
+- **Detalhe (clique na card):** abre em **modal** (não inline; fecha só em **Fechar** ou **×**, sem clique no overlay); lista analítica das linhas da etapa (req, fórmula, unidade, filial, **funcionário** — nome via `funcionarios.codigoUsuarioErp` na unidade da linha, **cliente/paciente** — um nome se iguais ou só um preenchido; `cliente / paciente` se diferentes, retirada); **tempo** = minutos por fórmula com a mesma regra corrido/útil acima.
 - **Dados:** snapshot PostgreSQL pós-import/sync (RN-PCP-001); não substitui fila ao vivo do ERP; divergências possíveis (RN-PCP-004) — mensagem informativa na tela.
+- **Atualização automática:** mesma regra da RN-PCP-010 (`ProducaoEtapasRefreshService` + polling de sync).
 - API: `GET /producao/acompanhamento/resumo?unidades=` e `GET /producao/acompanhamento/detalhe?codEtapa=&unidades=`.
+
+### RN-PCP-010 — Painel de retirada (operacional)
+
+- Tela **`/producao/painel`**; requisições-fórmulas **não concluídas** (sem `dataSaida` em etapa final configurada por unidade).
+- **Prazo até retirada** e faixas de alerta usam a mesma regra **corrido vs tempo útil** da RN-PCP-007 (jornada/feriados por unidade).
+- **Legenda:** coluna **Status** na grade (rótulo da faixa de alerta por req-fórmula; «No prazo» ou «Sem data de retirada» quando neutro).
+- **Resumo:** card **Total em produção** (primeiro na faixa de cards) + cards por etapa; contadores de fórmulas (e atrasadas no total).
+- **Cliente/paciente:** exibir um nome se iguais ou só um preenchido; `cliente / paciente` se diferentes.
+- **Grade:** req-fórmula sem filial; etapa atual só o nome; retirada data e hora na mesma linha; coluna **Prescritor** após cliente/paciente (`nomePrescritor` do resumo de etapas).
+- **Atualização automática:** com a tela aberta (`/producao/painel` ou `/producao/acompanhamento`), recarregar após conclusão da **sincronização agendada ou manual** que tenha executado a etapa **producao_etapas** (`GET /sincronizacao/status`, polling); também após importação manual ou limpeza de etapas (RN-PCP-011).
 
 ### RN-PCP-004 — Reconciliação ERP × fechamento de produtividade (decisão com gestão)
 
@@ -506,6 +531,7 @@ Responder formalmente antes de alterar importação ou fechamento oficial:
 - **Fechamento de Caixa (Atualizar Vendas):** importa **apenas o dia** selecionado na tela (`dataInicio` = `dataFim` = data do caixa), usando a unidade já informada. Não abre modal; exibe mensagem de sucesso ou erro na própria tela, sem resumo/preview da importação.
 - **Configuração → Importação (Buscar caixa ERP por período):** abre modal com **intervalo de datas** (início e fim) e unidade; ao concluir, exibe resumo da importação no modal. Permite reimportar períodos **anteriores** ao último fechamento confirmado (`reimportacaoHistorica: true`; exige **`configuracao:access`**).
 - **Configuração → Importação (Buscar etapas por período):** abre modal com unidade e intervalo de datas (mesmo padrão do caixa ERP); ao concluir, exibe resumo da importação no modal.
+- **Configuração → Importação (Limpar etapas antigas):** modal com unidade, data limite e etapas finais; preview + confirmação; remove abertos/fila/fórmulas sem fim (**RN-PCP-011**).
 - Usuário **com** unidade no cadastro: importação **somente** na própria unidade (campo bloqueado na UI e validado na API).
 - Usuário **sem** unidade no cadastro: pode escolher qualquer unidade na UI (acesso global conforme permissões).
 - Exige **`venda:fechar-caixa`**.

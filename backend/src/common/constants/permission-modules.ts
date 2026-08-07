@@ -55,8 +55,12 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
     label: 'Produção',
     groupKeys: [
       'Produção — Configuração',
+      'Produção — Horários',
+      'Produção — Feriados',
       'Produção — Acompanhamento',
       'Produção — Produtividade',
+      'Produção — Painel de retirada',
+      'Produção — Painel de retirada (config)',
     ],
   },
 ];

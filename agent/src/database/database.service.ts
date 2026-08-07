@@ -1527,6 +1527,79 @@ export class DatabaseService {
     return `${a}.serier = ${b}.serier`;
   }
 
+  /** CRM da fórmula com fallback na mesma requisição (RN-PCP-001). */
+  private sqlProducaoEtapasCrmPfcrm(): string {
+    return `
+      COALESCE(
+        CASE WHEN COALESCE(req.nrcrm, 0) > 0 THEN req.pfcrm END,
+        (
+          SELECT FIRST 1 f.pfcrm
+          FROM fc12100 f
+          WHERE f.cdfil = stage.cdfil
+            AND f.nrrqu = stage.nrrqu
+            AND TRIM(f.serier) = '0'
+            AND COALESCE(f.nrcrm, 0) > 0
+        ),
+        (
+          SELECT FIRST 1 f.pfcrm
+          FROM fc12100 f
+          WHERE f.cdfil = stage.cdfil
+            AND f.nrrqu = stage.nrrqu
+            AND COALESCE(f.nrcrm, 0) > 0
+          ORDER BY CAST(TRIM(f.serier) AS INTEGER)
+        )
+      )
+    `.trim();
+  }
+
+  private sqlProducaoEtapasCrmUfcrm(): string {
+    return `
+      COALESCE(
+        CASE WHEN COALESCE(req.nrcrm, 0) > 0 THEN req.ufcrm END,
+        (
+          SELECT FIRST 1 f.ufcrm
+          FROM fc12100 f
+          WHERE f.cdfil = stage.cdfil
+            AND f.nrrqu = stage.nrrqu
+            AND TRIM(f.serier) = '0'
+            AND COALESCE(f.nrcrm, 0) > 0
+        ),
+        (
+          SELECT FIRST 1 f.ufcrm
+          FROM fc12100 f
+          WHERE f.cdfil = stage.cdfil
+            AND f.nrrqu = stage.nrrqu
+            AND COALESCE(f.nrcrm, 0) > 0
+          ORDER BY CAST(TRIM(f.serier) AS INTEGER)
+        )
+      )
+    `.trim();
+  }
+
+  private sqlProducaoEtapasCrmNrcrm(): string {
+    return `
+      COALESCE(
+        CASE WHEN COALESCE(req.nrcrm, 0) > 0 THEN req.nrcrm END,
+        (
+          SELECT FIRST 1 f.nrcrm
+          FROM fc12100 f
+          WHERE f.cdfil = stage.cdfil
+            AND f.nrrqu = stage.nrrqu
+            AND TRIM(f.serier) = '0'
+            AND COALESCE(f.nrcrm, 0) > 0
+        ),
+        (
+          SELECT FIRST 1 f.nrcrm
+          FROM fc12100 f
+          WHERE f.cdfil = stage.cdfil
+            AND f.nrrqu = stage.nrrqu
+            AND COALESCE(f.nrcrm, 0) > 0
+          ORDER BY CAST(TRIM(f.serier) AS INTEGER)
+        )
+      )
+    `.trim();
+  }
+
   private buildProducaoEtapasResumoQuery(
     unit: number,
     options: {
@@ -1571,6 +1644,9 @@ export class DatabaseService {
     const cdusuInt = this.sqlCdusuInteiro('p');
     const cdusuCmp = (a: string, b: string) =>
       `${this.sqlCdusuInteiroOuZero(a)} > ${this.sqlCdusuInteiroOuZero(b)}`;
+    const crmPfcrm = this.sqlProducaoEtapasCrmPfcrm();
+    const crmUfcrm = this.sqlProducaoEtapasCrmUfcrm();
+    const crmNrcrm = this.sqlProducaoEtapasCrmNrcrm();
 
     const sql = `
       SELECT
@@ -1651,14 +1727,57 @@ export class DatabaseService {
         CAST(NULL AS VARCHAR(8000))                               AS principios_ativos,
         CAST(NULL AS VARCHAR(500))                                AS embalagem,
         TRIM(req.nomepa)                                          AS paciente,
-        CASE
-          WHEN COALESCE(req.cdcli, 0) > 0 THEN req.cdcli
-          ELSE NULL
-        END                                                       AS codigo_cliente,
-        CAST(NULL AS VARCHAR(500))                                 AS cliente,
-        CAST(req.nrcrm AS VARCHAR(20))                            AS crf,
-        TRIM(req.ufcrm)                                           AS uf_crf,
-        CAST(NULL AS VARCHAR(500))                                AS nome_prescritor,
+        COALESCE(
+          CASE WHEN COALESCE(req.cdcli, 0) > 0 THEN req.cdcli END,
+          (
+            SELECT FIRST 1 f.cdcli
+            FROM fc12100 f
+            WHERE f.cdfil = stage.cdfil
+              AND f.nrrqu = stage.nrrqu
+              AND COALESCE(f.cdcli, 0) > 0
+            ORDER BY
+              CASE WHEN TRIM(f.serier) = '0' THEN 0 ELSE 1 END,
+              CAST(TRIM(f.serier) AS INTEGER)
+          )
+        )                                                         AS codigo_cliente,
+        COALESCE(
+          (
+            SELECT FIRST 1 TRIM(c.nomecli)
+            FROM fc07000 c
+            WHERE c.cdcli = req.cdcli
+              AND c.cdfil = stage.cdfil
+              AND COALESCE(req.cdcli, 0) > 0
+          ),
+          (
+            SELECT FIRST 1 TRIM(c.nomecli)
+            FROM fc07000 c
+            WHERE c.cdcli = req.cdcli
+              AND COALESCE(req.cdcli, 0) > 0
+            ORDER BY c.cdfil
+          ),
+          (
+            SELECT FIRST 1 TRIM(c.nomecli)
+            FROM fc12100 f
+            INNER JOIN fc07000 c
+              ON c.cdcli = f.cdcli
+             AND c.cdfil = f.cdfil
+            WHERE f.cdfil = stage.cdfil
+              AND f.nrrqu = stage.nrrqu
+              AND COALESCE(f.cdcli, 0) > 0
+            ORDER BY
+              CASE WHEN TRIM(f.serier) = '0' THEN 0 ELSE 1 END,
+              CAST(TRIM(f.serier) AS INTEGER)
+          )
+        )                                                         AS cliente,
+        CAST(${crmNrcrm} AS VARCHAR(20))                          AS crf,
+        TRIM(${crmUfcrm})                                         AS uf_crf,
+        (
+          SELECT FIRST 1 TRIM(m.nomemed)
+          FROM fc04000 m
+          WHERE m.pfcrm = ${crmPfcrm}
+            AND m.ufcrm = ${crmUfcrm}
+            AND m.nrcrm = ${crmNrcrm}
+        )                                                         AS nome_prescritor,
         req.dtentr                                                AS data_retirada,
         req.hrret                                                 AS hora_retirada
       FROM (

@@ -1,0 +1,412 @@
+<div
+  class="vendas-page producao-painel-page"
+  [class.producao-painel-page--processando]="processamentoAtivo">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para o painel de retirada (producao-painel:read).
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="filters-panel-top">
+        <div class="filters-inline producao-prod-filters producao-prod-filters-compact">
+          @if (unidadeDisabled) {
+            <div class="filter-field filter-field-unidade-fixa">
+              <label class="form-label" for="pp-unidade-fixa">Unidade</label>
+              <select
+                id="pp-unidade-fixa"
+                class="form-control"
+                [ngModel]="unidadeFixa"
+                disabled>
+                @if (unidadeFixa; as u) {
+                  <option [ngValue]="u">{{ u }}</option>
+                }
+              </select>
+            </div>
+          } @else {
+            <div
+              class="filter-field filter-field-unidades"
+              role="button"
+              tabindex="0"
+              title="Clique para marcar/desmarcar todas as unidades"
+              (click)="onUnidadesContainerClick($event)"
+              (keydown.enter)="toggleTodasUnidades()"
+              (keydown.space)="toggleTodasUnidades(); $event.preventDefault()">
+              <div class="filter-section-header">
+                <label>
+                  <i class="fas fa-map-marker-alt filter-title-icon"></i>
+                  Unidades
+                </label>
+                <div class="filter-section-actions">
+                  <button
+                    type="button"
+                    class="btn-filter-action btn-filter-muted btn-filter-icon-only"
+                    title="Remove todas as unidades selecionadas"
+                    aria-label="Limpar unidades"
+                    (click)="limparUnidades(); $event.stopPropagation()">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="unidades-grid">
+                @for (u of unidades; track u) {
+                  <label
+                    class="unidade-item"
+                    [class.is-selected]="selectedUnidades.has(u)">
+                    <input
+                      type="checkbox"
+                      [checked]="selectedUnidades.has(u)"
+                      (change)="toggleUnidade(u, $any($event.target).checked)" />
+                    <span>{{ u }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="filter-field filter-field-req-formula">
+            <div class="producao-painel-resumo-geral producao-painel-filtro-formula">
+              <label class="producao-painel-resumo-geral-titulo" for="pp-req-formula"
+                >Filtrar fórmula</label
+              >
+              <div class="producao-painel-req-busca">
+                <input
+                  id="pp-req-formula"
+                  type="text"
+                  class="form-control"
+                  [(ngModel)]="filtroReqFormula"
+                  placeholder="96605-0"
+                  autocomplete="off"
+                  (keydown.enter)="buscarRequisicaoFormula()" />
+                <button
+                  type="button"
+                  class="btn btn-secondary producao-painel-btn-busca"
+                  title="Localizar fórmula no painel"
+                  [disabled]="
+                    carregando || selectedUnidades.size === 0 || !dados?.linhas?.length
+                  "
+                  (click)="buscarRequisicaoFormula()">
+                  <i class="fas fa-search"></i>
+                </button>
+                @if (reqFormulaFiltroAtivo || filtroReqFormula.trim()) {
+                  <button
+                    type="button"
+                    class="btn btn-secondary producao-painel-btn-limpar"
+                    title="Limpar busca"
+                    (click)="limparFiltroReqFormula()">
+                    <i class="fas fa-times"></i>
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-field filter-field-acao">
+            <label class="form-label">&nbsp;</label>
+            <button
+              type="button"
+              class="btn btn-primary producao-prod-btn-relatorio"
+              [disabled]="carregando || selectedUnidades.size === 0"
+              (click)="atualizar()">
+              @if (carregando) {
+                <i class="fas fa-spinner fa-spin"></i>
+              } @else {
+                <i class="fas fa-sync-alt"></i>
+              }
+              Atualizar
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      @if (selectedUnidades.size === 0) {
+        <div class="producao-painel-state">
+          <i class="fas fa-filter"></i> Selecione ao menos uma unidade.
+        </div>
+      } @else if (carregando && !dados) {
+        <div class="producao-painel-state">
+          <i class="fas fa-spinner fa-spin"></i> Carregando painel…
+        </div>
+      } @else if (!cardsEtapa.length) {
+        <div class="producao-painel-state">
+          <i class="fas fa-inbox"></i> Nenhuma requisição em produção no momento.
+        </div>
+      } @else {
+        <div class="producao-painel-cards">
+          <button
+            type="button"
+            class="producao-painel-card producao-painel-card-total"
+            [class.producao-painel-card-destaque]="!codEtapaFiltro"
+            (click)="selecionarCardTotal()"
+            aria-live="polite">
+            <span
+              class="producao-painel-resumo-geral-titulo producao-painel-resumo-geral-titulo-caps"
+              >Total em produção</span
+            >
+            <div class="producao-painel-resumo-geral-badges">
+              <span class="producao-painel-resumo-geral-total">
+                {{ resumoGeral.total }} fórmula{{
+                  resumoGeral.total === 1 ? '' : 's'
+                }}
+              </span>
+              @if (resumoGeral.atrasadas > 0) {
+                <span class="producao-painel-resumo-geral-atrasadas">
+                  {{ resumoGeral.atrasadas }} atrasada{{
+                    resumoGeral.atrasadas === 1 ? '' : 's'
+                  }}
+                </span>
+              }
+            </div>
+          </button>
+          @for (c of cardsEtapa; track c.codEtapa) {
+            <button
+              type="button"
+              class="producao-painel-card"
+              [class.producao-painel-card-destaque]="codEtapaFiltro === c.codEtapa"
+              (click)="selecionarCardEtapa(c.codEtapa)">
+              <span
+                class="producao-painel-resumo-geral-titulo producao-painel-resumo-geral-titulo-caps"
+                >{{ c.etapa }}</span
+              >
+              <div class="producao-painel-resumo-geral-badges">
+                <span class="producao-painel-resumo-geral-total">
+                  {{ c.total }} fórmula{{ c.total === 1 ? '' : 's' }}
+                </span>
+                @if (c.atrasadas > 0) {
+                  <span class="producao-painel-resumo-geral-atrasadas">
+                    {{ c.atrasadas }} atrasada{{ c.atrasadas === 1 ? '' : 's' }}
+                  </span>
+                }
+              </div>
+            </button>
+          }
+        </div>
+
+        @if (codEtapaFiltro || reqFormulaFiltroAtivo) {
+          <div class="producao-painel-filtro-bar">
+            <span>
+              @if (reqFormulaFiltroAtivo) {
+                Filtrando
+                <strong
+                  >{{ reqFormulaFiltroAtivo.requisicao }}-{{
+                    reqFormulaFiltroAtivo.formula
+                  }}</strong
+                >
+                @if (codEtapaFiltro) {
+                  · etapa <strong>{{ labelEtapaFiltro }}</strong>
+                }
+              } @else {
+                Filtrando etapa
+                <strong>{{ labelEtapaFiltro }}</strong>
+              }
+            </span>
+            <button
+              type="button"
+              class="btn btn-link"
+              (click)="limparFiltrosVisuais()">
+              Ver todas
+            </button>
+          </div>
+        }
+
+        @if (linhasVisiveis.length) {
+          <div class="table-responsive">
+            <table class="vendas-table producao-painel-table">
+              <thead>
+                <tr>
+                  <th>Req-fórmula</th>
+                  <th>Unidade</th>
+                  <th>Etapa atual</th>
+                  <th>Retirada</th>
+                  <th>Prazo</th>
+                  <th>Cliente / Paciente</th>
+                  <th>Prescritor</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (lin of linhasVisiveis; track chaveLinha(lin)) {
+                  <tr
+                    [class]="'producao-painel-linha-click ' + classeCorLinha(lin.corPainel)"
+                    [ngStyle]="estiloCorLinha(lin.corPainel)"
+                    (click)="abrirHistorico(lin)"
+                    title="Clique para ver o histórico por etapa">
+                    <td>{{ labelReqFormula(lin) }}</td>
+                    <td>{{ lin.unidade }}</td>
+                    <td>
+                      <span class="producao-painel-etapa-nome producao-painel-etapa-nome-inline">{{
+                        lin.etapaAtual
+                      }}</span>
+                    </td>
+                    <td class="producao-painel-retirada">
+                      @if (lin.dataRetirada) {
+                        <span>{{ formatarData(lin.dataRetirada) }}</span>
+                        @if (lin.horaRetirada) {
+                          <span class="producao-painel-retirada-hora">{{
+                            formatarHoraRetirada(lin.horaRetirada)
+                          }}</span>
+                        }
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td class="producao-painel-prazo">
+                      <strong>{{ labelTempoRetirada(lin) }}</strong>
+                    </td>
+                    <td>
+                      @if (rotuloClientePaciente(lin.cliente, lin.paciente); as rotulo) {
+                        <span>{{ rotulo }}</span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td>{{ lin.nomePrescritor?.trim() || '—' }}</td>
+                    <td>
+                      <span
+                        class="producao-painel-status-chip"
+                        [ngClass]="classeCorLinha(lin.corPainel)"
+                        [ngStyle]="estiloCorLinha(lin.corPainel)">
+                        {{ labelStatus(lin) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="producao-painel-state">
+            <i class="fas fa-search"></i> Nenhuma requisição com o filtro atual.
+            <button type="button" class="btn btn-link" (click)="limparFiltrosVisuais()">
+              Limpar filtro
+            </button>
+          </div>
+        }
+
+      }
+    </div>
+
+    @if (processamentoAtivo) {
+      <div
+        class="producao-painel-processing-overlay"
+        role="alertdialog"
+        aria-modal="true"
+        aria-busy="true">
+        <div class="producao-painel-processing-modal">
+          <i class="fas fa-spinner fa-spin"></i>
+          <h3>{{ tituloProcessamento }}</h3>
+          <p>{{ subtituloProcessamento }}</p>
+        </div>
+      </div>
+    }
+  }
+</div>
+
+@if (modalHistoricoAberto && linhaHistorico) {
+  <div class="producao-prod-modal-overlay" role="presentation">
+    <div
+      class="producao-prod-modal-box producao-painel-modal-historico"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pp-hist-titulo"
+      (click)="$event.stopPropagation()">
+      <header class="producao-prod-modal-header producao-painel-hist-header">
+        <div class="producao-prod-modal-header-text">
+          <p class="producao-painel-hist-eyebrow">Etapas da requisição</p>
+          <h3 id="pp-hist-titulo" class="producao-painel-hist-titulo">
+            {{ linhaHistorico.requisicao }}-{{ linhaHistorico.formula }}
+          </h3>
+          <div class="producao-painel-hist-meta">
+            <span class="producao-painel-hist-meta-item">
+              <span class="producao-painel-hist-meta-label">Unidade</span>
+              <span class="producao-painel-hist-meta-valor">{{ linhaHistorico.unidade }}</span>
+            </span>
+            @if (rotuloClientePaciente(historico?.cliente, historico?.paciente); as rotuloCp) {
+              <span class="producao-painel-hist-meta-item">
+                <span class="producao-painel-hist-meta-label">Cliente / paciente</span>
+                <span class="producao-painel-hist-meta-valor">{{ rotuloCp }}</span>
+              </span>
+            }
+            @if (historico?.dataRetirada) {
+              <span class="producao-painel-hist-meta-item">
+                <span class="producao-painel-hist-meta-label">Retirada</span>
+                <span class="producao-painel-hist-meta-valor">
+                  {{ formatarData(historico!.dataRetirada) }}
+                  @if (historico!.horaRetirada) {
+                    {{ historico!.horaRetirada }}
+                  }
+                </span>
+              </span>
+            }
+          </div>
+        </div>
+        <button
+          type="button"
+          class="producao-prod-modal-close"
+          aria-label="Fechar"
+          (click)="fecharHistorico()">
+          ×
+        </button>
+      </header>
+
+      <div class="producao-prod-modal-body">
+        @if (carregandoHistorico) {
+          <p class="producao-painel-hist-loading">
+            <i class="fas fa-spinner fa-spin"></i> Carregando etapas…
+          </p>
+        } @else if (historico?.etapas?.length) {
+          <div class="table-responsive">
+            <table class="vendas-table producao-painel-hist-table">
+              <thead>
+                <tr>
+                  <th>Etapa</th>
+                  <th>Entrada</th>
+                  <th>Saída</th>
+                  <th>Tempo etapa</th>
+                  <th>Fila</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (e of historico!.etapas; track e.codEtapa) {
+                  <tr [class.producao-painel-hist-etapa-ativa]="etapaEmDestaque(e)">
+                    <td>
+                      <span class="producao-painel-etapa-nome">{{ e.etapa }}</span>
+                    </td>
+                    <td>
+                      {{ labelEntradaSaida(e.dataEntrada, e.horaEntrada) }}
+                      @if (e.funcionarioEntrada) {
+                        <span class="producao-painel-hist-func">{{ e.funcionarioEntrada }}</span>
+                      }
+                    </td>
+                    <td>
+                      {{ labelEntradaSaida(e.dataSaida, e.horaSaida) }}
+                      @if (e.funcionarioSaida) {
+                        <span class="producao-painel-hist-func">{{ e.funcionarioSaida }}</span>
+                      }
+                    </td>
+                    <td>{{ labelTempoEtapa(e.tempoEtapaMinutos) }}</td>
+                    <td>
+                      @if (e.emAndamentoFila) {
+                        <span class="producao-painel-hist-badge">Em andamento</span>
+                        <span class="producao-painel-hist-fila-detalhe">
+                          {{ labelEntradaSaida(e.dataEntradaFila, e.horaEntradaFila) }}
+                          @if (e.funcionarioFila) {
+                            · {{ e.funcionarioFila }}
+                          }
+                        </span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="producao-painel-hist-loading">Nenhuma etapa encontrada.</p>
+        }
+      </div>
+    </div>
+  </div>
+}

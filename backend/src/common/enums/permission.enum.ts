@@ -161,6 +161,19 @@ export enum Permission {
   PRODUCAO_PRODUTIVIDADE_READ_ALERTAS = 'producao-produtividade:read-alertas',
   /** Produção — fila operacional em andamento por etapa. */
   PRODUCAO_ACOMPANHAMENTO_READ = 'producao-acompanhamento:read',
+  /** Produção — jornada (horários) por unidade. */
+  PRODUCAO_JORNADA_READ = 'producao-jornada:read',
+  PRODUCAO_JORNADA_UPDATE = 'producao-jornada:update',
+  /** Produção — feriados por unidade. */
+  PRODUCAO_FERIADO_READ = 'producao-feriado:read',
+  PRODUCAO_FERIADO_UPDATE = 'producao-feriado:update',
+  PRODUCAO_FERIADO_IMPORT = 'producao-feriado:import',
+  PRODUCAO_FERIADO_DELETE = 'producao-feriado:delete',
+  /** Produção — painel de retirada (operacional). */
+  PRODUCAO_PAINEL_READ = 'producao-painel:read',
+  /** Produção — config do painel de retirada. */
+  PRODUCAO_PAINEL_CONFIG_READ = 'producao-painel-config:read',
+  PRODUCAO_PAINEL_CONFIG_UPDATE = 'producao-painel-config:update',
 }
 
 export const PERMISSION_GROUPS = {
@@ -477,6 +490,50 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.PRODUCAO_ACOMPANHAMENTO_READ,
       label: 'Visualizar acompanhamento da fila de produção',
+    },
+  ],
+  'Produção — Horários': [
+    {
+      key: Permission.PRODUCAO_JORNADA_READ,
+      label: 'Visualizar horários de produção (jornada)',
+    },
+    {
+      key: Permission.PRODUCAO_JORNADA_UPDATE,
+      label: 'Editar horários de produção (jornada)',
+    },
+  ],
+  'Produção — Feriados': [
+    {
+      key: Permission.PRODUCAO_FERIADO_READ,
+      label: 'Visualizar feriados de produção',
+    },
+    {
+      key: Permission.PRODUCAO_FERIADO_UPDATE,
+      label: 'Incluir feriados de produção (manual)',
+    },
+    {
+      key: Permission.PRODUCAO_FERIADO_IMPORT,
+      label: 'Importar feriados nacionais',
+    },
+    {
+      key: Permission.PRODUCAO_FERIADO_DELETE,
+      label: 'Remover feriados de produção',
+    },
+  ],
+  'Produção — Painel de retirada': [
+    {
+      key: Permission.PRODUCAO_PAINEL_READ,
+      label: 'Visualizar painel de retirada',
+    },
+  ],
+  'Produção — Painel de retirada (config)': [
+    {
+      key: Permission.PRODUCAO_PAINEL_CONFIG_READ,
+      label: 'Visualizar configuração do painel de retirada',
+    },
+    {
+      key: Permission.PRODUCAO_PAINEL_CONFIG_UPDATE,
+      label: 'Editar configuração do painel de retirada',
     },
   ],
 };

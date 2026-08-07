@@ -1,4 +1,12 @@
-import { Controller, Post, Get, UseGuards, Req, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  UseGuards,
+  Req,
+  Body,
+  Query,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiTags,
@@ -11,6 +19,7 @@ import {
   SincronizacaoResult,
   SincronizacaoProgress,
 } from './sincronizacao.service';
+import { ProducaoEtapasLimpezaService } from './producao-etapas-limpeza.service';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
@@ -23,11 +32,21 @@ import {
   ImportarOrcamentosDto,
   ImportarOrcamentosResponseDto,
 } from './dto/importar-orcamentos.dto';
+import {
+  LimparProducaoEtapasAntigasDto,
+  LimparProducaoEtapasAntigasResponseDto,
+  ListarFormulasSemFimLimpezaResponseDto,
+  ProducaoEtapaDisponivelDto,
+} from './dto/limpar-producao-etapas-antigas.dto';
+import { ProducaoConfigUnidadeQueryDto } from '../producao-config/dto/producao-config-unidade-query.dto';
 
 @ApiTags('sincronizacao')
 @Controller('sincronizacao')
 export class SincronizacaoController {
-  constructor(private readonly sincronizacaoService: SincronizacaoService) {}
+  constructor(
+    private readonly sincronizacaoService: SincronizacaoService,
+    private readonly producaoEtapasLimpezaService: ProducaoEtapasLimpezaService,
+  ) {}
 
   @Post('executar')
   @ApiOperation({ summary: 'Executar sincronização manualmente' })
@@ -97,6 +116,68 @@ export class SincronizacaoController {
     @Body() dto: ImportarProducaoEtapasDto,
   ): Promise<ImportarProducaoEtapasResponseDto> {
     return this.sincronizacaoService.importarProducaoEtapasManual(dto);
+  }
+
+  @Get('producao-etapas/etapas-disponiveis')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Lista etapas distintas da unidade (para seleção na limpeza de etapas antigas)',
+  })
+  @ApiResponse({ status: 200, type: [ProducaoEtapaDisponivelDto] })
+  listarEtapasDisponiveisLimpeza(
+    @Query() query: ProducaoConfigUnidadeQueryDto,
+  ): Promise<ProducaoEtapaDisponivelDto[]> {
+    return this.producaoEtapasLimpezaService.listarEtapasDisponiveis(
+      query.unidade,
+    );
+  }
+
+  @Post('producao-etapas/limpar-antigas/preview')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Pré-visualiza limpeza de etapas antigas (não altera dados; RN-PCP-011)',
+  })
+  @ApiResponse({ status: 200, type: LimparProducaoEtapasAntigasResponseDto })
+  previewLimparProducaoEtapasAntigas(
+    @Body() dto: LimparProducaoEtapasAntigasDto,
+  ): Promise<LimparProducaoEtapasAntigasResponseDto> {
+    return this.producaoEtapasLimpezaService.preview(dto);
+  }
+
+  @Post('producao-etapas/limpar-antigas/formulas-sem-fim')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Lista completa de req-fórmulas sem fim nas etapas finais (prévia da limpeza)',
+  })
+  @ApiResponse({ status: 200, type: ListarFormulasSemFimLimpezaResponseDto })
+  listarFormulasSemFimLimpeza(
+    @Body() dto: LimparProducaoEtapasAntigasDto,
+  ): Promise<ListarFormulasSemFimLimpezaResponseDto> {
+    return this.producaoEtapasLimpezaService.listarFormulasSemFim(dto);
+  }
+
+  @Post('producao-etapas/limpar-antigas')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Executa limpeza de etapas antigas por unidade/data/etapas finais (RN-PCP-011)',
+  })
+  @ApiResponse({ status: 200, type: LimparProducaoEtapasAntigasResponseDto })
+  limparProducaoEtapasAntigas(
+    @Body() dto: LimparProducaoEtapasAntigasDto,
+  ): Promise<LimparProducaoEtapasAntigasResponseDto> {
+    return this.producaoEtapasLimpezaService.executar(dto);
   }
 
   @Post('orcamentos/importar')

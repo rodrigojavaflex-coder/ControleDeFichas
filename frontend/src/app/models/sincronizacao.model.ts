@@ -110,6 +110,46 @@ export interface ImportarProducaoEtapasResponse {
   erros: string[];
 }
 
+export interface ProducaoEtapaDisponivelLimpeza {
+  codEtapa: string;
+  etapa: string;
+  posicaoEtapa: number;
+}
+
+export interface LimparProducaoEtapasAntigasDto {
+  unidade: string;
+  dataLimite: string;
+  etapasFinais: string[];
+}
+
+export interface FormulaAmostraLimpeza {
+  filial: number;
+  requisicao: number;
+  formula: string;
+  minDataEntrada?: string | null;
+}
+
+export interface LimparProducaoEtapasAntigasResponse {
+  unidade: string;
+  dataLimite: string;
+  etapasFinais: string[];
+  linhasAbertos: number;
+  linhasFila: number;
+  formulasSemFim: number;
+  linhasFormulasSemFim: number;
+  totalLinhas: number;
+  amostraFormulasSemFim: FormulaAmostraLimpeza[];
+  executado?: boolean;
+}
+
+export interface ListarFormulasSemFimLimpezaResponse {
+  unidade: string;
+  dataLimite: string;
+  etapasFinais: string[];
+  total: number;
+  formulas: FormulaAmostraLimpeza[];
+}
+
 export interface ImportarOrcamentosDto {
   unidade: string;
   dataInicio: string;

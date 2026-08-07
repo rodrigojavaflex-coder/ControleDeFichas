@@ -301,7 +301,16 @@ export class NavigationComponent implements OnInit, OnDestroy {
           requiredPermissions: [
             Permission.PRODUCAO_CONFIG_READ,
             Permission.PRODUCAO_CONFIG_UPDATE,
+            Permission.PRODUCAO_JORNADA_READ,
+            Permission.PRODUCAO_FERIADO_READ,
+            Permission.PRODUCAO_PAINEL_CONFIG_READ,
           ],
+        },
+        {
+          label: 'Painel de retirada',
+          route: '/producao/painel',
+          icon: 'feather-monitor',
+          requiredPermissions: [Permission.PRODUCAO_PAINEL_READ],
         },
         {
           label: 'Acompanhamento',

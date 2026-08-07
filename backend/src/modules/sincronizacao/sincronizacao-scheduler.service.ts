@@ -39,10 +39,18 @@ export class SincronizacaoSchedulerService {
         );
 
         if (agora >= proximaExecucao) {
+          if (this.sincronizacaoService.estaEmExecucao()) {
+            this.logger.debug(
+              `Agente ${config.agente}: sync em andamento, agendada adiada`,
+            );
+            continue;
+          }
           this.logger.log(
-            `Executando sincronização para agente: ${config.agente}`,
+            `Executando sincronização agendada para agente: ${config.agente}`,
           );
-          await this.sincronizacaoService.sincronizarAgente(config);
+          await this.sincronizacaoService.executarSincronizacaoAgendada(
+            config,
+          );
         } else {
           this.logger.debug(
             `Agente ${config.agente} aguardando próximo intervalo`,

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PageContextService } from '../../services/page-context.service';
@@ -12,6 +12,9 @@ import {
   AcompanhamentoLinhaFila,
   AcompanhamentoResumoResponse,
 } from '../../models/producao-acompanhamento.model';
+import { rotuloClientePaciente } from './utils/producao-cliente-paciente.util';
+import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-producao-acompanhamento-page',
@@ -20,11 +23,13 @@ import {
   templateUrl: './producao-acompanhamento-page.html',
   styleUrls: ['./producao-acompanhamento-page.css'],
 })
-export class ProducaoAcompanhamentoPage implements OnInit {
+export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
   private pageCtx = inject(PageContextService);
   private auth = inject(AuthService);
   private errors = inject(ErrorModalService);
   private acompanhamentoService = inject(ProducaoAcompanhamentoService);
+  private producaoEtapasRefresh = inject(ProducaoEtapasRefreshService);
+  private destroyRef = inject(DestroyRef);
 
   unidades: Unidade[] = Object.values(Unidade);
   selectedUnidades = new Set<Unidade>();
@@ -54,6 +59,24 @@ export class ProducaoAcompanhamentoPage implements OnInit {
     });
     this.initializeUnidadeFilter();
     void this.atualizar();
+
+    this.producaoEtapasRefresh.iniciarMonitoramentoSincronizacao();
+    this.producaoEtapasRefresh.onEtapasAtualizadas$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (
+          this.podeLer() &&
+          this.selectedUnidades.size > 0 &&
+          !this.carregando &&
+          !this.buscandoReqFormula
+        ) {
+          this.atualizar();
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.producaoEtapasRefresh.pararMonitoramentoSincronizacao();
   }
 
   podeLer(): boolean {
@@ -338,6 +361,13 @@ export class ProducaoAcompanhamentoPage implements OnInit {
       return false;
     }
     return min > 24 * 60;
+  }
+
+  rotuloClientePaciente(
+    cliente: string | null | undefined,
+    paciente: string | null | undefined,
+  ): string | null {
+    return rotuloClientePaciente(cliente, paciente);
   }
 
   formatarData(iso: string | null | undefined): string {

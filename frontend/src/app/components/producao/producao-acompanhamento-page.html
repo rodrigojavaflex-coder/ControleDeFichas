@@ -237,13 +237,9 @@
                     </td>
                     <td class="text-end">{{ formatarMinutos(lin.tempoDecorridoMinutos) }}</td>
                     <td>
-                      @if (lin.cliente) {
-                        <span>{{ lin.cliente }}</span>
-                      }
-                      @if (lin.paciente) {
-                        <span class="producao-acomp-paciente">{{ lin.paciente }}</span>
-                      }
-                      @if (!lin.cliente && !lin.paciente) {
+                      @if (rotuloClientePaciente(lin.cliente, lin.paciente); as rotulo) {
+                        <span>{{ rotulo }}</span>
+                      } @else {
                         —
                       }
                     </td>

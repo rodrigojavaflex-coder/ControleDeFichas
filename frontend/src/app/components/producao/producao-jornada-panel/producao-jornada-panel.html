@@ -1,0 +1,206 @@
+<section class="producao-config-panel producao-jornada-panel">
+  <header class="producao-jornada-header">
+    <div class="producao-jornada-title-row">
+      <h3>Horários de produção</h3>
+      @if (podeEditar()) {
+        <div class="producao-jornada-acoes">
+          <button
+            type="button"
+            class="btn btn-auditoria producao-jornada-carga-padrao"
+            [disabled]="salvando || carregando"
+            (click)="abrirModalCargaPadrao()">
+            Carga horário padrão
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar producao-jornada-salvar"
+            [disabled]="!dirty || salvando || carregando"
+            (click)="salvar()">
+            {{ salvando ? 'Salvando…' : 'Salvar horários' }}
+          </button>
+        </div>
+      }
+    </div>
+    <div class="producao-jornada-desc">
+      <p class="producao-panel-legenda">
+        (Tempo na fila considera apenas estes horários)
+      </p>
+      @if (!configurado) {
+        <p class="producao-panel-legenda producao-panel-legenda-aviso">
+          Sem horários salvos: o acompanhamento usa tempo corrido até você salvar.
+        </p>
+      } @else if (todosDiasSemProducao()) {
+        <p class="producao-panel-legenda producao-panel-legenda-aviso">
+          Todos os dias estão sem produção: o acompanhamento usa tempo corrido (dias corridos).
+        </p>
+      }
+    </div>
+  </header>
+
+  <div class="producao-jornada-scroll">
+    @if (carregando) {
+      <div class="loading-message">Carregando horários…</div>
+    } @else {
+      <ul class="producao-jornada-list" role="list">
+        @for (dia of dias; track dia.diaSemana) {
+          <li class="producao-jornada-dia" role="listitem">
+            <div class="producao-jornada-dia-head">
+              <span class="producao-jornada-dia-nome">{{ labelDia(dia.diaSemana) }}</span>
+              <label class="producao-jornada-fechado">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="dia.fechado"
+                  [disabled]="!podeEditar()"
+                  (ngModelChange)="onFechadoChange(dia)" />
+                <span>Sem produção</span>
+              </label>
+            </div>
+            @if (!dia.fechado) {
+              <div class="producao-jornada-faixas">
+                @for (faixa of dia.intervalos; track $index; let idx = $index) {
+                  <div class="producao-jornada-faixa">
+                    <label class="producao-jornada-hora-label">
+                      <span>Inicia à(s)</span>
+                      <input
+                        type="time"
+                        class="form-control"
+                        [(ngModel)]="faixa.horaInicio"
+                        [disabled]="!podeEditar()"
+                        (ngModelChange)="marcarDirty()" />
+                    </label>
+                    <label class="producao-jornada-hora-label">
+                      <span>Finaliza à(s)</span>
+                      <input
+                        type="time"
+                        class="form-control"
+                        [(ngModel)]="faixa.horaFim"
+                        [disabled]="!podeEditar()"
+                        (ngModelChange)="marcarDirty()" />
+                    </label>
+                    @if (podeEditar() && dia.intervalos.length > 1) {
+                      <button
+                        type="button"
+                        class="btn-icon btn-icon-danger"
+                        title="Remover faixa"
+                        (click)="removerFaixa(dia, idx)">
+                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                      </button>
+                    }
+                    @if (podeEditar() && idx === dia.intervalos.length - 1) {
+                      <button
+                        type="button"
+                        class="btn-icon"
+                        title="Adicionar faixa"
+                        (click)="adicionarFaixa(dia)">
+                        <i class="fas fa-plus" aria-hidden="true"></i>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>
+
+@if (modalCargaPadraoAberto) {
+  <div class="producao-modal-overlay">
+    <div
+      class="producao-modal-box producao-modal-box-compact"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pj-modal-carga-titulo">
+      <header class="producao-modal-header">
+        <div class="producao-modal-header-text">
+          <h3 id="pj-modal-carga-titulo">Carga horário padrão</h3>
+        </div>
+        <button
+          type="button"
+          class="producao-modal-close"
+          (click)="fecharModalCargaPadrao()"
+          aria-label="Fechar">
+          ×
+        </button>
+      </header>
+      <div class="producao-modal-body">
+        <p class="producao-modal-help">
+          Ajuste os horários padrão abaixo. O quadro da unidade será redefinido ao aplicar.
+          As alterações só serão gravadas após clicar em <strong>Salvar horários</strong>.
+        </p>
+
+        <div class="producao-jornada-carga-bloco">
+          <h4 class="producao-jornada-carga-bloco-titulo">Segunda a sexta</h4>
+          <div class="producao-jornada-carga-faixa">
+            <span class="producao-jornada-carga-faixa-label">1ª faixa</span>
+            <label class="producao-jornada-hora-label">
+              <span>Inicia à(s)</span>
+              <input
+                type="time"
+                class="form-control"
+                [(ngModel)]="cargaPadrao.segSexManhaInicio" />
+            </label>
+            <label class="producao-jornada-hora-label">
+              <span>Finaliza à(s)</span>
+              <input
+                type="time"
+                class="form-control"
+                [(ngModel)]="cargaPadrao.segSexManhaFim" />
+            </label>
+          </div>
+          <div class="producao-jornada-carga-faixa">
+            <span class="producao-jornada-carga-faixa-label">2ª faixa</span>
+            <label class="producao-jornada-hora-label">
+              <span>Inicia à(s)</span>
+              <input
+                type="time"
+                class="form-control"
+                [(ngModel)]="cargaPadrao.segSexTardeInicio" />
+            </label>
+            <label class="producao-jornada-hora-label">
+              <span>Finaliza à(s)</span>
+              <input
+                type="time"
+                class="form-control"
+                [(ngModel)]="cargaPadrao.segSexTardeFim" />
+            </label>
+          </div>
+        </div>
+
+        <div class="producao-jornada-carga-bloco">
+          <h4 class="producao-jornada-carga-bloco-titulo">Sábado</h4>
+          <div class="producao-jornada-carga-faixa">
+            <label class="producao-jornada-hora-label">
+              <span>Inicia à(s)</span>
+              <input
+                type="time"
+                class="form-control"
+                [(ngModel)]="cargaPadrao.sabadoInicio" />
+            </label>
+            <label class="producao-jornada-hora-label">
+              <span>Finaliza à(s)</span>
+              <input
+                type="time"
+                class="form-control"
+                [(ngModel)]="cargaPadrao.sabadoFim" />
+            </label>
+          </div>
+        </div>
+
+        <p class="producao-jornada-carga-domingo">
+          <strong>Domingo:</strong> sem produção
+        </p>
+      </div>
+      <footer class="producao-modal-footer">
+        <button type="button" class="btn btn-cancelar" (click)="fecharModalCargaPadrao()">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-salvar" (click)="confirmarCargaPadrao()">
+          Aplicar padrão
+        </button>
+      </footer>
+    </div>
+  </div>
+}

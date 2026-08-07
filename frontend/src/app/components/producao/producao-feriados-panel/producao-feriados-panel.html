@@ -1,0 +1,254 @@
+<section class="producao-config-panel producao-feriados-panel">
+  <header class="producao-feriados-header">
+    <div class="producao-feriados-top-row">
+      <h3 class="producao-feriados-titulo" id="feriados-titulo">Feriados</h3>
+      <div class="producao-feriados-periodo">
+        <span class="form-label producao-feriados-periodo-label">Período</span>
+        <div class="producao-feriados-periodo-nav">
+          <button
+            type="button"
+            class="btn-filter-action btn-filter-icon-only producao-feriados-nav-periodo"
+            title="Período anterior"
+            aria-label="Período anterior"
+            [disabled]="carregando"
+            (click)="navegarPeriodoAnterior()">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <div class="producao-feriados-periodo-combo">
+            <select
+              id="comboMes"
+              class="form-control"
+              [(ngModel)]="mesLista"
+              (ngModelChange)="onPeriodoChange()"
+              [disabled]="carregando"
+              aria-label="Mês ou todo o ano">
+              <option [ngValue]="null">Todo o ano</option>
+              @for (m of MESES_PT; track m.numero) {
+                <option [ngValue]="m.numero">{{ m.nome }}</option>
+              }
+            </select>
+            <select
+              id="comboAno"
+              class="form-control"
+              [(ngModel)]="anoLista"
+              (ngModelChange)="onPeriodoChange()"
+              [disabled]="carregando"
+              aria-label="Ano">
+              @for (a of anosDisponiveis; track a) {
+                <option [ngValue]="a">{{ a }}</option>
+              }
+            </select>
+          </div>
+          <button
+            type="button"
+            class="btn-filter-action btn-filter-icon-only producao-feriados-nav-periodo"
+            title="Próximo período"
+            aria-label="Próximo período"
+            [disabled]="carregando"
+            (click)="navegarPeriodoProximo()">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+      @if (podeIncluir()) {
+        <button
+          type="button"
+          id="botaoIncluirFeriado"
+          class="btn btn-salvar"
+          (click)="abrirModalIncluir()">
+          <i class="fas fa-plus"></i>
+          Incluir feriado
+        </button>
+      }
+      @if (podeImportar()) {
+        <button
+          type="button"
+          id="botaoImportarFeriadosNacionais"
+          class="btn btn-imprimir"
+          (click)="abrirModalImport()">
+          <i class="fas fa-download"></i>
+          Importar nacionais
+        </button>
+      }
+    </div>
+  </header>
+
+  <div class="producao-feriados-scroll">
+    @if (carregando) {
+      <div class="loading-message">Carregando feriados…</div>
+    } @else if (feriados.length === 0) {
+      <div class="no-data-inline">
+        <i class="fas fa-inbox"></i> Nenhum feriado cadastrado para {{ labelPeriodoLista() }}.
+      </div>
+    } @else {
+      <table class="vendas-table producao-feriados-table">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Origem</th>
+            @if (podeRemover()) {
+              <th class="col-acoes">Ações</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of feriados; track item.data) {
+            <tr>
+              <td>{{ formatarData(item.data) }}</td>
+              <td>{{ item.descricao?.trim() || '—' }}</td>
+              <td>
+                <span
+                  class="producao-feriado-origem"
+                  [class.origem-nacional]="item.origem === 'nacional'">
+                  {{ labelOrigem(item.origem) }}
+                </span>
+              </td>
+              @if (podeRemover()) {
+                <td class="col-acoes">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-excluir"
+                    title="Excluir feriado"
+                    (click)="abrirConfirmacaoExcluir(item)">
+                    Excluir
+                  </button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</section>
+
+@if (modalImportAberto) {
+  <div class="producao-modal-overlay">
+    <div
+      class="producao-modal-box producao-modal-box-compact"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pf-modal-import-titulo">
+      <header class="producao-modal-header">
+        <div class="producao-modal-header-text">
+          <h3 id="pf-modal-import-titulo">Importar feriados nacionais</h3>
+        </div>
+        <button
+          type="button"
+          class="producao-modal-close"
+          [disabled]="importando"
+          (click)="fecharModalImport()"
+          aria-label="Fechar">
+          ×
+        </button>
+      </header>
+      <div class="producao-modal-body">
+        <p class="producao-modal-help">
+          Busca feriados nacionais (Brasil API) e inclui os que ainda não existem nesta unidade.
+        </p>
+        <div class="filter-field">
+          <label class="form-label" for="pf-modal-import-ano">Ano</label>
+          <select
+            id="pf-modal-import-ano"
+            class="form-control"
+            [(ngModel)]="anoImportacao"
+            [disabled]="importando">
+            @for (a of anosDisponiveis; track a) {
+              <option [ngValue]="a">{{ a }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <footer class="producao-modal-footer">
+        <button
+          type="button"
+          class="btn btn-cancelar"
+          [disabled]="importando"
+          (click)="fecharModalImport()">
+          Fechar
+        </button>
+        <button
+          type="button"
+          class="btn btn-imprimir"
+          [disabled]="importando"
+          (click)="confirmarImportacao()">
+          <i class="fas fa-download" [class.fa-spin]="importando"></i>
+          {{ importando ? 'Importando…' : 'Importar' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (modalIncluirAberto) {
+  <div class="producao-modal-overlay">
+    <div
+      class="producao-modal-box producao-modal-box-compact"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pf-modal-incluir-titulo">
+      <header class="producao-modal-header">
+        <div class="producao-modal-header-text">
+          <h3 id="pf-modal-incluir-titulo">Incluir feriado</h3>
+        </div>
+        <button
+          type="button"
+          class="producao-modal-close"
+          [disabled]="salvandoManual"
+          (click)="fecharModalIncluir()"
+          aria-label="Fechar">
+          ×
+        </button>
+      </header>
+      <div class="producao-modal-body">
+        <div class="filter-field producao-feriados-modal-field">
+          <label class="form-label" for="pf-modal-nova-data">Data</label>
+          <input
+            id="pf-modal-nova-data"
+            type="date"
+            class="form-control"
+            [(ngModel)]="novaData"
+            [disabled]="salvandoManual" />
+        </div>
+        <div class="filter-field producao-feriados-modal-field">
+          <label class="form-label" for="pf-modal-nova-desc">Descrição</label>
+          <input
+            id="pf-modal-nova-desc"
+            type="text"
+            class="form-control"
+            [(ngModel)]="novaDescricao"
+            placeholder="Ex.: Feriado local"
+            maxlength="200"
+            [disabled]="salvandoManual" />
+        </div>
+      </div>
+      <footer class="producao-modal-footer">
+        <button
+          type="button"
+          class="btn btn-cancelar"
+          [disabled]="salvandoManual"
+          (click)="fecharModalIncluir()">
+          Fechar
+        </button>
+        <button
+          type="button"
+          class="btn btn-salvar"
+          [disabled]="!novaData || salvandoManual"
+          (click)="confirmarIncluir()">
+          {{ salvandoManual ? 'Salvando…' : 'Incluir' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<app-confirmation-modal
+  [isVisible]="modalExcluirVisivel"
+  [title]="tituloModalExcluir"
+  [message]="mensagemModalExcluir()"
+  [confirmText]="excluindoFeriado ? 'Excluindo…' : 'Excluir'"
+  cancelText="Cancelar"
+  (confirmed)="confirmarExclusaoFeriado()"
+  (cancelled)="cancelarExclusaoFeriado()"
+></app-confirmation-modal>

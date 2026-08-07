@@ -1,10 +1,17 @@
 /* Layout página cheia (compensa --app-zoom-factor: 0.80 em styles.css) */
+:host {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
 .producao-config-page {
   width: calc(100% + var(--layout-horizontal-padding, 1.5rem));
   margin-left: 0;
   margin-right: calc(-1 * var(--layout-horizontal-padding, 1.5rem));
   padding: 0;
-  background: var(--bg-secondary, #f8fafc);
+  background: var(--cor-fundo, var(--bg-secondary, #f8fafc));
   height: calc((100vh - 64px) * 1.23);
   margin-top: 0;
   display: flex;
@@ -23,7 +30,7 @@
 
 .producao-config-page .results-card {
   width: 100%;
-  background: var(--bg-card, #fff);
+  background: var(--bg-card, var(--cor-superficie, var(--bg-primary, #fff)));
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 16px;
   padding: 0.9rem;
@@ -43,8 +50,95 @@
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 10px;
   padding: 0.5rem 0.75rem;
-  background: var(--bg-secondary, #f8fafc);
+  background: var(--cor-fundo, var(--bg-secondary, #f8fafc));
   flex-shrink: 0;
+}
+
+.producao-config-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.65rem 0 0.75rem;
+  border-bottom: 2px solid var(--border-color, #e5e7eb);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.producao-config-tabs .tab-button {
+  padding: 0.65rem 1.15rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.producao-config-tabs .tab-button:hover {
+  color: var(--text-primary, #0f172a);
+  background: var(--bg-secondary, #f1f5f9);
+}
+
+.producao-config-tabs .tab-button:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+.producao-config-tabs .tab-button.active {
+  color: var(--color-primary, #3b82f6);
+  border-bottom-color: var(--color-primary, #3b82f6);
+  font-weight: 600;
+}
+
+.producao-config-aba-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  display: block;
+}
+
+.producao-config-shell {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.65rem;
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.producao-config-shell .producao-config-tabs {
+  margin: 0;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  background: var(--cor-superficie-hover, var(--bg-secondary, #f1f5f9));
+}
+
+.producao-config-shell .producao-config-split {
+  margin-top: 0;
+  padding: 0.75rem;
+  box-sizing: border-box;
+}
+
+.producao-config-shell > .producao-config-aba-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+body.theme-dark .producao-config-tabs .tab-button:hover,
+[data-theme='dark'] .producao-config-tabs .tab-button:hover {
+  background: rgba(30, 41, 59, 0.6);
+  color: var(--text-primary, #e2e8f0);
 }
 
 .producao-filters-unidade-row {
@@ -191,7 +285,7 @@
 .producao-config-panel {
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--border-radius, 8px);
-  background: var(--bg-card, #fff);
+  background: var(--bg-card, var(--cor-superficie, var(--bg-primary, #fff)));
   padding: 1rem;
   min-height: 0;
   height: 100%;
@@ -427,14 +521,14 @@
   border-bottom: 1px solid var(--border-color, #e2e8f0);
   position: sticky;
   top: 0;
-  background: var(--bg-card, #fff);
+  background: var(--bg-card, var(--cor-superficie, var(--bg-primary, #fff)));
   z-index: 1;
 }
 
 .producao-etapas-grid-row {
   padding: 0.5rem;
   border-radius: 6px;
-  background: var(--bg-secondary, #f8fafc);
+  background: var(--cor-fundo, var(--bg-secondary, #f8fafc));
   border: 1px solid transparent;
 }
 
@@ -548,7 +642,7 @@
   text-align: left;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--border-radius, 8px);
-  background: var(--bg-secondary, #f8fafc);
+  background: var(--cor-fundo, var(--bg-secondary, #f8fafc));
   padding: 0.65rem 0.75rem;
   cursor: pointer;
   display: flex;
@@ -665,7 +759,7 @@
   padding: 0.55rem 0.65rem;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
-  background: var(--bg-secondary, #f8fafc);
+  background: var(--cor-fundo, var(--bg-secondary, #f8fafc));
   cursor: pointer;
   font-size: 0.875rem;
   color: var(--text-primary, #1e293b);
@@ -693,7 +787,7 @@
   flex-direction: column;
   width: min(720px, 100%);
   max-height: min(88vh, 900px);
-  background: var(--bg-card, #fff);
+  background: var(--bg-card, var(--cor-superficie, var(--bg-primary, #fff)));
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--border-radius, 10px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
@@ -752,7 +846,7 @@
   padding: 0.85rem 1.25rem;
   border-top: 1px solid var(--border-color, #e2e8f0);
   flex-shrink: 0;
-  background: var(--bg-card, #fff);
+  background: var(--bg-card, var(--cor-superficie, var(--bg-primary, #fff)));
 }
 
 .producao-modal-desligado {
@@ -792,14 +886,14 @@
   border-bottom: 1px solid var(--border-color, #e2e8f0);
   position: sticky;
   top: 0;
-  background: var(--bg-card, #fff);
+  background: var(--bg-card, var(--cor-superficie, var(--bg-primary, #fff)));
   z-index: 1;
 }
 
 .producao-modal-grid-row {
   padding: 0.55rem 0.5rem;
   border-radius: 6px;
-  background: var(--bg-secondary, #f8fafc);
+  background: var(--cor-fundo, var(--bg-secondary, #f8fafc));
   border: 1px solid transparent;
 }
 
@@ -853,7 +947,7 @@
   padding: 0.85rem 0.9rem;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 8px;
-  background: var(--bg-secondary, #f8fafc);
+  background: var(--cor-fundo, var(--bg-secondary, #f8fafc));
 }
 
 .producao-modal-gestao-titulo {
@@ -988,7 +1082,202 @@ body.theme-dark .producao-config-page .results-card {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
+body.theme-dark .producao-config-page .producao-config-shell,
+[data-theme='dark'] .producao-config-page .producao-config-shell {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+body.theme-dark .producao-config-page .producao-config-shell .producao-config-tabs,
+[data-theme='dark'] .producao-config-page .producao-config-shell .producao-config-tabs {
+  border-bottom-color: rgba(148, 163, 184, 0.22);
+}
+
 body.theme-dark .producao-config-page .filters-panel-top {
   background: rgba(15, 23, 42, 0.8);
   border-color: rgba(148, 163, 184, 0.2);
+}
+
+body.theme-dark .producao-config-page .producao-config-panel,
+[data-theme='dark'] .producao-config-page .producao-config-panel {
+  background: var(--bg-card, #1e293b);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+body.theme-dark .producao-config-page .producao-config-panel-header h3,
+[data-theme='dark'] .producao-config-page .producao-config-panel-header h3 {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .producao-config-page .producao-config-aba-panel,
+[data-theme='dark'] .producao-config-page .producao-config-aba-panel {
+  background: transparent;
+}
+
+/* —— Tema escuro: aba Etapas e funcionários + tabs —— */
+body.theme-dark .producao-config-page .producao-config-tabs,
+[data-theme='dark'] .producao-config-page .producao-config-tabs {
+  border-bottom-color: rgba(148, 163, 184, 0.25);
+}
+
+body.theme-dark .producao-config-page .producao-config-tabs .tab-button,
+[data-theme='dark'] .producao-config-page .producao-config-tabs .tab-button {
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .producao-config-page .producao-config-tabs .tab-button:hover,
+[data-theme='dark'] .producao-config-page .producao-config-tabs .tab-button:hover {
+  color: var(--text-primary, #e2e8f0);
+  background: rgba(30, 41, 59, 0.55);
+}
+
+body.theme-dark .producao-config-page .producao-config-tabs .tab-button.active,
+[data-theme='dark'] .producao-config-page .producao-config-tabs .tab-button.active {
+  color: var(--color-primary, #60a5fa);
+  border-bottom-color: var(--color-primary, #60a5fa);
+}
+
+body.theme-dark .producao-config-page .producao-panel-top,
+[data-theme='dark'] .producao-config-page .producao-panel-top {
+  border-bottom-color: rgba(148, 163, 184, 0.22);
+}
+
+body.theme-dark .producao-config-page .producao-panel-top-etapas h3,
+body.theme-dark .producao-config-page .producao-panel-title-row h3,
+body.theme-dark .producao-config-page .producao-config-panel-header h3,
+[data-theme='dark'] .producao-config-page .producao-panel-top-etapas h3,
+[data-theme='dark'] .producao-config-page .producao-panel-title-row h3,
+[data-theme='dark'] .producao-config-page .producao-config-panel-header h3 {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .producao-config-page .producao-panel-legenda,
+body.theme-dark .producao-config-page .producao-etapas-filtro .form-label,
+body.theme-dark .producao-config-page .producao-func-filtro-select .form-label,
+body.theme-dark .producao-config-page .filter-field .form-label,
+[data-theme='dark'] .producao-config-page .producao-panel-legenda,
+[data-theme='dark'] .producao-config-page .producao-etapas-filtro .form-label,
+[data-theme='dark'] .producao-config-page .producao-func-filtro-select .form-label,
+[data-theme='dark'] .producao-config-page .filter-field .form-label {
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .producao-config-page .producao-config-panel .form-control,
+[data-theme='dark'] .producao-config-page .producao-config-panel .form-control {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .producao-config-page .producao-config-panel .form-control::placeholder,
+[data-theme='dark'] .producao-config-page .producao-config-panel .form-control::placeholder {
+  color: var(--text-secondary, #64748b);
+}
+
+body.theme-dark .producao-config-page .producao-etapas-grid-head,
+[data-theme='dark'] .producao-config-page .producao-etapas-grid-head {
+  background: var(--bg-card, #1e293b);
+  border-bottom-color: rgba(148, 163, 184, 0.22);
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .producao-config-page .producao-etapas-grid-row,
+[data-theme='dark'] .producao-config-page .producao-etapas-grid-row {
+  background: rgba(30, 41, 59, 0.55);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+body.theme-dark .producao-config-page .producao-etapas-grid-row:hover,
+[data-theme='dark'] .producao-config-page .producao-etapas-grid-row:hover {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(30, 41, 59, 0.85);
+}
+
+body.theme-dark .producao-config-page .producao-etapas-grid-row.row-dirty,
+[data-theme='dark'] .producao-config-page .producao-etapas-grid-row.row-dirty {
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 14%, rgba(30, 41, 59, 0.85));
+}
+
+body.theme-dark .producao-config-page .producao-etapas-grid-row.row-valor-invalid,
+[data-theme='dark'] .producao-config-page .producao-etapas-grid-row.row-valor-invalid {
+  background: color-mix(in srgb, var(--color-danger, #dc3545) 16%, rgba(30, 41, 59, 0.85));
+}
+
+body.theme-dark .producao-config-page .producao-etapas-grid-row .col-etapa,
+[data-theme='dark'] .producao-config-page .producao-etapas-grid-row .col-etapa {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .producao-config-page .producao-func-item,
+[data-theme='dark'] .producao-config-page .producao-func-item {
+  background: rgba(30, 41, 59, 0.55);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+body.theme-dark .producao-config-page .producao-func-item:hover,
+body.theme-dark .producao-config-page .producao-func-item:focus-visible,
+[data-theme='dark'] .producao-config-page .producao-func-item:hover,
+[data-theme='dark'] .producao-config-page .producao-func-item:focus-visible {
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 12%, rgba(30, 41, 59, 0.9));
+  border-color: rgba(96, 165, 250, 0.45);
+}
+
+body.theme-dark .producao-config-page .producao-func-row.is-selected .producao-func-item,
+[data-theme='dark'] .producao-config-page .producao-func-row.is-selected .producao-func-item {
+  border-color: rgba(96, 165, 250, 0.55);
+  background: color-mix(in srgb, var(--color-primary, #3b82f6) 16%, rgba(30, 41, 59, 0.92));
+}
+
+body.theme-dark .producao-config-page .producao-func-nome,
+[data-theme='dark'] .producao-config-page .producao-func-nome {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .producao-config-page .producao-func-meta,
+body.theme-dark .producao-config-page .producao-func-selecao-count,
+body.theme-dark .producao-config-page .producao-func-check-all,
+[data-theme='dark'] .producao-config-page .producao-func-meta,
+[data-theme='dark'] .producao-config-page .producao-func-selecao-count,
+[data-theme='dark'] .producao-config-page .producao-func-check-all {
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .producao-config-page .producao-func-selecao-bar,
+[data-theme='dark'] .producao-config-page .producao-func-selecao-bar {
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+body.theme-dark .producao-config-page .loading-message,
+body.theme-dark .producao-config-page .no-data-inline,
+[data-theme='dark'] .producao-config-page .loading-message,
+[data-theme='dark'] .producao-config-page .no-data-inline {
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .producao-config-page .producao-gestao-badge,
+[data-theme='dark'] .producao-config-page .producao-gestao-badge {
+  color: var(--color-primary, #93c5fd);
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+/* Painel retirada — botões e tabela na config (escopo página) */
+body.theme-dark .producao-config-page .producao-painel-ret-header-actions .btn-auditoria,
+body.theme-dark .producao-config-page .producao-painel-ret-header-actions .btn-cancelar,
+[data-theme='dark'] .producao-config-page .producao-painel-ret-header-actions .btn-auditoria,
+[data-theme='dark'] .producao-config-page .producao-painel-ret-header-actions .btn-cancelar {
+  background-color: rgba(51, 65, 85, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.35) !important;
+  color: #e2e8f0 !important;
+}
+
+body.theme-dark .producao-config-page .producao-painel-ret-header-actions .btn-auditoria:hover:not(:disabled),
+[data-theme='dark'] .producao-config-page .producao-painel-ret-header-actions .btn-auditoria:hover:not(:disabled) {
+  background-color: rgba(71, 85, 105, 0.95) !important;
+  border-color: rgba(148, 163, 184, 0.5) !important;
+}
+
+body.theme-dark .producao-config-page .producao-painel-ret-actions .btn-salvar,
+[data-theme='dark'] .producao-config-page .producao-painel-ret-actions .btn-salvar {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }

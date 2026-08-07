@@ -22,8 +22,9 @@ import {
 } from './dto/acompanhamento-response.dto';
 import {
   chaveRequisicaoFormula,
-  minutosDecorridosDesdeEntrada,
 } from './utils/fila-etapa.util';
+import { ProducaoCalendarioService } from '../producao-config/producao-calendario.service';
+import { minutosDecorridosProducaoDesdeEntrada } from '../producao-config/utils/producao-calendario.util';
 
 @Injectable()
 export class ProducaoAcompanhamentoService {
@@ -32,6 +33,7 @@ export class ProducaoAcompanhamentoService {
     private readonly resumoRepo: Repository<ProducaoEtapaResumo>,
     @InjectRepository(Funcionario)
     private readonly funcionarioRepo: Repository<Funcionario>,
+    private readonly calendarioService: ProducaoCalendarioService,
   ) {}
 
   async consultarResumo(
@@ -45,7 +47,10 @@ export class ProducaoAcompanhamentoService {
       unidadeLegado,
     );
     const consultadoEm = new Date().toISOString();
+    const agora = new Date(consultadoEm);
     const linhas = await this.buscarFilaEmAndamento(unidades);
+    const mapaCalendarios =
+      await this.calendarioService.mapaCalendariosPorUnidade(unidades);
 
     const porEtapa = new Map<
       string,
@@ -87,10 +92,11 @@ export class ProducaoAcompanhamentoService {
         ),
       );
       agg.minutos.push(
-        minutosDecorridosDesdeEntrada(
+        minutosDecorridosProducaoDesdeEntrada(
           entrada.data,
           entrada.hora,
-          new Date(consultadoEm),
+          agora,
+          mapaCalendarios.get(row.unidade),
         ),
       );
     }
@@ -177,6 +183,8 @@ export class ProducaoAcompanhamentoService {
     const consultadoEm = new Date().toISOString();
     const agora = new Date(consultadoEm);
     const linhasDb = await this.buscarFilaEmAndamento(unidades, cod);
+    const mapaCalendarios =
+      await this.calendarioService.mapaCalendariosPorUnidade(unidades);
 
     if (linhasDb.length === 0) {
       return {
@@ -219,10 +227,11 @@ export class ProducaoAcompanhamentoService {
               : null,
           dataEntrada: entrada.data ?? null,
           horaEntrada: entrada.hora ?? null,
-          tempoDecorridoMinutos: minutosDecorridosDesdeEntrada(
+          tempoDecorridoMinutos: minutosDecorridosProducaoDesdeEntrada(
             entrada.data,
             entrada.hora,
             agora,
+            mapaCalendarios.get(row.unidade),
           ),
           cliente: row.cliente ?? null,
           paciente: row.paciente ?? null,

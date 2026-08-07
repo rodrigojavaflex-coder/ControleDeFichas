@@ -1,0 +1,253 @@
+<div class="modal-overlay" *ngIf="visible">
+  <div class="modal-conteudo modal-limpeza-etapas">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Limpar etapas antigas</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="loading"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <p class="limpeza-hint">
+        Remove da base local registros antigos para permitir reimportação.
+        Não altera o watermark da sincronização automática.
+        Operação <strong>irreversível</strong>.
+      </p>
+
+      <div class="limpeza-form-grid">
+        <div class="filter-group">
+          <label for="limpezaUnidade" class="label-campo">Unidade</label>
+          @if (unidadeBloqueada) {
+            <input
+              id="limpezaUnidade"
+              type="text"
+              class="campo"
+              [value]="unidade"
+              disabled
+              readonly />
+          } @else {
+            <select
+              id="limpezaUnidade"
+              class="campo"
+              [(ngModel)]="unidade"
+              [disabled]="loading"
+              (ngModelChange)="onUnidadeChange()">
+              <option value="">Selecione...</option>
+              <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+            </select>
+          }
+        </div>
+
+        <div class="filter-group">
+          <label for="limpezaDataLimite" class="label-campo">Data limite</label>
+          <input
+            id="limpezaDataLimite"
+            type="date"
+            class="campo"
+            [(ngModel)]="dataLimite"
+            [disabled]="loading"
+            (ngModelChange)="onDataLimiteChange()" />
+          <span class="limpeza-field-help">
+            Entrada/fila igual ou anterior a esta data.
+          </span>
+        </div>
+      </div>
+
+      <section class="limpeza-etapas-block" aria-labelledby="limpeza-etapas-titulo">
+        <div class="limpeza-etapas-head">
+          <h4 id="limpeza-etapas-titulo">Etapas que definem o fim da produção</h4>
+          <button
+            type="button"
+            class="botao botao-fantasma botao-sm"
+            (click)="selecionarEtapasRot()"
+            [disabled]="loading || !etapasDisponiveis.length">
+            Marcar ROT*
+          </button>
+        </div>
+        <p class="limpeza-field-help">
+          Fórmulas sem <strong>data de saída</strong> nessas etapas serão removidas por completo.
+        </p>
+
+        @if (loadingEtapas) {
+          <p class="limpeza-loading-inline">
+            <i class="fas fa-spinner fa-spin"></i> Carregando etapas…
+          </p>
+        } @else if (!unidade) {
+          <p class="limpeza-empty">Selecione a unidade para listar as etapas.</p>
+        } @else if (!etapasDisponiveis.length) {
+          <p class="limpeza-empty">Nenhuma etapa encontrada nesta unidade.</p>
+        } @else {
+          <div class="limpeza-etapas-lista">
+            @for (e of etapasDisponiveis; track e.codEtapa) {
+              <label class="limpeza-etapa-item">
+                <input
+                  type="checkbox"
+                  [checked]="isEtapaSelecionada(e.codEtapa)"
+                  [disabled]="loading"
+                  (change)="toggleEtapa(e.codEtapa)" />
+                <span class="limpeza-etapa-pos">{{ e.posicaoEtapa }}</span>
+                <span class="limpeza-etapa-nome">{{ e.etapa }}</span>
+                <span class="limpeza-etapa-cod">{{ e.codEtapa }}</span>
+              </label>
+            }
+          </div>
+        }
+      </section>
+
+      <div class="importacao-periodo-erro" *ngIf="error">{{ error }}</div>
+
+      @if (preview && !loadingExecucao) {
+        <section class="limpeza-resultado">
+          <h4>
+            {{ result?.executado ? 'Limpeza concluída' : 'Pré-visualização' }}
+          </h4>
+          <ul class="limpeza-stats">
+            <li>
+              Abertos (entrada ≤ limite, sem saída):
+              <strong>{{ preview.linhasAbertos }}</strong> linha(s)
+            </li>
+            <li>
+              Fila operacional antiga:
+              <strong>{{ preview.linhasFila }}</strong> linha(s)
+            </li>
+            <li>
+              Fórmulas sem fim nas etapas selecionadas:
+              <strong>{{ preview.formulasSemFim }}</strong>
+              ({{ preview.linhasFormulasSemFim }} linha(s))
+            </li>
+            <li>
+              Total estimado de linhas:
+              <strong>{{ preview.totalLinhas }}</strong>
+            </li>
+          </ul>
+
+          @if (preview.formulasSemFim > 0) {
+            <div class="limpeza-lista-head">
+              <p class="limpeza-field-help limpeza-lista-titulo">
+                @if (listaCompletaVisivel) {
+                  Lista completa ({{ formulasCompletas.length }} fórmulas):
+                } @else {
+                  Amostra de fórmulas sem fim (até 20):
+                }
+              </p>
+              <button
+                type="button"
+                class="botao botao-fantasma botao-sm"
+                (click)="toggleListaCompleta()"
+                [disabled]="loadingListaCompleta">
+                @if (loadingListaCompleta) {
+                  <i class="fas fa-spinner fa-spin"></i>
+                  Carregando…
+                } @else if (listaCompletaVisivel) {
+                  Ver amostra
+                } @else {
+                  Ver lista completa
+                }
+              </button>
+            </div>
+
+            @if (listaCompletaVisivel) {
+              <div class="limpeza-amostra limpeza-amostra-completa">
+                <table class="limpeza-formulas-table">
+                  <thead>
+                    <tr>
+                      <th>Filial</th>
+                      <th>Requisição</th>
+                      <th>Fórmula</th>
+                      <th>Desde</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (f of formulasCompletas; track f.filial + '-' + f.requisicao + '-' + f.formula) {
+                      <tr>
+                        <td>{{ f.filial }}</td>
+                        <td>{{ f.requisicao }}</td>
+                        <td>{{ f.formula }}</td>
+                        <td>{{ formatarData(f.minDataEntrada) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <ul class="limpeza-amostra">
+                @for (f of preview.amostraFormulasSemFim; track f.filial + '-' + f.requisicao + '-' + f.formula) {
+                  <li>
+                    Filial {{ f.filial }} · Req {{ f.requisicao }}/{{ f.formula }}
+                    @if (f.minDataEntrada) {
+                      · desde {{ formatarData(f.minDataEntrada) }}
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          }
+
+          @if (!result?.executado && preview.totalLinhas > 0) {
+            <div class="limpeza-confirm">
+              <label for="limpezaConfirm" class="label-campo">
+                Para confirmar, digite <strong>LIMPAR</strong>
+              </label>
+              <input
+                id="limpezaConfirm"
+                type="text"
+                class="campo"
+                [(ngModel)]="confirmacaoTexto"
+                [disabled]="loading"
+                autocomplete="off"
+                placeholder="LIMPAR" />
+            </div>
+          }
+
+          @if (result?.executado && preview.totalLinhas === 0) {
+            <p class="limpeza-field-help">Nenhuma linha foi removida.</p>
+          }
+        </section>
+      }
+
+      @if (loadingPreview || loadingExecucao) {
+        <div class="inline-loading">
+          <div class="spinner"></div>
+          <span>
+            {{
+              loadingExecucao
+                ? 'Executando limpeza…'
+                : 'Calculando impacto…'
+            }}
+          </span>
+        </div>
+      }
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="fechar()"
+        [disabled]="loading">
+        Fechar
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="executarPreview()"
+        [disabled]="!podePreview()">
+        <i class="fas fa-search" [class.fa-spin]="loadingPreview"></i>
+        Pré-visualizar
+      </button>
+      <button
+        type="button"
+        class="botao botao-perigo"
+        (click)="executarLimpeza()"
+        [disabled]="!podeExecutar()">
+        <i class="fas fa-trash-alt" [class.fa-spin]="loadingExecucao"></i>
+        Executar limpeza
+      </button>
+    </div>
+  </div>
+</div>

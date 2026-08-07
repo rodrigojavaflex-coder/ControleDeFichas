@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   SincronizacaoConfig,
@@ -12,6 +12,10 @@ import {
   ImportarProducaoEtapasResponse,
   ImportarOrcamentosDto,
   ImportarOrcamentosResponse,
+  ProducaoEtapaDisponivelLimpeza,
+  LimparProducaoEtapasAntigasDto,
+  LimparProducaoEtapasAntigasResponse,
+  ListarFormulasSemFimLimpezaResponse,
 } from '../models/sincronizacao.model';
 import { environment } from '../../environments/environment';
 
@@ -74,6 +78,43 @@ export class SincronizacaoService {
   ): Observable<ImportarProducaoEtapasResponse> {
     return this.http.post<ImportarProducaoEtapasResponse>(
       `${this.syncApiUrl}/producao-etapas/importar`,
+      data,
+    );
+  }
+
+  listarEtapasDisponiveisLimpeza(
+    unidade: string,
+  ): Observable<ProducaoEtapaDisponivelLimpeza[]> {
+    const params = new HttpParams().set('unidade', unidade);
+    return this.http.get<ProducaoEtapaDisponivelLimpeza[]>(
+      `${this.syncApiUrl}/producao-etapas/etapas-disponiveis`,
+      { params },
+    );
+  }
+
+  previewLimparProducaoEtapasAntigas(
+    data: LimparProducaoEtapasAntigasDto,
+  ): Observable<LimparProducaoEtapasAntigasResponse> {
+    return this.http.post<LimparProducaoEtapasAntigasResponse>(
+      `${this.syncApiUrl}/producao-etapas/limpar-antigas/preview`,
+      data,
+    );
+  }
+
+  limparProducaoEtapasAntigas(
+    data: LimparProducaoEtapasAntigasDto,
+  ): Observable<LimparProducaoEtapasAntigasResponse> {
+    return this.http.post<LimparProducaoEtapasAntigasResponse>(
+      `${this.syncApiUrl}/producao-etapas/limpar-antigas`,
+      data,
+    );
+  }
+
+  listarFormulasSemFimLimpeza(
+    data: LimparProducaoEtapasAntigasDto,
+  ): Observable<ListarFormulasSemFimLimpezaResponse> {
+    return this.http.post<ListarFormulasSemFimLimpezaResponse>(
+      `${this.syncApiUrl}/producao-etapas/limpar-antigas/formulas-sem-fim`,
       data,
     );
   }

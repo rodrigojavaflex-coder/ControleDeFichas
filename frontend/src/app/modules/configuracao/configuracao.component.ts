@@ -15,7 +15,9 @@ import { FechamentoCaixaService } from '../../services/fechamento-caixa.service'
 import { CaixaSaldoInicialUnidade } from '../../models/fechamento-caixa.model';
 import { ImportarCaixaErpModalComponent } from '../../components/importar-caixa-erp-modal/importar-caixa-erp-modal';
 import { ImportarProducaoEtapasModalComponent } from '../../components/importar-producao-etapas-modal/importar-producao-etapas-modal';
+import { LimparProducaoEtapasModalComponent } from '../../components/limpar-producao-etapas-modal/limpar-producao-etapas-modal';
 import { ImportarOrcamentosModalComponent } from '../../components/importar-orcamentos-modal/importar-orcamentos-modal';
+import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
 import { Permission, Unidade } from '../../models/usuario.model';
 
 type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
@@ -25,7 +27,15 @@ type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
 @Component({
   selector: 'app-configuracao',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, ImportarCaixaErpModalComponent, ImportarProducaoEtapasModalComponent, ImportarOrcamentosModalComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule,
+    ImportarCaixaErpModalComponent,
+    ImportarProducaoEtapasModalComponent,
+    LimparProducaoEtapasModalComponent,
+    ImportarOrcamentosModalComponent,
+  ],
   templateUrl: './configuracao.component.html',
   styleUrls: ['./configuracao.component.css']
 })
@@ -35,10 +45,12 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   private sincronizacaoService = inject(SincronizacaoService);
   private authService = inject(AuthService);
   private fechamentoCaixaService = inject(FechamentoCaixaService);
+  private producaoEtapasRefresh = inject(ProducaoEtapasRefreshService);
   private fb = inject(FormBuilder);
 
   @ViewChild('caixaErpModal') caixaErpModal?: ImportarCaixaErpModalComponent;
   @ViewChild('etapasModal') etapasModal?: ImportarProducaoEtapasModalComponent;
+  @ViewChild('limparEtapasModal') limparEtapasModal?: LimparProducaoEtapasModalComponent;
   @ViewChild('orcamentosModal') orcamentosModal?: ImportarOrcamentosModalComponent;
   private progressSubscription?: Subscription;
   private cadastrosProgressSubscription?: Subscription;
@@ -256,6 +268,17 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   onImportacaoEtapasConcluida(): void {
     this.success = 'Importação de etapas de produção concluída.';
     this.error = null;
+    this.producaoEtapasRefresh.notificarEtapasAtualizadas();
+  }
+
+  abrirModalLimparProducaoEtapas(): void {
+    this.limparEtapasModal?.abrir();
+  }
+
+  onLimpezaEtapasConcluida(): void {
+    this.success = 'Limpeza de etapas de produção concluída.';
+    this.error = null;
+    this.producaoEtapasRefresh.notificarEtapasAtualizadas();
   }
 
   abrirModalImportarOrcamentos(): void {

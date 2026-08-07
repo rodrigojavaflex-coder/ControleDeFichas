@@ -1,0 +1,305 @@
+:host {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  height: 0;
+  overflow: hidden;
+  margin: 0 0.5rem 0.5rem;
+}
+
+:host-context(.producao-config-shell) {
+  margin: 0;
+  height: auto;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.producao-feriados-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  border-radius: var(--border-radius, 8px);
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  padding: 1rem;
+}
+
+.producao-feriados-header {
+  flex-shrink: 0;
+  margin-bottom: 0.75rem;
+}
+
+.producao-feriados-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  width: 100%;
+}
+
+.producao-feriados-titulo {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--cor-texto-primario, var(--text-primary, #212529));
+  flex: 0 0 auto;
+}
+
+.producao-feriados-periodo {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.producao-feriados-periodo-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--cor-texto-secundario, var(--text-secondary, #64748b));
+  white-space: nowrap;
+}
+
+.producao-feriados-periodo-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.producao-feriados-nav-periodo {
+  flex-shrink: 0;
+}
+
+.producao-feriados-periodo-combo {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 7.75rem) minmax(4.5rem, 5rem);
+  gap: 0.35rem;
+}
+
+.producao-feriados-periodo-combo .form-control {
+  min-height: 2rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.producao-feriados-panel .btn-filter-action {
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  background: var(--cor-superficie-hover, var(--bg-secondary, #f8fafc));
+  color: var(--cor-texto-secundario, var(--text-secondary, #64748b));
+  border-radius: 6px;
+  min-height: 2rem;
+  min-width: 2rem;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.producao-feriados-panel .btn-filter-action:hover:not(:disabled),
+.producao-feriados-panel .btn-filter-action:focus-visible:not(:disabled) {
+  border-color: var(--cor-primaria, #2563eb);
+  color: var(--cor-primaria, #2563eb);
+  outline: none;
+}
+
+.producao-feriados-panel .btn-filter-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.producao-feriados-top-row .btn {
+  flex-shrink: 0;
+}
+
+.producao-feriados-modal-field {
+  margin-bottom: 0.75rem;
+}
+
+.producao-feriados-modal-field:last-child {
+  margin-bottom: 0;
+}
+
+/* Modais (mesmo padrão producao-config-page) */
+.producao-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.producao-modal-box {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  max-height: min(88vh, 900px);
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  border-radius: var(--border-radius, 10px);
+  box-shadow: var(--sombra-lg, 0 12px 40px rgba(0, 0, 0, 0.18));
+  overflow: hidden;
+}
+
+.producao-modal-box-compact {
+  max-width: 520px;
+  width: min(96vw, 520px);
+}
+
+.producao-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  flex-shrink: 0;
+}
+
+.producao-modal-header-text h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--cor-texto-primario, var(--text-primary, #1e293b));
+}
+
+.producao-modal-close {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cor-texto-secundario, var(--text-secondary, #64748b));
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.producao-modal-close:hover:not(:disabled),
+.producao-modal-close:focus-visible:not(:disabled) {
+  background: var(--cor-superficie-hover, var(--bg-secondary, #f1f5f9));
+  color: var(--cor-texto-primario, var(--text-primary, #1e293b));
+  outline: none;
+}
+
+.producao-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.producao-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+}
+
+.producao-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  flex-shrink: 0;
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+}
+
+.producao-modal-help {
+  margin: 0 0 0.85rem;
+  font-size: 0.875rem;
+  color: var(--cor-texto-secundario, var(--text-secondary, #64748b));
+  line-height: 1.45;
+}
+
+:host-context(body.theme-dark) .producao-feriados-panel {
+  border-color: rgba(148, 163, 184, 0.25);
+  box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.06);
+}
+
+:host-context(body.theme-dark) .producao-modal-box,
+:host-context(body.theme-dark) .producao-modal-footer {
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+:host-context(body.theme-dark) .producao-modal-header {
+  border-bottom-color: rgba(148, 163, 184, 0.25);
+}
+
+:host-context(body.theme-dark) .producao-feriados-panel .loading-message,
+:host-context(body.theme-dark) .producao-feriados-panel .no-data-inline {
+  color: var(--cor-texto-secundario, #8b949e);
+}
+
+:host-context(body.theme-dark) .producao-feriado-origem {
+  background: rgba(148, 163, 184, 0.15);
+}
+
+:host-context(body.theme-dark) .producao-feriado-origem.origem-nacional {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.producao-feriados-panel .producao-panel-legenda {
+  display: none;
+}
+
+.producao-feriados-import-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.producao-feriados-import-row .form-control {
+  min-width: 6rem;
+}
+
+.producao-feriados-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.producao-feriados-table {
+  width: 100%;
+}
+
+.producao-feriados-table .col-acoes {
+  width: 8rem;
+  white-space: nowrap;
+}
+
+.producao-feriado-origem {
+  display: inline-block;
+  font-size: 0.8125rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: var(--cor-superficie-hover, var(--bg-secondary, #f1f5f9));
+  color: var(--cor-texto-secundario, var(--text-secondary, #64748b));
+}
+
+.producao-feriado-origem.origem-nacional {
+  background: var(--cor-primaria-clara, rgba(59, 130, 246, 0.12));
+  color: var(--cor-primaria, var(--color-primary, #3b82f6));
+}
+
+.no-data-inline {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--cor-texto-terciario, var(--text-muted, #6c757d));
+}
+
+.no-data-inline i {
+  margin-right: 0.35rem;
+}

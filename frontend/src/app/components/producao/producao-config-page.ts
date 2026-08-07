@@ -22,11 +22,22 @@ import {
   PRODUCAO_COD_ETAPA_GESTAO,
   ProducaoEtapaTipoCalculo,
 } from '../../models/producao-config.model';
+import { ProducaoJornadaPanel } from './producao-jornada-panel/producao-jornada-panel';
+import { ProducaoFeriadosPanel } from './producao-feriados-panel/producao-feriados-panel';
+import { ProducaoPainelRetiradaPanel } from './producao-painel-retirada-panel/producao-painel-retirada-panel';
+
+export type ProducaoConfigAba = 'etapas' | 'horarios' | 'feriados' | 'painel';
 
 @Component({
   selector: 'app-producao-config-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ProducaoJornadaPanel,
+    ProducaoFeriadosPanel,
+    ProducaoPainelRetiradaPanel,
+  ],
   templateUrl: './producao-config-page.html',
   styleUrls: ['./producao-config-page.css'],
 })
@@ -71,6 +82,8 @@ export class ProducaoConfigPage implements OnInit {
   acaoEtapasModal: AcaoEtapasFuncionariosModal | null = null;
   processandoAcaoEtapas = false;
 
+  abaAtiva: ProducaoConfigAba = 'etapas';
+
   private moedaFmt = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -80,16 +93,50 @@ export class ProducaoConfigPage implements OnInit {
     this.pageCtx.setContext({
       title: 'Configuração de produção',
       description:
-        'Parametrize etapas remuneradas e quais etapas cada funcionário recebe. Configuração permanente, sem período.',
+        'Etapas remuneradas, horários, feriados e painel de retirada por unidade.',
     });
     this.initializeUnidadeFilter();
+    this.abaAtiva = this.resolverAbaInicial();
     if (this.unidadeFiltro) {
       this.recarregar();
     }
   }
 
+  private resolverAbaInicial(): ProducaoConfigAba {
+    if (this.podeLerEtapas()) return 'etapas';
+    if (this.podeLerHorarios()) return 'horarios';
+    if (this.podeLerFeriados()) return 'feriados';
+    if (this.podeLerPainelConfig()) return 'painel';
+    return 'etapas';
+  }
+
+  selecionarAba(aba: ProducaoConfigAba): void {
+    this.abaAtiva = aba;
+  }
+
   podeLer(): boolean {
+    return (
+      this.podeLerEtapas() ||
+      this.podeLerHorarios() ||
+      this.podeLerFeriados() ||
+      this.podeLerPainelConfig()
+    );
+  }
+
+  podeLerEtapas(): boolean {
     return this.auth.hasPermission(Permission.PRODUCAO_CONFIG_READ);
+  }
+
+  podeLerHorarios(): boolean {
+    return this.auth.hasPermission(Permission.PRODUCAO_JORNADA_READ);
+  }
+
+  podeLerFeriados(): boolean {
+    return this.auth.hasPermission(Permission.PRODUCAO_FERIADO_READ);
+  }
+
+  podeLerPainelConfig(): boolean {
+    return this.auth.hasPermission(Permission.PRODUCAO_PAINEL_CONFIG_READ);
   }
 
   podeEditar(): boolean {

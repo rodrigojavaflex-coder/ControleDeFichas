@@ -18,6 +18,7 @@ import { SincronizacaoController } from './sincronizacao.controller';
 import { SincronizacaoSchedulerService } from './sincronizacao-scheduler.service';
 import { PainelMedicosService } from '../painel-medicos/painel-medicos.service';
 import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.service';
+import { ProducaoEtapasLimpezaService } from './producao-etapas-limpeza.service';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 
 @Module({
@@ -43,6 +44,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
     SincronizacaoSchedulerService,
     PainelMedicosService,
     ProducaoEtapasService,
+    ProducaoEtapasLimpezaService,
     PermissionsGuard,
   ],
   exports: [SincronizacaoConfigService, SincronizacaoService],

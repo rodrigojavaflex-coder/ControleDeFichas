@@ -92,6 +92,7 @@
   /* ========== Variáveis de Compatibilidade (Legado) ========== */
   --bg-primary: var(--cor-superficie);
   --bg-secondary: var(--cor-superficie-hover);
+  --bg-card: var(--cor-superficie);
   --bg-tertiary: var(--cor-superficie-ativa);
   --bg-hover: var(--cor-superficie-hover);
   --bg-hover-secondary: var(--cor-superficie-ativa);
@@ -200,6 +201,7 @@
   /* ========== Variáveis de Compatibilidade (Legado) - Tema Escuro ========== */
   --bg-primary: var(--cor-superficie);
   --bg-secondary: var(--cor-superficie-hover);
+  --bg-card: var(--cor-superficie);
   --bg-tertiary: var(--cor-superficie-ativa);
   --bg-hover: var(--cor-superficie-hover);
   --bg-hover-secondary: var(--cor-superficie-ativa);
