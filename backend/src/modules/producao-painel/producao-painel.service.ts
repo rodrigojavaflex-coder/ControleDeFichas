@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsSelect, In, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ProducaoEtapaResumo } from '../producao-etapas/entities/producao-etapa-resumo.entity';
 import { Funcionario } from '../folha/entities/funcionario.entity';
 import { Prescritor } from '../prescritores/entities/prescritor.entity';
@@ -68,7 +68,19 @@ export class ProducaoPainelService {
       this.painelConfig.mapaAlertasPorUnidades(unidades),
       this.calendarioService.mapaCalendariosPorUnidade(unidades),
     ]);
-    const mapaPrescritorCrm = await this.mapaNomesPrescritorPorCrm(rows);
+
+    const alertasPorUnidade = new Map<
+      Unidade,
+      ReturnType<typeof mapAlertasEntidade>
+    >();
+    for (const unidade of unidades) {
+      alertasPorUnidade.set(
+        unidade,
+        mapAlertasEntidade(mapaAlertas.get(unidade) ?? []),
+      );
+    }
+
+    const mapaPrescritorPromise = this.mapaNomesPrescritorPorCrm(rows);
 
     const grupos = new Map<string, ProducaoEtapaResumo[]>();
     for (const row of rows) {
@@ -77,6 +89,8 @@ export class ProducaoPainelService {
       list.push(row);
       grupos.set(k, list);
     }
+
+    const mapaPrescritorCrm = await mapaPrescritorPromise;
 
     const linhas: ProducaoPainelLinhaDto[] = [];
 
@@ -87,7 +101,7 @@ export class ProducaoPainelService {
         continue;
       }
 
-      const alertas = mapAlertasEntidade(mapaAlertas.get(amostra.unidade) ?? []);
+      const alertas = alertasPorUnidade.get(amostra.unidade) ?? [];
       const dataRetirada =
         grupo.map((r) => r.dataRetirada?.trim()).find(Boolean) ?? null;
       const horaRetirada =
@@ -307,28 +321,41 @@ export class ProducaoPainelService {
   private async buscarLinhasResumo(
     unidades: Unidade[],
   ): Promise<ProducaoEtapaResumo[]> {
-    const select: FindOptionsSelect<ProducaoEtapaResumo> = {
-      unidade: true,
-      filial: true,
-      requisicao: true,
-      formula: true,
-      codEtapa: true,
-      etapa: true,
-      posicaoEtapa: true,
-      emAndamentoFila: true,
-      dataSaida: true,
-      dataRetirada: true,
-      horaRetirada: true,
-      cliente: true,
-      paciente: true,
-      nomePrescritor: true,
-      crf: true,
-      ufCrf: true,
-    };
-    return this.resumoRepo.find({
-      select,
-      where: { unidade: In(unidades) },
-    });
+    return this.resumoRepo
+      .createQueryBuilder('r')
+      .select([
+        'r.unidade',
+        'r.filial',
+        'r.requisicao',
+        'r.formula',
+        'r.codEtapa',
+        'r.etapa',
+        'r.posicaoEtapa',
+        'r.emAndamentoFila',
+        'r.dataSaida',
+        'r.dataRetirada',
+        'r.horaRetirada',
+        'r.cliente',
+        'r.paciente',
+        'r.nomePrescritor',
+        'r.crf',
+        'r.ufCrf',
+      ])
+      .where('r.unidade IN (:...unidades)', { unidades })
+      .andWhere(
+        `NOT EXISTS (
+          SELECT 1
+          FROM producao_etapas_resumo r2
+          INNER JOIN producao_painel_etapa_final ef
+            ON ef.unidade = r2.unidade AND ef."codEtapa" = r2."codEtapa"
+          WHERE r2.unidade = r.unidade
+            AND r2.filial = r.filial
+            AND r2.requisicao = r.requisicao
+            AND r2.formula = r.formula
+            AND r2."dataSaida" IS NOT NULL
+        )`,
+      )
+      .getMany();
   }
 
   private resolverUnidadesConsulta(

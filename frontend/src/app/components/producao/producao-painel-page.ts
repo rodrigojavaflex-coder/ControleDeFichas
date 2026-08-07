@@ -1,4 +1,15 @@
-import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PageContextService } from '../../services/page-context.service';
@@ -15,7 +26,6 @@ import {
 import { estiloFundoPainel } from './utils/producao-painel-cor.util';
 import { rotuloClientePaciente } from './utils/producao-cliente-paciente.util';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface ProducaoPainelCardEtapa {
   codEtapa: string;
@@ -31,6 +41,7 @@ export interface ProducaoPainelCardEtapa {
   imports: [CommonModule, FormsModule],
   templateUrl: './producao-painel-page.html',
   styleUrls: ['./producao-painel-page.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProducaoPainelPage implements OnInit, OnDestroy {
   private pageCtx = inject(PageContextService);
@@ -39,6 +50,7 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
   private painelService = inject(ProducaoPainelService);
   private producaoEtapasRefresh = inject(ProducaoEtapasRefreshService);
   private destroyRef = inject(DestroyRef);
+  private cdr = inject(ChangeDetectorRef);
 
   unidades: Unidade[] = Object.values(Unidade);
   selectedUnidades = new Set<Unidade>();
@@ -46,14 +58,90 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
 
   carregando = false;
   carregandoHistorico = false;
-  dados: ProducaoPainelResponse | null = null;
-  codEtapaFiltro: string | null = null;
-  filtroReqFormula = '';
-  reqFormulaFiltroAtivo: {
+  readonly dados = signal<ProducaoPainelResponse | null>(null);
+  readonly codEtapaFiltro = signal<string | null>(null);
+  readonly reqFormulaFiltroAtivo = signal<{
     requisicao: number;
     formula: string;
     filial?: number;
-  } | null = null;
+  } | null>(null);
+
+  readonly cardsEtapa = computed((): ProducaoPainelCardEtapa[] => {
+    const linhas = this.dados()?.linhas ?? [];
+    const mapa = new Map<string, ProducaoPainelCardEtapa>();
+    for (const lin of linhas) {
+      const key = lin.codEtapaAtual;
+      const atual = mapa.get(key);
+      if (!atual) {
+        mapa.set(key, {
+          codEtapa: lin.codEtapaAtual,
+          etapa: lin.etapaAtual,
+          posicaoEtapa: lin.posicaoEtapaAtual,
+          total: 1,
+          atrasadas:
+            lin.minutosParaRetirada != null && lin.minutosParaRetirada < 0 ? 1 : 0,
+        });
+      } else {
+        atual.total += 1;
+        if (lin.minutosParaRetirada != null && lin.minutosParaRetirada < 0) {
+          atual.atrasadas += 1;
+        }
+      }
+    }
+    return [...mapa.values()].sort(
+      (a, b) =>
+        a.posicaoEtapa - b.posicaoEtapa ||
+        a.etapa.localeCompare(b.etapa, 'pt-BR'),
+    );
+  });
+
+  readonly linhasVisiveis = computed((): ProducaoPainelLinha[] => {
+    let linhas = this.dados()?.linhas ?? [];
+    const reqF = this.reqFormulaFiltroAtivo();
+    const codF = this.codEtapaFiltro();
+    if (reqF) {
+      linhas = linhas.filter(
+        (l) =>
+          l.requisicao === reqF.requisicao &&
+          this.normalizarFormula(l.formula) ===
+            this.normalizarFormula(reqF.formula) &&
+          (reqF.filial == null || l.filial === reqF.filial),
+      );
+    } else if (codF) {
+      linhas = linhas.filter((l) => l.codEtapaAtual === codF);
+    }
+    return linhas;
+  });
+
+  readonly labelEtapaFiltro = computed((): string => {
+    const cod = this.codEtapaFiltro();
+    const card = this.cardsEtapa().find((c) => c.codEtapa === cod);
+    if (!card) {
+      return cod ?? '';
+    }
+    return `${card.etapa} (${card.codEtapa})`;
+  });
+
+  readonly resumoGeral = computed((): { total: number; atrasadas: number } => {
+    const linhas = this.dados()?.linhas ?? [];
+    let atrasadas = 0;
+    for (const lin of linhas) {
+      if (lin.minutosParaRetirada != null && lin.minutosParaRetirada < 0) {
+        atrasadas += 1;
+      }
+    }
+    return { total: linhas.length, atrasadas };
+  });
+
+  readonly descricaoUltimaAtualizacao = computed((): string | null => {
+    const iso = this.dados()?.consultadoEm;
+    if (!iso) {
+      return null;
+    }
+    return `Última atualização: ${this.formatarDataHoraConsulta(iso)}`;
+  });
+
+  filtroReqFormula = '';
 
   modalHistoricoAberto = false;
   historico: ProducaoPainelHistoricoResponse | null = null;
@@ -107,69 +195,6 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
     return this.selectedUnidades.values().next().value ?? null;
   }
 
-  get cardsEtapa(): ProducaoPainelCardEtapa[] {
-    const linhas = this.dados?.linhas ?? [];
-    const mapa = new Map<string, ProducaoPainelCardEtapa>();
-    for (const lin of linhas) {
-      const key = lin.codEtapaAtual;
-      const atual = mapa.get(key);
-      if (!atual) {
-        mapa.set(key, {
-          codEtapa: lin.codEtapaAtual,
-          etapa: lin.etapaAtual,
-          posicaoEtapa: lin.posicaoEtapaAtual,
-          total: 1,
-          atrasadas: lin.minutosParaRetirada != null && lin.minutosParaRetirada < 0 ? 1 : 0,
-        });
-      } else {
-        atual.total += 1;
-        if (lin.minutosParaRetirada != null && lin.minutosParaRetirada < 0) {
-          atual.atrasadas += 1;
-        }
-      }
-    }
-    return [...mapa.values()].sort(
-      (a, b) =>
-        a.posicaoEtapa - b.posicaoEtapa ||
-        a.etapa.localeCompare(b.etapa, 'pt-BR'),
-    );
-  }
-
-  get linhasVisiveis(): ProducaoPainelLinha[] {
-    let linhas = this.dados?.linhas ?? [];
-    if (this.reqFormulaFiltroAtivo) {
-      const f = this.reqFormulaFiltroAtivo;
-      linhas = linhas.filter(
-        (l) =>
-          l.requisicao === f.requisicao &&
-          this.normalizarFormula(l.formula) === this.normalizarFormula(f.formula) &&
-          (f.filial == null || l.filial === f.filial),
-      );
-    } else if (this.codEtapaFiltro) {
-      linhas = linhas.filter((l) => l.codEtapaAtual === this.codEtapaFiltro);
-    }
-    return linhas;
-  }
-
-  get labelEtapaFiltro(): string {
-    const card = this.cardsEtapa.find((c) => c.codEtapa === this.codEtapaFiltro);
-    if (!card) {
-      return this.codEtapaFiltro ?? '';
-    }
-    return `${card.etapa} (${card.codEtapa})`;
-  }
-
-  get resumoGeral(): { total: number; atrasadas: number } {
-    const linhas = this.dados?.linhas ?? [];
-    let atrasadas = 0;
-    for (const lin of linhas) {
-      if (lin.minutosParaRetirada != null && lin.minutosParaRetirada < 0) {
-        atrasadas += 1;
-      }
-    }
-    return { total: linhas.length, atrasadas };
-  }
-
   podeLer(): boolean {
     return this.auth.hasPermission(Permission.PRODUCAO_PAINEL_READ);
   }
@@ -179,40 +204,44 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
       return;
     }
     this.carregando = true;
+    this.cdr.markForCheck();
     this.fecharHistorico();
     this.painelService
       .consultar({ unidades: Array.from(this.selectedUnidades) })
       .subscribe({
         next: (data) => {
-          this.dados = data;
+          this.dados.set(data);
+          const codF = this.codEtapaFiltro();
           if (
-            this.codEtapaFiltro &&
-            !data.linhas.some((l) => l.codEtapaAtual === this.codEtapaFiltro)
+            codF &&
+            !data.linhas.some((l) => l.codEtapaAtual === codF)
           ) {
-            this.codEtapaFiltro = null;
+            this.codEtapaFiltro.set(null);
           }
-          if (this.reqFormulaFiltroAtivo) {
-            const f = this.reqFormulaFiltroAtivo;
+          const reqF = this.reqFormulaFiltroAtivo();
+          if (reqF) {
             const aindaExiste = data.linhas.some(
               (l) =>
-                l.requisicao === f.requisicao &&
+                l.requisicao === reqF.requisicao &&
                 this.normalizarFormula(l.formula) ===
-                  this.normalizarFormula(f.formula) &&
-                (f.filial == null || l.filial === f.filial),
+                  this.normalizarFormula(reqF.formula) &&
+                (reqF.filial == null || l.filial === reqF.filial),
             );
             if (!aindaExiste) {
               this.limparFiltroReqFormula(false);
             }
           }
           this.carregando = false;
+          this.cdr.markForCheck();
         },
         error: (e) => {
           this.errors.show(
             e?.error?.message ?? 'Erro ao carregar painel.',
             'Painel de retirada',
           );
-          this.dados = null;
+          this.dados.set(null);
           this.carregando = false;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -232,8 +261,9 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
       this.selectedUnidades.size === this.unidades.length;
     if (all) {
       this.selectedUnidades.clear();
-      this.dados = null;
-      this.codEtapaFiltro = null;
+      this.dados.set(null);
+      this.codEtapaFiltro.set(null);
+      this.cdr.markForCheck();
     } else {
       this.unidades.forEach((u) => this.selectedUnidades.add(u));
       this.atualizar();
@@ -242,10 +272,11 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
 
   limparUnidades(): void {
     this.selectedUnidades.clear();
-    this.dados = null;
-    this.codEtapaFiltro = null;
+    this.dados.set(null);
+    this.codEtapaFiltro.set(null);
     this.limparFiltroReqFormula();
     this.fecharHistorico();
+    this.cdr.markForCheck();
   }
 
   buscarRequisicaoFormula(): void {
@@ -260,7 +291,7 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
       );
       return;
     }
-    const linhas = this.dados?.linhas ?? [];
+    const linhas = this.dados()?.linhas ?? [];
     const encontradas = linhas.filter(
       (l) =>
         l.requisicao === parsed.requisicao &&
@@ -275,23 +306,26 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
       );
       return;
     }
-    this.reqFormulaFiltroAtivo = parsed;
-    this.codEtapaFiltro = encontradas[0].codEtapaAtual;
+    this.reqFormulaFiltroAtivo.set(parsed);
+    this.codEtapaFiltro.set(encontradas[0].codEtapaAtual);
+    this.cdr.markForCheck();
     if (encontradas.length === 1) {
       this.abrirHistorico(encontradas[0]);
     }
   }
 
   limparFiltroReqFormula(limparInput = true): void {
-    this.reqFormulaFiltroAtivo = null;
+    this.reqFormulaFiltroAtivo.set(null);
     if (limparInput) {
       this.filtroReqFormula = '';
     }
+    this.cdr.markForCheck();
   }
 
   limparFiltrosVisuais(): void {
-    this.codEtapaFiltro = null;
+    this.codEtapaFiltro.set(null);
     this.limparFiltroReqFormula();
+    this.cdr.markForCheck();
   }
 
   onUnidadesContainerClick(event: MouseEvent): void {
@@ -308,20 +342,24 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
 
   selecionarCardEtapa(codEtapa: string): void {
     this.limparFiltroReqFormula(false);
-    if (this.codEtapaFiltro === codEtapa) {
-      this.codEtapaFiltro = null;
+    if (this.codEtapaFiltro() === codEtapa) {
+      this.codEtapaFiltro.set(null);
+      this.cdr.markForCheck();
       return;
     }
-    this.codEtapaFiltro = codEtapa;
+    this.codEtapaFiltro.set(codEtapa);
+    this.cdr.markForCheck();
   }
 
   selecionarCardTotal(): void {
     this.limparFiltroReqFormula(false);
-    this.codEtapaFiltro = null;
+    this.codEtapaFiltro.set(null);
+    this.cdr.markForCheck();
   }
 
   limparFiltroEtapa(): void {
-    this.codEtapaFiltro = null;
+    this.codEtapaFiltro.set(null);
+    this.cdr.markForCheck();
   }
 
   private normalizarFormula(formula: string): string {
@@ -432,6 +470,21 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
     return `${day}/${m}/${y}`;
   }
 
+  formatarDataHoraConsulta(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) {
+      return iso;
+    }
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  }
+
   labelReqFormula(lin: ProducaoPainelLinha): string {
     return `${lin.requisicao}-${lin.formula}`;
   }
@@ -513,10 +566,11 @@ export class ProducaoPainelPage implements OnInit, OnDestroy {
     if (this.selectedUnidades.size > 0) {
       this.atualizar();
     } else {
-      this.dados = null;
-      this.codEtapaFiltro = null;
+      this.dados.set(null);
+      this.codEtapaFiltro.set(null);
       this.limparFiltroReqFormula();
       this.fecharHistorico();
+      this.cdr.markForCheck();
     }
   }
 
