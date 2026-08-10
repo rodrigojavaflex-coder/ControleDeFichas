@@ -463,10 +463,15 @@
 .producao-prod-modal-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.5rem;
   padding: 0.85rem 1.25rem;
   border-top: 1px solid var(--border-color, #e2e8f0);
   flex-shrink: 0;
+}
+
+.producao-acompanhamento-page .producao-prod-modal-footer .btn-imprimir {
+  margin-right: auto;
 }
 
 body.theme-dark .producao-acompanhamento-page,

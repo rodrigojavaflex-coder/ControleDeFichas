@@ -14,6 +14,9 @@ import {
 } from '../../models/producao-acompanhamento.model';
 import { rotuloClientePaciente } from './utils/producao-cliente-paciente.util';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
+import { ConfiguracaoService } from '../../services/configuracao.service';
+import { Configuracao } from '../../models/configuracao.model';
+import { environment } from '../../../environments/environment';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FiltroReqFormula,
@@ -40,7 +43,10 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
   private errors = inject(ErrorModalService);
   private acompanhamentoService = inject(ProducaoAcompanhamentoService);
   private producaoEtapasRefresh = inject(ProducaoEtapasRefreshService);
+  private configuracaoService = inject(ConfiguracaoService);
   private destroyRef = inject(DestroyRef);
+
+  private configRelatorio: Configuracao | null = null;
 
   unidades: Unidade[] = Object.values(Unidade);
   selectedUnidades = new Set<Unidade>();
@@ -66,6 +72,7 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
         'Fila operacional: etapas em andamento conforme dados importados do PCP.',
     });
     this.initializeUnidadeFilter();
+    this.carregarConfigRelatorio();
     void this.atualizar();
 
     this.producaoEtapasRefresh.iniciarMonitoramentoSincronizacao();
@@ -411,6 +418,250 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
     filial: number,
   ): string {
     return `${requisicao}-${formula} (filial ${filial})`;
+  }
+
+  imprimirDetalheEtapa(): void {
+    if (!this.etapaSelecionada || this.carregandoDetalhe) {
+      return;
+    }
+    const linhas = this.linhasDetalheModal;
+    if (!linhas.length) {
+      this.errors.show('Nenhuma requisição na fila para imprimir.', 'Acompanhamento');
+      return;
+    }
+
+    const etapa = this.etapaSelecionada;
+    const consultadoEm = this.detalhe?.consultadoEm ?? this.resumo?.consultadoEm;
+
+    const rowsHtml = linhas
+      .map((lin) => {
+        const entrada = [
+          this.formatarData(lin.dataEntrada),
+          lin.horaEntrada ? lin.horaEntrada.slice(0, 8) : '',
+        ]
+          .filter((p) => p && p !== '—')
+          .join(' ');
+        const clientePaciente =
+          this.rotuloClientePaciente(lin.cliente, lin.paciente) ?? '—';
+        const atrasada = this.tempoMaisDe24Horas(lin.tempoDecorridoMinutos);
+        return `<tr${atrasada ? ' class="linha-atrasada"' : ''}>
+          <td>${this.escapeHtml(this.labelRequisicaoFormula(lin.requisicao, lin.formula, lin.filial))}</td>
+          <td>${this.escapeHtml(lin.unidade)}</td>
+          <td>${this.escapeHtml(lin.funcionario ?? '—')}</td>
+          <td>${this.escapeHtml(entrada || '—')}</td>
+          <td class="col-num">${this.escapeHtml(this.formatarMinutos(lin.tempoDecorridoMinutos))}</td>
+          <td>${this.escapeHtml(clientePaciente)}</td>
+        </tr>`;
+      })
+      .join('');
+
+    const metaParts: string[] = [];
+    if (this.reqFormulaFiltroAtivo) {
+      metaParts.push(
+        `Filtro: ${this.escapeHtml(this.rotuloFiltroReqFormula(this.reqFormulaFiltroAtivo))}`,
+      );
+    }
+    if (consultadoEm) {
+      metaParts.push(
+        `Dados consultados em: ${this.escapeHtml(this.formatarDataHoraConsulta(consultadoEm))}`,
+      );
+    }
+    const metaHtml = metaParts.length
+      ? `<div class="resumo-linha">${metaParts.join(' · ')}</div>`
+      : '';
+
+    const corpo = `${metaHtml}
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Req-fórmula</th>
+          <th>Unidade</th>
+          <th>Funcionário</th>
+          <th>Entrada</th>
+          <th class="col-num">Tempo</th>
+          <th>Cliente / Paciente</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>`;
+
+    const tituloDocumento = `Acompanhamento — ${etapa.etapa}`;
+    const html = this.montarHtmlDocumentoRelatorio({
+      tituloDocumento,
+      tituloPrincipal: etapa.etapa,
+      linhasCabecalho: this.linhasCabecalhoRelatorioDetalheEtapa(etapa, linhas.length),
+      corpo,
+    });
+
+    this.abrirDocumentoImpressao(html, tituloDocumento);
+  }
+
+  private carregarConfigRelatorio(): void {
+    this.configuracaoService.getConfiguracao().subscribe({
+      next: (config) => {
+        this.configRelatorio = config;
+      },
+      error: () => {
+        this.configRelatorio = null;
+      },
+    });
+  }
+
+  private linhasCabecalhoRelatorioDetalheEtapa(
+    etapa: AcompanhamentoEtapaResumo,
+    totalLinhas: number,
+  ): string[] {
+    const unidades = [...this.selectedUnidades]
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .join(', ');
+    return [
+      `Etapa: ${etapa.codEtapa} · Posição ${etapa.posicaoEtapa}`,
+      `Unidade(s): ${unidades || '—'}`,
+      `${totalLinhas} requisição(ões) na fila`,
+    ];
+  }
+
+  private montarHtmlDocumentoRelatorio(opts: {
+    tituloDocumento: string;
+    tituloPrincipal: string;
+    linhasCabecalho: string[];
+    corpo: string;
+  }): string {
+    const user = this.auth.getCurrentUser();
+    const userName = user?.nome || 'Usuário';
+    const emitidoEm = new Date().toLocaleString('pt-BR');
+    const logoHtml = this.configRelatorio?.hasLogo
+      ? `<img src="${environment.apiUrl}/configuracao/logo" alt="Logo" style="max-height: 80px; max-width: 120px; display: block;" />`
+      : '';
+    const headerRow = opts.linhasCabecalho
+      .map((t) => `<div>${this.escapeHtml(t)}</div>`)
+      .join('');
+
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>${this.escapeHtml(opts.tituloDocumento)}</title>
+    <style>
+      @page { margin: 12mm 10mm 42px 10mm; }
+      body { font-family: Arial, sans-serif; margin: 15px; line-height: 1.35; font-size: 11px; color: #111; background: #fff; }
+      .print-actions { text-align: right; margin-bottom: 12px; }
+      .print-actions button { padding: 8px 16px; border: none; background: #2563eb; color: #fff; border-radius: 4px; cursor: pointer; font-size: 12px; }
+      .header { display: flex; align-items: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 16px; }
+      .logo-box { flex: 0 0 auto; margin-right: 20px; }
+      .header-content { flex: 1 1 auto; text-align: center; }
+      .header-title { margin: 0; font-size: 1.35em; font-weight: bold; color: #0f172a; }
+      .header-row { display: flex; gap: 20px; margin-top: 8px; font-size: 0.95em; justify-content: center; flex-wrap: wrap; }
+      .header-row div { font-weight: bold; color: #334155; }
+      .resumo-linha { margin: 0 0 14px; padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 11px; }
+      .table-wrapper { border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+      table { width: 100%; border-collapse: collapse; font-size: 10px; }
+      th, td { border-bottom: 1px solid #e5e7eb; padding: 5px 7px; text-align: left; vertical-align: top; }
+      tr:last-child td { border-bottom: none; }
+      th { background: #f8fafc; text-transform: uppercase; font-size: 9px; letter-spacing: 0.04em; color: #475569; }
+      .col-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      tr.linha-atrasada td { background: #fef2f2; }
+      .footer-print {
+        margin-top: 24px;
+        padding-top: 8px;
+        border-top: 1px solid #e2e8f0;
+        font-size: 9px;
+        color: #64748b;
+        text-align: center;
+      }
+      @media print {
+        .print-actions { display: none; }
+        .footer-print {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100vw;
+          margin-top: 0;
+          padding: 6px 10mm;
+          border-top: 1px solid #ccc;
+          background: #fff;
+          z-index: 1000;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="print-actions">
+      <button type="button" onclick="window.print()">Imprimir</button>
+    </div>
+    <div class="header">
+      <div class="logo-box">${logoHtml}</div>
+      <div class="header-content">
+        <h1 class="header-title">${this.escapeHtml(opts.tituloPrincipal)}</h1>
+        <div class="header-row">${headerRow}</div>
+      </div>
+    </div>
+    ${opts.corpo}
+    <div class="footer-print">
+      Documento gerado em ${emitidoEm} &nbsp;·&nbsp; Impresso por: ${this.escapeHtml(userName)}
+    </div>
+  </body>
+</html>`;
+  }
+
+  /** Pop-up sem noopener (senão o Chrome retorna null); fallback iframe se bloqueado. */
+  private abrirDocumentoImpressao(html: string, titulo: string): void {
+    const popup = window.open('', '_blank', 'width=1024,height=768');
+    if (popup) {
+      popup.document.open();
+      popup.document.write(html);
+      popup.document.close();
+      popup.document.title = titulo;
+      popup.focus();
+      return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('title', titulo);
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText =
+      'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument ?? iframe.contentWindow?.document ?? null;
+    const win = iframe.contentWindow;
+    if (!doc || !win) {
+      iframe.remove();
+      this.errors.show(
+        'Não foi possível abrir a impressão. Verifique bloqueadores de pop-up.',
+        'Acompanhamento',
+      );
+      return;
+    }
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const imprimir = (): void => {
+      if (iframe.dataset['printed'] === '1') return;
+      iframe.dataset['printed'] = '1';
+      win.focus();
+      win.print();
+      window.setTimeout(() => iframe.remove(), 1500);
+    };
+
+    win.addEventListener('load', imprimir, { once: true });
+    if (doc.readyState === 'complete') {
+      imprimir();
+    } else {
+      window.setTimeout(imprimir, 800);
+    }
+  }
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   private initializeUnidadeFilter(): void {

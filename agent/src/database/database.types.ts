@@ -128,6 +128,19 @@ export interface ProducaoExclusaoReceitaRow {
   evento: string;
 }
 
+/** Remarcação de retirada (FC01M20 ALTERACAO + AGENDAMENTO) — RN-PCP-012 */
+export interface ProducaoAlteracaoAgendamentoRow {
+  filial: number;
+  requisicao: number;
+  formula: string;
+  data_alteracao: string;
+  hora_alteracao?: string | null;
+  cdusu?: number | null;
+  evento: string;
+  data_retirada: string | null;
+  hora_retirada: string | null;
+}
+
 export interface OrcamentoRow {
   ultima_modificacao: string;
   filial: number;

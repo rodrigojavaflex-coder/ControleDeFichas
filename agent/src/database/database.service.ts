@@ -1778,7 +1778,7 @@ export class DatabaseService {
             AND m.ufcrm = ${crmUfcrm}
             AND m.nrcrm = ${crmNrcrm}
         )                                                         AS nome_prescritor,
-        req.dtentr                                                AS data_retirada,
+        COALESCE(req.dtret, req.dtentr)                            AS data_retirada,
         req.hrret                                                 AS hora_retirada
       FROM (
         SELECT DISTINCT
@@ -2183,6 +2183,168 @@ export class DatabaseService {
           resolve(confirmadas);
         });
       });
+    });
+  }
+
+  /** RN-PCP-012: remarcação de retirada (ALTERACAO + AGENDAMENTO) na janela de datas. */
+  async buscarAlteracoesAgendamentoReceitas(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<import('./database.types').ProducaoAlteracaoAgendamentoRow[]> {
+    const sql = `
+      SELECT
+        m.data AS data_exclusao,
+        m.hora AS hora_exclusao,
+        TRIM(m.cdusu) AS cdusu,
+        m.evento AS evento
+      FROM fc01m20 m
+      WHERE m.data BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
+        AND m.classificacao = 'ALTERACAO'
+        AND m.modulo = 'RECEITAS'
+        AND m.evento CONTAINING 'REQUISICAO:'
+        AND m.evento CONTAINING 'AGENDAMENTO'
+      ORDER BY m.data, m.hora
+    `;
+    const params = [start, end];
+    const connectOptions = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    return new Promise((resolve, reject) => {
+      Firebird.attach(connectOptions, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        const t0 = Date.now();
+        db.query(sql, params, async (queryErr: Error, result: any[]) => {
+          if (queryErr) {
+            db.detach();
+            return reject(
+              new InternalServerErrorException(
+                `Erro ao consultar alterações AGENDAMENTO RECEITAS: ${queryErr.message}`,
+              ),
+            );
+          }
+
+          const parsed: import('./database.types').ProducaoExclusaoReceitaRow[] =
+            [];
+          for (const row of result ?? []) {
+            const converted = converterObjetoFirebird(row, charset);
+            const item = parseExclusaoReceitaEvento(
+              converted as Record<string, unknown>,
+            );
+            if (!item || item.filial !== unit) {
+              continue;
+            }
+            parsed.push({
+              filial: item.filial,
+              requisicao: item.requisicao,
+              formula: item.formula,
+              data_exclusao: item.data_exclusao,
+              hora_exclusao: item.hora_exclusao,
+              cdusu: item.cdusu,
+              motivo: item.motivo,
+              evento: item.evento,
+            });
+          }
+
+          const dedup = deduplicarExclusoesPorFormula(
+            parsed.map((p) => ({
+              ...p,
+              hora_exclusao: p.hora_exclusao ?? null,
+              cdusu: p.cdusu ?? null,
+              motivo: p.motivo ?? null,
+            })),
+          );
+
+          const confirmadas: import('./database.types').ProducaoAlteracaoAgendamentoRow[] =
+            [];
+          for (const item of dedup) {
+            const retirada = await this.obterRetiradaFormulaFc12100(
+              db,
+              item.filial,
+              item.requisicao,
+              item.formula,
+            );
+            if (!retirada) {
+              continue;
+            }
+            confirmadas.push({
+              filial: item.filial,
+              requisicao: item.requisicao,
+              formula: item.formula,
+              data_alteracao: item.data_exclusao,
+              hora_alteracao: item.hora_exclusao ?? null,
+              cdusu: item.cdusu,
+              evento: item.evento,
+              data_retirada: retirada.data_retirada,
+              hora_retirada: retirada.hora_retirada,
+            });
+          }
+
+          db.detach();
+          this.logger.log(
+            `Alterações AGENDAMENTO RECEITAS: ${confirmadas.length} fórmula(s) com retirada atualizada no ERP (bruto parse=${parsed.length}, dedup=${dedup.length}, ${Date.now() - t0}ms, unit=${unit}, ${start}..${end})`,
+          );
+          resolve(confirmadas);
+        });
+      });
+    });
+  }
+
+  private obterRetiradaFormulaFc12100(
+    db: any,
+    cdfil: number,
+    nrrqu: number,
+    formula: string,
+  ): Promise<{
+    data_retirada: string | null;
+    hora_retirada: string | null;
+  } | null> {
+    const sql = `
+      SELECT FIRST 1
+        COALESCE(req.dtret, req.dtentr) AS data_retirada,
+        req.hrret AS hora_retirada
+      FROM fc12100 req
+      WHERE req.cdfil = ?
+        AND req.nrrqu = ?
+        AND CAST(TRIM(req.serier) AS INTEGER) = ?
+    `;
+    const formulaInt = Number(formula);
+    return new Promise((resolve, reject) => {
+      db.query(
+        sql,
+        [cdfil, nrrqu, formulaInt],
+        (err: Error, rows: Record<string, unknown>[]) => {
+          if (err) {
+            return reject(err);
+          }
+          if (!rows?.length) {
+            return resolve(null);
+          }
+          const row = converterObjetoFirebird(
+            rows[0],
+            this.getDbCharset(),
+          ) as Record<string, unknown>;
+          const get = (k: string) =>
+            row[k] ?? row[k.toUpperCase()] ?? row[k.toLowerCase()];
+          const dataRaw = get('data_retirada');
+          const horaRaw = get('hora_retirada');
+          const data_retirada = dataRaw
+            ? this.formatDateField(dataRaw)
+            : null;
+          const hora_retirada = horaRaw
+            ? this.formatTimeField(horaRaw)
+            : null;
+          if (!data_retirada && !hora_retirada) {
+            return resolve(null);
+          }
+          resolve({ data_retirada, hora_retirada });
+        },
+      );
     });
   }
 

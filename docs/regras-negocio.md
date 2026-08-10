@@ -300,7 +300,8 @@
 
 - Origem: SQL validado `producao_etapas_sla_resumo.sql` via agente (`POST /api/v1/producao/etapas-resumo`).
 - Persistência: tabela `producao_etapas_resumo`; chave upsert: `unidade + filial + requisicao + formula + cod_etapa`.
-- Filtro de movimentos: data do evento PCP (`p.data` na FC12500), não `dtentr` (data de retirada é apenas informativa). O filtro (período ou watermark) define **quais fórmulas** entram no lote (`formula_touch`: requisição + série com ao menos um movimento no intervalo); para cada fórmula selecionada, o agente importa **todas** as etapas (`cdetapa`) com movimento na `FC12500`, calculando **1º `01` / 1º `02` / encerramento ≠ `01` entre todos os `tppcp`** da mesma etapa (uma linha por `cod_etapa` no payload). Fila (`emAndamentoFila`): último movimento **por `tppcp`**; merge OR no backend quando houver mais de um ciclo. Série (`serier`): normalização numérica (`9` = `09`) **apenas** em `formula_touch` e coluna `formula` exportada; joins internos usam `serier` bruto (desempenho Firebird).
+- Filtro de movimentos: data do evento PCP (`p.data` na FC12500). Alteração só de retirada no ERP (`FC12100.dtret` / `hrret`) **não** inclui a fórmula no lote incremental — `dataRetirada` / `horaRetirada` no PostgreSQL só atualizam quando a fórmula entra no lote (próximo movimento PCP, importação manual no período com movimento, etc.). O filtro (período ou watermark) define **quais fórmulas** entram no lote (`formula_touch`: requisição + série com ao menos um movimento no intervalo); para cada fórmula selecionada, o agente importa **todas** as etapas (`cdetapa`) com movimento na `FC12500`, calculando **1º `01` / 1º `02` / encerramento ≠ `01` entre todos os `tppcp`** da mesma etapa (uma linha por `cod_etapa` no payload). Fila (`emAndamentoFila`): último movimento **por `tppcp`**; merge OR no backend quando houver mais de um ciclo. Série (`serier`): normalização numérica (`9` = `09`) **apenas** em `formula_touch` e coluna `formula` exportada; joins internos usam `serier` bruto (desempenho Firebird).
+- **Retirada (painel/acompanhamento):** `dataRetirada` = `COALESCE(FC12100.dtret, FC12100.dtentr)`; `horaRetirada` = `FC12100.hrret`. Ao upsert, replicada em **todas** as linhas da mesma req+fórmula no lote. Remarcação sem movimento PCP: **RN-PCP-012**.
 - **Importação manual:** `POST /sincronizacao/producao-etapas/importar` com `unidade`, `dataInicio`, `dataFim`; upsert idempotente; **não** altera `ultimaModificacaoProducaoEtapas`; **não** consulta exclusões FC01M20 (carga em tabela limpa ou reimportação completa). Disparo pela aba **Configuração → Importação** (modal *Buscar etapas por período*). Para remover restos locais antes de reimportar, ver **RN-PCP-011**.
 - **Importação automática:** integrada à sync geral quando `ultimaModificacaoProducaoEtapas` estiver configurada; filtra movimentos posteriores ao watermark; **antes** do upsert incremental, aplica **RN-PCP-008** (remoção de fórmulas excluídas no ERP); ao concluir, atualiza watermark com hora do processamento (America/Sao_Paulo), alinhado ao padrão de orçamentos.
 - Registros sem **nenhum** `01` na etapa são excluídos (`WHERE EXISTS` entrada); etapas só com saída não são importadas.
@@ -338,6 +339,15 @@
 - **Importação manual / massa:** **não** chama exclusões; assume tabela limpa ou reimportação idempotente do período.
 - **Persistência local:** **sem** histórico de exclusão no PostgreSQL; remoção física (`DELETE`); rastreio operacional permanece no ERP (`FC01M20`).
 - **Orçamentos:** fora do escopo desta RN — ver **RN-ORC-004** (rejeição via FC15100 + sync existente).
+
+### RN-PCP-012 — Remarcação de retirada (agendamento) na sync incremental
+
+- **Contexto:** alteração de data/hora de retirada no ERP (`FC12100.dtret` / `hrret`) **não** gera movimento na `FC12500`; o upsert incremental (RN-PCP-001) sozinho **não** atualiza `dataRetirada` / `horaRetirada` no PostgreSQL.
+- **Auditoria:** tabela **`FC01M20`**, `CLASSIFICACAO = ALTERACAO`, `MODULO = RECEITAS`, `EVENTO` contendo **`REQUISICAO:`** e **`AGENDAMENTO`** (ex.: remarcação req. **98265-0**).
+- **Agente:** `POST /api/v1/producao/alteracoes-agendamento-receitas` com `unit`, `start`, `end`; deduplica por fórmula (evento mais recente); **confirma** se a fórmula **existe** em `FC12100` e retorna `data_retirada` = `COALESCE(dtret, dtentr)`, `hora_retirada` = `hrret`.
+- **Backend (sync automática):** na mesma janela **watermark → hoje** da RN-PCP-008, **após** exclusões e **antes** do upsert FC12500: `UPDATE` em `producao_etapas_resumo` (`dataRetirada`, `horaRetirada`) em **todas** as linhas da `unidade + filial + requisicao + formula`. Executa **mesmo** quando o incremental não retorna etapas novas.
+- **Importação manual / massa:** **não** chama este fluxo (mesmo critério da RN-PCP-008 para exclusões).
+- **Escopo:** apenas eventos com **AGENDAMENTO** no texto; outras `ALTERACAO` RECEITAS ficam de fora.
 
 ### RN-PCP-002 — Remuneração por etapa (config permanente)
 

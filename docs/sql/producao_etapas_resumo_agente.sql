@@ -95,7 +95,7 @@ SELECT
   req.volume                                                AS quantidade,
   TRIM(req.univol)                                          AS unidade_medida,
   TRIM(req.nomepa)                                          AS paciente,
-  req.dtentr                                                AS data_retirada,
+  COALESCE(req.dtret, req.dtentr)                            AS data_retirada,
   req.hrret                                                 AS hora_retirada
 FROM (
   SELECT DISTINCT

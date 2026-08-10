@@ -321,6 +321,14 @@
       </div>
 
       <footer class="producao-prod-modal-footer">
+        <button
+          type="button"
+          class="btn btn-imprimir"
+          [disabled]="carregandoDetalhe || linhasDetalheModal.length === 0"
+          (click)="imprimirDetalheEtapa()">
+          <i class="fas fa-print" aria-hidden="true"></i>
+          Imprimir
+        </button>
         <button type="button" class="btn btn-secondary" (click)="fecharDetalhe()">
           Fechar
         </button>

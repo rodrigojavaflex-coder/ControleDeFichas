@@ -67,6 +67,23 @@ export interface ProducaoEtapasExclusaoResult {
   linhasRemovidas: number;
 }
 
+export interface AgenteProducaoAlteracaoAgendamento {
+  filial: number;
+  requisicao: number;
+  formula: string;
+  data_alteracao: string;
+  hora_alteracao?: string | null;
+  cdusu?: number | null;
+  evento: string;
+  data_retirada: string | null;
+  hora_retirada: string | null;
+}
+
+export interface ProducaoEtapasRetiradaAgendamentoResult {
+  formulasProcessadas: number;
+  linhasAtualizadas: number;
+}
+
 export type ProducaoEtapasProgressCallback = (
   stats: ProducaoEtapasSyncResult & { total: number },
 ) => void;
@@ -221,6 +238,112 @@ export class ProducaoEtapasService {
       if (afetadas > 0) {
         this.logger.log(
           `[${agente}] Exclusão ERP: req.${item.requisicao} fórmula ${formula} — ${afetadas} linha(s) removida(s)${item.motivo ? ` (motivo: ${item.motivo})` : ''}`,
+        );
+      }
+    }
+
+    return resultado;
+  }
+
+  async buscarAlteracoesAgendamentoDoAgente(
+    url: string,
+    token: string,
+    unit: number,
+    start: string,
+    end: string,
+    agente: string,
+  ): Promise<AgenteProducaoAlteracaoAgendamento[]> {
+    const urlCompleta = `${url}/api/v1/producao/alteracoes-agendamento-receitas`;
+    this.logger.log(
+      `[${agente}] Consultando alterações AGENDAMENTO RECEITAS: ${urlCompleta} (${start}..${end}, unit=${unit})`,
+    );
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+    try {
+      const response = await fetch(urlCompleta, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ unit, start, end }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Erro ao buscar alterações de agendamento do agente: ${response.status} - ${errorText}`,
+        );
+      }
+
+      const data = (await response.json()) as {
+        alteracoes?: AgenteProducaoAlteracaoAgendamento[];
+      };
+      const alteracoes = data.alteracoes ?? [];
+      this.logger.log(
+        `[${agente}] Agente retornou ${alteracoes.length} alteração(ões) AGENDAMENTO confirmada(s)`,
+      );
+      return alteracoes;
+    } catch (error: unknown) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Timeout ao buscar alterações de agendamento do agente');
+      }
+      throw error;
+    }
+  }
+
+  /** RN-PCP-012: atualiza data/hora de retirada em todas as etapas da fórmula. */
+  async aplicarAlteracoesAgendamentoRetirada(
+    unidade: Unidade,
+    alteracoes: AgenteProducaoAlteracaoAgendamento[],
+    agente: string,
+  ): Promise<ProducaoEtapasRetiradaAgendamentoResult> {
+    const resultado: ProducaoEtapasRetiradaAgendamentoResult = {
+      formulasProcessadas: 0,
+      linhasAtualizadas: 0,
+    };
+
+    const vistos = new Set<string>();
+    for (const item of alteracoes) {
+      const formula = this.normalizarFormulaImportacao(String(item.formula ?? ''));
+      const key = `${Number(item.filial)}|${Number(item.requisicao)}|${formula}`;
+      if (vistos.has(key)) {
+        continue;
+      }
+      vistos.add(key);
+      resultado.formulasProcessadas += 1;
+
+      const patch: Partial<ProducaoEtapaResumo> = {};
+      if (item.data_retirada?.trim()) {
+        patch.dataRetirada = item.data_retirada.trim();
+      }
+      if (item.hora_retirada?.trim()) {
+        patch.horaRetirada = item.hora_retirada.trim();
+      }
+      if (Object.keys(patch).length === 0) {
+        continue;
+      }
+
+      const updateResult = await this.etapaRepository.update(
+        {
+          unidade,
+          filial: Number(item.filial),
+          requisicao: Number(item.requisicao),
+          formula,
+        },
+        patch,
+      );
+      const afetadas = updateResult.affected ?? 0;
+      resultado.linhasAtualizadas += afetadas;
+
+      if (afetadas > 0) {
+        this.logger.log(
+          `[${agente}] RN-PCP-012: req.${item.requisicao} fórmula ${formula} — retirada ${patch.dataRetirada ?? '?'} ${patch.horaRetirada ?? ''} em ${afetadas} linha(s)`,
         );
       }
     }

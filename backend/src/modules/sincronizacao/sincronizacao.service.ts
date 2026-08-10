@@ -95,6 +95,9 @@ export interface SincronizacaoResult {
   /** RN-PCP-008: fórmulas com exclusão ERP confirmada (FC12100 ausente). */
   producaoEtapasFormulasExcluidas: number;
   producaoEtapasRemovidas: number;
+  /** RN-PCP-012: remarcação de retirada via auditoria AGENDAMENTO. */
+  producaoEtapasRetiradaAgendamentoFormulas: number;
+  producaoEtapasRetiradaAgendamentoLinhas: number;
   erros: string[];
 }
 
@@ -218,6 +221,8 @@ export class SincronizacaoService {
       producaoEtapasAtualizados: 0,
       producaoEtapasFormulasExcluidas: 0,
       producaoEtapasRemovidas: 0,
+      producaoEtapasRetiradaAgendamentoFormulas: 0,
+      producaoEtapasRetiradaAgendamentoLinhas: 0,
       erros,
     };
   }
@@ -1273,6 +1278,40 @@ export class SincronizacaoService {
       this.logger.warn(
         `[${config.agente}] Janela de exclusões RECEITAS ignorada (início=${inicioExclusoes ?? 'null'}, fim=${fimExclusoes})`,
       );
+    }
+
+    if (inicioExclusoes && inicioExclusoes <= fimExclusoes) {
+      this.atualizarProgresso({
+        etapa: 'producao_etapas',
+        message: `Verificando remarcações de retirada (${config.agente}, ${inicioExclusoes}..${fimExclusoes})...`,
+        fase: 0.87,
+      });
+
+      const alteracoesAgendamento =
+        await this.producaoEtapasService.buscarAlteracoesAgendamentoDoAgente(
+          url,
+          token,
+          unit,
+          inicioExclusoes,
+          fimExclusoes,
+          config.agente,
+        );
+
+      const retirada = await this.producaoEtapasService.aplicarAlteracoesAgendamentoRetirada(
+        unidade,
+        alteracoesAgendamento,
+        config.agente,
+      );
+      resultado.producaoEtapasRetiradaAgendamentoFormulas =
+        retirada.formulasProcessadas;
+      resultado.producaoEtapasRetiradaAgendamentoLinhas =
+        retirada.linhasAtualizadas;
+
+      if (retirada.formulasProcessadas > 0) {
+        this.logger.log(
+          `[${config.agente}] RN-PCP-012: ${retirada.formulasProcessadas} fórmula(s) com agendamento alterado — ${retirada.linhasAtualizadas} linha(s) com retirada atualizada`,
+        );
+      }
     }
 
     this.atualizarProgresso({

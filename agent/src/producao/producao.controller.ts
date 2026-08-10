@@ -3,6 +3,7 @@ import { ProducaoService } from './producao.service';
 import { ProducaoEtapasResumoDto } from './dto/producao-etapas-resumo.dto';
 
 import { ProducaoExclusoesReceitasDto } from './dto/producao-exclusoes-receitas.dto';
+import { ProducaoAlteracoesAgendamentoReceitasDto } from './dto/producao-alteracoes-agendamento-receitas.dto';
 
 @Controller('v1/producao')
 export class ProducaoController {
@@ -16,5 +17,12 @@ export class ProducaoController {
   @Post('exclusoes-receitas')
   async exclusoesReceitas(@Body() body: ProducaoExclusoesReceitasDto) {
     return this.producaoService.buscarExclusoesReceitas(body);
+  }
+
+  @Post('alteracoes-agendamento-receitas')
+  async alteracoesAgendamentoReceitas(
+    @Body() body: ProducaoAlteracoesAgendamentoReceitasDto,
+  ) {
+    return this.producaoService.buscarAlteracoesAgendamentoReceitas(body);
   }
 }
