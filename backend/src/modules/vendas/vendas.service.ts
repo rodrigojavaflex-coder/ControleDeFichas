@@ -32,6 +32,10 @@ import { Vendedor } from '../vendedores/entities/vendedor.entity';
 import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Permission } from '../../common/enums/permission.enum';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
+import {
+  formatarErroRespostaAgente,
+  mensagemErroChamadaAgente,
+} from '../../common/utils/formatar-erro-agente.util';
 
 interface FecharVendaFalha {
   id: string;
@@ -923,34 +927,9 @@ export class VendasService {
               signal: controller.signal,
             },
           );
-        } catch (fetchError: any) {
+        } catch (fetchError: unknown) {
           clearTimeout(timeoutId);
-
-          // Tratar diferentes tipos de erro
-          if (fetchError.name === 'AbortError') {
-            throw new Error(
-              'Timeout: O agente não respondeu dentro do tempo esperado (30 segundos)',
-            );
-          }
-
-          if (fetchError.cause) {
-            const cause = fetchError.cause;
-            const nomeUnidade = this.getNomeUnidadePorOrigem(origem);
-            if (cause.code === 'ENOTFOUND' || cause.code === 'ECONNREFUSED') {
-              throw new Error(
-                `Não foi possível conectar à unidade: ${nomeUnidade}`,
-              );
-            }
-            if (cause.code === 'ETIMEDOUT') {
-              throw new Error(
-                `Timeout ao conectar à unidade: ${nomeUnidade}. O serviço pode estar sobrecarregado.`,
-              );
-            }
-          }
-
-          throw new Error(
-            `Erro ao chamar agente: ${fetchError.message || 'Erro desconhecido'}`,
-          );
+          throw new Error(mensagemErroChamadaAgente(fetchError));
         } finally {
           clearTimeout(timeoutId);
         }
@@ -963,16 +942,9 @@ export class VendasService {
             // Se não conseguir ler o texto do erro, usar mensagem padrão
           }
 
-          const statusMessage =
-            response.status === 404
-              ? 'Endpoint não encontrado no agente'
-              : response.status === 401 || response.status === 403
-                ? 'Erro de autenticação com o agente'
-                : response.status >= 500
-                  ? 'Erro interno no agente'
-                  : `Erro HTTP ${response.status}`;
-
-          throw new Error(`${statusMessage}: ${errorText}`);
+          throw new Error(
+            formatarErroRespostaAgente(response.status, errorText),
+          );
         }
 
         const responseData: {

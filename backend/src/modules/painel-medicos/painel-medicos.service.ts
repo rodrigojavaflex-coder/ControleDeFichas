@@ -11,6 +11,10 @@ import {
   PainelContratoRepresentantesConfig,
 } from '../../common/utils/painel-config.util';
 import { padronizarNomeDeSistemaLegado } from '../../common/utils/encoding-legado.util';
+import {
+  formatarErroRespostaAgente,
+  mensagemErroChamadaAgente,
+} from '../../common/utils/formatar-erro-agente.util';
 
 export interface AgentePainelMedico {
   nome_medico: string;
@@ -83,18 +87,15 @@ export class PainelMedicosService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar painel do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 
       const data = await response.json();
       return data.medicos_representantes || [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar painel do agente');
-      }
-      throw error;
+      throw new Error(mensagemErroChamadaAgente(error));
     }
   }
 

@@ -12,6 +12,7 @@ import {
   ImportarCaixaErpResponse,
 } from '../../models/fechamento-caixa.model';
 import { ImportacaoManualProgress } from '../../models/importacao-manual-progress.model';
+import { extrairMensagemErroApi } from '../../utils/mensagem-erro-api.util';
 import {
   DateRangeFilterComponent,
   DateRangeValue,
@@ -180,12 +181,10 @@ export class ImportarCaixaErpModalComponent implements OnDestroy {
         error: (err) => {
           this.loading = false;
           this.pararPollingProgresso(true);
-          const msg =
-            err?.error?.message ||
-            (Array.isArray(err?.error?.message)
-              ? err.error.message.join(', ')
-              : null) ||
-            'Não foi possível importar o caixa ERP. Verifique o agente e tente novamente.';
+          const msg = extrairMensagemErroApi(
+            err,
+            'Não foi possível importar o caixa ERP. Verifique o agente e tente novamente.',
+          );
           this.error = msg;
           this.errorModalService.show(msg, 'Importar caixa ERP');
         },

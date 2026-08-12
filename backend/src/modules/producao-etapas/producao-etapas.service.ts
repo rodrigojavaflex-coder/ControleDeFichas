@@ -8,6 +8,7 @@ import {
   padronizarDescricaoLegado,
   padronizarNomeLegadoNullable,
 } from '../../common/utils/encoding-legado.util';
+import { formatarErroRespostaAgente } from '../../common/utils/formatar-erro-agente.util';
 
 export interface AgenteProducaoEtapa {
   filial: number;
@@ -184,7 +185,7 @@ export class ProducaoEtapasService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar exclusões do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 
@@ -276,7 +277,7 @@ export class ProducaoEtapasService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar alterações de agendamento do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 
@@ -389,7 +390,7 @@ export class ProducaoEtapasService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar etapas do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 

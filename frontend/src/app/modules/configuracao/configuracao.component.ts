@@ -19,6 +19,11 @@ import { LimparProducaoEtapasModalComponent } from '../../components/limpar-prod
 import { ImportarOrcamentosModalComponent } from '../../components/importar-orcamentos-modal/importar-orcamentos-modal';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
 import { Permission, Unidade } from '../../models/usuario.model';
+import {
+  extrairMensagemErroApi,
+  normalizarListaErrosAgente,
+  normalizarMensagemErroApi,
+} from '../../utils/mensagem-erro-api.util';
 
 type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
   saldoInicialDisplay: string;
@@ -356,7 +361,10 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     this.sincronizacaoService.executarSincronizacao().subscribe({
       next: (resultados) => {
         this.sincronizacaoExecutando = false;
-        this.sincronizacaoResultado = resultados;
+        this.sincronizacaoResultado = resultados.map((resultado) => ({
+          ...resultado,
+          erros: normalizarListaErrosAgente(resultado.erros ?? []),
+        }));
         const totalClientes = resultados.reduce((sum, r) => sum + r.clientesCriados, 0);
         const totalPrescritores = resultados.reduce((sum, r) => sum + r.prescritoresCriados, 0);
         const totalOrcamentos = resultados.reduce((sum, r) => sum + r.orcamentosProcessados, 0);
@@ -368,7 +376,10 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.sincronizacaoExecutando = false;
-        this.error = 'Erro ao executar sincronização: ' + (err?.error?.message || err?.message);
+        this.error = extrairMensagemErroApi(
+          err,
+          'Erro ao executar sincronização. Tente novamente.',
+        );
         this.stopSincronizacaoProgressPolling();
       }
     });
@@ -1027,5 +1038,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
         this.error = 'Erro ao remover campos texto: ' + (err?.error?.message || err?.message);
       }
     });
+  }
+
+  formatarErroExibicao(erro: string): string {
+    return normalizarMensagemErroApi(erro) || erro;
   }
 }

@@ -22,6 +22,7 @@ import {
   ordenarLinhasErpNoBloco,
   FORMAS_FECHAMENTO_CAIXA,
 } from '../../models/fechamento-caixa.model';
+import { extrairMensagemErroApi } from '../../utils/mensagem-erro-api.util';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
@@ -167,9 +168,10 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.importandoErp = false;
-          this.error =
-            err?.error?.message ||
-            'Não foi possível atualizar as vendas do ERP.';
+          this.error = extrairMensagemErroApi(
+            err,
+            'Não foi possível atualizar as vendas do ERP.',
+          );
         },
       });
   }

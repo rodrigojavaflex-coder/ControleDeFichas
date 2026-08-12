@@ -27,6 +27,11 @@ import {
   normalizarDataIso,
 } from '../../common/utils/data-date.util';
 import {
+  formatarErroRespostaAgente,
+  MENSAGEM_ERRO_CONEXAO_AGENTE,
+  mensagemErroChamadaAgente,
+} from '../../common/utils/formatar-erro-agente.util';
+import {
   ImportarProducaoEtapasDto,
   ImportarProducaoEtapasResponseDto,
 } from './dto/importar-producao-etapas.dto';
@@ -195,6 +200,24 @@ export class SincronizacaoService {
     private readonly producaoEtapasService: ProducaoEtapasService,
     private readonly importacaoProgressService: ImportacaoManualProgressService,
   ) {}
+
+  /** Registra erro de sync; deduplica mensagem amigável de agente indisponível. */
+  private registrarErroSincronizacaoAgente(
+    resultado: SincronizacaoResult,
+    contexto: string,
+    error: unknown,
+  ): void {
+    const msg = mensagemErroChamadaAgente(error);
+    if (msg === MENSAGEM_ERRO_CONEXAO_AGENTE) {
+      const titulo = MENSAGEM_ERRO_CONEXAO_AGENTE.split('\n')[0];
+      const jaRegistrado = resultado.erros.some((e) => e.includes(titulo));
+      if (!jaRegistrado) {
+        resultado.erros.push(MENSAGEM_ERRO_CONEXAO_AGENTE);
+      }
+      return;
+    }
+    resultado.erros.push(`${contexto}: ${msg}`);
+  }
 
   private criarResultadoVazio(
     agente: string,
@@ -911,7 +934,7 @@ export class SincronizacaoService {
         `Erro ao sincronizar dados do agente ${config.agente}:`,
         error,
       );
-      resultado.erros.push(`Sincronização: ${error.message}`);
+      this.registrarErroSincronizacaoAgente(resultado, 'Sincronização', error);
     }
 
     // Sincronizar orçamentos (somente se watermark configurado)
@@ -928,7 +951,7 @@ export class SincronizacaoService {
           `Erro ao sincronizar orçamentos do agente ${config.agente}:`,
           error,
         );
-        resultado.erros.push(`Orçamentos: ${error.message}`);
+        this.registrarErroSincronizacaoAgente(resultado, 'Orçamentos', error);
       }
     } else {
       this.logger.log(
@@ -949,7 +972,7 @@ export class SincronizacaoService {
           `Erro ao sincronizar painel do agente ${config.agente}:`,
           error,
         );
-        resultado.erros.push(`Painel: ${error.message}`);
+        this.registrarErroSincronizacaoAgente(resultado, 'Painel', error);
       }
     } else {
       this.logger.log(
@@ -970,7 +993,11 @@ export class SincronizacaoService {
           `Erro ao sincronizar etapas de produção do agente ${config.agente}:`,
           error,
         );
-        resultado.erros.push(`Etapas produção: ${error.message}`);
+        this.registrarErroSincronizacaoAgente(
+          resultado,
+          'Etapas produção',
+          error,
+        );
       }
     } else {
       this.logger.log(
@@ -1688,7 +1715,7 @@ export class SincronizacaoService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar orçamentos do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 
@@ -1736,7 +1763,7 @@ export class SincronizacaoService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar orçamentos do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 
@@ -1886,7 +1913,7 @@ export class SincronizacaoService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar dados de sincronização do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 
@@ -1940,7 +1967,7 @@ export class SincronizacaoService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar clientes do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 
@@ -1983,7 +2010,7 @@ export class SincronizacaoService {
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-          `Erro ao buscar prescritores do agente: ${response.status} - ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 

@@ -13,6 +13,10 @@ import { Permission } from '../../common/enums/permission.enum';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import {
+  formatarErroRespostaAgente,
+  mensagemErroChamadaAgente,
+} from '../../common/utils/formatar-erro-agente.util';
+import {
   normalizarTextoLegado,
   padronizarNomeDeSistemaLegado,
 } from '../../common/utils/encoding-legado.util';
@@ -521,7 +525,7 @@ export class FechamentoCaixaService {
           .text()
           .catch(() => 'Erro desconhecido');
         throw new ServiceUnavailableException(
-          `Erro ao consultar agente (${response.status}) em ${rotulo}: ${errorText}`,
+          formatarErroRespostaAgente(response.status, errorText),
         );
       }
 
@@ -534,13 +538,7 @@ export class FechamentoCaixaService {
       if (error instanceof ServiceUnavailableException) {
         throw error;
       }
-      const timeoutSegundos = Math.round(timeoutMs / 1000);
-      const message =
-        error instanceof Error && error.name === 'AbortError'
-          ? `Timeout ao consultar agente de caixa (${timeoutSegundos}s) em ${rotulo}.`
-          : error instanceof Error
-            ? error.message
-            : 'Erro desconhecido ao consultar agente.';
+      const message = mensagemErroChamadaAgente(error);
       throw new ServiceUnavailableException(message);
     } finally {
       clearTimeout(timeoutId);

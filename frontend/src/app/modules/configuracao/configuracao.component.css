@@ -128,6 +128,10 @@
   border: none;
 }
 
+.erro-sync-linha {
+  white-space: pre-line;
+}
+
 /* Estilos para a seção de auditoria */
 .audit-section {
   margin: 2rem 0;

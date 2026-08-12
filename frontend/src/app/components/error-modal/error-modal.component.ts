@@ -14,7 +14,7 @@ import { ThemeService, Theme } from '../../services/theme.service';
           <button type="button" class="close-icon" (click)="close()">×</button>
         </div>
         <div class="modal-body">
-          <p [innerHTML]="message"></p>
+          <p class="modal-message">{{ message }}</p>
         </div>
         <div class="modal-footer">
           <button class="btn btn-primary" (click)="close()">OK</button>
@@ -70,6 +70,10 @@ import { ThemeService, Theme } from '../../services/theme.service';
       .modal-body {
         padding: 1rem;
       }
+      .modal-message {
+        margin: 0;
+        white-space: pre-line;
+      }
       .modal-body a {
         color: #0066cc;
         text-decoration: underline;
@@ -117,8 +121,8 @@ export class ErrorModalComponent implements OnInit {
   /** Mensagens longas (ex.: lista de competências com lançamento na folha). */
   modalLargo(): boolean {
     if (this.title === 'Aviso') return true;
-    const br = (this.message?.match(/<br\s*\/?>/gi) ?? []).length;
-    return br >= 2;
+    const linhas = (this.message?.split('\n') ?? []).length;
+    return linhas >= 3;
   }
 
   // Tema atual (light | dark)

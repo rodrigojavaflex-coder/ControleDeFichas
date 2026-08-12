@@ -448,7 +448,7 @@
                     <summary>Ver erros</summary>
                     <ul>
                       @for (erro of resultado.erros; track erro) {
-                        <li>{{ erro }}</li>
+                        <li class="erro-sync-linha">{{ formatarErroExibicao(erro) }}</li>
                       }
                     </ul>
                   </details>
@@ -753,7 +753,7 @@
     <div class="alert alert-success">{{ success }}</div>
   }
   @if (error) {
-    <div class="alert alert-danger">{{ error }}</div>
+    <div class="alert alert-danger erro-sync-linha">{{ error }}</div>
   }
 </div>
 

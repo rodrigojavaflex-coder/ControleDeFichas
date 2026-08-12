@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { normalizarMensagemErroApi } from '../utils/mensagem-erro-api.util';
 
 export interface ErrorModalState {
   visible: boolean;
@@ -13,7 +14,8 @@ export class ErrorModalService {
   state$: Observable<ErrorModalState> = this.stateSubject.asObservable();
 
   show(message: string, title?: string): void {
-    const formattedMessage = (message || '').replace(/\n/g, '<br>');
+    const texto = (message || '').replace(/<br\s*\/?>/gi, '\n');
+    const formattedMessage = normalizarMensagemErroApi(texto);
     this.stateSubject.next({ visible: true, title, message: formattedMessage });
   }
 
