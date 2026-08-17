@@ -1495,6 +1495,16 @@ export class DatabaseService {
     `.trim();
   }
 
+  /** `cdfun` do movimento PCP (FC12500) — fallback quando `cdusu` ausente. */
+  private sqlCdfunInteiro(alias: string): string {
+    return `
+      CASE
+        WHEN COALESCE(${alias}.cdfun, 0) > 0 THEN ${alias}.cdfun
+        ELSE NULL
+      END
+    `.trim();
+  }
+
   private sqlCdoperaEntrada(alias: string): string {
     return `TRIM(${alias}.cdopera) IN ('01', '1')`;
   }
@@ -1642,6 +1652,7 @@ export class DatabaseService {
     params.push(unit, unit, unit, unit);
 
     const cdusuInt = this.sqlCdusuInteiro('p');
+    const cdfunInt = this.sqlCdfunInteiro('p');
     const cdusuCmp = (a: string, b: string) =>
       `${this.sqlCdusuInteiroOuZero(a)} > ${this.sqlCdusuInteiroOuZero(b)}`;
     const crmPfcrm = this.sqlProducaoEtapasCrmPfcrm();
@@ -1658,6 +1669,22 @@ export class DatabaseService {
         e.posicao                                                 AS posicao_etapa,
         evt_ent.usuario_entrada                                   AS usuario_entrada,
         evt_sai.usuario_saida                                     AS usuario_saida,
+        evt_ent.funcionario_entrada                               AS funcionario_entrada,
+        COALESCE(
+          evt_sai.funcionario_saida,
+          (
+            SELECT FIRST 1
+              CASE WHEN COALESCE(p_enc.cdfun, 0) > 0 THEN p_enc.cdfun ELSE NULL END
+            FROM fc12500 p_enc
+            WHERE p_enc.cdfil = stage.cdfil
+              AND p_enc.nrrqu = stage.nrrqu
+              AND ${serierEq('p_enc', 'stage')}
+              AND p_enc.cdetapa = stage.cdetapa
+              AND p_enc.tppcp = stage.tppcp
+              AND ${cdopNaoEnt('p_enc')}
+            ORDER BY p_enc.data, p_enc.hora
+          )
+        )                                                         AS funcionario_saida,
         evt_ent.data_entrada                                      AS data_entrada,
         evt_ent.hora_entrada                                      AS hora_entrada,
         COALESCE(
@@ -1812,6 +1839,7 @@ export class DatabaseService {
           p.cdetapa,
           p.tppcp,
           ${cdusuInt} AS usuario_entrada,
+          ${cdfunInt} AS funcionario_entrada,
           p.data AS data_entrada,
           p.hora AS hora_entrada
         FROM fc12500 p
@@ -1850,6 +1878,7 @@ export class DatabaseService {
           p.cdetapa,
           p.tppcp,
           ${cdusuInt} AS usuario_saida,
+          ${cdfunInt} AS funcionario_saida,
           p.data AS data_saida,
           p.hora AS hora_saida
         FROM fc12500 p
@@ -1965,6 +1994,8 @@ export class DatabaseService {
 
     const usuarioEntrada = get('usuario_entrada');
     const usuarioSaida = get('usuario_saida');
+    const funcionarioEntrada = get('funcionario_entrada');
+    const funcionarioSaida = get('funcionario_saida');
     const quantidade = get('quantidade');
     const tempoEtapa = get('tempo_etapa');
 
@@ -1982,6 +2013,14 @@ export class DatabaseService {
       usuario_saida:
         usuarioSaida != null && usuarioSaida !== ''
           ? Number(usuarioSaida)
+          : null,
+      funcionario_entrada:
+        funcionarioEntrada != null && funcionarioEntrada !== ''
+          ? Number(funcionarioEntrada)
+          : null,
+      funcionario_saida:
+        funcionarioSaida != null && funcionarioSaida !== ''
+          ? Number(funcionarioSaida)
           : null,
       data_entrada: get('data_entrada')
         ? this.formatDateField(get('data_entrada'))

@@ -61,14 +61,19 @@ export class FolhaFuncionariosService {
   ): Promise<Funcionario> {
     assertUnidadeFolha(usuario, dto.unidade);
     await this.assertCargoSetorIds(dto.cargoId, dto.setorId);
-    await this.assertCodigoFuncionarioErpUnico(
+    await this.assertCodigoUsuarioErpUnico(
       dto.unidade,
       dto.codigoUsuarioErp ?? null,
+    );
+    await this.assertCodigoFuncionarioErpCdfunUnico(
+      dto.unidade,
+      dto.codigoFuncionarioErp ?? null,
     );
     const payload: Partial<Funcionario> = {
       nome: dto.nome,
       unidade: dto.unidade,
       codigoUsuarioErp: dto.codigoUsuarioErp ?? null,
+      codigoFuncionarioErp: dto.codigoFuncionarioErp ?? null,
       cpf: dto.cpf?.trim() ? dto.cpf.trim() : undefined,
       telefone: dto.telefone?.trim() || null,
       endereco: dto.endereco?.trim() || null,
@@ -351,12 +356,21 @@ export class FolhaFuncionariosService {
     }
     if (dto.codigoUsuarioErp !== undefined) {
       const unidadeAlvo = dto.unidade ?? entity.unidade;
-      await this.assertCodigoFuncionarioErpUnico(
+      await this.assertCodigoUsuarioErpUnico(
         unidadeAlvo,
         dto.codigoUsuarioErp ?? null,
         id,
       );
       entity.codigoUsuarioErp = dto.codigoUsuarioErp ?? null;
+    }
+    if (dto.codigoFuncionarioErp !== undefined) {
+      const unidadeAlvo = dto.unidade ?? entity.unidade;
+      await this.assertCodigoFuncionarioErpCdfunUnico(
+        unidadeAlvo,
+        dto.codigoFuncionarioErp ?? null,
+        id,
+      );
+      entity.codigoFuncionarioErp = dto.codigoFuncionarioErp ?? null;
     }
 
     if (patchCargoId !== undefined) {
@@ -535,7 +549,7 @@ export class FolhaFuncionariosService {
     }
   }
 
-  private async assertCodigoFuncionarioErpUnico(
+  private async assertCodigoUsuarioErpUnico(
     unidade: Unidade,
     codigo: number | null | undefined,
     ignorarFuncionarioId?: string,
@@ -551,7 +565,28 @@ export class FolhaFuncionariosService {
     const existente = await qb.getOne();
     if (existente) {
       throw new BadRequestException(
-        `Já existe funcionário «${existente.nome}» com o código ERP ${codigo} nesta unidade.`,
+        `Já existe funcionário «${existente.nome}» com o código usuário ERP ${codigo} nesta unidade.`,
+      );
+    }
+  }
+
+  private async assertCodigoFuncionarioErpCdfunUnico(
+    unidade: Unidade,
+    codigo: number | null | undefined,
+    ignorarFuncionarioId?: string,
+  ): Promise<void> {
+    if (codigo == null) return;
+    const qb = this.funcionarioRepo
+      .createQueryBuilder('f')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere('f.codigoFuncionarioErp = :codigo', { codigo });
+    if (ignorarFuncionarioId) {
+      qb.andWhere('f.id != :id', { id: ignorarFuncionarioId });
+    }
+    const existente = await qb.getOne();
+    if (existente) {
+      throw new BadRequestException(
+        `Já existe funcionário «${existente.nome}» com o código funcionário ERP ${codigo} nesta unidade.`,
       );
     }
   }

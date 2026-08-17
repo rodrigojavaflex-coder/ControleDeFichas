@@ -10,6 +10,25 @@ const STATUS_CONEXAO_AGENTE = new Set([
   502, 503, 504, 520, 521, 522, 523, 524, 530,
 ]);
 
+function extrairMensagemJsonAgente(corpo?: string | null): string | null {
+  const texto = corpo?.trim();
+  if (!texto?.startsWith('{')) {
+    return null;
+  }
+  try {
+    const json = JSON.parse(texto) as { message?: string | string[] };
+    if (Array.isArray(json.message)) {
+      return json.message.join('; ');
+    }
+    if (typeof json.message === 'string' && json.message.trim()) {
+      return json.message.trim();
+    }
+  } catch {
+    // corpo não é JSON válido
+  }
+  return null;
+}
+
 export function isRespostaErroConexaoAgente(
   status?: number,
   corpo?: string | null,
@@ -19,6 +38,9 @@ export function isRespostaErroConexaoAgente(
   }
   const texto = corpo?.trim();
   if (!texto) {
+    return false;
+  }
+  if (extrairMensagemJsonAgente(texto)) {
     return false;
   }
   if (texto.length > 400) {
@@ -37,6 +59,10 @@ export function formatarErroRespostaAgente(
   status: number,
   corpo?: string | null,
 ): string {
+  const msgJson = extrairMensagemJsonAgente(corpo);
+  if (msgJson) {
+    return `Erro ao consultar agente (${status}): ${msgJson}`;
+  }
   if (isRespostaErroConexaoAgente(status, corpo)) {
     return MENSAGEM_ERRO_CONEXAO_AGENTE;
   }

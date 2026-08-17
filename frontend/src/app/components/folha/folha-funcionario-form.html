@@ -196,6 +196,22 @@
             }
           </div>
           <div class="form-group">
+            <label class="form-label" for="ff-cod-func-erp">Código funcionário ERP (cdfun)</label>
+            <input
+              id="ff-cod-func-erp"
+              type="number"
+              min="1"
+              step="1"
+              class="form-control"
+              formControlName="codigoFuncionarioErp"
+              placeholder="Ex.: 33"
+            />
+            <div class="form-help">Código do funcionário no ERP (FC08000) — fallback quando cdusu não vier no PCP.</div>
+            @if (form.get('codigoFuncionarioErp')?.invalid && form.get('codigoFuncionarioErp')?.touched) {
+              <div class="error-message">Informe um código inteiro maior que zero.</div>
+            }
+          </div>
+          <div class="form-group">
             <label class="form-label" for="ff-ativo">Ativo</label>
             <select id="ff-ativo" class="form-control" formControlName="ativo">
               <option [ngValue]="true">Sim</option>

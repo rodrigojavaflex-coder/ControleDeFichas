@@ -11,6 +11,7 @@
     ?6 = cdfil (evt_sai)
     ?7 = cdfil (evt_ult)
 
+  v4 (2026-08): exporta `funcionario_entrada` / `funcionario_saida` (`cdfun` do FC12500) além de `cdusu`.
   v3 (2026-07): serier_int só em formula_touch + fc12100; demais joins serier bruto; sem ORDER BY no Firebird.
   Para testar um bloco menor, ajuste formula_touch: BETWEEN '2026-07-01' AND '2026-07-07'.
 
@@ -31,6 +32,22 @@ SELECT
   e.posicao                                                 AS posicao_etapa,
   evt_ent.usuario_entrada                                   AS usuario_entrada,
   evt_sai.usuario_saida                                     AS usuario_saida,
+  evt_ent.funcionario_entrada                               AS funcionario_entrada,
+  COALESCE(
+    evt_sai.funcionario_saida,
+    (
+      SELECT FIRST 1
+        CASE WHEN COALESCE(p_enc.cdfun, 0) > 0 THEN p_enc.cdfun ELSE NULL END
+      FROM fc12500 p_enc
+      WHERE p_enc.cdfil = stage.cdfil
+        AND p_enc.nrrqu = stage.nrrqu
+        AND p_enc.serier = stage.serier
+        AND p_enc.cdetapa = stage.cdetapa
+        AND p_enc.tppcp = stage.tppcp
+        AND TRIM(p_enc.cdopera) NOT IN ('01', '1')
+      ORDER BY p_enc.data, p_enc.hora
+    )
+  )                                                         AS funcionario_saida,
   evt_ent.data_entrada                                      AS data_entrada,
   evt_ent.hora_entrada                                      AS hora_entrada,
   COALESCE(
@@ -132,6 +149,10 @@ INNER JOIN (
       THEN CAST(NULLIF(TRIM(CAST(p.cdusu AS VARCHAR(32))), '') AS INTEGER)
       ELSE NULL
     END AS usuario_entrada,
+    CASE
+      WHEN COALESCE(p.cdfun, 0) > 0 THEN p.cdfun
+      ELSE NULL
+    END AS funcionario_entrada,
     p.data AS data_entrada,
     p.hora AS hora_entrada
   FROM fc12500 p
@@ -189,6 +210,10 @@ LEFT JOIN (
       THEN CAST(NULLIF(TRIM(CAST(p.cdusu AS VARCHAR(32))), '') AS INTEGER)
       ELSE NULL
     END AS usuario_saida,
+    CASE
+      WHEN COALESCE(p.cdfun, 0) > 0 THEN p.cdfun
+      ELSE NULL
+    END AS funcionario_saida,
     p.data AS data_saida,
     p.hora AS hora_saida
   FROM fc12500 p

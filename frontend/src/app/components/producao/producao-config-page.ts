@@ -16,6 +16,7 @@ import {
   FiltroEtapasRecebe,
   FiltroFuncionarioEtapas,
   ProducaoConfigRelatorio,
+  ProducaoConfigRelatorioFuncionario,
   AcaoEtapasFuncionariosModal,
   AplicarEtapasRemuneradasDto,
   RemoverEtapasFuncionariosDto,
@@ -75,7 +76,9 @@ export class ProducaoConfigPage implements OnInit {
   modalCarregando = false;
   modalSalvando = false;
   modalCodigoUsuarioErpInput = '';
+  modalCodigoFuncionarioErpInput = '';
   private modalCodigoUsuarioErpOriginal: number | null = null;
+  private modalCodigoFuncionarioErpOriginal: number | null = null;
 
   relatorioCarregando = false;
   funcionariosSelecionados = new Set<string>();
@@ -153,7 +156,9 @@ export class ProducaoConfigPage implements OnInit {
     if (!this.modalFuncionario || this.modalCarregando) return false;
     if (this.podeEditar()) return true;
     return (
-      this.podeEditarCodigoUsuarioErp() && this.modalCodigoUsuarioErpDirty()
+      this.podeEditarCodigoUsuarioErp() &&
+      (this.modalCodigoUsuarioErpDirty() ||
+        this.modalCodigoFuncionarioErpDirty())
     );
   }
 
@@ -534,6 +539,9 @@ export class ProducaoConfigPage implements OnInit {
     this.modalCodigoUsuarioErpOriginal = f.codigoUsuarioErp ?? null;
     this.modalCodigoUsuarioErpInput =
       f.codigoUsuarioErp != null ? String(f.codigoUsuarioErp) : '';
+    this.modalCodigoFuncionarioErpOriginal = f.codigoFuncionarioErp ?? null;
+    this.modalCodigoFuncionarioErpInput =
+      f.codigoFuncionarioErp != null ? String(f.codigoFuncionarioErp) : '';
     this.producaoConfig
       .listarEtapasFuncionario(this.unidadeFiltro, f.id)
       .subscribe({
@@ -560,6 +568,8 @@ export class ProducaoConfigPage implements OnInit {
     this.modalGestao = null;
     this.modalCodigoUsuarioErpInput = '';
     this.modalCodigoUsuarioErpOriginal = null;
+    this.modalCodigoFuncionarioErpInput = '';
+    this.modalCodigoFuncionarioErpOriginal = null;
   }
 
   alternarRecebeModal(row: ProducaoFuncionarioEtapaModalRow): void {
@@ -647,6 +657,34 @@ export class ProducaoConfigPage implements OnInit {
     return n;
   }
 
+  onModalCodigoFuncionarioErpInput(value: string | number): void {
+    this.modalCodigoFuncionarioErpInput =
+      value === null || value === undefined ? '' : String(value);
+  }
+
+  modalCodigoFuncionarioErpDirty(): boolean {
+    return (
+      this.parseModalCodigoFuncionarioErp() !==
+      this.modalCodigoFuncionarioErpOriginal
+    );
+  }
+
+  modalCodigoFuncionarioErpInvalido(): boolean {
+    if (!this.podeEditarCodigoUsuarioErp()) return false;
+    const raw = this.modalCodigoFuncionarioErpInput.trim();
+    if (!raw) return false;
+    const n = Number(raw);
+    return !Number.isInteger(n) || n < 1;
+  }
+
+  private parseModalCodigoFuncionarioErp(): number | null {
+    const raw = this.modalCodigoFuncionarioErpInput.trim();
+    if (!raw) return null;
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1) return null;
+    return n;
+  }
+
   salvarModalFuncionario(): void {
     if (
       !this.podeSalvarModalFuncionario() ||
@@ -654,13 +692,16 @@ export class ProducaoConfigPage implements OnInit {
       !this.modalFuncionario ||
       this.modalSalvando ||
       this.modalGestaoInvalido() ||
-      this.modalCodigoUsuarioErpInvalido()
+      this.modalCodigoUsuarioErpInvalido() ||
+      this.modalCodigoFuncionarioErpInvalido()
     ) {
       return;
     }
 
     const salvarCodigo =
-      this.podeEditarCodigoUsuarioErp() && this.modalCodigoUsuarioErpDirty();
+      this.podeEditarCodigoUsuarioErp() &&
+      (this.modalCodigoUsuarioErpDirty() ||
+        this.modalCodigoFuncionarioErpDirty());
     const salvarEtapas = this.podeEditar();
 
     const requests: Observable<unknown>[] = [];
@@ -672,6 +713,7 @@ export class ProducaoConfigPage implements OnInit {
           {
             unidade: this.unidadeFiltro,
             codigoUsuarioErp: this.parseModalCodigoUsuarioErp(),
+            codigoFuncionarioErp: this.parseModalCodigoFuncionarioErp(),
           },
         ),
       );
@@ -839,7 +881,7 @@ export class ProducaoConfigPage implements OnInit {
             <div class="func-card-header">
               <p class="func-identidade">
                 <strong>${this.escapeHtml(f.nome)}</strong>
-                ${setor} ${cargo} (Cód. ERP: ${f.codigoUsuarioErp})
+                ${setor} ${cargo} (${this.formatarCodigosErpRelatorio(f)})
               </p>
               <p class="func-etapas-titulo">${qtdLabel}</p>
               ${desligado}
@@ -942,6 +984,17 @@ export class ProducaoConfigPage implements OnInit {
       .join('');
 
     return `<div class="func-etapas-pilha" style="column-count: ${colunas}">${items}</div>`;
+  }
+
+  private formatarCodigosErpRelatorio(f: ProducaoConfigRelatorioFuncionario): string {
+    const partes: string[] = [];
+    if (f.codigoUsuarioErp != null) {
+      partes.push(`cdusu ${f.codigoUsuarioErp}`);
+    }
+    if (f.codigoFuncionarioErp != null) {
+      partes.push(`cdfun ${f.codigoFuncionarioErp}`);
+    }
+    return partes.length > 0 ? partes.join(' · ') : 'sem código ERP';
   }
 
   private escapeHtml(texto: string): string {

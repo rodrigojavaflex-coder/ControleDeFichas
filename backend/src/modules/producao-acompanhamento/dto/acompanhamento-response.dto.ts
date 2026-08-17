@@ -54,10 +54,13 @@ export class AcompanhamentoLinhaFilaDto {
   @ApiProperty({ nullable: true, description: 'cdusu ERP (entrada na etapa)' })
   usuarioEntrada: number | null;
 
+  @ApiProperty({ nullable: true, description: 'cdfun ERP (entrada na etapa)' })
+  funcionarioEntrada: number | null;
+
   @ApiProperty({
     nullable: true,
     description:
-      'Nome do funcionário (funcionarios.codigoUsuarioErp na unidade da linha)',
+      'Nome do funcionário (codigoUsuarioErp ou codigoFuncionarioErp na unidade da linha)',
   })
   funcionario: string | null;
 

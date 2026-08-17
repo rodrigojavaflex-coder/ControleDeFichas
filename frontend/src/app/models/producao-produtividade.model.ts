@@ -12,7 +12,9 @@ export interface ProdutividadeFuncionarioRow {
   funcionarioId: string;
   unidades: Unidade[];
   nome: string;
-  codigoUsuarioErp: number;
+  codigoUsuarioErp: number | null;
+  codigoFuncionarioErp: number | null;
+  codigoExibicaoErp: number | null;
   codigosUsuarioErp?: number[];
   setor: string | null;
   cargo: string | null;
@@ -38,6 +40,7 @@ export interface ProdutividadeSemCadastroUnidade {
 
 export interface ProdutividadeFuncionarioSemCadastro {
   codigoErp: number;
+  tipoCodigoErp: 'USUARIO' | 'FUNCIONARIO';
   nome: string;
   unidades: ProdutividadeSemCadastroUnidade[];
   amostrasRequisicoes: string[];

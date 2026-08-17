@@ -32,6 +32,15 @@ import {
   ProdutividadeFuncionarioSemEtapaVinculadaDto,
   ProdutividadeTotalColunaEtapaDto,
 } from './dto/produtividade-response.dto';
+import {
+  chaveAlertaSemCadastro,
+  codigoCreditoSaida,
+  codigoExibicaoFuncionario,
+  construirMapasFuncionarios,
+  ProducaoCodigoCredito,
+  resolverFuncionarioProducao,
+  rotuloCodigoCredito,
+} from '../producao-etapas/utils/producao-funcionario-erp.util';
 
 interface AggEtapaConsolidada {
   codEtapa: string;
@@ -49,7 +58,7 @@ interface AccFuncionarioConsolidado {
 }
 
 interface AccSemCadastro {
-  codigoErp: number;
+  credito: ProducaoCodigoCredito;
   nomes: Map<string, number>;
   unidades: Map<Unidade, number>;
   amostrasRequisicoes: Set<string>;
@@ -57,9 +66,9 @@ interface AccSemCadastro {
 }
 
 interface AccSemEtapaVinculada {
-  codigoErp: number;
   funcionarioId: string;
   nome: string;
+  codigoExibicao: number | null;
   unidades: Map<Unidade, number>;
   etapas: Map<string, { etapa: string; linhas: number }>;
   totalLinhas: number;
@@ -72,7 +81,7 @@ const LIMITE_AMOSTRAS_REQUISICAO_AVISO = 5;
 interface EscopoProdutividadeConsulta {
   /** Resumo importado + remuneração por etapa. */
   unidadesResumo: Unidade[];
-  /** Cadastro de funcionários exibido/contabilizado (`cdusu` por unidade). */
+  /** Cadastro de funcionários exibido/contabilizado (`cdusu`/`cdfun` por unidade). */
   unidadesFuncionarios: Unidade[];
 }
 
@@ -184,7 +193,7 @@ export class ProducaoProdutividadeService {
 
   /**
    * Contabilização: resumo das `unidadesResumo`; funcionários só de
-   * `unidadesFuncionarios` (`codigoUsuarioErp` único por unidade de cadastro).
+   * `unidadesFuncionarios` (`codigoUsuarioErp` / `codigoFuncionarioErp` por unidade).
    */
   private async consultarConsolidado(
     usuario: Usuario,
@@ -219,17 +228,12 @@ export class ProducaoProdutividadeService {
       .where('f.unidade IN (:...unidadesFuncionarios)', {
         unidadesFuncionarios,
       })
-      .andWhere('f.codigoUsuarioErp IS NOT NULL')
+      .andWhere(
+        '(f.codigoUsuarioErp IS NOT NULL OR f.codigoFuncionarioErp IS NOT NULL)',
+      )
       .getMany();
 
-    const funcionariosPorCodErp = new Map<number, Funcionario[]>();
-    for (const funcionario of funcionarios) {
-      if (funcionario.codigoUsuarioErp == null) continue;
-      const cod = funcionario.codigoUsuarioErp;
-      const lista = funcionariosPorCodErp.get(cod) ?? [];
-      lista.push(funcionario);
-      funcionariosPorCodErp.set(cod, lista);
-    }
+    const mapasFuncionarios = construirMapasFuncionarios(funcionarios);
 
     const funcEtapas = await this.funcionarioEtapaRepo.find({
       where: { unidade: In(unidadesFuncionarios), recebe: true },
@@ -250,12 +254,17 @@ export class ProducaoProdutividadeService {
       .where('r.unidade IN (:...unidadesResumo)', { unidadesResumo })
       .andWhere('r.dataSaida >= :dataInicio', { dataInicio })
       .andWhere('r.dataSaida <= :dataFim', { dataFim })
-      .andWhere('r.usuarioSaida IS NOT NULL')
+      .andWhere(
+        '(r.usuarioSaida IS NOT NULL OR r.funcionarioSaida IS NOT NULL)',
+      )
       .getMany();
 
-    const aggPorCodErp = new Map<number, AccFuncionarioConsolidado>();
-    const semCadastroPorCodErp = new Map<number, AccSemCadastro>();
-    const semEtapaVinculadaPorCodErp = new Map<number, AccSemEtapaVinculada>();
+    const aggPorFuncionario = new Map<string, AccFuncionarioConsolidado>();
+    const semCadastroPorChave = new Map<string, AccSemCadastro>();
+    const semEtapaVinculadaPorFuncionario = new Map<
+      string,
+      AccSemEtapaVinculada
+    >();
     let linhasContabilizadas = 0;
     let linhasSemFuncionario = 0;
     let linhasEtapaNaoConfigurada = 0;
@@ -273,8 +282,8 @@ export class ProducaoProdutividadeService {
     const consultaMultiplasUnidadesResumo = unidadesResumo.length > 1;
 
     for (const row of linhasResumo) {
-      const codFunc = row.usuarioSaida;
-      if (codFunc == null) continue;
+      const credito = codigoCreditoSaida(row);
+      if (!credito) continue;
 
       if (!isCodEtapaGestao(row.codEtapa)) {
         const remBase = remuneracaoPorUnidadeEtapa.get(
@@ -294,10 +303,10 @@ export class ProducaoProdutividadeService {
         }
       }
 
-      const funcionario = this.resolverFuncionarioPorCodErp(
-        codFunc,
+      const funcionario = resolverFuncionarioProducao(
+        credito,
         row.unidade,
-        funcionariosPorCodErp,
+        mapasFuncionarios,
         creditarResumoOutrasUnidades,
         consultaMultiplasUnidadesResumo,
       );
@@ -307,7 +316,7 @@ export class ProducaoProdutividadeService {
       ) {
         if (!funcionario) {
           linhasSemFuncionario += 1;
-          this.registrarSemCadastro(semCadastroPorCodErp, codFunc, row);
+          this.registrarSemCadastro(semCadastroPorChave, credito, row);
         }
         continue;
       }
@@ -323,7 +332,7 @@ export class ProducaoProdutividadeService {
       if (!funcEtapaSet.has(`${funcionario.id}:${row.codEtapa}`)) {
         linhasEtapaNaoConfigurada += 1;
         this.registrarSemEtapaVinculada(
-          semEtapaVinculadaPorCodErp,
+          semEtapaVinculadaPorFuncionario,
           funcionario,
           row,
           rem.etapa || row.etapa,
@@ -341,8 +350,8 @@ export class ProducaoProdutividadeService {
         (totalContabilizadoPorCodEtapa.get(row.codEtapa) ?? 0) + 1,
       );
 
-      const chaveAgg = funcionario.codigoUsuarioErp as number;
-      let acc = aggPorCodErp.get(chaveAgg);
+      const chaveAgg = funcionario.id;
+      let acc = aggPorFuncionario.get(chaveAgg);
       if (!acc) {
         acc = {
           funcionario,
@@ -351,14 +360,14 @@ export class ProducaoProdutividadeService {
           unidadesResumo: new Set<Unidade>(),
           etapas: new Map<string, AggEtapaConsolidada>(),
         };
-        aggPorCodErp.set(chaveAgg, acc);
+        aggPorFuncionario.set(chaveAgg, acc);
       }
 
       acc.unidadesResumo.add(row.unidade);
-      const candidatos = funcionariosPorCodErp.get(chaveAgg) ?? [funcionario];
-      for (const c of candidatos) {
-        acc.unidadesCadastro.add(c.unidade);
-        acc.codigosErp.add(c.codigoUsuarioErp as number);
+      acc.unidadesCadastro.add(funcionario.unidade);
+      const codExibicao = codigoExibicaoFuncionario(funcionario);
+      if (codExibicao != null) {
+        acc.codigosErp.add(codExibicao);
       }
 
       const existente = acc.etapas.get(row.codEtapa);
@@ -379,14 +388,14 @@ export class ProducaoProdutividadeService {
       unidadesFuncionarios,
       unidadesResumo,
       dataInicio,
-      aggPorCodErp,
+      aggPorFuncionario,
       remuneracaoPorUnidadeEtapa,
       totalBaseGestaoPorCodEtapa,
     );
 
     const funcionariosRows: ProdutividadeFuncionarioRowDto[] = [];
 
-    for (const acc of aggPorCodErp.values()) {
+    for (const acc of aggPorFuncionario.values()) {
       if (
         !funcionarioElegivelProdutividadeNoPeriodo(acc.funcionario, dataInicio)
       ) {
@@ -405,6 +414,7 @@ export class ProducaoProdutividadeService {
       const totalQuantidade = etapas.reduce((s, e) => s + e.quantidade, 0);
       const totalValor = etapas.reduce((s, e) => s + e.valorTotal, 0);
       const codigos = [...acc.codigosErp].sort((a, b) => a - b);
+      const codigoPrincipal = codigoExibicaoFuncionario(acc.funcionario);
       const unidadesFuncionario = [
         ...new Set([...acc.unidadesCadastro, ...acc.unidadesResumo]),
       ].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -413,8 +423,13 @@ export class ProducaoProdutividadeService {
         funcionarioId: acc.funcionario.id,
         unidades: unidadesFuncionario,
         nome: acc.funcionario.nome,
-        codigoUsuarioErp: codigos[0],
-        codigosUsuarioErp: codigos.length > 1 ? codigos : undefined,
+        codigoUsuarioErp: acc.funcionario.codigoUsuarioErp ?? null,
+        codigoFuncionarioErp: acc.funcionario.codigoFuncionarioErp ?? null,
+        codigoExibicaoErp: codigoPrincipal,
+        codigosUsuarioErp:
+          codigos.length > 1 && acc.funcionario.codigoUsuarioErp != null
+            ? codigos
+            : undefined,
         setor: acc.funcionario.setor?.descricao?.trim() || null,
         cargo: acc.funcionario.cargo?.descricao?.trim() || null,
         totalQuantidade,
@@ -433,15 +448,15 @@ export class ProducaoProdutividadeService {
     const totaisColunaEtapas = this.montarTotaisColunaEtapas(
       totalRemuneradoResumoPorCodEtapa,
       nomeEtapaPorCodEtapa,
-      aggPorCodErp,
+      aggPorFuncionario,
       remuneracaoPorUnidadeEtapa,
     );
 
     const podeVerAlertas = this.usuarioPodeVerAlertas(usuario);
     const avisos = podeVerAlertas
       ? this.montarAvisos(
-          semCadastroPorCodErp,
-          semEtapaVinculadaPorCodErp,
+          semCadastroPorChave,
+          semEtapaVinculadaPorFuncionario,
           linhasSemFuncionario,
         )
       : this.avisosVazios();
@@ -470,7 +485,7 @@ export class ProducaoProdutividadeService {
   private montarTotaisColunaEtapas(
     totalRemuneradoResumoPorCodEtapa: Map<string, number>,
     nomeEtapaPorCodEtapa: Map<string, string>,
-    aggPorCodErp: Map<number, AccFuncionarioConsolidado>,
+    aggPorFuncionario: Map<string, AccFuncionarioConsolidado>,
     remuneracaoPorUnidadeEtapa: Map<string, { valor: number; etapa: string }>,
   ): ProdutividadeTotalColunaEtapaDto[] {
     const itens: ProdutividadeTotalColunaEtapaDto[] = [];
@@ -486,7 +501,7 @@ export class ProducaoProdutividadeService {
 
     let qtdGestao = 0;
     let nomeGestao = 'GESTÃO';
-    for (const acc of aggPorCodErp.values()) {
+    for (const acc of aggPorFuncionario.values()) {
       const g = acc.etapas.get(PRODUCAO_COD_ETAPA_GESTAO);
       if (g) {
         qtdGestao += g.quantidade;
@@ -549,17 +564,12 @@ export class ProducaoProdutividadeService {
       .where('f.unidade IN (:...unidadesFuncionarios)', {
         unidadesFuncionarios,
       })
-      .andWhere('f.codigoUsuarioErp IS NOT NULL')
+      .andWhere(
+        '(f.codigoUsuarioErp IS NOT NULL OR f.codigoFuncionarioErp IS NOT NULL)',
+      )
       .getMany();
 
-    const funcionariosPorCodErp = new Map<number, Funcionario[]>();
-    for (const funcionario of funcionarios) {
-      if (funcionario.codigoUsuarioErp == null) continue;
-      const cod = funcionario.codigoUsuarioErp;
-      const lista = funcionariosPorCodErp.get(cod) ?? [];
-      lista.push(funcionario);
-      funcionariosPorCodErp.set(cod, lista);
-    }
+    const mapasFuncionarios = construirMapasFuncionarios(funcionarios);
 
     const funcEtapas = await this.funcionarioEtapaRepo.find({
       where: { unidade: In(unidadesFuncionarios), recebe: true },
@@ -580,7 +590,9 @@ export class ProducaoProdutividadeService {
       .where('r.unidade IN (:...unidadesResumo)', { unidadesResumo })
       .andWhere('r.dataSaida >= :dataInicio', { dataInicio })
       .andWhere('r.dataSaida <= :dataFim', { dataFim })
-      .andWhere('r.usuarioSaida IS NOT NULL')
+      .andWhere(
+        '(r.usuarioSaida IS NOT NULL OR r.funcionarioSaida IS NOT NULL)',
+      )
       .getMany();
 
     const linhas: ProdutividadeAnaliticoLinhaDto[] = [];
@@ -592,13 +604,13 @@ export class ProducaoProdutividadeService {
     const consultaMultiplasUnidadesResumo = unidadesResumo.length > 1;
 
     for (const row of linhasResumo) {
-      const codFunc = row.usuarioSaida;
-      if (codFunc == null) continue;
+      const credito = codigoCreditoSaida(row);
+      if (!credito) continue;
 
-      const funcionario = this.resolverFuncionarioPorCodErp(
-        codFunc,
+      const funcionario = resolverFuncionarioProducao(
+        credito,
         row.unidade,
-        funcionariosPorCodErp,
+        mapasFuncionarios,
         creditarResumoOutrasUnidades,
         consultaMultiplasUnidadesResumo,
       );
@@ -648,20 +660,21 @@ export class ProducaoProdutividadeService {
   }
 
   private registrarSemCadastro(
-    mapa: Map<number, AccSemCadastro>,
-    codigoErp: number,
+    mapa: Map<string, AccSemCadastro>,
+    credito: ProducaoCodigoCredito,
     row: ProducaoEtapaResumo,
   ): void {
-    let acc = mapa.get(codigoErp);
+    const chave = chaveAlertaSemCadastro(credito);
+    let acc = mapa.get(chave);
     if (!acc) {
       acc = {
-        codigoErp,
+        credito,
         nomes: new Map<string, number>(),
         unidades: new Map<Unidade, number>(),
         amostrasRequisicoes: new Set<string>(),
         totalLinhas: 0,
       };
-      mapa.set(codigoErp, acc);
+      mapa.set(chave, acc);
     }
     acc.totalLinhas += 1;
     acc.unidades.set(row.unidade, (acc.unidades.get(row.unidade) ?? 0) + 1);
@@ -674,23 +687,22 @@ export class ProducaoProdutividadeService {
   }
 
   private registrarSemEtapaVinculada(
-    mapa: Map<number, AccSemEtapaVinculada>,
+    mapa: Map<string, AccSemEtapaVinculada>,
     funcionario: Funcionario,
     row: ProducaoEtapaResumo,
     nomeEtapa: string,
   ): void {
-    const codigoErp = funcionario.codigoUsuarioErp as number;
-    let acc = mapa.get(codigoErp);
+    let acc = mapa.get(funcionario.id);
     if (!acc) {
       acc = {
-        codigoErp,
         funcionarioId: funcionario.id,
         nome: funcionario.nome?.trim() || 'Nome não informado no cadastro',
+        codigoExibicao: codigoExibicaoFuncionario(funcionario),
         unidades: new Map<Unidade, number>(),
         etapas: new Map<string, { etapa: string; linhas: number }>(),
         totalLinhas: 0,
       };
-      mapa.set(codigoErp, acc);
+      mapa.set(funcionario.id, acc);
     }
     acc.totalLinhas += 1;
     acc.unidades.set(row.unidade, (acc.unidades.get(row.unidade) ?? 0) + 1);
@@ -709,7 +721,7 @@ export class ProducaoProdutividadeService {
     unidadesFuncionarios: Unidade[],
     unidadesResumo: Unidade[],
     dataInicio: string,
-    aggPorCodErp: Map<number, AccFuncionarioConsolidado>,
+    aggPorFuncionario: Map<string, AccFuncionarioConsolidado>,
     remuneracaoPorUnidadeEtapa: Map<string, { valor: number; etapa: string }>,
     totalBaseGestaoPorCodEtapa: Map<string, number>,
   ): Promise<void> {
@@ -733,15 +745,15 @@ export class ProducaoProdutividadeService {
       const funcionario = gc.funcionario;
       if (
         !ref ||
-        funcionario?.codigoUsuarioErp == null ||
+        !funcionario ||
+        codigoExibicaoFuncionario(funcionario) == null ||
         !unidadesFuncionarios.includes(funcionario.unidade) ||
         !funcionarioElegivelProdutividadeNoPeriodo(funcionario, dataInicio)
       ) {
         continue;
       }
 
-      const codErp = funcionario.codigoUsuarioErp;
-      const chaveDedupe = `${codErp}:${ref}`;
+      const chaveDedupe = `${funcionario.id}:${ref}`;
       if (gestaoAplicada.has(chaveDedupe)) continue;
 
       const remGestao = remuneracaoPorUnidadeEtapa.get(
@@ -754,16 +766,19 @@ export class ProducaoProdutividadeService {
 
       gestaoAplicada.add(chaveDedupe);
 
-      let acc = aggPorCodErp.get(codErp);
+      let acc = aggPorFuncionario.get(funcionario.id);
       if (!acc) {
+        const codExibicao = codigoExibicaoFuncionario(funcionario);
         acc = {
           funcionario,
-          codigosErp: new Set<number>([codErp]),
+          codigosErp: new Set<number>(
+            codExibicao != null ? [codExibicao] : [],
+          ),
           unidadesCadastro: new Set<Unidade>([funcionario.unidade]),
           unidadesResumo: new Set<Unidade>(),
           etapas: new Map<string, AggEtapaConsolidada>(),
         };
-        aggPorCodErp.set(codErp, acc);
+        aggPorFuncionario.set(funcionario.id, acc);
       }
 
       acc.etapas.set(PRODUCAO_COD_ETAPA_GESTAO, {
@@ -800,8 +815,8 @@ export class ProducaoProdutividadeService {
   }
 
   private montarAvisos(
-    semCadastro: Map<number, AccSemCadastro>,
-    semEtapaVinculada: Map<number, AccSemEtapaVinculada>,
+    semCadastro: Map<string, AccSemCadastro>,
+    semEtapaVinculada: Map<string, AccSemEtapaVinculada>,
     totalLinhasSemCadastro: number,
   ): {
     totalLinhasSemCadastro: number;
@@ -858,8 +873,10 @@ export class ProducaoProdutividadeService {
     acc: AccSemCadastro,
   ): ProdutividadeFuncionarioSemCadastroDto {
     return {
-      codigoErp: acc.codigoErp,
-      nome: this.nomeMaisFrequente(acc.nomes) || `Usuário ERP ${acc.codigoErp}`,
+      codigoErp: acc.credito.codigo,
+      tipoCodigoErp: acc.credito.tipo,
+      nome:
+        this.nomeMaisFrequente(acc.nomes) || rotuloCodigoCredito(acc.credito),
       unidades: [...acc.unidades.entries()]
         .map(([unidade, linhas]) => ({ unidade, linhas }))
         .sort((a, b) => a.unidade.localeCompare(b.unidade, 'pt-BR')),
@@ -881,7 +898,7 @@ export class ProducaoProdutividadeService {
     acc: AccSemEtapaVinculada,
   ): ProdutividadeFuncionarioSemEtapaVinculadaDto {
     return {
-      codigoErp: acc.codigoErp,
+      codigoErp: acc.codigoExibicao ?? 0,
       funcionarioId: acc.funcionarioId,
       nome: acc.nome,
       unidades: [...acc.unidades.entries()]
@@ -912,28 +929,5 @@ export class ProducaoProdutividadeService {
       }
     }
     return melhor || 'Nome não informado no resumo';
-  }
-
-  /**
-   * Cadastro por unidade; com resumo ampliado credita pelo `cdusu` no cadastro local.
-   */
-  private resolverFuncionarioPorCodErp(
-    usuarioSaida: number,
-    unidadeResumo: Unidade,
-    funcionariosPorCodErp: Map<number, Funcionario[]>,
-    creditarResumoOutrasUnidades: boolean,
-    consultaMultiplasUnidadesResumo: boolean,
-  ): Funcionario | undefined {
-    const candidatos = funcionariosPorCodErp.get(usuarioSaida);
-    if (!candidatos?.length) return undefined;
-
-    const porUnidade = candidatos.find((f) => f.unidade === unidadeResumo);
-    if (porUnidade) return porUnidade;
-
-    if (creditarResumoOutrasUnidades || consultaMultiplasUnidadesResumo) {
-      if (candidatos.length === 1) return candidatos[0];
-    }
-
-    return undefined;
   }
 }

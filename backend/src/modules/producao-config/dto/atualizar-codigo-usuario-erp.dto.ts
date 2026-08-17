@@ -23,6 +23,17 @@ export class AtualizarCodigoUsuarioErpProducaoDto {
   @IsInt({ message: 'Código usuário ERP deve ser um número inteiro.' })
   @Min(1, { message: 'Código usuário ERP deve ser maior que zero.' })
   codigoUsuarioErp?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Código de funcionário no ERP (cdfun); null ou omitido para limpar.',
+    example: 33,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_o, v) => v != null && v !== '')
+  @IsInt({ message: 'Código funcionário ERP deve ser um número inteiro.' })
+  @Min(1, { message: 'Código funcionário ERP deve ser maior que zero.' })
+  codigoFuncionarioErp?: number | null;
 }
 
 export class AtualizarCodigoUsuarioErpProducaoResponseDto {
@@ -31,4 +42,7 @@ export class AtualizarCodigoUsuarioErpProducaoResponseDto {
 
   @ApiProperty({ nullable: true })
   codigoUsuarioErp: number | null;
+
+  @ApiProperty({ nullable: true })
+  codigoFuncionarioErp: number | null;
 }

@@ -25,6 +25,12 @@ import {
 } from './utils/fila-etapa.util';
 import { ProducaoCalendarioService } from '../producao-config/producao-calendario.service';
 import { minutosDecorridosProducaoDesdeEntrada } from '../producao-config/utils/producao-calendario.util';
+import {
+  carregarMapaNomesFuncionarioProducao,
+  codigoCreditoEntrada,
+  nomeFuncionarioProducao,
+  ProducaoCodigoCredito,
+} from '../producao-etapas/utils/producao-funcionario-erp.util';
 
 @Injectable()
 export class ProducaoAcompanhamentoService {
@@ -218,15 +224,23 @@ export class ProducaoAcompanhamentoService {
     const posicaoEtapa = Math.max(...linhasDb.map((r) => r.posicaoEtapa));
     const etapa = linhasDb.find((r) => r.etapa?.trim())?.etapa?.trim() ?? cod;
 
-    const codigosErp = [
-      ...new Set(
-        linhasDb
-          .map((r) => this.resolverEntradaFila(r).usuario)
-          .filter((c): c is number => c != null),
-      ),
-    ];
+    const codigosUsuario: number[] = [];
+    const codigosFuncionario: number[] = [];
+    for (const row of linhasDb) {
+      const credito = this.resolverEntradaFila(row).credito;
+      if (credito?.tipo === 'USUARIO') {
+        codigosUsuario.push(credito.codigo);
+      } else if (credito?.tipo === 'FUNCIONARIO') {
+        codigosFuncionario.push(credito.codigo);
+      }
+    }
     const nomesPorUnidadeCodErp =
-      await this.mapaNomesFuncionarioPorUnidadeCodErp(unidades, codigosErp);
+      await carregarMapaNomesFuncionarioProducao(
+        this.funcionarioRepo,
+        unidades,
+        codigosUsuario,
+        codigosFuncionario,
+      );
 
     const linhas: AcompanhamentoLinhaFilaDto[] = linhasDb
       .map((row) => {
@@ -236,13 +250,19 @@ export class ProducaoAcompanhamentoService {
           filial: row.filial,
           requisicao: row.requisicao,
           formula: row.formula,
-          usuarioEntrada: entrada.usuario ?? null,
-          funcionario:
-            entrada.usuario != null
-              ? (nomesPorUnidadeCodErp.get(
-                  `${row.unidade}:${entrada.usuario}`,
-                ) ?? null)
+          usuarioEntrada:
+            entrada.credito?.tipo === 'USUARIO'
+              ? entrada.credito.codigo
               : null,
+          funcionarioEntrada:
+            entrada.credito?.tipo === 'FUNCIONARIO'
+              ? entrada.credito.codigo
+              : null,
+          funcionario: nomeFuncionarioProducao(
+            nomesPorUnidadeCodErp,
+            row.unidade,
+            entrada.credito ?? null,
+          ),
           dataEntrada: entrada.data ?? null,
           horaEntrada: entrada.hora ?? null,
           tempoDecorridoMinutos: minutosDecorridosProducaoDesdeEntrada(
@@ -275,52 +295,26 @@ export class ProducaoAcompanhamentoService {
     };
   }
 
-  private async mapaNomesFuncionarioPorUnidadeCodErp(
-    unidades: Unidade[],
-    codigosErp: number[],
-  ): Promise<Map<string, string>> {
-    const map = new Map<string, string>();
-    if (codigosErp.length === 0) {
-      return map;
-    }
-
-    const funcionarios = await this.funcionarioRepo.find({
-      where: {
-        unidade: In(unidades),
-        codigoUsuarioErp: In(codigosErp),
-      },
-    });
-
-    for (const f of funcionarios) {
-      if (f.codigoUsuarioErp == null) {
-        continue;
-      }
-      const nome = f.nome?.trim();
-      map.set(
-        `${f.unidade}:${f.codigoUsuarioErp}`,
-        nome || 'Nome não informado',
-      );
-    }
-
-    return map;
-  }
-
   private resolverEntradaFila(row: ProducaoEtapaResumo): {
     data: string | null | undefined;
     hora: string | null | undefined;
-    usuario: number | null | undefined;
+    credito: ProducaoCodigoCredito | null;
   } {
     if (row.emAndamentoFila && row.dataEntradaFila) {
+      const usuarioFila =
+        row.usuarioEntradaFila != null && row.usuarioEntradaFila > 0
+          ? ({ tipo: 'USUARIO', codigo: row.usuarioEntradaFila } as const)
+          : null;
       return {
         data: row.dataEntradaFila,
         hora: row.horaEntradaFila,
-        usuario: row.usuarioEntradaFila,
+        credito: usuarioFila,
       };
     }
     return {
       data: row.dataEntrada,
       hora: row.horaEntrada,
-      usuario: row.usuarioEntrada,
+      credito: codigoCreditoEntrada(row),
     };
   }
 

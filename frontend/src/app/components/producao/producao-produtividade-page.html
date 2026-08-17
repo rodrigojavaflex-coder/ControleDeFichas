@@ -432,7 +432,7 @@
               @for (item of resultado.avisos.funcionariosSemCadastro; track item.codigoErp) {
                 <li>
                   <strong>{{ item.nome }}</strong>
-                  · Cód. ERP {{ item.codigoErp }}
+                  · {{ formatarTipoCodigoAviso(item) }} {{ item.codigoErp }}
                   · {{ formatarUnidadesAviso(item) }}
                   · {{ item.totalLinhas }} etapa(s)
                   @if (item.amostrasRequisicoes.length) {

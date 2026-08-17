@@ -335,10 +335,20 @@ export class ProducaoProdutividadePage implements OnInit {
   }
 
   formatarCodigosErp(f: ProdutividadeFuncionarioRow): string {
+    const partes: string[] = [];
+    if (f.codigoUsuarioErp != null) {
+      partes.push(`cdusu ${f.codigoUsuarioErp}`);
+    }
+    if (f.codigoFuncionarioErp != null) {
+      partes.push(`cdfun ${f.codigoFuncionarioErp}`);
+    }
+    if (partes.length > 0) {
+      return partes.join(' · ');
+    }
     if (f.codigosUsuarioErp?.length) {
       return f.codigosUsuarioErp.join(' / ');
     }
-    return String(f.codigoUsuarioErp);
+    return f.codigoExibicaoErp != null ? String(f.codigoExibicaoErp) : '—';
   }
 
   formatarUnidadesAviso(item: {
@@ -361,6 +371,12 @@ export class ProducaoProdutividadePage implements OnInit {
     item: ProdutividadeFuncionarioSemCadastro,
   ): string {
     return (item.amostrasRequisicoes ?? []).join(', ');
+  }
+
+  formatarTipoCodigoAviso(
+    item: Pick<ProdutividadeFuncionarioSemCadastro, 'tipoCodigoErp'>,
+  ): string {
+    return item.tipoCodigoErp === 'FUNCIONARIO' ? 'cdfun' : 'cdusu';
   }
 
   temAvisosSemCadastro(): boolean {

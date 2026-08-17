@@ -26,6 +26,10 @@ const dateTransformer = {
 ])
 @Index('idx_producao_etapa_unidade_data_entrada', ['unidade', 'dataEntrada'])
 @Index('idx_producao_etapa_unidade_usuario_saida', ['unidade', 'usuarioSaida'])
+@Index('idx_producao_etapa_unidade_funcionario_saida', [
+  'unidade',
+  'funcionarioSaida',
+])
 export class ProducaoEtapaResumo extends BaseEntity {
   static get nomeAmigavel(): string {
     return 'etapa de produção';
@@ -66,6 +70,20 @@ export class ProducaoEtapaResumo extends BaseEntity {
   @ApiProperty({ required: false, description: 'cdusu do ERP (1º movimento 02)' })
   @Column({ type: 'integer', nullable: true })
   usuarioSaida?: number | null;
+
+  @ApiProperty({
+    required: false,
+    description: 'cdfun do ERP (1º movimento 01) — fallback quando cdusu ausente.',
+  })
+  @Column({ type: 'integer', nullable: true })
+  funcionarioEntrada?: number | null;
+
+  @ApiProperty({
+    required: false,
+    description: 'cdfun do ERP (1º movimento 02) — fallback quando cdusu ausente.',
+  })
+  @Column({ type: 'integer', nullable: true })
+  funcionarioSaida?: number | null;
 
   @ApiProperty({ required: false })
   @Column({ type: 'date', nullable: true, transformer: dateTransformer })

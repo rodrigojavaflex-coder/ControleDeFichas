@@ -1278,27 +1278,39 @@ export class SincronizacaoService {
         fase: 0.86,
       });
 
-      const exclusoes =
-        await this.producaoEtapasService.buscarExclusoesReceitasDoAgente(
-          url,
-          token,
-          unit,
-          inicioExclusoes,
-          fimExclusoes,
+      try {
+        const exclusoes =
+          await this.producaoEtapasService.buscarExclusoesReceitasDoAgente(
+            url,
+            token,
+            unit,
+            inicioExclusoes,
+            fimExclusoes,
+            config.agente,
+          );
+
+        const purge = await this.producaoEtapasService.aplicarExclusoesFormulas(
+          unidade,
+          exclusoes,
           config.agente,
         );
+        resultado.producaoEtapasFormulasExcluidas = purge.formulasProcessadas;
+        resultado.producaoEtapasRemovidas = purge.linhasRemovidas;
 
-      const purge = await this.producaoEtapasService.aplicarExclusoesFormulas(
-        unidade,
-        exclusoes,
-        config.agente,
-      );
-      resultado.producaoEtapasFormulasExcluidas = purge.formulasProcessadas;
-      resultado.producaoEtapasRemovidas = purge.linhasRemovidas;
-
-      if (purge.formulasProcessadas > 0) {
-        this.logger.log(
-          `[${config.agente}] RN-PCP-008: ${purge.formulasProcessadas} fórmula(s) excluída(s) no ERP — ${purge.linhasRemovidas} linha(s) removida(s) do resumo`,
+        if (purge.formulasProcessadas > 0) {
+          this.logger.log(
+            `[${config.agente}] RN-PCP-008: ${purge.formulasProcessadas} fórmula(s) excluída(s) no ERP — ${purge.linhasRemovidas} linha(s) removida(s) do resumo`,
+          );
+        }
+      } catch (error: unknown) {
+        this.logger.error(
+          `[${config.agente}] Falha ao verificar exclusões RECEITAS; continuando sync incremental de etapas`,
+          error,
+        );
+        this.registrarErroSincronizacaoAgente(
+          resultado,
+          'Etapas produção (exclusões RECEITAS)',
+          error,
         );
       }
     } else {
@@ -1314,29 +1326,42 @@ export class SincronizacaoService {
         fase: 0.87,
       });
 
-      const alteracoesAgendamento =
-        await this.producaoEtapasService.buscarAlteracoesAgendamentoDoAgente(
-          url,
-          token,
-          unit,
-          inicioExclusoes,
-          fimExclusoes,
-          config.agente,
+      try {
+        const alteracoesAgendamento =
+          await this.producaoEtapasService.buscarAlteracoesAgendamentoDoAgente(
+            url,
+            token,
+            unit,
+            inicioExclusoes,
+            fimExclusoes,
+            config.agente,
+          );
+
+        const retirada =
+          await this.producaoEtapasService.aplicarAlteracoesAgendamentoRetirada(
+            unidade,
+            alteracoesAgendamento,
+            config.agente,
+          );
+        resultado.producaoEtapasRetiradaAgendamentoFormulas =
+          retirada.formulasProcessadas;
+        resultado.producaoEtapasRetiradaAgendamentoLinhas =
+          retirada.linhasAtualizadas;
+
+        if (retirada.formulasProcessadas > 0) {
+          this.logger.log(
+            `[${config.agente}] RN-PCP-012: ${retirada.formulasProcessadas} fórmula(s) com agendamento alterado — ${retirada.linhasAtualizadas} linha(s) com retirada atualizada`,
+          );
+        }
+      } catch (error: unknown) {
+        this.logger.error(
+          `[${config.agente}] Falha ao verificar alterações AGENDAMENTO; continuando sync incremental de etapas`,
+          error,
         );
-
-      const retirada = await this.producaoEtapasService.aplicarAlteracoesAgendamentoRetirada(
-        unidade,
-        alteracoesAgendamento,
-        config.agente,
-      );
-      resultado.producaoEtapasRetiradaAgendamentoFormulas =
-        retirada.formulasProcessadas;
-      resultado.producaoEtapasRetiradaAgendamentoLinhas =
-        retirada.linhasAtualizadas;
-
-      if (retirada.formulasProcessadas > 0) {
-        this.logger.log(
-          `[${config.agente}] RN-PCP-012: ${retirada.formulasProcessadas} fórmula(s) com agendamento alterado — ${retirada.linhasAtualizadas} linha(s) com retirada atualizada`,
+        this.registrarErroSincronizacaoAgente(
+          resultado,
+          'Etapas produção (agendamento retirada)',
+          error,
         );
       }
     }

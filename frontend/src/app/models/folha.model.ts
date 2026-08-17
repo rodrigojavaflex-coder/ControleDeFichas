@@ -34,6 +34,7 @@ export interface FuncionarioFolha {
   dataAdmissao?: string | null;
   dataDemissao?: string | null;
   codigoUsuarioErp?: number | null;
+  codigoFuncionarioErp?: number | null;
   cargoId?: string | null;
   setorId?: string | null;
   cargo?: FolhaCadastroSimples | null;

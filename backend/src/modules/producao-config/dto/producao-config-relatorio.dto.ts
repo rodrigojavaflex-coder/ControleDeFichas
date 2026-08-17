@@ -39,8 +39,11 @@ export class ProducaoConfigRelatorioFuncionarioDto {
   @ApiProperty({ nullable: true })
   cargo: string | null;
 
-  @ApiProperty()
-  codigoUsuarioErp: number;
+  @ApiProperty({ nullable: true })
+  codigoUsuarioErp: number | null;
+
+  @ApiProperty({ nullable: true })
+  codigoFuncionarioErp: number | null;
 
   @ApiProperty()
   desligado: boolean;

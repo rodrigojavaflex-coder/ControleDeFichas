@@ -52,6 +52,7 @@ export interface ProducaoFuncionarioConfigRow {
   id: string;
   nome: string;
   codigoUsuarioErp: number | null;
+  codigoFuncionarioErp: number | null;
   setor: string | null;
   cargo: string | null;
   dataDemissao: string | null;
@@ -201,7 +202,9 @@ export class ProducaoConfigService {
       .leftJoinAndSelect('f.cargo', 'cargo')
       .leftJoinAndSelect('f.setor', 'setor')
       .where('f.unidade = :unidade', { unidade })
-      .andWhere('f.codigoUsuarioErp IS NOT NULL')
+      .andWhere(
+        '(f.codigoUsuarioErp IS NOT NULL OR f.codigoFuncionarioErp IS NOT NULL)',
+      )
       .orderBy('CASE WHEN f.dataDemissao IS NULL THEN 0 ELSE 1 END', 'ASC')
       .addOrderBy('f.nome', 'ASC')
       .getMany();
@@ -227,6 +230,7 @@ export class ProducaoConfigService {
       id: f.id,
       nome: f.nome,
       codigoUsuarioErp: f.codigoUsuarioErp ?? null,
+      codigoFuncionarioErp: f.codigoFuncionarioErp ?? null,
       setor: f.setor?.descricao?.trim() || null,
       cargo: f.cargo?.descricao?.trim() || null,
       dataDemissao: f.dataDemissao ?? null,
@@ -285,19 +289,35 @@ export class ProducaoConfigService {
       throw new NotFoundException('Funcionário não encontrado.');
     }
 
-    const codigo =
-      dto.codigoUsuarioErp === undefined ? null : dto.codigoUsuarioErp;
-    await this.assertCodigoUsuarioErpUnico(
-      dto.unidade,
-      codigo,
-      funcionarioId,
-    );
-    funcionario.codigoUsuarioErp = codigo;
+    const codigoUsuario =
+      dto.codigoUsuarioErp === undefined ? undefined : dto.codigoUsuarioErp;
+    const codigoFuncionario =
+      dto.codigoFuncionarioErp === undefined
+        ? undefined
+        : dto.codigoFuncionarioErp;
+
+    if (codigoUsuario !== undefined) {
+      await this.assertCodigoUsuarioErpUnico(
+        dto.unidade,
+        codigoUsuario,
+        funcionarioId,
+      );
+      funcionario.codigoUsuarioErp = codigoUsuario;
+    }
+    if (codigoFuncionario !== undefined) {
+      await this.assertCodigoFuncionarioErpCdfunUnico(
+        dto.unidade,
+        codigoFuncionario,
+        funcionarioId,
+      );
+      funcionario.codigoFuncionarioErp = codigoFuncionario;
+    }
     await this.funcionarioRepo.save(funcionario);
 
     return {
       funcionarioId: funcionario.id,
       codigoUsuarioErp: funcionario.codigoUsuarioErp ?? null,
+      codigoFuncionarioErp: funcionario.codigoFuncionarioErp ?? null,
     };
   }
 
@@ -461,7 +481,8 @@ export class ProducaoConfigService {
           nome: f.nome,
           setor: f.setor,
           cargo: f.cargo,
-          codigoUsuarioErp: f.codigoUsuarioErp as number,
+          codigoUsuarioErp: f.codigoUsuarioErp,
+          codigoFuncionarioErp: f.codigoFuncionarioErp,
           desligado: f.desligado,
           dataDemissao: f.dataDemissao,
           etapas: etapasFunc,
@@ -554,7 +575,9 @@ export class ProducaoConfigService {
     const funcionarios = await this.funcionarioRepo
       .createQueryBuilder('f')
       .where('f.unidade = :unidade', { unidade })
-      .andWhere('f.codigoUsuarioErp IS NOT NULL')
+      .andWhere(
+        '(f.codigoUsuarioErp IS NOT NULL OR f.codigoFuncionarioErp IS NOT NULL)',
+      )
       .andWhere('f.id IN (:...ids)', { ids })
       .getMany();
 
@@ -584,6 +607,27 @@ export class ProducaoConfigService {
     if (existente) {
       throw new BadRequestException(
         `Já existe funcionário «${existente.nome}» com o código usuário ERP ${codigo} nesta unidade.`,
+      );
+    }
+  }
+
+  private async assertCodigoFuncionarioErpCdfunUnico(
+    unidade: Unidade,
+    codigo: number | null | undefined,
+    ignorarFuncionarioId?: string,
+  ): Promise<void> {
+    if (codigo == null) return;
+    const qb = this.funcionarioRepo
+      .createQueryBuilder('f')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere('f.codigoFuncionarioErp = :codigo', { codigo });
+    if (ignorarFuncionarioId) {
+      qb.andWhere('f.id != :id', { id: ignorarFuncionarioId });
+    }
+    const existente = await qb.getOne();
+    if (existente) {
+      throw new BadRequestException(
+        `Já existe funcionário «${existente.nome}» com o código funcionário ERP ${codigo} nesta unidade.`,
       );
     }
   }

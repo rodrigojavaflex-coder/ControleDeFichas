@@ -38,6 +38,7 @@ interface FolhaFuncFormValue {
   dataAdmissao: string;
   dataDemissao: string;
   codigoUsuarioErp: string | number;
+  codigoFuncionarioErp: string | number;
   ativo: boolean;
   naoReceberReciboWhatsapp: boolean;
   participaFolhaPagamento: boolean;
@@ -132,6 +133,21 @@ export class FolhaFuncionarioFormComponent implements OnInit {
         dataAdmissao: ['', [Validators.required]],
         dataDemissao: [''],
         codigoUsuarioErp: [
+          '',
+          [
+            Validators.min(1),
+            (c: AbstractControl): ValidationErrors | null => {
+              const v = c.value;
+              if (v === '' || v == null) return null;
+              const n = Number(v);
+              if (!Number.isInteger(n) || n < 1) {
+                return { codigoErpInvalido: true };
+              }
+              return null;
+            },
+          ],
+        ],
+        codigoFuncionarioErp: [
           '',
           [
             Validators.min(1),
@@ -752,6 +768,8 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           dataDemissao: this.patchDateField(f.dataDemissao),
           codigoUsuarioErp:
             f.codigoUsuarioErp != null ? String(f.codigoUsuarioErp) : '',
+          codigoFuncionarioErp:
+            f.codigoFuncionarioErp != null ? String(f.codigoFuncionarioErp) : '',
           cargoId: f.cargo?.id ?? f.cargoId ?? null,
           setorId: f.setor?.id ?? f.setorId ?? null,
           ativo: f.ativo ?? true,
@@ -818,6 +836,16 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       payload['codigoUsuarioErp'] = Number(codErp);
     } else if (this.isEditMode) {
       payload['codigoUsuarioErp'] = null;
+    }
+
+    const codFunErp =
+      v.codigoFuncionarioErp != null && v.codigoFuncionarioErp !== ''
+        ? String(v.codigoFuncionarioErp).trim()
+        : '';
+    if (codFunErp) {
+      payload['codigoFuncionarioErp'] = Number(codFunErp);
+    } else if (this.isEditMode) {
+      payload['codigoFuncionarioErp'] = null;
     }
 
     const cid = v.cargoId != null ? String(v.cargoId).trim() : '';

@@ -89,6 +89,8 @@ export interface ProducaoEtapaResumoRow {
   posicao_etapa: number;
   usuario_entrada?: number | null;
   usuario_saida?: number | null;
+  funcionario_entrada?: number | null;
+  funcionario_saida?: number | null;
   data_entrada?: string | null;
   hora_entrada?: string | null;
   data_saida?: string | null;

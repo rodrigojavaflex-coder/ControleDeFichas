@@ -28,8 +28,17 @@ export class ProdutividadeFuncionarioRowDto {
   @ApiProperty()
   nome: string;
 
-  @ApiProperty()
-  codigoUsuarioErp: number;
+  @ApiProperty({ nullable: true })
+  codigoUsuarioErp: number | null;
+
+  @ApiProperty({ nullable: true })
+  codigoFuncionarioErp: number | null;
+
+  @ApiProperty({
+    nullable: true,
+    description: 'Código principal exibido (cdusu ou cdfun).',
+  })
+  codigoExibicaoErp: number | null;
 
   @ApiProperty({ type: [Number], required: false })
   codigosUsuarioErp?: number[];
@@ -99,6 +108,9 @@ export class ProdutividadeSemCadastroUnidadeDto {
 export class ProdutividadeFuncionarioSemCadastroDto {
   @ApiProperty()
   codigoErp: number;
+
+  @ApiProperty({ enum: ['USUARIO', 'FUNCIONARIO'] })
+  tipoCodigoErp: 'USUARIO' | 'FUNCIONARIO';
 
   @ApiProperty()
   nome: string;

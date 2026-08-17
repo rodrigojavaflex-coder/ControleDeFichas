@@ -19,6 +19,8 @@ export interface AgenteProducaoEtapa {
   posicao_etapa: number;
   usuario_entrada?: number | null;
   usuario_saida?: number | null;
+  funcionario_entrada?: number | null;
+  funcionario_saida?: number | null;
   data_entrada?: string | null;
   hora_entrada?: string | null;
   data_saida?: string | null;
@@ -184,6 +186,9 @@ export class ProducaoEtapasService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        this.logger.error(
+          `[${agente}] exclusoes-receitas HTTP ${response.status}: ${errorText.slice(0, 500)}`,
+        );
         throw new Error(
           formatarErroRespostaAgente(response.status, errorText),
         );
@@ -276,6 +281,9 @@ export class ProducaoEtapasService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        this.logger.error(
+          `[${agente}] alteracoes-agendamento-receitas HTTP ${response.status}: ${errorText.slice(0, 500)}`,
+        );
         throw new Error(
           formatarErroRespostaAgente(response.status, errorText),
         );
@@ -490,6 +498,8 @@ export class ProducaoEtapasService {
       posicaoEtapa: Number(registro.posicao_etapa ?? 0),
       usuarioEntrada: registro.usuario_entrada ?? null,
       usuarioSaida: registro.usuario_saida ?? null,
+      funcionarioEntrada: registro.funcionario_entrada ?? null,
+      funcionarioSaida: registro.funcionario_saida ?? null,
       dataEntrada: registro.data_entrada || null,
       horaEntrada: registro.hora_entrada || null,
       dataSaida: registro.data_saida || null,
@@ -543,8 +553,12 @@ export class ProducaoEtapasService {
     ].join('|');
   }
 
-  private usuarioValido(cod: number | null | undefined): boolean {
+  private codigoOperadorValido(cod: number | null | undefined): boolean {
     return cod != null && Number(cod) > 0;
+  }
+
+  private usuarioValido(cod: number | null | undefined): boolean {
+    return this.codigoOperadorValido(cod);
   }
 
   private deduplicarRegistrosPorChaveImportacao(
@@ -584,9 +598,11 @@ export class ProducaoEtapasService {
       etapa: etapaNome,
       posicao_etapa: posicao,
       usuario_entrada: entrada.usuario,
+      funcionario_entrada: entrada.funcionario,
       data_entrada: entrada.data,
       hora_entrada: entrada.hora,
       usuario_saida: saida.usuario,
+      funcionario_saida: saida.funcionario,
       data_saida: saida.data,
       hora_saida: saida.hora,
       tempo_etapa:
@@ -605,11 +621,14 @@ export class ProducaoEtapasService {
     tipo: 'entrada' | 'saida',
   ): {
     usuario: number | null | undefined;
+    funcionario: number | null | undefined;
     data: string | null | undefined;
     hora: string | null | undefined;
   } {
     const usuarioKey =
       tipo === 'entrada' ? 'usuario_entrada' : 'usuario_saida';
+    const funcionarioKey =
+      tipo === 'entrada' ? 'funcionario_entrada' : 'funcionario_saida';
     const dataKey = tipo === 'entrada' ? 'data_entrada' : 'data_saida';
     const horaKey = tipo === 'entrada' ? 'hora_entrada' : 'hora_saida';
 
@@ -617,6 +636,7 @@ export class ProducaoEtapasService {
     if (candidatos.length === 0) {
       return {
         usuario: a[usuarioKey] ?? b[usuarioKey] ?? null,
+        funcionario: a[funcionarioKey] ?? b[funcionarioKey] ?? null,
         data: null,
         hora: null,
       };
@@ -632,6 +652,7 @@ export class ProducaoEtapasService {
     const escolhido = candidatos[0];
     return {
       usuario: escolhido[usuarioKey],
+      funcionario: escolhido[funcionarioKey],
       data: escolhido[dataKey],
       hora: escolhido[horaKey],
     };
@@ -701,11 +722,25 @@ export class ProducaoEtapasService {
     ) {
       payload.usuarioSaida = existente.usuarioSaida;
     }
+    if (
+      !this.codigoOperadorValido(payload.funcionarioEntrada) &&
+      this.codigoOperadorValido(existente.funcionarioEntrada)
+    ) {
+      payload.funcionarioEntrada = existente.funcionarioEntrada;
+    }
+    if (
+      !this.codigoOperadorValido(payload.funcionarioSaida) &&
+      this.codigoOperadorValido(existente.funcionarioSaida)
+    ) {
+      payload.funcionarioSaida = existente.funcionarioSaida;
+    }
 
     if (!payload.dataSaida?.trim() && existente.dataSaida) {
       payload.dataSaida = existente.dataSaida;
       payload.horaSaida = existente.horaSaida ?? payload.horaSaida;
       payload.usuarioSaida = existente.usuarioSaida ?? payload.usuarioSaida;
+      payload.funcionarioSaida =
+        existente.funcionarioSaida ?? payload.funcionarioSaida;
     }
 
     if (payload.dataEntrada && existente.dataEntrada) {
@@ -721,6 +756,8 @@ export class ProducaoEtapasService {
         payload.horaEntrada = existente.horaEntrada;
         payload.usuarioEntrada =
           existente.usuarioEntrada ?? payload.usuarioEntrada;
+        payload.funcionarioEntrada =
+          existente.funcionarioEntrada ?? payload.funcionarioEntrada;
       }
     }
 
@@ -736,6 +773,8 @@ export class ProducaoEtapasService {
         payload.dataSaida = existente.dataSaida;
         payload.horaSaida = existente.horaSaida;
         payload.usuarioSaida = existente.usuarioSaida ?? payload.usuarioSaida;
+        payload.funcionarioSaida =
+          existente.funcionarioSaida ?? payload.funcionarioSaida;
       }
     }
   }

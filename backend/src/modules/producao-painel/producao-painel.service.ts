@@ -24,6 +24,12 @@ import {
 } from '../producao-config/entities/producao-painel-alerta-retirada.entity';
 import { normalizarCorPainelRetirada } from '../producao-config/utils/producao-painel-cor.util';
 import {
+  carregarMapaNomesFuncionarioProducao,
+  codigoCreditoEntrada,
+  codigoCreditoSaida,
+  nomeFuncionarioProducao,
+} from '../producao-etapas/utils/producao-funcionario-erp.util';
+import {
   ProducaoPainelAlertaLegendaDto,
   ProducaoPainelLinhaDto,
   ProducaoPainelResponseDto,
@@ -224,7 +230,7 @@ export class ProducaoPainelService {
     }
 
     const amostra = rows[0];
-    const codigosErp = [
+    const codigosUsuario = [
       ...new Set(
         rows
           .flatMap((r) => [
@@ -232,10 +238,22 @@ export class ProducaoPainelService {
             r.usuarioSaida,
             r.usuarioEntradaFila,
           ])
-          .filter((c): c is number => c != null),
+          .filter((c): c is number => c != null && c > 0),
       ),
     ];
-    const nomes = await this.mapaNomesFuncionario(unidade, codigosErp);
+    const codigosFuncionario = [
+      ...new Set(
+        rows
+          .flatMap((r) => [r.funcionarioEntrada, r.funcionarioSaida])
+          .filter((c): c is number => c != null && c > 0),
+      ),
+    ];
+    const nomes = await carregarMapaNomesFuncionarioProducao(
+      this.funcionarioRepo,
+      [unidade],
+      codigosUsuario,
+      codigosFuncionario,
+    );
     const consultadoEm = new Date().toISOString();
 
     const etapas = rows.map((r) => ({
@@ -244,22 +262,28 @@ export class ProducaoPainelService {
       etapa: r.etapa?.trim() || r.codEtapa,
       dataEntrada: r.dataEntrada?.trim() || null,
       horaEntrada: this.normalizarHora(r.horaEntrada),
-      funcionarioEntrada: this.nomeFuncionario(
+      funcionarioEntrada: nomeFuncionarioProducao(
         nomes,
         unidade,
-        r.usuarioEntrada,
+        codigoCreditoEntrada(r),
       ),
       dataSaida: r.dataSaida?.trim() || null,
       horaSaida: this.normalizarHora(r.horaSaida),
-      funcionarioSaida: this.nomeFuncionario(nomes, unidade, r.usuarioSaida),
+      funcionarioSaida: nomeFuncionarioProducao(
+        nomes,
+        unidade,
+        codigoCreditoSaida(r),
+      ),
       tempoEtapaMinutos: r.tempoEtapa ?? null,
       emAndamentoFila: !!r.emAndamentoFila,
       dataEntradaFila: r.dataEntradaFila?.trim() || null,
       horaEntradaFila: this.normalizarHora(r.horaEntradaFila),
-      funcionarioFila: this.nomeFuncionario(
+      funcionarioFila: nomeFuncionarioProducao(
         nomes,
         unidade,
-        r.usuarioEntradaFila,
+        r.usuarioEntradaFila != null && r.usuarioEntradaFila > 0
+          ? { tipo: 'USUARIO', codigo: r.usuarioEntradaFila }
+          : null,
       ),
     }));
 
@@ -399,44 +423,6 @@ export class ProducaoPainelService {
       return `${h.slice(0, 2)}:${h.slice(2, 4)}`;
     }
     return h;
-  }
-
-  private async mapaNomesFuncionario(
-    unidade: Unidade,
-    codigosErp: number[],
-  ): Promise<Map<string, string>> {
-    const map = new Map<string, string>();
-    if (codigosErp.length === 0) {
-      return map;
-    }
-    const funcionarios = await this.funcionarioRepo.find({
-      where: {
-        unidade,
-        codigoUsuarioErp: In(codigosErp),
-      },
-    });
-    for (const f of funcionarios) {
-      if (f.codigoUsuarioErp == null) {
-        continue;
-      }
-      const nome = f.nome?.trim();
-      map.set(
-        `${f.unidade}:${f.codigoUsuarioErp}`,
-        nome || 'Nome não informado',
-      );
-    }
-    return map;
-  }
-
-  private nomeFuncionario(
-    map: Map<string, string>,
-    unidade: Unidade,
-    codigo: number | null | undefined,
-  ): string | null {
-    if (codigo == null) {
-      return null;
-    }
-    return map.get(`${unidade}:${codigo}`) ?? `Usuário ERP ${codigo}`;
   }
 
   private resolverNomePrescritor(
