@@ -33,12 +33,23 @@ export class FolhaService {
     page = 1,
     limit = 10,
     nome?: string,
+    cargoId?: string,
+    setorId?: string,
+    participaFolhaPagamento?: boolean,
   ): Observable<FuncionarioPaginated> {
     let params = new HttpParams()
       .set('page', String(page))
       .set('limit', String(limit));
     if (unidade) params = params.set('unidade', unidade);
     if (nome?.trim()) params = params.set('nome', nome.trim());
+    if (cargoId) params = params.set('cargoId', cargoId);
+    if (setorId) params = params.set('setorId', setorId);
+    if (participaFolhaPagamento !== undefined) {
+      params = params.set(
+        'participaFolhaPagamento',
+        String(participaFolhaPagamento),
+      );
+    }
     return this.http.get<FuncionarioPaginated>(`${base}/funcionarios`, { params });
   }
 
@@ -47,11 +58,22 @@ export class FolhaService {
     unidade?: Unidade,
     nome?: string,
     comEventosFixos = false,
+    cargoId?: string,
+    setorId?: string,
+    participaFolhaPagamento?: boolean,
   ): Observable<FuncionarioFolha[]> {
     let params = new HttpParams().set('todos', 'true');
     if (unidade) params = params.set('unidade', unidade);
     if (nome?.trim()) params = params.set('nome', nome.trim());
     if (comEventosFixos) params = params.set('comEventosFixos', 'true');
+    if (cargoId) params = params.set('cargoId', cargoId);
+    if (setorId) params = params.set('setorId', setorId);
+    if (participaFolhaPagamento !== undefined) {
+      params = params.set(
+        'participaFolhaPagamento',
+        String(participaFolhaPagamento),
+      );
+    }
     return this.http.get<FuncionarioFolha[]>(`${base}/funcionarios`, { params });
   }
 

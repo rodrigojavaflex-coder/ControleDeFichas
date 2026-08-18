@@ -327,6 +327,19 @@ export class NavigationComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      label: 'Visitação',
+      icon: 'feather-user-plus',
+      requiredPermissions: [],
+      children: [
+        {
+          label: 'Painel Médico',
+          route: '/visitacao/painel-medico',
+          icon: 'feather-user-plus',
+          requiredPermissions: [Permission.VISITACAO_PAINEL_MEDICO_READ],
+        },
+      ],
+    },
+    {
       label: 'Relatórios',
       icon: 'feather-bar-chart-2',
       requiredPermissions: [],

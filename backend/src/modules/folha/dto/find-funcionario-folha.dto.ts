@@ -6,6 +6,7 @@ import {
   Max,
   IsEnum,
   IsBoolean,
+  IsUUID,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -39,6 +40,30 @@ export class FindFuncionarioFolhaDto {
   @IsOptional()
   @IsString()
   nome?: string;
+
+  @ApiPropertyOptional({ description: 'Filtra por cargo (folha_cargo.id).' })
+  @IsOptional()
+  @IsUUID()
+  cargoId?: string;
+
+  @ApiPropertyOptional({ description: 'Filtra por setor (folha_setor.id).' })
+  @IsOptional()
+  @IsUUID()
+  setorId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Filtra por participação na folha de pagamento (participaFolhaPagamento).',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
+    return undefined;
+  })
+  @IsBoolean()
+  participaFolhaPagamento?: boolean;
 
   @ApiPropertyOptional({
     description: 'Retorna todos os registros (impressão), sem paginação.',

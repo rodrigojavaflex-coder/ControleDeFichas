@@ -1,0 +1,244 @@
+<div class="vendas-page visitacao-painel-medico-page">
+  <section *ngIf="error" class="state-card error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </section>
+
+  <section class="results-card" *ngIf="!error">
+    <div class="results-header visitacao-painel-header-actions">
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn btn-imprimir"
+          (click)="imprimir()"
+          [disabled]="loading || imprimindo || totalItems === 0"
+          title="Imprimir listagem com os filtros aplicados">
+          <i class="fas fa-print"></i>
+          Imprimir
+        </button>
+        <span class="visitacao-painel-imprimir-status" *ngIf="imprimindo" aria-live="polite">
+          Preparando…
+        </span>
+      </div>
+    </div>
+
+    <div class="inline-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Carregando médicos do painel...</span>
+    </div>
+
+    <div class="filters-inline">
+      <div
+        class="filters-panel-top"
+        role="button"
+        tabindex="0"
+        (click)="onContainerClick($event)"
+        (keydown)="onFiltersToggleKey($event)">
+        <div class="filters-controls">
+          <button
+            type="button"
+            class="filters-toggle btn btn-toggle-filtros"
+            (click)="toggleFiltersVisibility(); $event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()">
+            <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
+            <span class="filters-count" *ngIf="appliedFilters.length">{{ appliedFilters.length }}</span>
+            <i class="fas" [class.fa-chevron-up]="filtersPanelOpen" [class.fa-chevron-down]="!filtersPanelOpen"></i>
+          </button>
+
+          <div class="applied-filters-container" *ngIf="appliedFilters.length || totalItems">
+            <div class="results-count" (click)="$event.stopPropagation()">
+              <i class="fas fa-filter"></i>
+              <span>{{ totalItems }} resultado(s)</span>
+            </div>
+            <div class="applied-filters-wrapper" *ngIf="appliedFilters.length">
+              <div class="applied-filters-list">
+                <span class="filter-chip" *ngFor="let filter of appliedFilters" [title]="filter.value">
+                  <strong>{{ filter.label }}:</strong>
+                  <span class="filter-value">{{ filter.value }}</span>
+                  <button
+                    *ngIf="canRemoveFilter(filter.key)"
+                    type="button"
+                    class="filter-chip-remove"
+                    (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
+                    [attr.aria-label]="'Remover filtro ' + filter.label">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrapper" *ngIf="!loading">
+      <table class="vendas-table visitacao-painel-table">
+        <thead>
+          <tr>
+            <th>Unidade</th>
+            <th>Médico</th>
+            <th>CRM</th>
+            <th>Representante</th>
+            <th>Cód. rep.</th>
+            <th>Filial painel</th>
+            <th>Vínculo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of items" [class.visitacao-row-sem-vinculo]="!item.vinculadoFuncionario">
+            <td>{{ item.unidade }}</td>
+            <td>{{ item.nomeMedico }}</td>
+            <td>{{ formatCrm(item) }}</td>
+            <td>
+              <span class="visitacao-rep-nome">{{ item.nomeRepresentante }}</span>
+              <span
+                class="visitacao-rep-erp-hint"
+                *ngIf="item.vinculadoFuncionario && item.nomeRepresentanteErp !== item.nomeRepresentante"
+                [title]="'Nome no ERP: ' + item.nomeRepresentanteErp">
+                ERP: {{ item.nomeRepresentanteErp }}
+              </span>
+            </td>
+            <td>{{ item.codigoRepresentante }}</td>
+            <td>{{ item.contratoRepresentante }}</td>
+            <td>
+              <span
+                class="visitacao-vinculo-badge"
+                [class.is-vinculado]="item.vinculadoFuncionario"
+                [class.is-pendente]="!item.vinculadoFuncionario">
+                {{ item.vinculadoFuncionario ? 'Vinculado' : 'Sem cadastro' }}
+              </span>
+            </td>
+          </tr>
+          <tr class="no-data" *ngIf="items.length === 0">
+            <td colspan="7">
+              <i class="fas fa-inbox"></i>
+              Nenhum médico encontrado no painel
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar" *ngIf="totalPages > 1 && !loading">
+      <button
+        type="button"
+        class="btn btn-sm btn-cancelar"
+        (click)="onPageChange(currentPage - 1)"
+        [disabled]="currentPage <= 1">
+        Anterior
+      </button>
+      <span class="page-info">
+        Página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} médico(s))
+      </span>
+      <button
+        type="button"
+        class="btn btn-sm btn-cancelar"
+        (click)="onPageChange(currentPage + 1)"
+        [disabled]="currentPage >= totalPages">
+        Próxima
+      </button>
+    </div>
+  </section>
+</div>
+
+<!-- Modal de filtros (padrão vendas) -->
+<div class="modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
+  <div class="modal-conteudo modal-filtros" (click)="$event.stopPropagation()">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Filtros — Painel Médico</h3>
+      <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="filters-grid vendas-filtros-grid">
+        <div class="filter-group">
+          <label for="pm-nome-medico" class="label-campo">Médico</label>
+          <input
+            id="pm-nome-medico"
+            type="text"
+            class="campo"
+            [(ngModel)]="nomeMedicoFilter"
+            placeholder="Nome do médico"
+            (keyup.enter)="applyFilters()" />
+        </div>
+
+        <div class="filter-group">
+          <label for="pm-crm" class="label-campo">CRM</label>
+          <input
+            id="pm-crm"
+            type="text"
+            class="campo"
+            [(ngModel)]="crmMedicoFilter"
+            placeholder="Número do CRM"
+            (keyup.enter)="applyFilters()" />
+        </div>
+
+        <div class="filter-group">
+          <label for="pm-uf" class="label-campo">UF</label>
+          <input
+            id="pm-uf"
+            type="text"
+            class="campo"
+            maxlength="2"
+            [(ngModel)]="ufCrmMedicoFilter"
+            placeholder="UF"
+            (keyup.enter)="applyFilters()" />
+        </div>
+
+        <div class="filter-group">
+          <label for="pm-representante" class="label-campo">Representante (funcionário)</label>
+          <select
+            id="pm-representante"
+            class="campo"
+            [(ngModel)]="funcionarioIdFilter"
+            (change)="onFuncionarioFilterChange()">
+            <option value="">Todos</option>
+            <option *ngFor="let rep of representantesVinculados" [value]="rep.id">
+              {{ labelRepresentanteOption(rep) }}
+            </option>
+          </select>
+          <small class="visitacao-filter-hint" *ngIf="!loadingRepresentantes && representantesVinculados.length === 0">
+            Nenhum funcionário com vínculo ao painel nesta unidade.
+          </small>
+        </div>
+
+        <div class="filter-group">
+          <label for="pm-nome-rep-texto" class="label-campo">Nome representante (texto)</label>
+          <input
+            id="pm-nome-rep-texto"
+            type="text"
+            class="campo"
+            [(ngModel)]="nomeRepresentanteFilter"
+            [disabled]="!!funcionarioIdFilter"
+            placeholder="Funcionário ou nome no ERP"
+            (keyup.enter)="applyFilters()" />
+        </div>
+
+        <div class="filter-group">
+          <label for="pm-unidade" class="label-campo">Unidade</label>
+          <select
+            id="pm-unidade"
+            class="campo"
+            [(ngModel)]="unidadeFilter"
+            [disabled]="unidadeDisabled">
+            <option value="">Todas</option>
+            <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-rodape">
+      <button type="button" class="botao botao-fantasma" (click)="clearFilters()">
+        <i class="fas fa-eraser"></i>
+        Limpar filtros
+      </button>
+      <button type="button" class="botao botao-primario" (click)="applyFilters()">
+        <i class="fas fa-filter"></i>
+        Aplicar filtros
+      </button>
+    </div>
+  </div>
+</div>

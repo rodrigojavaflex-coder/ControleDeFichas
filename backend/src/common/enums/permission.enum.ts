@@ -174,6 +174,9 @@ export enum Permission {
   /** Produção — config do painel de retirada. */
   PRODUCAO_PAINEL_CONFIG_READ = 'producao-painel-config:read',
   PRODUCAO_PAINEL_CONFIG_UPDATE = 'producao-painel-config:update',
+
+  /** Visitação — painel médico (médicos × representantes sincronizados). */
+  VISITACAO_PAINEL_MEDICO_READ = 'visitacao-painel-medico:read',
 }
 
 export const PERMISSION_GROUPS = {
@@ -534,6 +537,12 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.PRODUCAO_PAINEL_CONFIG_UPDATE,
       label: 'Editar configuração do painel de retirada',
+    },
+  ],
+  'Visitação — Painel Médico': [
+    {
+      key: Permission.VISITACAO_PAINEL_MEDICO_READ,
+      label: 'Visualizar painel médico (visitação)',
     },
   ],
 };

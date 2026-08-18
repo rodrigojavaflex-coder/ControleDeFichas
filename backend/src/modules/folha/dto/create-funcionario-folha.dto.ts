@@ -52,6 +52,26 @@ export class CreateFuncionarioFolhaDto {
   @Min(1, { message: 'Código funcionário ERP deve ser maior que zero.' })
   codigoFuncionarioErp?: number | null;
 
+  @ApiPropertyOptional({
+    description: 'Filial do painel médico (cdcon). Informar junto com painelCodigoRepresentante.',
+    example: 9999,
+  })
+  @IsOptional()
+  @ValidateIf((_o, v) => v != null && v !== '')
+  @IsInt({ message: 'Filial do painel deve ser um número inteiro.' })
+  @Min(1, { message: 'Filial do painel deve ser maior que zero.' })
+  painelContratoRepresentante?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Código do representante no painel médico (cdfun).',
+    example: 1,
+  })
+  @IsOptional()
+  @ValidateIf((_o, v) => v != null && v !== '')
+  @IsInt({ message: 'Código do representante no painel deve ser inteiro.' })
+  @Min(1, { message: 'Código do representante no painel deve ser maior que zero.' })
+  painelCodigoRepresentante?: number | null;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

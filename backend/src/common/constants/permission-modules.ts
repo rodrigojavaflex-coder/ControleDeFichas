@@ -63,4 +63,9 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
       'Produção — Painel de retirada (config)',
     ],
   },
+  {
+    key: 'visitacao',
+    label: 'Visitação',
+    groupKeys: ['Visitação — Painel Médico'],
+  },
 ];

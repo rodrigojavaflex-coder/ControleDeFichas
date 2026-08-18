@@ -28,6 +28,7 @@ export const HOME_SHORTCUT_IDS = [
   'relatorios-analise-valores',
   'producao-config',
   'producao-produtividade',
+  'visitacao-painel-medico',
 ] as const;
 
 export type HomeShortcutId = (typeof HOME_SHORTCUT_IDS)[number];

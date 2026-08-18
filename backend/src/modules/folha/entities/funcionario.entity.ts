@@ -37,6 +37,22 @@ export class Funcionario extends BaseEntity {
   @Column({ type: 'integer', nullable: true })
   codigoFuncionarioErp?: number | null;
 
+  @ApiProperty({
+    required: false,
+    description: 'Filial do painel médico (cdcon / contratoRepresentante).',
+    example: 9999,
+  })
+  @Column({ type: 'integer', nullable: true })
+  painelContratoRepresentante?: number | null;
+
+  @ApiProperty({
+    required: false,
+    description: 'Código do representante no painel médico (cdfun).',
+    example: 1,
+  })
+  @Column({ type: 'integer', nullable: true })
+  painelCodigoRepresentante?: number | null;
+
   @ApiProperty({ required: false })
   @Column({ type: 'varchar', length: 14, nullable: true })
   cpf?: string | null;

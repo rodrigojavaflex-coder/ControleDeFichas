@@ -339,6 +339,14 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     category: 'Produção',
     requiredPermissions: [Permission.PRODUCAO_PRODUTIVIDADE_READ],
   },
+  {
+    id: 'visitacao-painel-medico',
+    label: 'Painel Médico',
+    route: '/visitacao/painel-medico',
+    icon: 'feather-user-plus',
+    category: 'Visitação',
+    requiredPermissions: [Permission.VISITACAO_PAINEL_MEDICO_READ],
+  },
 ] as const;
 
 const catalogById = new Map(HOME_SHORTCUTS_CATALOG.map((s) => [s.id, s]));

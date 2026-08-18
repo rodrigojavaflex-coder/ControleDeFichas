@@ -9,6 +9,7 @@ export const PERMISSION_MODULE_ICON_KEYS: Record<string, string> = {
   folha: 'feather-briefcase',
   orcamentos: 'feather-file-text',
   producao: 'feather-layers',
+  visitacao: 'feather-user-plus',
 };
 
 /** Ícones das telas/grupos (labels de PERMISSION_MODULE_CONFIG.groupKeys). */
@@ -40,6 +41,7 @@ export const PERMISSION_GROUP_ICON_KEYS: Record<string, string> = {
   'Produção — Configuração': 'feather-settings',
   'Produção — Acompanhamento': 'feather-activity',
   'Produção — Produtividade': 'feather-bar-chart-2',
+  'Visitação — Painel Médico': 'feather-user-plus',
 };
 
 export function getPermissionModuleIconKey(moduleKey: string): string {

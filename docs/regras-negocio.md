@@ -294,6 +294,45 @@
 
 ---
 
+## Visitação — Painel Médico
+
+### RN-VIS-001 — Acesso à tela de painel médico (visitação)
+
+- Tela **`/visitacao/painel-medico`**; permissão **`visitacao-painel-medico:read`**.
+- Menu lateral **Visitação → Painel Médico** e rota protegidos com a mesma permissão (OR).
+
+### RN-VIS-002 — Fonte de dados da consulta
+
+- Listagem lê **`painel_medicos_representantes`** (dados importados pela **RN-REP-001**).
+- A tela **não** consulta o agente/ERP em tempo real.
+
+### RN-VIS-003 — Escopo por unidade do usuário
+
+- Usuário **com** `unidade` cadastrada: vê apenas médicos dessa unidade (backend valida com `resolverEscopoListaFechamentoPorUsuario`; filtro de unidade na UI fica fixo).
+- Usuário **sem** `unidade`: escopo global — todas as unidades; filtro opcional na UI.
+- Endpoint: **`GET /visitacao/painel-medico`** (paginado; filtros opcionais por nome do médico, CRM, UF, representante e código do representante).
+
+### RN-VIS-004 — Conteúdo exibido
+
+- Exibe **todos** os médicos sincronizados no escopo de unidade permitido.
+- Coluna **Representante**: nome do **funcionário** vinculado quando existir par `(painelContratoRepresentante, painelCodigoRepresentante)` no cadastro; caso contrário, nome importado do ERP (`nomeRepresentante`).
+- Indicador visual de **vinculado** vs **sem cadastro** na listagem.
+- Filtro **Representante** usa funcionários com vínculo ao painel (`GET /visitacao/painel-medico/representantes`); filtro por `funcionarioId` restringe à carteira daquele par filial/código.
+
+### RN-VIS-005 — Vínculo funcionário × painel médico
+
+- Campos opcionais em `funcionarios`: **`painelContratoRepresentante`** (cdcon) e **`painelCodigoRepresentante`** (cdfun).
+- Preenchimento **manual** no cadastro de funcionário (seção **Integração ERP**); informar **ambos** ou **nenhum**.
+- Unicidade por unidade: `(unidade, painelContratoRepresentante, painelCodigoRepresentante)` quando preenchidos.
+- **Não** reutilizar `codigoFuncionarioErp` (produtividade/FC08000) para o representante do painel.
+
+### RN-VIS-006 — Integração ERP no cadastro de funcionário
+
+- Seção **Integração ERP** agrupa: `codigoUsuarioErp`, `codigoFuncionarioErp`, `painelContratoRepresentante`, `painelCodigoRepresentante`.
+- Alteração via `POST/PATCH …/folha/funcionarios` com as mesmas validações de par e unicidade do painel (**RN-VIS-005**).
+
+---
+
 ## Etapas de produção (SLA resumo)
 
 ### RN-PCP-001 — Importação de etapas de produção (SLA resumo)

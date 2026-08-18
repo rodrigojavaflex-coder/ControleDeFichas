@@ -39,6 +39,8 @@ interface FolhaFuncFormValue {
   dataDemissao: string;
   codigoUsuarioErp: string | number;
   codigoFuncionarioErp: string | number;
+  painelContratoRepresentante: string | number;
+  painelCodigoRepresentante: string | number;
   ativo: boolean;
   naoReceberReciboWhatsapp: boolean;
   participaFolhaPagamento: boolean;
@@ -162,6 +164,36 @@ export class FolhaFuncionarioFormComponent implements OnInit {
             },
           ],
         ],
+        painelContratoRepresentante: [
+          '',
+          [
+            Validators.min(1),
+            (c: AbstractControl): ValidationErrors | null => {
+              const v = c.value;
+              if (v === '' || v == null) return null;
+              const n = Number(v);
+              if (!Number.isInteger(n) || n < 1) {
+                return { painelCodigoInvalido: true };
+              }
+              return null;
+            },
+          ],
+        ],
+        painelCodigoRepresentante: [
+          '',
+          [
+            Validators.min(1),
+            (c: AbstractControl): ValidationErrors | null => {
+              const v = c.value;
+              if (v === '' || v == null) return null;
+              const n = Number(v);
+              if (!Number.isInteger(n) || n < 1) {
+                return { painelCodigoInvalido: true };
+              }
+              return null;
+            },
+          ],
+        ],
         ativo: [true],
         participaFolhaPagamento: [true],
         naoReceberReciboWhatsapp: [false],
@@ -180,6 +212,8 @@ export class FolhaFuncionarioFormComponent implements OnInit {
         validators: [
           (g: AbstractControl): ValidationErrors | null =>
             this.pixParValidator(g),
+          (g: AbstractControl): ValidationErrors | null =>
+            this.painelParValidator(g),
         ],
       },
     );
@@ -605,6 +639,26 @@ export class FolhaFuncionarioFormComponent implements OnInit {
     return { pixPar: true };
   }
 
+  /** Filial e código do painel: ambos vazios ou ambos preenchidos. */
+  private painelParValidator(group: AbstractControl): ValidationErrors | null {
+    const contrato = String(
+      group.get('painelContratoRepresentante')?.value ?? '',
+    ).trim();
+    const codigo = String(
+      group.get('painelCodigoRepresentante')?.value ?? '',
+    ).trim();
+    const temContrato = contrato.length > 0;
+    const temCodigo = codigo.length > 0;
+    if (temContrato === temCodigo) {
+      return null;
+    }
+    return { painelPar: true };
+  }
+
+  mensagemErroPainelPar(): string {
+    return 'Informe filial do painel e código do representante juntos, ou deixe ambos vazios.';
+  }
+
   private chavePixFormato(control: AbstractControl): ValidationErrors | null {
     const v = String(control.value ?? '').trim();
     if (!v) {
@@ -770,6 +824,14 @@ export class FolhaFuncionarioFormComponent implements OnInit {
             f.codigoUsuarioErp != null ? String(f.codigoUsuarioErp) : '',
           codigoFuncionarioErp:
             f.codigoFuncionarioErp != null ? String(f.codigoFuncionarioErp) : '',
+          painelContratoRepresentante:
+            f.painelContratoRepresentante != null
+              ? String(f.painelContratoRepresentante)
+              : '',
+          painelCodigoRepresentante:
+            f.painelCodigoRepresentante != null
+              ? String(f.painelCodigoRepresentante)
+              : '',
           cargoId: f.cargo?.id ?? f.cargoId ?? null,
           setorId: f.setor?.id ?? f.setorId ?? null,
           ativo: f.ativo ?? true,
@@ -846,6 +908,23 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       payload['codigoFuncionarioErp'] = Number(codFunErp);
     } else if (this.isEditMode) {
       payload['codigoFuncionarioErp'] = null;
+    }
+
+    const painelContrato =
+      v.painelContratoRepresentante != null &&
+      v.painelContratoRepresentante !== ''
+        ? String(v.painelContratoRepresentante).trim()
+        : '';
+    const painelCodigo =
+      v.painelCodigoRepresentante != null && v.painelCodigoRepresentante !== ''
+        ? String(v.painelCodigoRepresentante).trim()
+        : '';
+    if (painelContrato && painelCodigo) {
+      payload['painelContratoRepresentante'] = Number(painelContrato);
+      payload['painelCodigoRepresentante'] = Number(painelCodigo);
+    } else if (this.isEditMode) {
+      payload['painelContratoRepresentante'] = null;
+      payload['painelCodigoRepresentante'] = null;
     }
 
     const cid = v.cargoId != null ? String(v.cargoId).trim() : '';

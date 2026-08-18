@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subject, forkJoin, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { FolhaService } from '../../services/folha.service';
 import { AuthService } from '../../services/auth.service';
 import { PageContextService } from '../../services/page-context.service';
@@ -13,6 +14,7 @@ import {
   FuncionarioPaginated,
   FolhaFuncionarioEventoFixo,
   FolhaMovimentoTipo,
+  FolhaCadastroSimples,
 } from '../../models/folha.model';
 import { Permission, Unidade } from '../../models/usuario.model';
 import { Configuracao } from '../../models/configuracao.model';
@@ -24,7 +26,7 @@ import { formatarTelefoneBrExibicao } from './folha-telefone.util';
   imports: [CommonModule, FormsModule],
   templateUrl: './folha-funcionarios-page.html',
 })
-export class FolhaFuncionariosPage implements OnInit {
+export class FolhaFuncionariosPage implements OnInit, OnDestroy {
   private folha = inject(FolhaService);
   private auth = inject(AuthService);
   private pageCtx = inject(PageContextService);
@@ -32,6 +34,8 @@ export class FolhaFuncionariosPage implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private configuracaoService = inject(ConfiguracaoService);
+  private destroy$ = new Subject<void>();
+  private nomeSearch$ = new Subject<string>();
 
   configuracao: Configuracao | null = null;
 
@@ -43,6 +47,12 @@ export class FolhaFuncionariosPage implements OnInit {
   unidadeFiltro: Unidade | '' = '';
   unidadeFiltroDisabled = false;
   nomeFiltro = '';
+  cargoFiltro = '';
+  setorFiltro = '';
+  /** '' = todos; 'true' | 'false' = filtro explícito */
+  participaFolhaFiltro: '' | 'true' | 'false' = '';
+  cargosCatalogo: FolhaCadastroSimples[] = [];
+  setoresCatalogo: FolhaCadastroSimples[] = [];
   dados: FuncionarioPaginated | null = null;
   pagina = 1;
   pageSize = 10;
@@ -58,6 +68,48 @@ export class FolhaFuncionariosPage implements OnInit {
     this.initializeUnidadeFiltro();
     this.aplicarUnidadeDaQueryString();
     this.carregarConfiguracao();
+    this.configurarBuscaNome();
+    this.carregarCatalogosFiltro();
+    this.carregarLista();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private configurarBuscaNome(): void {
+    this.nomeSearch$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.pagina = 1;
+        this.carregarLista();
+      });
+  }
+
+  private carregarCatalogosFiltro(): void {
+    forkJoin({
+      cargos: this.folha.listarCargos(),
+      setores: this.folha.listarSetores(),
+    }).subscribe({
+      next: ({ cargos, setores }) => {
+        this.cargosCatalogo = cargos;
+        this.setoresCatalogo = setores;
+      },
+      error: () => {
+        this.cargosCatalogo = [];
+        this.setoresCatalogo = [];
+      },
+    });
+  }
+
+  onNomeFiltroInput(): void {
+    this.nomeSearch$.next(this.nomeFiltro.trim());
+  }
+
+  onMudarFiltroCombo(): void {
+    this.pagina = 1;
+    this.sincronizarQueryFiltroUnidade();
     this.carregarLista();
   }
 
@@ -163,6 +215,9 @@ export class FolhaFuncionariosPage implements OnInit {
 
   limparFiltros(): void {
     this.nomeFiltro = '';
+    this.cargoFiltro = '';
+    this.setorFiltro = '';
+    this.participaFolhaFiltro = '';
     this.pagina = 1;
     if (!this.unidadeFiltroDisabled) {
       this.unidadeFiltro = '';
@@ -171,22 +226,62 @@ export class FolhaFuncionariosPage implements OnInit {
     this.carregarLista();
   }
 
-  onMudarUnidadeFiltro(): void {
-    this.pagina = 1;
-    this.sincronizarQueryFiltroUnidade();
-    this.carregarLista();
+  private filtrosListaAtuais(): {
+    unidade?: Unidade;
+    nome?: string;
+    cargoId?: string;
+    setorId?: string;
+    participaFolhaPagamento?: boolean;
+  } {
+    return {
+      unidade: this.unidadeFiltro ? (this.unidadeFiltro as Unidade) : undefined,
+      nome: this.nomeFiltro.trim() || undefined,
+      cargoId: this.cargoFiltro || undefined,
+      setorId: this.setorFiltro || undefined,
+      participaFolhaPagamento: this.parseParticipaFolhaFiltro(),
+    };
+  }
+
+  private parseParticipaFolhaFiltro(): boolean | undefined {
+    if (this.participaFolhaFiltro === 'true') return true;
+    if (this.participaFolhaFiltro === 'false') return false;
+    return undefined;
+  }
+
+  labelParticipaFolha(f: FuncionarioFolha): string {
+    return f.participaFolhaPagamento !== false ? 'Sim' : 'Não';
+  }
+
+  private labelCargoFiltro(): string | null {
+    if (!this.cargoFiltro) return null;
+    return (
+      this.cargosCatalogo.find((c) => c.id === this.cargoFiltro)?.descricao ??
+      this.cargoFiltro
+    );
+  }
+
+  private labelSetorFiltro(): string | null {
+    if (!this.setorFiltro) return null;
+    return (
+      this.setoresCatalogo.find((s) => s.id === this.setorFiltro)?.descricao ??
+      this.setorFiltro
+    );
   }
 
   carregarLista(): void {
     if (!this.podeLer()) return;
     this.carregando = true;
-    const unidade = this.unidadeFiltro ? (this.unidadeFiltro as Unidade) : undefined;
+    const { unidade, nome, cargoId, setorId, participaFolhaPagamento } =
+      this.filtrosListaAtuais();
     this.folha
       .listarFuncionarios(
         unidade,
         this.pagina,
         this.pageSize,
-        this.nomeFiltro || undefined,
+        nome,
+        cargoId,
+        setorId,
+        participaFolhaPagamento,
       )
       .subscribe({
         next: (r) => {
@@ -218,9 +313,17 @@ export class FolhaFuncionariosPage implements OnInit {
   ): void {
     if (!this.podeLer() || this.imprimindo) return;
     this.imprimindo = true;
-    const unidade = this.unidadeFiltro ? (this.unidadeFiltro as Unidade) : undefined;
+    const { unidade, nome, cargoId, setorId, participaFolhaPagamento } =
+      this.filtrosListaAtuais();
     this.folha
-      .listarFuncionariosTodos(unidade, this.nomeFiltro || undefined, comEventosFixos)
+      .listarFuncionariosTodos(
+        unidade,
+        nome,
+        comEventosFixos,
+        cargoId,
+        setorId,
+        participaFolhaPagamento,
+      )
       .subscribe({
         next: (rows) => {
           this.imprimindo = false;
@@ -464,6 +567,18 @@ export class FolhaFuncionariosPage implements OnInit {
     );
     if (this.nomeFiltro.trim()) {
       partes.push(`Nome contém: «${this.nomeFiltro.trim()}»`);
+    }
+    const cargoLabel = this.labelCargoFiltro();
+    if (cargoLabel) {
+      partes.push(`Cargo: ${cargoLabel}`);
+    }
+    const setorLabel = this.labelSetorFiltro();
+    if (setorLabel) {
+      partes.push(`Setor: ${setorLabel}`);
+    }
+    const participa = this.parseParticipaFolhaFiltro();
+    if (participa !== undefined) {
+      partes.push(`Participa da folha: ${participa ? 'Sim' : 'Não'}`);
     }
     partes.push(...extras);
     return `<div class="report-subtitle">${this.escapeHtml(partes.join(' · '))}</div>`;

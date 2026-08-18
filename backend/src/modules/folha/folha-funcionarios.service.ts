@@ -69,11 +69,22 @@ export class FolhaFuncionariosService {
       dto.unidade,
       dto.codigoFuncionarioErp ?? null,
     );
+    this.assertPainelRepresentantePar(
+      dto.painelContratoRepresentante,
+      dto.painelCodigoRepresentante,
+    );
+    await this.assertPainelRepresentanteUnico(
+      dto.unidade,
+      dto.painelContratoRepresentante ?? null,
+      dto.painelCodigoRepresentante ?? null,
+    );
     const payload: Partial<Funcionario> = {
       nome: dto.nome,
       unidade: dto.unidade,
       codigoUsuarioErp: dto.codigoUsuarioErp ?? null,
       codigoFuncionarioErp: dto.codigoFuncionarioErp ?? null,
+      painelContratoRepresentante: dto.painelContratoRepresentante ?? null,
+      painelCodigoRepresentante: dto.painelCodigoRepresentante ?? null,
       cpf: dto.cpf?.trim() ? dto.cpf.trim() : undefined,
       telefone: dto.telefone?.trim() || null,
       endereco: dto.endereco?.trim() || null,
@@ -216,6 +227,20 @@ export class FolhaFuncionariosService {
 
     if (dto.nome?.trim()) {
       qb.andWhere('f.nome ILIKE :nome', { nome: `%${dto.nome.trim()}%` });
+    }
+
+    if (dto.cargoId) {
+      qb.andWhere('cargo.id = :cargoId', { cargoId: dto.cargoId });
+    }
+
+    if (dto.setorId) {
+      qb.andWhere('setor.id = :setorId', { setorId: dto.setorId });
+    }
+
+    if (dto.participaFolhaPagamento !== undefined) {
+      qb.andWhere('f.participaFolhaPagamento = :participaFolhaPagamento', {
+        participaFolhaPagamento: dto.participaFolhaPagamento,
+      });
     }
 
     if (dto.comEventosFixos) {
@@ -371,6 +396,30 @@ export class FolhaFuncionariosService {
         id,
       );
       entity.codigoFuncionarioErp = dto.codigoFuncionarioErp ?? null;
+    }
+
+    const painelContrato =
+      dto.painelContratoRepresentante !== undefined
+        ? dto.painelContratoRepresentante
+        : entity.painelContratoRepresentante;
+    const painelCodigo =
+      dto.painelCodigoRepresentante !== undefined
+        ? dto.painelCodigoRepresentante
+        : entity.painelCodigoRepresentante;
+    if (
+      dto.painelContratoRepresentante !== undefined ||
+      dto.painelCodigoRepresentante !== undefined
+    ) {
+      this.assertPainelRepresentantePar(painelContrato, painelCodigo);
+      const unidadeAlvo = dto.unidade ?? entity.unidade;
+      await this.assertPainelRepresentanteUnico(
+        unidadeAlvo,
+        painelContrato ?? null,
+        painelCodigo ?? null,
+        id,
+      );
+      entity.painelContratoRepresentante = painelContrato ?? null;
+      entity.painelCodigoRepresentante = painelCodigo ?? null;
     }
 
     if (patchCargoId !== undefined) {
@@ -587,6 +636,42 @@ export class FolhaFuncionariosService {
     if (existente) {
       throw new BadRequestException(
         `Já existe funcionário «${existente.nome}» com o código funcionário ERP ${codigo} nesta unidade.`,
+      );
+    }
+  }
+
+  private assertPainelRepresentantePar(
+    contrato: number | null | undefined,
+    codigo: number | null | undefined,
+  ): void {
+    const temContrato = contrato != null;
+    const temCodigo = codigo != null;
+    if (temContrato !== temCodigo) {
+      throw new BadRequestException(
+        'Filial do painel e código do representante no painel devem ser informados juntos.',
+      );
+    }
+  }
+
+  private async assertPainelRepresentanteUnico(
+    unidade: Unidade,
+    contrato: number | null | undefined,
+    codigo: number | null | undefined,
+    ignorarFuncionarioId?: string,
+  ): Promise<void> {
+    if (contrato == null || codigo == null) return;
+    const qb = this.funcionarioRepo
+      .createQueryBuilder('f')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere('f.painelContratoRepresentante = :contrato', { contrato })
+      .andWhere('f.painelCodigoRepresentante = :codigo', { codigo });
+    if (ignorarFuncionarioId) {
+      qb.andWhere('f.id != :id', { id: ignorarFuncionarioId });
+    }
+    const existente = await qb.getOne();
+    if (existente) {
+      throw new BadRequestException(
+        `Já existe funcionário «${existente.nome}» vinculado ao representante ${codigo} (filial ${contrato}) nesta unidade.`,
       );
     }
   }

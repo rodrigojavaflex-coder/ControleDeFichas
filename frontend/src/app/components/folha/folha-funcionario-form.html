@@ -180,38 +180,6 @@
             <input id="ff-dem" type="date" class="form-control" formControlName="dataDemissao" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="ff-cod-erp">Código usuário ERP (cdusu)</label>
-            <input
-              id="ff-cod-erp"
-              type="number"
-              min="1"
-              step="1"
-              class="form-control"
-              formControlName="codigoUsuarioErp"
-              placeholder="Ex.: 1110"
-            />
-            <div class="form-help">Código de usuário no ERP (cdusu) para produtividade do laboratório.</div>
-            @if (form.get('codigoUsuarioErp')?.invalid && form.get('codigoUsuarioErp')?.touched) {
-              <div class="error-message">Informe um código inteiro maior que zero.</div>
-            }
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="ff-cod-func-erp">Código funcionário ERP (cdfun)</label>
-            <input
-              id="ff-cod-func-erp"
-              type="number"
-              min="1"
-              step="1"
-              class="form-control"
-              formControlName="codigoFuncionarioErp"
-              placeholder="Ex.: 33"
-            />
-            <div class="form-help">Código do funcionário no ERP (FC08000) — fallback quando cdusu não vier no PCP.</div>
-            @if (form.get('codigoFuncionarioErp')?.invalid && form.get('codigoFuncionarioErp')?.touched) {
-              <div class="error-message">Informe um código inteiro maior que zero.</div>
-            }
-          </div>
-          <div class="form-group">
             <label class="form-label" for="ff-ativo">Ativo</label>
             <select id="ff-ativo" class="form-control" formControlName="ativo">
               <option [ngValue]="true">Sim</option>
@@ -278,6 +246,83 @@
             }
           </div>
         </div>
+      </section>
+
+      <section
+        class="folha-form-block folha-form-block--integracao-erp"
+        aria-labelledby="ff-h-integracao-erp"
+      >
+        <h3 id="ff-h-integracao-erp" class="folha-form-block-title">Integração ERP</h3>
+        <p class="form-help folha-form-block-intro">
+          Códigos usados para cruzar o cadastro com sistemas legados (produção e painel médico de visitação).
+        </p>
+
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label" for="ff-cod-erp">Código usuário ERP (cdusu)</label>
+            <input
+              id="ff-cod-erp"
+              type="number"
+              min="1"
+              step="1"
+              class="form-control"
+              formControlName="codigoUsuarioErp"
+              placeholder="Ex.: 1110"
+            />
+            <div class="form-help">Produtividade do laboratório (movimentos PCP).</div>
+            @if (form.get('codigoUsuarioErp')?.invalid && form.get('codigoUsuarioErp')?.touched) {
+              <div class="error-message">Informe um código inteiro maior que zero.</div>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-cod-func-erp">Código funcionário ERP (cdfun)</label>
+            <input
+              id="ff-cod-func-erp"
+              type="number"
+              min="1"
+              step="1"
+              class="form-control"
+              formControlName="codigoFuncionarioErp"
+              placeholder="Ex.: 33"
+            />
+            <div class="form-help">Fallback PCP quando cdusu não vier no movimento (FC08000).</div>
+            @if (form.get('codigoFuncionarioErp')?.invalid && form.get('codigoFuncionarioErp')?.touched) {
+              <div class="error-message">Informe um código inteiro maior que zero.</div>
+            }
+          </div>
+        </div>
+
+        <div class="form-row form-row-2">
+          <div class="form-group">
+            <label class="form-label" for="ff-painel-contrato">Filial do painel (cdcon)</label>
+            <input
+              id="ff-painel-contrato"
+              type="number"
+              min="1"
+              step="1"
+              class="form-control"
+              formControlName="painelContratoRepresentante"
+              placeholder="Ex.: 9999"
+            />
+            <div class="form-help">Contrato/filial do painel médico — informe junto com o código do representante.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-painel-rep">Código representante painel (cdfun)</label>
+            <input
+              id="ff-painel-rep"
+              type="number"
+              min="1"
+              step="1"
+              class="form-control"
+              formControlName="painelCodigoRepresentante"
+              placeholder="Ex.: 1"
+            />
+            <div class="form-help">Representante no painel médico (visitação/comissão).</div>
+          </div>
+        </div>
+        @if (form.touched && form.hasError('painelPar')) {
+          <div class="error-message" role="alert">{{ mensagemErroPainelPar() }}</div>
+        }
       </section>
 
       <section
