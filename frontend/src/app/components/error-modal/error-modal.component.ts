@@ -17,7 +17,10 @@ import { ThemeService, Theme } from '../../services/theme.service';
           <p class="modal-message">{{ message }}</p>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-primary" (click)="close()">OK</button>
+          @if (retryLabel) {
+            <button type="button" class="btn btn-secondary" (click)="onRetryClick()">{{ retryLabel }}</button>
+          }
+          <button type="button" class="btn btn-primary" (click)="close()">OK</button>
         </div>
       </div>
     </div>
@@ -89,6 +92,13 @@ import { ThemeService, Theme } from '../../services/theme.service';
         padding: 0.75rem 1rem;
         border-top: 1px solid #ccc;
         text-align: right;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+      }
+      .btn-secondary {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
       }
       /* Tema claro */
       .light {
@@ -111,11 +121,17 @@ export class ErrorModalComponent implements OnInit {
   @Input() visible = false;
   @Input() title?: string;
   @Input() message = '';
+  @Input() retryLabel?: string;
   @Output() closed = new EventEmitter<void>();
+  @Output() retry = new EventEmitter<void>();
 
   close() {
     this.visible = false;
     this.closed.emit();
+  }
+
+  onRetryClick(): void {
+    this.retry.emit();
   }
 
   /** Mensagens longas (ex.: lista de competências com lançamento na folha). */

@@ -4,6 +4,13 @@ export const MENSAGEM_ERRO_CONEXAO_AGENTE =
   'Não foi possível conectar ao Servidor da unidade.\n' +
   'Aguarde alguns minutos e tente de novo.';
 
+export function mensagemErroConexaoAgenteCaixa(unidade: string): string {
+  return (
+    `Não foi possível atualizar as informações do caixa de ${unidade}.\n\n` +
+    'Aguarde alguns minutos e tente novamente!'
+  );
+}
+
 function extrairTextoMensagemErro(err: unknown): string | null {
   if (!err || typeof err !== 'object') {
     return null;
@@ -27,8 +34,19 @@ function extrairTextoMensagemErro(err: unknown): string | null {
   return null;
 }
 
+export function isMensagemErroConexaoAgenteCaixa(
+  mensagem: string | null | undefined,
+): boolean {
+  return /^Não foi possível atualizar as informações do caixa de /i.test(
+    mensagem?.trim() ?? '',
+  );
+}
+
 export function isMensagemErroConexaoAgente(mensagem: string | null | undefined): boolean {
   if (!mensagem?.trim()) {
+    return false;
+  }
+  if (isMensagemErroConexaoAgenteCaixa(mensagem)) {
     return false;
   }
   if (mensagem.trim() === MENSAGEM_ERRO_CONEXAO_AGENTE) {
@@ -73,10 +91,17 @@ export function isMensagemErroConexaoAgente(mensagem: string | null | undefined)
 export function normalizarMensagemErroApi(
   mensagem: string | null | undefined,
 ): string {
-  if (isMensagemErroConexaoAgente(mensagem)) {
+  const texto = mensagem?.trim() ?? '';
+  if (!texto) {
+    return '';
+  }
+  if (isMensagemErroConexaoAgenteCaixa(texto)) {
+    return texto;
+  }
+  if (isMensagemErroConexaoAgente(texto)) {
     return MENSAGEM_ERRO_CONEXAO_AGENTE;
   }
-  return mensagem?.trim() ?? '';
+  return texto;
 }
 
 export function extrairMensagemErroApi(
@@ -88,6 +113,26 @@ export function extrairMensagemErroApi(
     (err instanceof Error ? err.message : null);
   const normalizada = normalizarMensagemErroApi(bruta);
   return normalizada || fallback;
+}
+
+export function extrairMensagemErroApiCaixa(
+  err: unknown,
+  unidade: string,
+  fallback = 'Não foi possível atualizar as informações do caixa.',
+): string {
+  const bruta =
+    extrairTextoMensagemErro(err) ??
+    (err instanceof Error ? err.message : null);
+
+  if (isMensagemErroConexaoAgenteCaixa(bruta)) {
+    return bruta!.trim();
+  }
+
+  if (isMensagemErroConexaoAgente(bruta)) {
+    return mensagemErroConexaoAgenteCaixa(unidade);
+  }
+
+  return bruta?.trim() || fallback;
 }
 
 /** Normaliza e deduplica erros de sync/importação exibidos em listas. */

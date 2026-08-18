@@ -1,4 +1,4 @@
-<div class="fechamento-caixa-page vendas-page">
+<div class="fechamento-caixa-page vendas-page" [class.fechamento-caixa-page--importando]="importandoErp">
   <section class="results-card">
     <div class="top-bar">
       <div class="filter-group">
@@ -279,6 +279,20 @@
       </div>
     </section>
   </section>
+
+  @if (importandoErp) {
+    <div
+      class="fechamento-caixa-processing-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-busy="true">
+      <div class="fechamento-caixa-processing-modal">
+        <i class="fas fa-spinner fa-spin"></i>
+        <h3>Atualizando vendas do ERP</h3>
+        <p>Aguarde enquanto buscamos os dados da unidade.</p>
+      </div>
+    </div>
+  }
 </div>
 <app-confirmation-modal
   [isVisible]="showFecharCaixaModal"

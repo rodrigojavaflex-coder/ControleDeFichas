@@ -6,6 +6,38 @@ export const MENSAGEM_ERRO_CONEXAO_AGENTE =
   'Não foi possível conectar ao Servidor da unidade.\n' +
   'Aguarde alguns minutos e tente de novo.';
 
+export function mensagemErroConexaoAgenteCaixa(unidade: string): string {
+  return (
+    `Não foi possível atualizar as informações do caixa de ${unidade}.\n\n` +
+    'Aguarde alguns minutos e tente novamente!'
+  );
+}
+
+export function isMensagemErroConexaoAgente(mensagem: string | null | undefined): boolean {
+  if (!mensagem?.trim()) {
+    return false;
+  }
+  const texto = mensagem.trim();
+  if (texto === MENSAGEM_ERRO_CONEXAO_AGENTE) {
+    return true;
+  }
+  if (/^Não foi possível atualizar as informações do caixa de /i.test(texto)) {
+    return true;
+  }
+  return false;
+}
+
+export function mensagemErroChamadaAgenteCaixa(
+  error: unknown,
+  unidade: string,
+): string {
+  const msg = mensagemErroChamadaAgente(error);
+  if (isMensagemErroConexaoAgente(msg)) {
+    return mensagemErroConexaoAgenteCaixa(unidade);
+  }
+  return msg;
+}
+
 const STATUS_CONEXAO_AGENTE = new Set([
   502, 503, 504, 520, 521, 522, 523, 524, 530,
 ]);

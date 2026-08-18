@@ -13,9 +13,10 @@ import { Permission } from '../../common/enums/permission.enum';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import {
-  formatarErroRespostaAgente,
   mensagemErroChamadaAgente,
+  mensagemErroChamadaAgenteCaixa,
 } from '../../common/utils/formatar-erro-agente.util';
+import { fetchAgenteComRetry, AGENTE_RETRY_BACKOFF_CAIXA_MS } from '../../common/utils/fetch-agente-com-retry.util';
 import {
   normalizarTextoLegado,
   padronizarNomeDeSistemaLegado,
@@ -337,7 +338,7 @@ export class FechamentoCaixaService {
 
     const pagamentosResp = await this.chamarAgente<{
       pagamentos: AgenteCaixaPagamentoRow[];
-    }>(agente, '/api/v1/caixa/pagamentos', body, 'pagamentos');
+    }>(agente, '/api/v1/caixa/pagamentos', body, 'pagamentos', unidade);
 
     this.importacaoProgressService.atualizar({
       fase: 'consultando_agente',
@@ -350,6 +351,7 @@ export class FechamentoCaixaService {
       '/api/v1/caixa/itens',
       body,
       'itens',
+      unidade,
     );
 
     this.importacaoProgressService.atualizar({
@@ -360,7 +362,7 @@ export class FechamentoCaixaService {
 
     const requisicoesResp = await this.chamarAgente<{
       requisicoes: AgenteCaixaRequisicaoRow[];
-    }>(agente, '/api/v1/caixa/requisicoes-pagas', body, 'requisicoes-pagas');
+    }>(agente, '/api/v1/caixa/requisicoes-pagas', body, 'requisicoes-pagas', unidade);
 
     const pagamentosRows = pagamentosResp.pagamentos ?? [];
     const itensRows = itensResp.itens ?? [];
@@ -503,31 +505,29 @@ export class FechamentoCaixaService {
     path: string,
     body: Record<string, unknown>,
     rotulo = 'caixa',
+    unidade?: Unidade,
   ): Promise<T> {
-    const controller = new AbortController();
     const timeoutMs = FechamentoCaixaService.CAIXA_AGENTE_TIMEOUT_MS;
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     const inicio = Date.now();
 
     try {
-      const response = await fetch(`${agente.url}${path}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${agente.token}`,
-          'Content-Type': 'application/json',
+      const response = await fetchAgenteComRetry(
+        `${agente.url}${path}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${agente.token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
         },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response
-          .text()
-          .catch(() => 'Erro desconhecido');
-        throw new ServiceUnavailableException(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
+        {
+          timeoutMs,
+          logger: this.logger,
+          rotulo: `${rotulo} (${path})`,
+          backoffMs: AGENTE_RETRY_BACKOFF_CAIXA_MS,
+        },
+      );
 
       const resultado = (await response.json()) as T;
       this.logger.log(
@@ -538,10 +538,10 @@ export class FechamentoCaixaService {
       if (error instanceof ServiceUnavailableException) {
         throw error;
       }
-      const message = mensagemErroChamadaAgente(error);
+      const message = unidade
+        ? mensagemErroChamadaAgenteCaixa(error, unidade)
+        : mensagemErroChamadaAgente(error);
       throw new ServiceUnavailableException(message);
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 

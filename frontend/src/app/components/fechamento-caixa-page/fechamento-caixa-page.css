@@ -548,3 +548,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+.fechamento-caixa-page--importando .results-card {
+  pointer-events: none;
+  user-select: none;
+}
+
+.fechamento-caixa-processing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 13000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--cor-fundo, #0f172a) 55%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.fechamento-caixa-processing-modal {
+  text-align: center;
+  padding: 1.75rem;
+  border-radius: 12px;
+  background: var(--cor-superficie, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  max-width: 400px;
+}
+
+.fechamento-caixa-processing-modal i {
+  font-size: 2rem;
+  color: var(--cor-primaria, #2563eb);
+}
+
+.fechamento-caixa-processing-modal h3 {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.fechamento-caixa-processing-modal p {
+  margin: 0;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.9rem;
+}

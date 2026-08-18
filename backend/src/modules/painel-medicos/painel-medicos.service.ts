@@ -11,10 +11,8 @@ import {
   PainelContratoRepresentantesConfig,
 } from '../../common/utils/painel-config.util';
 import { padronizarNomeDeSistemaLegado } from '../../common/utils/encoding-legado.util';
-import {
-  formatarErroRespostaAgente,
-  mensagemErroChamadaAgente,
-} from '../../common/utils/formatar-erro-agente.util';
+import { mensagemErroChamadaAgente } from '../../common/utils/formatar-erro-agente.util';
+import { fetchAgenteComRetry } from '../../common/utils/fetch-agente-com-retry.util';
 
 export interface AgentePainelMedico {
   nome_medico: string;
@@ -69,32 +67,26 @@ export class PainelMedicosService {
 
     this.logger.log(`[${agente}] Chamando agente painel: ${urlCompleta}`);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000);
-
     try {
-      const response = await fetch(urlCompleta, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      const response = await fetchAgenteComRetry(
+        urlCompleta,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
+        {
+          timeoutMs: 120000,
+          logger: this.logger,
+          rotulo: `[${agente}] painel médicos`,
+        },
+      );
 
       const data = await response.json();
       return data.medicos_representantes || [];
     } catch (error: unknown) {
-      clearTimeout(timeoutId);
       throw new Error(mensagemErroChamadaAgente(error));
     }
   }

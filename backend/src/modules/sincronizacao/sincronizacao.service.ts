@@ -27,10 +27,10 @@ import {
   normalizarDataIso,
 } from '../../common/utils/data-date.util';
 import {
-  formatarErroRespostaAgente,
   MENSAGEM_ERRO_CONEXAO_AGENTE,
   mensagemErroChamadaAgente,
 } from '../../common/utils/formatar-erro-agente.util';
+import { fetchAgenteComRetry } from '../../common/utils/fetch-agente-com-retry.util';
 import {
   ImportarProducaoEtapasDto,
   ImportarProducaoEtapasResponseDto,
@@ -1721,42 +1721,27 @@ export class SincronizacaoService {
       `[${agente}] Chamando agente orçamentos por período: ${urlCompleta} (${start} a ${end})`,
     );
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 180000);
-
-    try {
-      const response = await fetch(urlCompleta, {
+    const response = await this.fetchDoAgente(
+      urlCompleta,
+      {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ unit, start, end }),
-        signal: controller.signal,
-      });
+      },
+      180000,
+      agente,
+      'orçamentos por período',
+    );
 
-      clearTimeout(timeoutId);
+    const data = await response.json();
+    this.logger.log(
+      `[${agente}] Resposta do agente: ${data.orcamentos?.length || 0} orçamentos`,
+    );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
-
-      const data = await response.json();
-      this.logger.log(
-        `[${agente}] Resposta do agente: ${data.orcamentos?.length || 0} orçamentos`,
-      );
-
-      return data.orcamentos || [];
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar orçamentos do agente');
-      }
-      throw error;
-    }
+    return data.orcamentos || [];
   }
 
   private async buscarOrcamentosDoAgente(
@@ -1770,41 +1755,26 @@ export class SincronizacaoService {
 
     this.logger.log(`[${agente}] Chamando agente orçamentos: ${urlCompleta}`);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000);
-
-    try {
-      const response = await fetch(urlCompleta, {
+    const response = await this.fetchDoAgente(
+      urlCompleta,
+      {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        signal: controller.signal,
-      });
+      },
+      120000,
+      agente,
+      'orçamentos',
+    );
 
-      clearTimeout(timeoutId);
+    const data = await response.json();
+    this.logger.log(
+      `[${agente}] Resposta do agente: ${data.orcamentos?.length || 0} orçamentos`,
+    );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
-
-      const data = await response.json();
-      this.logger.log(
-        `[${agente}] Resposta do agente: ${data.orcamentos?.length || 0} orçamentos`,
-      );
-
-      return data.orcamentos || [];
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar orçamentos do agente');
-      }
-      throw error;
-    }
+    return data.orcamentos || [];
   }
 
   private async processarOrcamento(
@@ -1920,47 +1890,32 @@ export class SincronizacaoService {
       `[${agente}] Parâmetros: dataMinimaCliente=${dataMinimaCliente}, dataMinimaPrescritor=${dataMinimaPrescritor}, unit=${unit}`,
     );
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 segundos (mais tempo para ambas as queries)
-
-    try {
-      const response = await fetch(urlCompleta, {
+    const response = await this.fetchDoAgente(
+      urlCompleta,
+      {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        signal: controller.signal,
-      });
+      },
+      120000,
+      agente,
+      'sincronização',
+    );
 
-      clearTimeout(timeoutId);
+    const data = await response.json();
+    this.logger.log(
+      `[${agente}] Resposta do agente: ${data.clientes?.length || 0} clientes, ${data.prescritores?.length || 0} prescritores`,
+    );
+    this.logger.debug(
+      `[${agente}] Primeiros clientes: ${JSON.stringify(data.clientes?.slice(0, 3) || [])}`,
+    );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
-
-      const data = await response.json();
-      this.logger.log(
-        `[${agente}] Resposta do agente: ${data.clientes?.length || 0} clientes, ${data.prescritores?.length || 0} prescritores`,
-      );
-      this.logger.debug(
-        `[${agente}] Primeiros clientes: ${JSON.stringify(data.clientes?.slice(0, 3) || [])}`,
-      );
-
-      return {
-        clientes: data.clientes || [],
-        prescritores: data.prescritores || [],
-      };
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar dados de sincronização do agente');
-      }
-      throw error;
-    }
+    return {
+      clientes: data.clientes || [],
+      prescritores: data.prescritores || [],
+    };
   }
 
   /**
@@ -1971,39 +1926,21 @@ export class SincronizacaoService {
     token: string,
     dataMinima: string,
   ): Promise<AgenteCliente[]> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
-
-    try {
-      const response = await fetch(
-        `${url}/api/v1/clientes?dataMinima=${dataMinima}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
+    const response = await this.fetchDoAgente(
+      `${url}/api/v1/clientes?dataMinima=${dataMinima}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-      );
+      },
+      60000,
+      'legado',
+      'clientes',
+    );
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar clientes do agente');
-      }
-      throw error;
-    }
+    return await response.json();
   }
 
   /**
@@ -2014,39 +1951,35 @@ export class SincronizacaoService {
     token: string,
     dataMinima: string,
   ): Promise<AgentePrescritor[]> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
-
-    try {
-      const response = await fetch(
-        `${url}/api/v1/prescritores?dataMinima=${dataMinima}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
+    const response = await this.fetchDoAgente(
+      `${url}/api/v1/prescritores?dataMinima=${dataMinima}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-      );
+      },
+      60000,
+      'legado',
+      'prescritores',
+    );
 
-      clearTimeout(timeoutId);
+    return await response.json();
+  }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar prescritores do agente');
-      }
-      throw error;
-    }
+  private async fetchDoAgente(
+    urlCompleta: string,
+    init: RequestInit,
+    timeoutMs: number,
+    agente: string,
+    rotulo: string,
+  ): Promise<Response> {
+    return fetchAgenteComRetry(urlCompleta, init, {
+      timeoutMs,
+      logger: this.logger,
+      rotulo: `[${agente}] ${rotulo}`,
+    });
   }
 
   /**

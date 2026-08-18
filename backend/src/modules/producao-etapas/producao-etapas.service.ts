@@ -8,7 +8,7 @@ import {
   padronizarDescricaoLegado,
   padronizarNomeLegadoNullable,
 } from '../../common/utils/encoding-legado.util';
-import { formatarErroRespostaAgente } from '../../common/utils/formatar-erro-agente.util';
+import { fetchAgenteComRetry } from '../../common/utils/fetch-agente-com-retry.util';
 
 export interface AgenteProducaoEtapa {
   filial: number;
@@ -169,46 +169,21 @@ export class ProducaoEtapasService {
       `[${agente}] Consultando exclusões RECEITAS: ${urlCompleta} (${start}..${end}, unit=${unit})`,
     );
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000);
-
-    try {
-      const response = await fetch(urlCompleta, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ unit, start, end }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(
-          `[${agente}] exclusoes-receitas HTTP ${response.status}: ${errorText.slice(0, 500)}`,
-        );
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
-
-      const data = (await response.json()) as {
-        exclusoes?: AgenteProducaoExclusaoReceita[];
-      };
-      const exclusoes = data.exclusoes ?? [];
-      this.logger.log(
-        `[${agente}] Agente retornou ${exclusoes.length} exclusão(ões) confirmada(s) (FC12100 ausente)`,
-      );
-      return exclusoes;
-    } catch (error: unknown) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar exclusões do agente');
-      }
-      throw error;
-    }
+    const data = await this.fetchAgentePostJson<{
+      exclusoes?: AgenteProducaoExclusaoReceita[];
+    }>(
+      urlCompleta,
+      token,
+      { unit, start, end },
+      120000,
+      agente,
+      'exclusoes-receitas',
+    );
+    const exclusoes = data.exclusoes ?? [];
+    this.logger.log(
+      `[${agente}] Agente retornou ${exclusoes.length} exclusão(ões) confirmada(s) (FC12100 ausente)`,
+    );
+    return exclusoes;
   }
 
   /** RN-PCP-008: remove todas as etapas da fórmula excluída no ERP (sem histórico local). */
@@ -264,46 +239,21 @@ export class ProducaoEtapasService {
       `[${agente}] Consultando alterações AGENDAMENTO RECEITAS: ${urlCompleta} (${start}..${end}, unit=${unit})`,
     );
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000);
-
-    try {
-      const response = await fetch(urlCompleta, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ unit, start, end }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.logger.error(
-          `[${agente}] alteracoes-agendamento-receitas HTTP ${response.status}: ${errorText.slice(0, 500)}`,
-        );
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
-
-      const data = (await response.json()) as {
-        alteracoes?: AgenteProducaoAlteracaoAgendamento[];
-      };
-      const alteracoes = data.alteracoes ?? [];
-      this.logger.log(
-        `[${agente}] Agente retornou ${alteracoes.length} alteração(ões) AGENDAMENTO confirmada(s)`,
-      );
-      return alteracoes;
-    } catch (error: unknown) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar alterações de agendamento do agente');
-      }
-      throw error;
-    }
+    const data = await this.fetchAgentePostJson<{
+      alteracoes?: AgenteProducaoAlteracaoAgendamento[];
+    }>(
+      urlCompleta,
+      token,
+      { unit, start, end },
+      120000,
+      agente,
+      'alteracoes-agendamento-receitas',
+    );
+    const alteracoes = data.alteracoes ?? [];
+    this.logger.log(
+      `[${agente}] Agente retornou ${alteracoes.length} alteração(ões) AGENDAMENTO confirmada(s)`,
+    );
+    return alteracoes;
   }
 
   /** RN-PCP-012: atualiza data/hora de retirada em todas as etapas da fórmula. */
@@ -379,42 +329,46 @@ export class ProducaoEtapasService {
 
     this.logger.log(`[${agente}] Chamando agente produção: ${urlCompleta}`);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    const data = await this.fetchAgentePostJson<{ etapas?: AgenteProducaoEtapa[] }>(
+      urlCompleta,
+      token,
+      body,
+      180000,
+      agente,
+      'etapas-resumo',
+    );
+    const etapas = data.etapas ?? [];
+    this.logger.log(
+      `[${agente}] Agente retornou ${etapas.length} etapa(s) (unit=${body.unit}, período=${body.start ?? body.dataMinimaMovimento}-${body.end ?? ''})`,
+    );
+    return etapas;
+  }
 
-    try {
-      const response = await fetch(urlCompleta, {
+  private async fetchAgentePostJson<T>(
+    urlCompleta: string,
+    token: string,
+    body: Record<string, unknown>,
+    timeoutMs: number,
+    agente: string,
+    rotulo: string,
+  ): Promise<T> {
+    const response = await fetchAgenteComRetry(
+      urlCompleta,
+      {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          formatarErroRespostaAgente(response.status, errorText),
-        );
-      }
-
-      const data = (await response.json()) as { etapas?: AgenteProducaoEtapa[] };
-      const etapas = data.etapas ?? [];
-      this.logger.log(
-        `[${agente}] Agente retornou ${etapas.length} etapa(s) (unit=${body.unit}, período=${body.start ?? body.dataMinimaMovimento}-${body.end ?? ''})`,
-      );
-      return etapas;
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        throw new Error('Timeout ao buscar etapas do agente');
-      }
-      throw error;
-    }
+      },
+      {
+        timeoutMs,
+        logger: this.logger,
+        rotulo: `[${agente}] ${rotulo}`,
+      },
+    );
+    return response.json() as Promise<T>;
   }
 
   async processarLote(

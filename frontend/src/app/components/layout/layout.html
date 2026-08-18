@@ -2,7 +2,9 @@
   [visible]="(errorModalService.state$ | async)?.visible ?? false"
   [title]="(errorModalService.state$ | async)?.title"
   [message]="(errorModalService.state$ | async)?.message || ''"
-  (closed)="errorModalService.hide()">
+  [retryLabel]="(errorModalService.state$ | async)?.retryLabel"
+  (closed)="errorModalService.hide()"
+  (retry)="errorModalService.retry()">
 </app-error-modal>
 
 <app-global-blocking-overlay />
