@@ -67,3 +67,13 @@ export interface ImportarFeriadosNacionaisResponse {
   inseridos: number;
   ignorados: number;
 }
+
+export interface CalendarioUnidadeResponse {
+  unidade: Unidade;
+  sabadoDiaUtil: boolean;
+}
+
+export interface SalvarCalendarioUnidadeDto {
+  unidade: Unidade;
+  sabadoDiaUtil: boolean;
+}

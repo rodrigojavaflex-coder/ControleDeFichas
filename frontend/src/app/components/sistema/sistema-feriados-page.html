@@ -1,0 +1,52 @@
+<div class="vendas-page producao-config-page sistema-feriados-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar feriados.
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="filters-panel-top">
+        <div class="filters-inline producao-filters-unidade-row">
+          <div class="filter-field">
+            <label class="form-label" for="sf-unidade">Unidade</label>
+            <select
+              id="sf-unidade"
+              class="form-control"
+              [(ngModel)]="unidadeFiltro"
+              [disabled]="unidadeDisabled"
+              (ngModelChange)="onUnidadeChange()">
+              @if (!unidadeDisabled) {
+                <option value="">Selecione…</option>
+              }
+              @for (u of unidades; track u) {
+                <option [ngValue]="u">{{ u }}</option>
+              }
+            </select>
+          </div>
+          @if (unidadeFiltro) {
+            <label class="sistema-feriados-sabado" for="sf-sabado">
+              <input
+                id="sf-sabado"
+                type="checkbox"
+                class="form-checkbox"
+                [(ngModel)]="sabadoDiaUtil"
+                [disabled]="!podeEditar() || salvandoSabado"
+                (ngModelChange)="onSabadoChange()" />
+              <span>Sábado é dia útil</span>
+            </label>
+          }
+        </div>
+      </section>
+
+      @if (!unidadeFiltro) {
+        <div class="loading-message">Selecione uma unidade para carregar os feriados.</div>
+      } @else {
+        <div class="producao-config-shell">
+          <app-producao-feriados-panel
+            class="producao-config-aba-panel"
+            [unidade]="$any(unidadeFiltro)" />
+        </div>
+      }
+    </div>
+  }
+</div>

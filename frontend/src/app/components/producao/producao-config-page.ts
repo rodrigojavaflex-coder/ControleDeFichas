@@ -24,10 +24,9 @@ import {
   ProducaoEtapaTipoCalculo,
 } from '../../models/producao-config.model';
 import { ProducaoJornadaPanel } from './producao-jornada-panel/producao-jornada-panel';
-import { ProducaoFeriadosPanel } from './producao-feriados-panel/producao-feriados-panel';
 import { ProducaoPainelRetiradaPanel } from './producao-painel-retirada-panel/producao-painel-retirada-panel';
 
-export type ProducaoConfigAba = 'etapas' | 'horarios' | 'feriados' | 'painel';
+export type ProducaoConfigAba = 'etapas' | 'horarios' | 'painel';
 
 @Component({
   selector: 'app-producao-config-page',
@@ -36,7 +35,6 @@ export type ProducaoConfigAba = 'etapas' | 'horarios' | 'feriados' | 'painel';
     CommonModule,
     FormsModule,
     ProducaoJornadaPanel,
-    ProducaoFeriadosPanel,
     ProducaoPainelRetiradaPanel,
   ],
   templateUrl: './producao-config-page.html',
@@ -96,7 +94,7 @@ export class ProducaoConfigPage implements OnInit {
     this.pageCtx.setContext({
       title: 'Configuração de produção',
       description:
-        'Etapas remuneradas, horários, feriados e painel de retirada por unidade.',
+        'Etapas remuneradas, horários e painel de retirada por unidade.',
     });
     this.initializeUnidadeFilter();
     this.abaAtiva = this.resolverAbaInicial();
@@ -108,7 +106,6 @@ export class ProducaoConfigPage implements OnInit {
   private resolverAbaInicial(): ProducaoConfigAba {
     if (this.podeLerEtapas()) return 'etapas';
     if (this.podeLerHorarios()) return 'horarios';
-    if (this.podeLerFeriados()) return 'feriados';
     if (this.podeLerPainelConfig()) return 'painel';
     return 'etapas';
   }
@@ -121,7 +118,6 @@ export class ProducaoConfigPage implements OnInit {
     return (
       this.podeLerEtapas() ||
       this.podeLerHorarios() ||
-      this.podeLerFeriados() ||
       this.podeLerPainelConfig()
     );
   }
@@ -132,10 +128,6 @@ export class ProducaoConfigPage implements OnInit {
 
   podeLerHorarios(): boolean {
     return this.auth.hasPermission(Permission.PRODUCAO_JORNADA_READ);
-  }
-
-  podeLerFeriados(): boolean {
-    return this.auth.hasPermission(Permission.PRODUCAO_FERIADO_READ);
   }
 
   podeLerPainelConfig(): boolean {

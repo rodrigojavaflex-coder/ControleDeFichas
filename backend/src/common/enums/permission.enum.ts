@@ -164,11 +164,11 @@ export enum Permission {
   /** Produção — jornada (horários) por unidade. */
   PRODUCAO_JORNADA_READ = 'producao-jornada:read',
   PRODUCAO_JORNADA_UPDATE = 'producao-jornada:update',
-  /** Produção — feriados por unidade. */
-  PRODUCAO_FERIADO_READ = 'producao-feriado:read',
-  PRODUCAO_FERIADO_UPDATE = 'producao-feriado:update',
-  PRODUCAO_FERIADO_IMPORT = 'producao-feriado:import',
-  PRODUCAO_FERIADO_DELETE = 'producao-feriado:delete',
+  /** Sistema — feriados e calendário por unidade. */
+  FERIADO_READ = 'feriado:read',
+  FERIADO_UPDATE = 'feriado:update',
+  FERIADO_IMPORT = 'feriado:import',
+  FERIADO_DELETE = 'feriado:delete',
   /** Produção — painel de retirada (operacional). */
   PRODUCAO_PAINEL_READ = 'producao-painel:read',
   /** Produção — config do painel de retirada. */
@@ -179,6 +179,14 @@ export enum Permission {
   VISITACAO_PAINEL_MEDICO_READ = 'visitacao-painel-medico:read',
   /** Visitação — acompanhamento (caixa recebido × orçamentos rejeitados). */
   VISITACAO_ACOMPANHAMENTO_READ = 'visitacao-acompanhamento:read',
+  /** Visitação — configuração de metas mensais. */
+  VISITACAO_META_READ = 'visitacao-meta:read',
+  VISITACAO_META_UPDATE = 'visitacao-meta:update',
+  /** Visitação — configuração de faixas de comissão por representante. */
+  VISITACAO_COMISSAO_READ = 'visitacao-comissao:read',
+  VISITACAO_COMISSAO_CREATE = 'visitacao-comissao:create',
+  VISITACAO_COMISSAO_UPDATE = 'visitacao-comissao:update',
+  VISITACAO_COMISSAO_DELETE = 'visitacao-comissao:delete',
 }
 
 export const PERMISSION_GROUPS = {
@@ -187,6 +195,12 @@ export const PERMISSION_GROUPS = {
       key: Permission.CONFIGURACAO_ACCESS,
       label: 'Acessar tela de configuração',
     },
+  ],
+  Feriados: [
+    { key: Permission.FERIADO_READ, label: 'Visualizar feriados' },
+    { key: Permission.FERIADO_UPDATE, label: 'Incluir feriados (manual)' },
+    { key: Permission.FERIADO_IMPORT, label: 'Importar feriados nacionais' },
+    { key: Permission.FERIADO_DELETE, label: 'Remover feriados' },
   ],
   Usuários: [
     { key: Permission.USER_CREATE, label: 'Criar usuários' },
@@ -507,24 +521,6 @@ export const PERMISSION_GROUPS = {
       label: 'Editar horários de produção (jornada)',
     },
   ],
-  'Produção — Feriados': [
-    {
-      key: Permission.PRODUCAO_FERIADO_READ,
-      label: 'Visualizar feriados de produção',
-    },
-    {
-      key: Permission.PRODUCAO_FERIADO_UPDATE,
-      label: 'Incluir feriados de produção (manual)',
-    },
-    {
-      key: Permission.PRODUCAO_FERIADO_IMPORT,
-      label: 'Importar feriados nacionais',
-    },
-    {
-      key: Permission.PRODUCAO_FERIADO_DELETE,
-      label: 'Remover feriados de produção',
-    },
-  ],
   'Produção — Painel de retirada': [
     {
       key: Permission.PRODUCAO_PAINEL_READ,
@@ -551,6 +547,34 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.VISITACAO_ACOMPANHAMENTO_READ,
       label: 'Visualizar acompanhamento (visitação)',
+    },
+  ],
+  'Visitação — Configuração Metas': [
+    {
+      key: Permission.VISITACAO_META_READ,
+      label: 'Visualizar configuração de metas',
+    },
+    {
+      key: Permission.VISITACAO_META_UPDATE,
+      label: 'Editar metas e copiar mês anterior',
+    },
+  ],
+  'Visitação — Configuração Comissões': [
+    {
+      key: Permission.VISITACAO_COMISSAO_READ,
+      label: 'Visualizar faixas de comissão',
+    },
+    {
+      key: Permission.VISITACAO_COMISSAO_CREATE,
+      label: 'Incluir faixas de comissão',
+    },
+    {
+      key: Permission.VISITACAO_COMISSAO_UPDATE,
+      label: 'Editar faixas de comissão',
+    },
+    {
+      key: Permission.VISITACAO_COMISSAO_DELETE,
+      label: 'Excluir faixas de comissão',
     },
   ],
 };

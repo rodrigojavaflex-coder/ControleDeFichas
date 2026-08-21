@@ -189,7 +189,7 @@ export class PerfilFormComponent implements OnInit {
       next: (perfil) => {
         this.perfilForm.patchValue({
           nomePerfil: perfil.nomePerfil,
-          permissoes: perfil.permissoes,
+          permissoes: this.sanitizePermissoes(perfil.permissoes),
         });
         this.expandModulesWithSelection();
         this.loading = false;
@@ -207,7 +207,7 @@ export class PerfilFormComponent implements OnInit {
       next: (perfil) => {
         this.perfilForm.patchValue({
           nomePerfil: `${perfil.nomePerfil} (cópia)`,
-          permissoes: [...perfil.permissoes],
+          permissoes: this.sanitizePermissoes([...perfil.permissoes]),
         });
         this.expandModulesWithSelection();
         this.loading = false;
@@ -230,6 +230,22 @@ export class PerfilFormComponent implements OnInit {
         this.expandedModules.add(mod.key);
       }
     }
+  }
+
+  /** Descarta chaves fora do catálogo (ex.: producao-feriado:* após a troca para feriado:*). */
+  private sanitizePermissoes(perms: Permission[] | null | undefined): Permission[] {
+    const valid = new Set<string>();
+    for (const mod of this.permissionCatalog?.modules ?? []) {
+      for (const group of mod.groups) {
+        for (const item of group.permissions) {
+          valid.add(item.key);
+        }
+      }
+    }
+    if (valid.size === 0) {
+      return [...(perms ?? [])];
+    }
+    return (perms ?? []).filter((p) => valid.has(p));
   }
 
   getModuleIconKey(moduleKey: string): string {
@@ -414,15 +430,19 @@ export class PerfilFormComponent implements OnInit {
     if (this.perfilForm.invalid) return;
     this.loading = true;
     this.error = null;
-    const data = this.perfilForm.value;
+    const data = {
+      nomePerfil: this.perfilForm.value.nomePerfil,
+      permissoes: this.sanitizePermissoes(this.perfilForm.value.permissoes ?? []),
+    };
     const request =
       this.isEditMode && this.perfilId
         ? this.perfilService.update(this.perfilId, data)
         : this.perfilService.create(data);
     request.subscribe({
       next: () => this.router.navigate(['/perfil']),
-      error: () => {
-        this.error = 'Erro ao salvar perfil';
+      error: (e) => {
+        this.error =
+          e?.error?.message ?? 'Erro ao salvar perfil';
         this.loading = false;
       },
     });

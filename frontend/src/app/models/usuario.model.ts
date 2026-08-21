@@ -149,16 +149,22 @@ export enum Permission {
   PRODUCAO_ACOMPANHAMENTO_READ = 'producao-acompanhamento:read',
   PRODUCAO_JORNADA_READ = 'producao-jornada:read',
   PRODUCAO_JORNADA_UPDATE = 'producao-jornada:update',
-  PRODUCAO_FERIADO_READ = 'producao-feriado:read',
-  PRODUCAO_FERIADO_UPDATE = 'producao-feriado:update',
-  PRODUCAO_FERIADO_IMPORT = 'producao-feriado:import',
-  PRODUCAO_FERIADO_DELETE = 'producao-feriado:delete',
+  FERIADO_READ = 'feriado:read',
+  FERIADO_UPDATE = 'feriado:update',
+  FERIADO_IMPORT = 'feriado:import',
+  FERIADO_DELETE = 'feriado:delete',
   PRODUCAO_PAINEL_READ = 'producao-painel:read',
   PRODUCAO_PAINEL_CONFIG_READ = 'producao-painel-config:read',
   PRODUCAO_PAINEL_CONFIG_UPDATE = 'producao-painel-config:update',
 
   VISITACAO_PAINEL_MEDICO_READ = 'visitacao-painel-medico:read',
   VISITACAO_ACOMPANHAMENTO_READ = 'visitacao-acompanhamento:read',
+  VISITACAO_META_READ = 'visitacao-meta:read',
+  VISITACAO_META_UPDATE = 'visitacao-meta:update',
+  VISITACAO_COMISSAO_READ = 'visitacao-comissao:read',
+  VISITACAO_COMISSAO_CREATE = 'visitacao-comissao:create',
+  VISITACAO_COMISSAO_UPDATE = 'visitacao-comissao:update',
+  VISITACAO_COMISSAO_DELETE = 'visitacao-comissao:delete',
 }
 
 export interface PermissionGroup {

@@ -1,0 +1,91 @@
+.visitacao-metas-page .filters-panel-top::after {
+  content: none;
+  display: none;
+}
+
+.visitacao-metas-page .visitacao-metas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 1rem;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 8px;
+}
+
+.visitacao-metas-page .visitacao-metas-toolbar .filter-group {
+  flex: 0 1 220px;
+  min-width: 160px;
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.visitacao-metas-page .visitacao-metas-toolbar .form-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.visitacao-metas-page .visitacao-metas-toolbar .form-control {
+  min-height: 2.375rem;
+  width: 100%;
+}
+
+.visitacao-metas-page .visitacao-metas-toolbar-acoes {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.visitacao-metas-page .visitacao-metas-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.visitacao-metas-valor-celula {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.visitacao-metas-valor {
+  max-width: 11rem;
+  text-align: right;
+}
+
+.visitacao-metas-page tr.editing {
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 8%, transparent);
+}
+
+.visitacao-metas-page .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+body.theme-dark .visitacao-metas-page tr.editing,
+[data-theme='dark'] .visitacao-metas-page tr.editing {
+  background: color-mix(in srgb, var(--color-primary, #60a5fa) 14%, transparent);
+}
+
+body.theme-dark .visitacao-metas-page .visitacao-metas-toolbar,
+[data-theme='dark'] .visitacao-metas-page .visitacao-metas-toolbar {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+
+@media (max-width: 720px) {
+  .visitacao-metas-page .visitacao-metas-toolbar .filter-group {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}

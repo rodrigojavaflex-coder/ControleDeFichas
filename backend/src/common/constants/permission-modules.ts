@@ -9,7 +9,7 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
   {
     key: 'sistema',
     label: 'Sistema',
-    groupKeys: ['Configuração', 'Usuários', 'Perfis', 'Auditoria'],
+    groupKeys: ['Configuração', 'Feriados', 'Usuários', 'Perfis', 'Auditoria'],
   },
   {
     key: 'fichas',
@@ -56,7 +56,6 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
     groupKeys: [
       'Produção — Configuração',
       'Produção — Horários',
-      'Produção — Feriados',
       'Produção — Acompanhamento',
       'Produção — Produtividade',
       'Produção — Painel de retirada',
@@ -66,6 +65,11 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
   {
     key: 'visitacao',
     label: 'Visitação',
-    groupKeys: ['Visitação — Painel Médico', 'Visitação — Acompanhamento'],
+    groupKeys: [
+      'Visitação — Painel Médico',
+      'Visitação — Acompanhamento',
+      'Visitação — Configuração Metas',
+      'Visitação — Configuração Comissões',
+    ],
   },
 ];

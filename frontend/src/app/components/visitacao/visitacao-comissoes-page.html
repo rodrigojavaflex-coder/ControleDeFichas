@@ -1,0 +1,204 @@
+<div class="vendas-page producao-config-page visitacao-comissoes-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar a configuração de comissões.
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="visitacao-comissoes-toolbar" aria-label="Unidade e representante">
+        <div class="filter-group">
+          <label class="form-label" for="vc-unidade">Unidade</label>
+          <select
+            id="vc-unidade"
+            class="form-control"
+            [(ngModel)]="unidadeFiltro"
+            [disabled]="unidadeDisabled"
+            (ngModelChange)="onUnidadeChange()">
+            @if (!unidadeDisabled) {
+              <option [ngValue]="''">Selecione…</option>
+            }
+            @for (u of unidadesVisiveis; track u) {
+              <option [ngValue]="u">{{ u }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group visitacao-comissoes-rep">
+          <label class="form-label" for="vc-rep">Representante</label>
+          <select
+            id="vc-rep"
+            class="form-control"
+            [(ngModel)]="funcionarioId"
+            [disabled]="!unidadeFiltro || carregandoReps"
+            (ngModelChange)="onRepresentanteChange()">
+            <option [ngValue]="''">Selecione…</option>
+            @for (r of representantes; track r.funcionarioId) {
+              <option [ngValue]="r.funcionarioId">
+                {{ rotuloRepresentante(r) }}
+              </option>
+            }
+          </select>
+        </div>
+      </section>
+
+      @if (!unidadeFiltro) {
+        <div class="loading-message">Selecione uma unidade para listar os representantes.</div>
+      } @else if (carregandoReps) {
+        <div class="loading-message">Carregando representantes…</div>
+      } @else if (representantes.length === 0) {
+        <div class="loading-message">
+          Nenhum representante com Filial do painel (cdcon) e Código representante painel (cdfun) nesta unidade.
+        </div>
+      } @else if (!funcionarioId) {
+        <div class="loading-message">Selecione um representante para configurar as faixas.</div>
+      } @else {
+        <section class="producao-config-panel visitacao-faixas-panel">
+          <div class="visitacao-faixas-toolbar">
+            @if (podeIncluirFaixa()) {
+              <button
+                type="button"
+                class="btn btn-salvar"
+                [disabled]="temLinhaEmEdicao() || carregandoFaixas || carregandoPadrao"
+                (click)="incluirFaixaNaGrade()">
+                Incluir faixa
+              </button>
+              <button
+                type="button"
+                class="btn btn-imprimir"
+                [disabled]="temLinhaEmEdicao() || carregandoPadrao || carregandoFaixas"
+                (click)="pedirCarregarPadrao()">
+                <i class="fas fa-download"></i>
+                {{ carregandoPadrao ? 'Carregando…' : 'Carregar faixas padrão' }}
+              </button>
+            }
+          </div>
+
+          @if (carregandoFaixas) {
+            <div class="loading-message">Carregando faixas…</div>
+          } @else {
+            <div class="table-container">
+              <table class="vendas-table">
+                <thead>
+                  <tr>
+                    <th>De (%)</th>
+                    <th>Até (%)</th>
+                    <th>% comissão</th>
+                    @if (mostrarAcoesFaixa()) {
+                      <th>Ações</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of linhas; track row.localId) {
+                    <tr [class.editing]="row.editando">
+                      <td>
+                        @if (row.editando) {
+                          <input
+                            class="form-control visitacao-faixa-valor"
+                            type="text"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            [(ngModel)]="row.draftDe"
+                            [disabled]="row.salvando"
+                            placeholder="0,00"
+                            aria-label="Percentual de" />
+                        } @else {
+                          {{ formatarPercentual(row.percentualMetaDe) }}
+                        }
+                      </td>
+                      <td>
+                        @if (row.editando) {
+                          <input
+                            class="form-control visitacao-faixa-valor"
+                            type="text"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            [(ngModel)]="row.draftAte"
+                            [disabled]="row.salvando"
+                            placeholder="vazio = sem teto"
+                            aria-label="Percentual até" />
+                        } @else {
+                          {{ formatarPercentual(row.percentualMetaAte) }}
+                        }
+                      </td>
+                      <td>
+                        @if (row.editando) {
+                          <input
+                            class="form-control visitacao-faixa-valor"
+                            type="text"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            [(ngModel)]="row.draftComissao"
+                            [disabled]="row.salvando"
+                            placeholder="0,00"
+                            aria-label="Percentual de comissão" />
+                        } @else {
+                          {{ formatarPercentual(row.percentualComissao) }}
+                        }
+                      </td>
+                      @if (mostrarAcoesFaixa()) {
+                        <td class="action-buttons">
+                          @if (row.editando) {
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-salvar"
+                              [disabled]="row.salvando || !podeSalvarLinha(row)"
+                              (click)="salvarLinha(row)">
+                              {{ row.salvando ? 'Salvando…' : 'Salvar' }}
+                            </button>
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-cancelar"
+                              [disabled]="row.salvando"
+                              (click)="cancelarEdicao(row)">
+                              Cancelar
+                            </button>
+                          } @else {
+                            @if (podeEditarFaixa()) {
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-editar"
+                                [disabled]="temLinhaEmEdicao()"
+                                (click)="alterarLinha(row)">
+                                Alterar
+                              </button>
+                            }
+                            @if (podeExcluirFaixa() && row.id) {
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-excluir"
+                                [disabled]="temLinhaEmEdicao()"
+                                (click)="pedirExcluirFaixa(row)">
+                                Excluir
+                              </button>
+                            }
+                          }
+                        </td>
+                      }
+                    </tr>
+                  } @empty {
+                    <tr class="no-data">
+                      <td [attr.colspan]="mostrarAcoesFaixa() ? 4 : 3">
+                        <i class="fas fa-inbox"></i> Nenhuma faixa cadastrada para este representante.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+    </div>
+  }
+
+  <app-confirmation-modal
+    [isVisible]="confirmVisivel"
+    [title]="confirmTitulo"
+    [message]="confirmMensagem"
+    confirmText="Confirmar"
+    cancelText="Cancelar"
+    [confirmVariant]="confirmVariante"
+    (confirmed)="confirmarAcao()"
+    (cancelled)="cancelarConfirmacao()">
+  </app-confirmation-modal>
+</div>

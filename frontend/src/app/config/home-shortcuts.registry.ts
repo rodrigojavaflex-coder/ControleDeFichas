@@ -355,6 +355,30 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     category: 'Visitação',
     requiredPermissions: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
   },
+  {
+    id: 'visitacao-metas',
+    label: 'Configuração Metas',
+    route: '/visitacao/configuracao-metas',
+    icon: 'feather-target',
+    category: 'Visitação',
+    requiredPermissions: [Permission.VISITACAO_META_READ],
+  },
+  {
+    id: 'visitacao-comissoes',
+    label: 'Configuração Comissões',
+    route: '/visitacao/configuracao-comissoes',
+    icon: 'feather-dollar-sign',
+    category: 'Visitação',
+    requiredPermissions: [Permission.VISITACAO_COMISSAO_READ],
+  },
+  {
+    id: 'feriados',
+    label: 'Feriados',
+    route: '/sistema/feriados',
+    icon: 'feather-calendar',
+    category: 'Sistema',
+    requiredPermissions: [Permission.FERIADO_READ],
+  },
 ] as const;
 
 const catalogById = new Map(HOME_SHORTCUTS_CATALOG.map((s) => [s.id, s]));

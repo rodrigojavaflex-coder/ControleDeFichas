@@ -365,6 +365,34 @@
 - Impressão da listagem abre modal de opções: **Analítico** (detalhado, padrão) ou **Sintético** (resumo por representante/unidade); movimentos **Todos** (padrão), **Recebidos** ou **Rejeitados**. Analítico agrupa **Representante → Unidade** sem cards no topo; o rodapé de cada tabela alinha quantidade de médicos e totais nas colunas Recebido/Rejeitado.
 - Impressão de **detalhes** (recebidos, rejeitados e totais) somente no modal do médico.
 
+### RN-VIS-011 — Metas mensais por representante
+
+- Tela **`/visitacao/configuracao-metas`** (menu **Visitação → Configuração Metas**). Permissões **`visitacao-meta:read`** (visualizar) e **`visitacao-meta:update`** (editar valor da meta e copiar mês anterior). Novas permissões entram só no catálogo; atribuição é **manual** em Perfis.
+- Filtros: **Unidade** (fixa se o usuário tem `unidade` cadastrada), **mês** (inclui **Todos**) e **ano** (**2026** a **2033**, padrão 2026). Com **Todos**, a grade lista os **12 meses** de cada representante no ano.
+- Grade: somente funcionários da unidade filtrada que sejam **representantes do painel** (RN-VIS-005): **Filial do painel** (`painelContratoRepresentante` / cdcon) **e** **Código representante painel** (`painelCodigoRepresentante` / cdfun) preenchidos e maiores que zero.
+- Campo **Meta** exibido como valor em R$. Sem meta: **Incluir**; com meta: **Alterar**; em edição: **Salvar** / **Cancelar**. Persistência em `visitacao_meta_representante` (unique `funcionarioId + anoMes`).
+- Ação **Copiar mês anterior**: disponível só com um mês específico selecionado; replica as metas da competência anterior para os representantes ainda vinculados; valores já existentes no destino são substituídos.
+- **Fora deste ciclo:** cálculo de comissão, % da meta e proporcional a dias úteis.
+
+### RN-VIS-012 — Faixas de comissão por representante
+
+- Tela **`/visitacao/configuracao-comissoes`** (menu **Visitação → Configuração Comissões**). Cadastro **por representante** (`funcionario_id`). Permissões: **`visitacao-comissao:read`** (visualizar), **`visitacao-comissao:create`** (incluir), **`visitacao-comissao:update`** (editar) e **`visitacao-comissao:delete`** (excluir). Atribuição **manual** em Perfis.
+- Escopo: unidade do usuário logado (filtro fixo quando `usuario.unidade` está preenchida). Lista só funcionários **dessa unidade** com **cdcon** e **cdfun** do painel preenchidos (mesmo critério da RN-VIS-011).
+- Persistência: `visitacao_comissao_faixa` (FK `funcionarioId`). Intervalos **sem sobreposição** **dentro do mesmo representante**; no máximo **uma** faixa sem teto (`percentualMetaAte` nulo), que deve ser a de maior início.
+- Combo do representante: **nome (cdcon/cdfun)** sem rótulos, ex. `MARCOS ROBERTO VIEIRA (9999/99)`.
+- Inclusão e edição **na grade**: **Incluir faixa** adiciona uma linha em edição; **Alterar** / **Salvar** / **Cancelar** / **Excluir** na coluna Ações. Botão **Carregar faixas padrão** (permissão **`visitacao-comissao:create`**): aplica 0–79,99% → 0%; 80–89,99% → 1%; 90–99,99% → 1,5%; 100–104,99% → 2%; 105% em diante → 2,5%. **Não** é automático. Se já houver faixas, pede confirmação e **substitui**.
+
+---
+
+## Calendário (Sistema)
+
+### RN-CAL-001 — Feriados e sábado útil por unidade
+
+- Tela **`/sistema/feriados`** (menu **Sistema → Feriados**). Permissões **`feriado:read`**, **`feriado:update`**, **`feriado:import`**, **`feriado:delete`**. Catálogo antigo `producao-feriado:*` foi retirado; quem gerencia a tela precisa da permissão nova no perfil.
+- Feriados continuam **por unidade** na tabela `producao_feriado` (unique `unidade + data`). Produção (tempo útil da RN-PCP-007/010) **continua lendo** esses registros; a aba Feriados saiu de **Produção → Configuração**.
+- Inclusão manual, exclusão e importação nacional (Brasil API) reutilizam o painel existente.
+- **Sábado é dia útil:** checkbox **por unidade** em `calendario_unidade.sabadoDiaUtil` (default **false**). Independente da jornada de produção. Uso em dias úteis de visitação fica para o cálculo de comissão (fora deste ciclo).
+
 ---
 
 ## Etapas de produção (SLA resumo)
@@ -485,7 +513,7 @@
 - **Escopo de unidades:** idêntico à produtividade (RN-PCP-005): `unidadesPermitidasProdutividade` / campo **`usuarios.unidades_produtividade`** + unidade principal; API valida com `assertUnidadeProducao`.
 - **Somente fila (MVP):** não há filtro de período histórico; exibe etapas com **`emAndamentoFila = true`** e `dataEntradaFila` preenchida (não usa `dataSaida IS NULL` do fechamento).
 - **Em andamento na etapa:** último movimento PCP na etapa (`tppcp`) é **`01`**; retorno/correção com operação posterior **`≠ 01`** remove a fórmula da fila naquela etapa.
-- **Resumo (cards):** uma card por `codEtapa` distinto **com ao menos uma requisição-fórmula em andamento** (`totalRequisicoesFormulas > 0`), ordenadas por **`posicaoEtapa`** ascendente; etapas sem fila **não** aparecem no resumo; **tempo médio** = média dos minutos desde entrada até `consultadoEm` (**corrido** se a unidade não tiver jornada de produção com faixas ativas; **tempo útil** dentro das faixas e exc. feriados quando configurado — mesma regra do calendário em **Configuração de produção → Horários/Feriados**).
+- **Resumo (cards):** uma card por `codEtapa` distinto **com ao menos uma requisição-fórmula em andamento** (`totalRequisicoesFormulas > 0`), ordenadas por **`posicaoEtapa`** ascendente; etapas sem fila **não** aparecem no resumo; **tempo médio** = média dos minutos desde entrada até `consultadoEm` (**corrido** se a unidade não tiver jornada de produção com faixas ativas; **tempo útil** dentro das faixas e exc. feriados quando configurado — jornada em **Configuração de produção → Horários** e feriados em **Sistema → Feriados**, mesma tabela `producao_feriado`).
 - **Detalhe (clique na card):** abre em **modal** (não inline; fecha só em **Fechar** ou **×**, sem clique no overlay); lista analítica das linhas da etapa (req, fórmula, unidade, filial, **funcionário** — nome via `funcionarios.codigoUsuarioErp` na unidade da linha, **cliente/paciente** — um nome se iguais ou só um preenchido; `cliente / paciente` se diferentes, retirada); **tempo** = minutos por fórmula com a mesma regra corrido/útil acima.
 - **Dados:** snapshot PostgreSQL pós-import/sync (RN-PCP-001); não substitui fila ao vivo do ERP; divergências possíveis (RN-PCP-004) — mensagem informativa na tela.
 - **Atualização automática:** mesma regra da RN-PCP-010 (`ProducaoEtapasRefreshService` + polling de sync).

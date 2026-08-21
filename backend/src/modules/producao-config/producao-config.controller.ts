@@ -51,6 +51,10 @@ import {
 } from './dto/producao-jornada-feriado.dto';
 import { ProducaoFeriadosQueryDto } from './dto/producao-feriados-query.dto';
 import {
+  CalendarioUnidadeResponseDto,
+  SalvarCalendarioUnidadeDto,
+} from './dto/calendario-unidade.dto';
+import {
   ProducaoPainelRetiradaConfigResponseDto,
   SalvarProducaoPainelRetiradaDto,
 } from './dto/producao-painel-retirada.dto';
@@ -219,8 +223,35 @@ export class ProducaoConfigController {
     return this.calendarioService.salvarJornada(req.user, dto);
   }
 
+  @Get('calendario')
+  @Permissions(Permission.FERIADO_READ)
+  @ApiOperation({
+    summary: 'Parâmetros de calendário da unidade (sábado útil)',
+  })
+  @ApiResponse({ status: 200, type: CalendarioUnidadeResponseDto })
+  obterCalendario(
+    @Req() req: { user: Usuario },
+    @Query() query: ProducaoConfigUnidadeQueryDto,
+  ): Promise<CalendarioUnidadeResponseDto> {
+    return this.calendarioService.obterCalendarioUnidade(
+      req.user,
+      query.unidade,
+    );
+  }
+
+  @Put('calendario')
+  @Permissions(Permission.FERIADO_UPDATE)
+  @ApiOperation({ summary: 'Salva parâmetro sábado útil da unidade' })
+  @ApiResponse({ status: 200, type: CalendarioUnidadeResponseDto })
+  salvarCalendario(
+    @Req() req: { user: Usuario },
+    @Body() dto: SalvarCalendarioUnidadeDto,
+  ): Promise<CalendarioUnidadeResponseDto> {
+    return this.calendarioService.salvarCalendarioUnidade(req.user, dto);
+  }
+
   @Get('feriados')
-  @Permissions(Permission.PRODUCAO_FERIADO_READ)
+  @Permissions(Permission.FERIADO_READ)
   @ApiOperation({ summary: 'Lista feriados da unidade por ano (mês opcional)' })
   @ApiResponse({ status: 200, type: ProducaoFeriadosMesResponseDto })
   listarFeriados(
@@ -243,7 +274,7 @@ export class ProducaoConfigController {
   }
 
   @Post('feriados/incluir')
-  @Permissions(Permission.PRODUCAO_FERIADO_UPDATE)
+  @Permissions(Permission.FERIADO_UPDATE)
   @ApiOperation({ summary: 'Inclui feriado manual na unidade' })
   @ApiResponse({ status: 200, type: ProducaoFeriadosMesResponseDto })
   incluirFeriado(
@@ -254,7 +285,7 @@ export class ProducaoConfigController {
   }
 
   @Post('feriados/remover')
-  @Permissions(Permission.PRODUCAO_FERIADO_DELETE)
+  @Permissions(Permission.FERIADO_DELETE)
   @ApiOperation({ summary: 'Remove feriado da unidade' })
   @ApiResponse({ status: 200, type: ProducaoFeriadosMesResponseDto })
   removerFeriado(
@@ -265,7 +296,7 @@ export class ProducaoConfigController {
   }
 
   @Post('feriados/importar-nacionais')
-  @Permissions(Permission.PRODUCAO_FERIADO_IMPORT)
+  @Permissions(Permission.FERIADO_IMPORT)
   @ApiOperation({ summary: 'Importa feriados nacionais (Brasil API)' })
   @ApiResponse({ status: 200, type: ImportarFeriadosNacionaisResponseDto })
   importarFeriadosNacionais(

@@ -8,6 +8,7 @@ import { ProducaoJornadaUnidade } from './entities/producao-jornada-unidade.enti
 import { ProducaoJornadaIntervalo } from './entities/producao-jornada-intervalo.entity';
 import { ProducaoJornadaDia } from './entities/producao-jornada-dia.entity';
 import { ProducaoFeriado } from './entities/producao-feriado.entity';
+import { CalendarioUnidade } from './entities/calendario-unidade.entity';
 import { ProducaoPainelEtapaFinal } from './entities/producao-painel-etapa-final.entity';
 import { ProducaoPainelAlertaRetirada } from './entities/producao-painel-alerta-retirada.entity';
 import { ProducaoEtapaResumo } from '../producao-etapas/entities/producao-etapa-resumo.entity';
@@ -29,6 +30,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
       ProducaoJornadaIntervalo,
       ProducaoJornadaDia,
       ProducaoFeriado,
+      CalendarioUnidade,
       ProducaoPainelEtapaFinal,
       ProducaoPainelAlertaRetirada,
       ProducaoEtapaResumo,

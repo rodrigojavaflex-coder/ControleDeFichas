@@ -128,7 +128,6 @@ const PERMS = {
     Permission.PRODUCAO_CONFIG_READ,
     Permission.PRODUCAO_CONFIG_UPDATE,
     Permission.PRODUCAO_JORNADA_READ,
-    Permission.PRODUCAO_FERIADO_READ,
     Permission.PRODUCAO_PAINEL_CONFIG_READ,
   ],
   producaoProdutividade: [Permission.PRODUCAO_PRODUTIVIDADE_READ],
@@ -136,6 +135,9 @@ const PERMS = {
   producaoPainel: [Permission.PRODUCAO_PAINEL_READ],
   visitacaoPainelMedico: [Permission.VISITACAO_PAINEL_MEDICO_READ],
   visitacaoAcompanhamento: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
+  visitacaoMetas: [Permission.VISITACAO_META_READ],
+  visitacaoComissoes: [Permission.VISITACAO_COMISSAO_READ],
+  feriados: [Permission.FERIADO_READ],
 } as const;
 
 /** Guards padrão: autenticado + permissão da rota (`data.permissions`). */
@@ -147,6 +149,15 @@ export const routes: Routes = [
     component: ConfiguracaoComponent,
     canActivate: guarded,
     data: { permissions: [...PERMS.configuracao] },
+  },
+  {
+    path: 'sistema/feriados',
+    loadComponent: () =>
+      import('./components/sistema/sistema-feriados-page').then(
+        (m) => m.SistemaFeriadosPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.feriados] },
   },
   {
     path: 'login',
@@ -551,6 +562,29 @@ export const routes: Routes = [
       ),
     canActivate: guarded,
     data: { permissions: [...PERMS.visitacaoAcompanhamento] },
+  },
+  {
+    path: 'visitacao/configuracao-metas',
+    loadComponent: () =>
+      import('./components/visitacao/visitacao-metas-page').then(
+        (m) => m.VisitacaoMetasPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.visitacaoMetas] },
+  },
+  {
+    path: 'visitacao/configuracao-comissoes',
+    loadComponent: () =>
+      import('./components/visitacao/visitacao-comissoes-page').then(
+        (m) => m.VisitacaoComissoesPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.visitacaoComissoes] },
+  },
+  {
+    path: 'visitacao/metas',
+    redirectTo: '/visitacao/configuracao-metas',
+    pathMatch: 'full',
   },
   {
     path: 'orcamentos/dashboard',

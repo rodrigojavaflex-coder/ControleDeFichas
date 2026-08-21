@@ -30,6 +30,9 @@ export const HOME_SHORTCUT_IDS = [
   'producao-produtividade',
   'visitacao-painel-medico',
   'visitacao-acompanhamento',
+  'visitacao-metas',
+  'visitacao-comissoes',
+  'feriados',
 ] as const;
 
 export type HomeShortcutId = (typeof HOME_SHORTCUT_IDS)[number];

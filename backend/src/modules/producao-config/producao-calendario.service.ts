@@ -15,6 +15,7 @@ import {
   ProducaoFeriado,
   ProducaoFeriadoOrigem,
 } from './entities/producao-feriado.entity';
+import { CalendarioUnidade } from './entities/calendario-unidade.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { assertUnidadeFolha } from '../folha/utils/folha-unidade-scope.util';
@@ -27,6 +28,10 @@ import {
   ProducaoJornadaResponseDto,
   SalvarProducaoJornadaDto,
 } from './dto/producao-jornada-feriado.dto';
+import {
+  CalendarioUnidadeResponseDto,
+  SalvarCalendarioUnidadeDto,
+} from './dto/calendario-unidade.dto';
 import {
   normalizarHoraCurta,
   ProducaoCalendarioUnidade,
@@ -75,6 +80,8 @@ export class ProducaoCalendarioService {
     private readonly jornadaDiaRepo: Repository<ProducaoJornadaDia>,
     @InjectRepository(ProducaoFeriado)
     private readonly feriadoRepo: Repository<ProducaoFeriado>,
+    @InjectRepository(CalendarioUnidade)
+    private readonly calendarioUnidadeRepo: Repository<CalendarioUnidade>,
     private readonly dataSource: DataSource,
     private readonly calendarioCache: ProducaoCalendarioCacheService,
   ) {}
@@ -531,5 +538,39 @@ export class ProducaoCalendarioService {
     return this.feriadoRepo.find({
       where: { unidade: In(unidades) },
     });
+  }
+
+  async obterCalendarioUnidade(
+    usuario: Usuario,
+    unidade: Unidade,
+  ): Promise<CalendarioUnidadeResponseDto> {
+    assertUnidadeFolha(usuario, unidade);
+    const row = await this.calendarioUnidadeRepo.findOne({
+      where: { unidade },
+    });
+    return {
+      unidade,
+      sabadoDiaUtil: row?.sabadoDiaUtil ?? false,
+    };
+  }
+
+  async salvarCalendarioUnidade(
+    usuario: Usuario,
+    dto: SalvarCalendarioUnidadeDto,
+  ): Promise<CalendarioUnidadeResponseDto> {
+    assertUnidadeFolha(usuario, dto.unidade);
+    let row = await this.calendarioUnidadeRepo.findOne({
+      where: { unidade: dto.unidade },
+    });
+    if (!row) {
+      row = this.calendarioUnidadeRepo.create({
+        unidade: dto.unidade,
+        sabadoDiaUtil: dto.sabadoDiaUtil,
+      });
+    } else {
+      row.sabadoDiaUtil = dto.sabadoDiaUtil;
+    }
+    await this.calendarioUnidadeRepo.save(row);
+    return { unidade: dto.unidade, sabadoDiaUtil: row.sabadoDiaUtil };
   }
 }

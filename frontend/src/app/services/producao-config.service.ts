@@ -26,6 +26,8 @@ import {
   ProducaoFeriadoToggleDto,
   ProducaoJornadaResponse,
   SalvarProducaoJornadaDto,
+  CalendarioUnidadeResponse,
+  SalvarCalendarioUnidadeDto,
 } from '../models/producao-jornada-feriado.model';
 import { ProducaoPainelRetiradaConfig } from '../models/producao-painel.model';
 
@@ -169,6 +171,21 @@ export class ProducaoConfigService {
       `${base}/feriados/importar-nacionais`,
       dto,
     );
+  }
+
+  obterCalendarioUnidade(
+    unidade: Unidade,
+  ): Observable<CalendarioUnidadeResponse> {
+    const params = new HttpParams().set('unidade', unidade);
+    return this.http.get<CalendarioUnidadeResponse>(`${base}/calendario`, {
+      params,
+    });
+  }
+
+  salvarCalendarioUnidade(
+    dto: SalvarCalendarioUnidadeDto,
+  ): Observable<CalendarioUnidadeResponse> {
+    return this.http.put<CalendarioUnidadeResponse>(`${base}/calendario`, dto);
   }
 
   obterPainelRetirada(

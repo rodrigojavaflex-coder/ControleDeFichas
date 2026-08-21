@@ -1,0 +1,99 @@
+.visitacao-comissoes-page .filters-panel-top::after {
+  content: none;
+  display: none;
+}
+
+.visitacao-comissoes-page .visitacao-comissoes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 1rem;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 8px;
+}
+
+.visitacao-comissoes-page .visitacao-comissoes-toolbar .filter-group {
+  flex: 0 1 220px;
+  min-width: 160px;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.visitacao-comissoes-page .visitacao-comissoes-toolbar .filter-group.visitacao-comissoes-rep {
+  flex: 1 1 320px;
+  max-width: 42rem;
+}
+
+.visitacao-comissoes-page .visitacao-comissoes-toolbar .form-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.visitacao-comissoes-page .visitacao-comissoes-toolbar .form-control {
+  min-height: 2.375rem;
+  width: 100%;
+}
+
+.visitacao-faixas-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  border-radius: var(--border-radius, 8px);
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+}
+
+.visitacao-faixas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+}
+
+.visitacao-faixa-valor {
+  max-width: 9rem;
+  text-align: right;
+}
+
+.visitacao-comissoes-page tr.editing {
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 8%, transparent);
+}
+
+.visitacao-comissoes-page .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+body.theme-dark .visitacao-comissoes-page .visitacao-comissoes-toolbar,
+[data-theme='dark'] .visitacao-comissoes-page .visitacao-comissoes-toolbar,
+body.theme-dark .visitacao-faixas-panel,
+[data-theme='dark'] .visitacao-faixas-panel {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+
+body.theme-dark .visitacao-comissoes-page tr.editing,
+[data-theme='dark'] .visitacao-comissoes-page tr.editing {
+  background: color-mix(in srgb, var(--color-primary, #60a5fa) 14%, transparent);
+}
+
+@media (max-width: 720px) {
+  .visitacao-comissoes-page .visitacao-comissoes-toolbar .filter-group,
+  .visitacao-comissoes-page .visitacao-comissoes-toolbar .filter-group.visitacao-comissoes-rep {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}

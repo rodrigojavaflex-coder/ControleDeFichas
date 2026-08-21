@@ -81,7 +81,13 @@ export class NavigationComponent implements OnInit, OnDestroy {
           route: '/configuracao',
           icon: 'feather-sliders',
           requiredPermissions: [Permission.CONFIGURACAO_ACCESS]
-        }
+        },
+        {
+          label: 'Feriados',
+          route: '/sistema/feriados',
+          icon: 'feather-calendar',
+          requiredPermissions: [Permission.FERIADO_READ],
+        },
       ]
     },
     {
@@ -302,7 +308,6 @@ export class NavigationComponent implements OnInit, OnDestroy {
             Permission.PRODUCAO_CONFIG_READ,
             Permission.PRODUCAO_CONFIG_UPDATE,
             Permission.PRODUCAO_JORNADA_READ,
-            Permission.PRODUCAO_FERIADO_READ,
             Permission.PRODUCAO_PAINEL_CONFIG_READ,
           ],
         },
@@ -342,6 +347,18 @@ export class NavigationComponent implements OnInit, OnDestroy {
           route: '/visitacao/acompanhamento',
           icon: 'feather-activity',
           requiredPermissions: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
+        },
+        {
+          label: 'Configuração Metas',
+          route: '/visitacao/configuracao-metas',
+          icon: 'feather-target',
+          requiredPermissions: [Permission.VISITACAO_META_READ],
+        },
+        {
+          label: 'Configuração Comissões',
+          route: '/visitacao/configuracao-comissoes',
+          icon: 'feather-dollar-sign',
+          requiredPermissions: [Permission.VISITACAO_COMISSAO_READ],
         },
       ],
     },

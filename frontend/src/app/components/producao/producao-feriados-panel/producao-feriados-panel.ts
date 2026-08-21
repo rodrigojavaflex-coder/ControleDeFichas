@@ -62,15 +62,15 @@ export class ProducaoFeriadosPanel implements OnChanges {
   }
 
   podeIncluir(): boolean {
-    return this.auth.hasPermission(Permission.PRODUCAO_FERIADO_UPDATE);
+    return this.auth.hasPermission(Permission.FERIADO_UPDATE);
   }
 
   podeImportar(): boolean {
-    return this.auth.hasPermission(Permission.PRODUCAO_FERIADO_IMPORT);
+    return this.auth.hasPermission(Permission.FERIADO_IMPORT);
   }
 
   podeRemover(): boolean {
-    return this.auth.hasPermission(Permission.PRODUCAO_FERIADO_DELETE);
+    return this.auth.hasPermission(Permission.FERIADO_DELETE);
   }
 
   private gerarAnosSelect(): number[] {

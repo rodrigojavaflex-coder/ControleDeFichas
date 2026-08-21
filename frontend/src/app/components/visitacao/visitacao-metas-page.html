@@ -1,0 +1,165 @@
+<div class="vendas-page producao-config-page visitacao-metas-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar a configuração de metas.
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="visitacao-metas-toolbar" aria-label="Unidade e competência">
+        <div class="filter-group">
+          <label class="form-label" for="vm-unidade">Unidade</label>
+          <select
+            id="vm-unidade"
+            class="form-control"
+            [(ngModel)]="unidadeFiltro"
+            [disabled]="unidadeDisabled"
+            (ngModelChange)="onFiltroChange()">
+            @if (!unidadeDisabled) {
+              <option [ngValue]="''">Selecione…</option>
+            }
+            @for (u of unidadesVisiveis; track u) {
+              <option [ngValue]="u">{{ u }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label" for="vm-mes">Mês</label>
+          <select
+            id="vm-mes"
+            class="form-control"
+            [(ngModel)]="mesFiltro"
+            (ngModelChange)="onFiltroChange()">
+            <option [ngValue]="0">Todos</option>
+            @for (m of MESES_PT; track m.numero) {
+              <option [ngValue]="m.numero">{{ m.nome }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label" for="vm-ano">Ano</label>
+          <select
+            id="vm-ano"
+            class="form-control"
+            [(ngModel)]="anoFiltro"
+            (ngModelChange)="onFiltroChange()">
+            @for (a of anosDisponiveis; track a) {
+              <option [ngValue]="a">{{ a }}</option>
+            }
+          </select>
+        </div>
+        @if (podeEditarMeta() && unidadeFiltro && mesFiltro > 0) {
+          <div class="visitacao-metas-toolbar-acoes">
+            <button
+              type="button"
+              class="btn btn-imprimir"
+              [disabled]="copiando || carregando || temLinhaEmEdicao()"
+              (click)="pedirCopiarMesAnterior()">
+              <i class="fas fa-copy"></i>
+              {{ copiando ? 'Copiando…' : 'Copiar mês anterior' }}
+            </button>
+          </div>
+        }
+      </section>
+
+      @if (!unidadeFiltro) {
+        <div class="loading-message">Selecione uma unidade para carregar as metas.</div>
+      } @else if (carregando) {
+        <div class="loading-message">Carregando metas…</div>
+      } @else {
+        <div class="table-container visitacao-metas-table-wrap">
+          <table class="vendas-table">
+            <thead>
+              <tr>
+                <th>Representante</th>
+                <th>Unidade</th>
+                <th>Mês</th>
+                <th>Meta</th>
+                @if (podeEditarMeta()) {
+                  <th>Ações</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of linhas; track row.funcionarioId + '-' + row.anoMes) {
+                <tr [class.editing]="row.editando">
+                  <td>{{ row.nome }}</td>
+                  <td>{{ row.unidade }}</td>
+                  <td>{{ nomeMes(row.mes) }}</td>
+                  <td class="visitacao-metas-valor-celula">
+                    @if (row.editando) {
+                      <input
+                        class="form-control visitacao-metas-valor"
+                        type="text"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        [(ngModel)]="row.draft"
+                        [disabled]="row.salvando"
+                        placeholder="R$ 0,00"
+                        (blur)="formatarDraftBlur(row)"
+                        [attr.aria-label]="'Valor da meta de ' + row.nome" />
+                    } @else {
+                      {{ formatarMoeda(row.valorMeta) }}
+                    }
+                  </td>
+                  @if (podeEditarMeta()) {
+                    <td class="action-buttons">
+                      @if (row.editando) {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-salvar"
+                          [disabled]="row.salvando"
+                          (click)="salvarLinha(row)">
+                          {{ row.salvando ? 'Salvando…' : 'Salvar' }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-cancelar"
+                          [disabled]="row.salvando"
+                          (click)="cancelarEdicao(row)">
+                          Cancelar
+                        </button>
+                      } @else if (row.valorMeta == null) {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-salvar"
+                          [disabled]="temLinhaEmEdicao()"
+                          (click)="incluirLinha(row)">
+                          Incluir
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-editar"
+                          [disabled]="temLinhaEmEdicao()"
+                          (click)="alterarLinha(row)">
+                          Alterar
+                        </button>
+                      }
+                    </td>
+                  }
+                </tr>
+              } @empty {
+                <tr class="no-data">
+                  <td [attr.colspan]="podeEditarMeta() ? 5 : 4">
+                    <i class="fas fa-inbox"></i> Nenhum representante com Filial do painel e Código representante painel nesta unidade.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <app-confirmation-modal
+    [isVisible]="confirmVisivel"
+    [title]="confirmTitulo"
+    [message]="confirmMensagem"
+    confirmText="Confirmar"
+    cancelText="Cancelar"
+    [confirmVariant]="confirmVariante"
+    (confirmed)="confirmarAcao()"
+    (cancelled)="cancelarConfirmacao()">
+  </app-confirmation-modal>
+</div>

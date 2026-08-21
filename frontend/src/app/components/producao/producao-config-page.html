@@ -1,7 +1,7 @@
 <div class="vendas-page producao-config-page">
   @if (!podeLer()) {
     <div class="alert alert-error">
-      Você não possui permissão para a configuração de produção (etapas, horários, feriados ou painel).
+      Você não possui permissão para a configuração de produção (etapas, horários ou painel).
     </div>
   } @else {
     <div class="results-card">
@@ -40,7 +40,7 @@
         <div class="loading-message">Selecione uma unidade para carregar a configuração.</div>
       } @else {
         <div class="producao-config-shell">
-        @if (podeLerEtapas() || podeLerHorarios() || podeLerFeriados() || podeLerPainelConfig()) {
+        @if (podeLerEtapas() || podeLerHorarios() || podeLerPainelConfig()) {
           <div class="tabs producao-config-tabs" role="tablist" aria-label="Seções da configuração">
             @if (podeLerEtapas()) {
               <button
@@ -62,17 +62,6 @@
                 [attr.aria-selected]="abaAtiva === 'horarios'"
                 (click)="selecionarAba('horarios')">
                 Horários
-              </button>
-            }
-            @if (podeLerFeriados()) {
-              <button
-                type="button"
-                class="tab-button"
-                role="tab"
-                [class.active]="abaAtiva === 'feriados'"
-                [attr.aria-selected]="abaAtiva === 'feriados'"
-                (click)="selecionarAba('feriados')">
-                Feriados
               </button>
             }
             @if (podeLerPainelConfig()) {
@@ -340,8 +329,6 @@
         </div>
         } @else if (abaAtiva === 'horarios' && podeLerHorarios()) {
           <app-producao-jornada-panel class="producao-config-aba-panel" [unidade]="$any(unidadeFiltro)" />
-        } @else if (abaAtiva === 'feriados' && podeLerFeriados()) {
-          <app-producao-feriados-panel class="producao-config-aba-panel" [unidade]="$any(unidadeFiltro)" />
         } @else if (abaAtiva === 'painel' && podeLerPainelConfig()) {
           <app-producao-painel-retirada-panel class="producao-config-aba-panel" [unidade]="$any(unidadeFiltro)" />
         }
