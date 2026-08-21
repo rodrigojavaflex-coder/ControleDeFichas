@@ -162,6 +162,45 @@
   margin-left: 0;
 }
 
+.visitacao-acompanhamento-page .visitacao-acomp-table td.col-num.is-recebido {
+  color: var(--cor-sucesso, var(--color-success, #16a34a));
+  font-weight: 600;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-table td.col-num.is-rejeitado {
+  color: var(--cor-perigo, var(--color-danger, #dc2626));
+  font-weight: 600;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-table th.col-acoes,
+.visitacao-acompanhamento-page .visitacao-acomp-table td.col-acoes {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.visitacao-acomp-link-detalhes {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--cor-primaria, #2563eb);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.visitacao-acomp-link-detalhes:hover {
+  color: color-mix(in srgb, var(--cor-primaria, #2563eb) 80%, #0f172a);
+}
+
+.visitacao-acomp-link-detalhes:focus-visible {
+  outline: 2px solid var(--cor-primaria, #2563eb);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .visitacao-acomp-modal-detalhe .vendas-table tfoot td {
   border-top: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
   background: var(--cor-superficie, var(--bg-primary, #fff));
@@ -249,6 +288,22 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-pr
 
 body.theme-dark .visitacao-acomp-row:hover {
   background: color-mix(in srgb, var(--cor-primaria, #60a5fa) 14%, transparent);
+}
+
+body.theme-dark .visitacao-acomp-link-detalhes {
+  color: var(--cor-primaria, #93c5fd);
+}
+
+body.theme-dark .visitacao-acomp-link-detalhes:hover {
+  color: color-mix(in srgb, var(--cor-primaria, #93c5fd) 85%, #fff);
+}
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-table td.col-num.is-recebido {
+  color: var(--cor-sucesso, #4ade80);
+}
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-table td.col-num.is-rejeitado {
+  color: var(--cor-perigo, #f87171);
 }
 
 body.theme-dark .visitacao-acomp-modal-detalhe .vendas-table tfoot td {

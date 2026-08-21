@@ -361,7 +361,7 @@
 ### RN-VIS-010 — Cards, detalhe e impressão
 
 - Cards abaixo dos filtros, no mesmo padrão: **Total** primeiro (recebido e rejeitado) e em seguida **um card por representante**, com **Recebido**, **Rejeitado** e **% Painel** (participação do recebido daquele representante no total recebido). O card Total **não** exibe % Painel.
-- Clique na linha abre detalhe: requisições pagas do caixa e orçamentos rejeitados **da unidade do movimento**; permitido se a unidade for a do usuário **ou** o CRM estiver na carteira dele **e** o médico **não** estiver no painel da unidade do movimento.
+- Clique na linha ou no link **Detalhes** (coluna **Ações**, após Rejeitado) abre o detalhe: requisições pagas do caixa e orçamentos rejeitados **da unidade do movimento**; permitido se a unidade for a do usuário **ou** o CRM estiver na carteira dele **e** o médico **não** estiver no painel da unidade do movimento. Valores de **Recebido** em verde e **Rejeitado** em vermelho na grid.
 - Impressão da listagem abre modal de opções: **Analítico** (detalhado, padrão) ou **Sintético** (resumo por representante/unidade); movimentos **Todos** (padrão), **Recebidos** ou **Rejeitados**. Analítico agrupa **Representante → Unidade** sem cards no topo; o rodapé de cada tabela alinha quantidade de médicos e totais nas colunas Recebido/Rejeitado.
 - Impressão de **detalhes** (recebidos, rejeitados e totais) somente no modal do médico.
 
