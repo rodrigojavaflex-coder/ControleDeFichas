@@ -74,6 +74,7 @@
       <div class="visitacao-acomp-kpi-grid">
         <article
           class="visitacao-acomp-rep-card"
+          [class.is-total]="isCardTotal(card)"
           *ngFor="let card of cardsResumo">
           <header class="visitacao-acomp-rep-card-head">
             <h3>{{ card.nomeRepresentante }}</h3>
@@ -81,7 +82,9 @@
               {{ card.quantidadeMedicos }} médico(s)
             </span>
           </header>
-          <div class="visitacao-acomp-rep-metrics">
+          <div
+            class="visitacao-acomp-rep-metrics"
+            [class.has-painel]="!isCardTotal(card)">
             <div class="visitacao-acomp-rep-metric is-success">
               <span class="label">Recebido</span>
               <span class="value">{{ formatarMoeda(card.valorRecebido) }}</span>
@@ -91,6 +94,16 @@
               <span class="label">Rejeitado</span>
               <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
               <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
+            </div>
+            <div
+              class="visitacao-acomp-rep-metric is-primary"
+              *ngIf="!isCardTotal(card)">
+              <span class="label">% Painel</span>
+              <span
+                class="value"
+                title="Participação no total recebido">
+                {{ formatarRepresentatividade(card) }}
+              </span>
             </div>
           </div>
         </article>

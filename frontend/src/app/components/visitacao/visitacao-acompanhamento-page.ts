@@ -181,6 +181,10 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     ];
   }
 
+  isCardTotal(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {
+    return card.nomeRepresentante === 'Total';
+  }
+
   get processamentoAtivo(): boolean {
     return this.loading || this.imprimindo;
   }
@@ -1279,5 +1283,16 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
       style: 'currency',
       currency: 'BRL',
     });
+  }
+
+  formatarRepresentatividade(card: { valorRecebido: number }): string {
+    const totalRecebido = Number(this.totais.valorRecebido) || 0;
+    if (totalRecebido <= 0) return '—';
+    const recebido = Number(card.valorRecebido) || 0;
+    const percentual = (recebido / totalRecebido) * 100;
+    return `${percentual.toLocaleString('pt-BR', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })}%`;
   }
 }
