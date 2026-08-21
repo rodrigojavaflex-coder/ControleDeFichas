@@ -158,6 +158,7 @@ export enum Permission {
   PRODUCAO_PAINEL_CONFIG_UPDATE = 'producao-painel-config:update',
 
   VISITACAO_PAINEL_MEDICO_READ = 'visitacao-painel-medico:read',
+  VISITACAO_ACOMPANHAMENTO_READ = 'visitacao-acompanhamento:read',
 }
 
 export interface PermissionGroup {

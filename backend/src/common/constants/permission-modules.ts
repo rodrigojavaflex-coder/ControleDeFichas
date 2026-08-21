@@ -66,6 +66,6 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
   {
     key: 'visitacao',
     label: 'Visitação',
-    groupKeys: ['Visitação — Painel Médico'],
+    groupKeys: ['Visitação — Painel Médico', 'Visitação — Acompanhamento'],
   },
 ];

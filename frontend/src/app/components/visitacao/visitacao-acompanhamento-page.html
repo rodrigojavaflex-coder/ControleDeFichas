@@ -1,0 +1,550 @@
+<div
+  class="vendas-page visitacao-painel-medico-page visitacao-acompanhamento-page"
+  [class.visitacao-acompanhamento-page--processando]="processamentoAtivo">
+  <section *ngIf="error" class="state-card error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </section>
+
+  <section class="results-card" *ngIf="!error">
+    <div class="results-header visitacao-painel-header-actions">
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn btn-imprimir"
+          (click)="imprimir()"
+          [disabled]="loading || imprimindo || totalItems === 0"
+          title="Configurar e imprimir o relatório">
+          <i class="fas fa-print"></i>
+          Imprimir
+        </button>
+        <span class="visitacao-painel-imprimir-status" *ngIf="imprimindo" aria-live="polite">
+          Preparando…
+        </span>
+      </div>
+    </div>
+
+    <div class="filters-inline">
+      <div
+        class="filters-panel-top"
+        role="button"
+        tabindex="0"
+        (click)="onContainerClick($event)"
+        (keydown)="onFiltersToggleKey($event)">
+        <div class="filters-controls">
+          <button
+            type="button"
+            class="filters-toggle btn btn-toggle-filtros"
+            (click)="toggleFiltersVisibility(); $event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()">
+            <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
+            <span class="filters-count" *ngIf="appliedFilters.length">{{ appliedFilters.length }}</span>
+            <i class="fas" [class.fa-chevron-up]="filtersPanelOpen" [class.fa-chevron-down]="!filtersPanelOpen"></i>
+          </button>
+
+          <div class="applied-filters-container" *ngIf="appliedFilters.length || totalItems">
+            <div class="results-count" (click)="$event.stopPropagation()">
+              <i class="fas fa-filter"></i>
+              <span>{{ totalItems }} resultado(s)</span>
+            </div>
+            <div class="applied-filters-wrapper" *ngIf="appliedFilters.length">
+              <div class="applied-filters-list">
+                <span class="filter-chip" *ngFor="let filter of appliedFilters" [title]="filter.value">
+                  <strong>{{ filter.label }}:</strong>
+                  <span class="filter-value">{{ filter.value }}</span>
+                  <button
+                    *ngIf="canRemoveFilter(filter.key)"
+                    type="button"
+                    class="filter-chip-remove"
+                    (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
+                    [attr.aria-label]="'Remover filtro ' + filter.label">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="visitacao-acomp-rep-cards-wrap"
+      *ngIf="totaisPorRepresentante.length">
+      <div class="visitacao-acomp-kpi-grid">
+        <article
+          class="visitacao-acomp-rep-card"
+          *ngFor="let card of cardsResumo">
+          <header class="visitacao-acomp-rep-card-head">
+            <h3>{{ card.nomeRepresentante }}</h3>
+            <span class="visitacao-acomp-rep-medicos">
+              {{ card.quantidadeMedicos }} médico(s)
+            </span>
+          </header>
+          <div class="visitacao-acomp-rep-metrics">
+            <div class="visitacao-acomp-rep-metric is-success">
+              <span class="label">Recebido</span>
+              <span class="value">{{ formatarMoeda(card.valorRecebido) }}</span>
+              <span class="sub">{{ card.quantidadeRecebido }} requisição(ões)</span>
+            </div>
+            <div class="visitacao-acomp-rep-metric is-danger">
+              <span class="label">Rejeitado</span>
+              <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
+              <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="vendas-table visitacao-painel-table visitacao-acomp-table">
+        <thead>
+          <tr>
+            <th
+              class="sortable"
+              (click)="onSort('unidade')"
+              [class.sorted]="sortField === 'unidade'"
+              [attr.aria-sort]="sortField === 'unidade' ? sortDirection : 'none'">
+              Unidade
+              <i class="fas sort-icon" *ngIf="sortField === 'unidade'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('nomeMedico')"
+              [class.sorted]="sortField === 'nomeMedico'"
+              [attr.aria-sort]="sortField === 'nomeMedico' ? sortDirection : 'none'">
+              Médico
+              <i class="fas sort-icon" *ngIf="sortField === 'nomeMedico'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('crmMedico')"
+              [class.sorted]="sortField === 'crmMedico'"
+              [attr.aria-sort]="sortField === 'crmMedico' ? sortDirection : 'none'">
+              CRM
+              <i class="fas sort-icon" *ngIf="sortField === 'crmMedico'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('nomeRepresentante')"
+              [class.sorted]="sortField === 'nomeRepresentante'"
+              [attr.aria-sort]="sortField === 'nomeRepresentante' ? sortDirection : 'none'">
+              Representante
+              <i class="fas sort-icon" *ngIf="sortField === 'nomeRepresentante'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable"
+              (click)="onSort('naCarteira')"
+              [class.sorted]="sortField === 'naCarteira'"
+              [attr.aria-sort]="sortField === 'naCarteira' ? sortDirection : 'none'">
+              No Painel
+              <i class="fas sort-icon" *ngIf="sortField === 'naCarteira'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+            </th>
+            <th
+              class="sortable col-num"
+              (click)="onSort('valorRecebido')"
+              [class.sorted]="sortField === 'valorRecebido'"
+              [attr.aria-sort]="sortField === 'valorRecebido' ? sortDirection : 'none'">
+              <span class="th-sort-inner">
+                Recebido
+                <i class="fas sort-icon" *ngIf="sortField === 'valorRecebido'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+              </span>
+            </th>
+            <th
+              class="sortable col-num"
+              (click)="onSort('valorRejeitado')"
+              [class.sorted]="sortField === 'valorRejeitado'"
+              [attr.aria-sort]="sortField === 'valorRejeitado' ? sortDirection : 'none'">
+              <span class="th-sort-inner">
+                Rejeitado
+                <i class="fas sort-icon" *ngIf="sortField === 'valorRejeitado'" [ngClass]="sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let item of items"
+            class="visitacao-acomp-row"
+            [class.visitacao-row-sem-vinculo]="!item.naCarteira"
+            tabindex="0"
+            role="button"
+            [attr.aria-label]="'Detalhe de ' + item.nomeMedico"
+            (click)="abrirDetalhe(item)"
+            (keydown)="onRowKey($event, item)">
+            <td>
+              {{ item.unidade }}
+              <span
+                *ngIf="item.movimentoForaCarteira"
+                class="visitacao-acomp-outra-unidade"
+                [title]="'Indicação do painel' + (item.unidadeCarteira ? ' de ' + item.unidadeCarteira : '')">
+                Outra unidade
+              </span>
+            </td>
+            <td>{{ item.nomeMedico }}</td>
+            <td>{{ formatCrm(item) }}</td>
+            <td>{{ item.nomeRepresentante || '—' }}</td>
+            <td>
+              <span
+                class="visitacao-vinculo-badge"
+                [class.is-vinculado]="item.naCarteira"
+                [class.is-pendente]="!item.naCarteira">
+                {{ item.naCarteira ? 'Sim' : 'Não' }}
+              </span>
+            </td>
+            <td class="col-num">{{ formatarMoeda(item.valorRecebido) }}</td>
+            <td class="col-num">{{ formatarMoeda(item.valorRejeitado) }}</td>
+          </tr>
+          <tr class="no-data" *ngIf="items.length === 0">
+            <td colspan="7">
+              <i class="fas fa-inbox"></i>
+              Nenhum movimento encontrado no período
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar" *ngIf="totalPages > 1">
+      <button
+        type="button"
+        class="btn btn-sm btn-cancelar"
+        (click)="onPageChange(currentPage - 1)"
+        [disabled]="currentPage <= 1">
+        Anterior
+      </button>
+      <span class="page-info">
+        Página {{ currentPage }} de {{ totalPages }} ({{ totalItems }} médico(s))
+      </span>
+      <button
+        type="button"
+        class="btn btn-sm btn-cancelar"
+        (click)="onPageChange(currentPage + 1)"
+        [disabled]="currentPage >= totalPages">
+        Próxima
+      </button>
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
+  <div class="modal-conteudo modal-filtros visitacao-acomp-modal-filtros" (click)="$event.stopPropagation()">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Filtros — Acompanhamento Visitação</h3>
+      <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="filters-grid vendas-filtros-grid">
+        <div class="filter-group filter-group-wide">
+          <app-date-range-filter
+            label="Período"
+            [start]="dataInicialFilter"
+            [end]="dataFinalFilter"
+            (rangeChange)="onDateRangeChange($event)">
+          </app-date-range-filter>
+        </div>
+
+        <div class="filter-group filter-group-wide filter-group-medico" (click)="$event.stopPropagation()">
+          <app-medico-filter-picker
+            [opcoes]="opcoesMedico"
+            [loading]="loadingOpcoesMedico"
+            [selectedMedicos]="selectedMedicos"
+            [ordenacaoOpcoes]="medicoOrdenacaoOpcoes"
+            (selectedMedicosChange)="onMedicosSelected($event)" />
+        </div>
+
+        <div class="filter-group">
+          <label for="va-crm" class="label-campo">CRM</label>
+          <input
+            id="va-crm"
+            type="text"
+            class="campo"
+            [(ngModel)]="crmMedicoFilter"
+            placeholder="Número do CRM"
+            (keyup.enter)="applyFilters()" />
+        </div>
+
+        <div class="filter-group">
+          <label for="va-uf" class="label-campo">UF</label>
+          <input
+            id="va-uf"
+            type="text"
+            class="campo"
+            maxlength="2"
+            [(ngModel)]="ufCrmMedicoFilter"
+            placeholder="UF"
+            (keyup.enter)="applyFilters()" />
+        </div>
+
+        <div class="filter-group">
+          <label for="va-representante" class="label-campo">Representante</label>
+          <select id="va-representante" class="campo" [(ngModel)]="funcionarioIdFilter">
+            <option value="">Todos</option>
+            <option *ngFor="let rep of representantesVinculados" [value]="rep.id">
+              {{ labelRepresentanteOption(rep) }}
+            </option>
+          </select>
+          <small class="visitacao-filter-hint" *ngIf="!loadingRepresentantes && representantesVinculados.length === 0">
+            Nenhum funcionário com vínculo ao painel nesta unidade.
+          </small>
+        </div>
+
+        <div class="filter-group">
+          <label for="va-na-painel" class="label-campo">No Painel</label>
+          <select id="va-na-painel" class="campo" [(ngModel)]="naCarteiraFilter">
+            <option value="todos">Todos</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="va-unidade" class="label-campo">Unidade</label>
+          <select
+            id="va-unidade"
+            class="campo"
+            [(ngModel)]="unidadeFilter"
+            [disabled]="unidadeDisabled">
+            <option value="">Todas</option>
+            <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
+          </select>
+          <small class="visitacao-filter-hint">
+            Painel desta unidade, inclusive recebido/rejeitado em outras filiais.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-rodape">
+      <button type="button" class="botao botao-fantasma" (click)="clearFilters()">
+        <i class="fas fa-eraser"></i>
+        Limpar filtros
+      </button>
+      <button type="button" class="botao botao-primario" (click)="applyFilters()">
+        <i class="fas fa-filter"></i>
+        Aplicar filtros
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" *ngIf="detalheAberto" (click)="fecharDetalhe()">
+  <div
+    class="modal-conteudo visitacao-acomp-modal-detalhe"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="va-detalhe-titulo">
+    <div class="modal-cabecalho">
+      <div>
+        <h3 class="modal-titulo" id="va-detalhe-titulo">
+          {{ medicoDetalhe?.nomeMedico }}
+        </h3>
+        <p class="visitacao-acomp-detalhe-sub" *ngIf="medicoDetalhe">
+          {{ formatCrm(medicoDetalhe) }} · {{ medicoDetalhe.unidade }}
+          <span *ngIf="medicoDetalhe.movimentoForaCarteira">
+            · movimento em outra unidade
+            <ng-container *ngIf="medicoDetalhe.unidadeCarteira">
+              (carteira {{ medicoDetalhe.unidadeCarteira }})
+            </ng-container>
+          </span>
+        </p>
+      </div>
+      <div class="visitacao-acomp-detalhe-header-actions">
+        <button
+          type="button"
+          class="btn btn-imprimir"
+          (click)="imprimirDetalheAtual()"
+          [disabled]="carregandoDetalhe || !detalhe"
+          title="Imprimir detalhe com totais de recebido e rejeitado">
+          <i class="fas fa-print"></i>
+          Imprimir
+        </button>
+        <button type="button" class="modal-fechar" (click)="fecharDetalhe()" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="visitacao-acomp-state" *ngIf="carregandoDetalhe">
+        <i class="fas fa-spinner fa-spin"></i> Carregando detalhe…
+      </div>
+
+      <ng-container *ngIf="!carregandoDetalhe && detalhe">
+        <h4 class="visitacao-acomp-section-title">Recebidos no caixa</h4>
+        <div class="table-wrapper visitacao-acomp-detalhe-table">
+          <table class="vendas-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cupom</th>
+                <th>Requisição</th>
+                <th>Orçamento</th>
+                <th class="col-num">Valor pago</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let rec of detalhe.recebidos">
+                <td>{{ formatarData(rec.dataPagamento) }}</td>
+                <td>{{ rec.numeroCupom }}</td>
+                <td>{{ rec.numeroRequisicao }}</td>
+                <td>{{ rec.numeroOrcamento ?? '—' }}</td>
+                <td class="col-num">{{ formatarMoeda(rec.valorPago) }}</td>
+              </tr>
+              <tr class="no-data" *ngIf="detalhe.recebidos.length === 0">
+                <td colspan="5">Nenhum recebimento no período</td>
+              </tr>
+            </tbody>
+            <tfoot *ngIf="detalhe.recebidos.length">
+              <tr>
+                <td colspan="4"><strong>Total recebido</strong></td>
+                <td class="col-num"><strong>{{ formatarMoeda(totalDetalheRecebido) }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <h4 class="visitacao-acomp-section-title">Orçamentos rejeitados</h4>
+        <div class="table-wrapper visitacao-acomp-detalhe-table">
+          <table class="vendas-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Orçamento</th>
+                <th>Cliente</th>
+                <th>Motivo</th>
+                <th class="col-num">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let rej of detalhe.rejeitados">
+                <td>{{ formatarData(rej.dataOrcamento) }}</td>
+                <td>{{ rej.nrOrcamento }}</td>
+                <td>{{ rej.nomeCliente || '—' }}</td>
+                <td>{{ rej.motivoRejeicao || 'Sem motivo' }}</td>
+                <td class="col-num">{{ formatarMoeda(rej.precoVenda) }}</td>
+              </tr>
+              <tr class="no-data" *ngIf="detalhe.rejeitados.length === 0">
+                <td colspan="5">Nenhum orçamento rejeitado no período</td>
+              </tr>
+            </tbody>
+            <tfoot *ngIf="detalhe.rejeitados.length">
+              <tr>
+                <td colspan="4"><strong>Total rejeitado</strong></td>
+                <td class="col-num"><strong>{{ formatarMoeda(totalDetalheRejeitado) }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal-overlay"
+  *ngIf="showPrintModal"
+  (click)="closePrintModal()">
+  <div
+    class="modal-conteudo visitacao-acomp-modal-relatorio"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="va-relatorio-titulo">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo" id="va-relatorio-titulo">
+        <i class="fas fa-print" aria-hidden="true"></i>
+        Relatório de acompanhamento
+      </h3>
+      <button type="button" class="modal-fechar" (click)="closePrintModal()" aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-corpo">
+      <p class="modal-hint">
+        Serão impressos os médicos conforme os filtros aplicados na listagem.
+      </p>
+
+      <section class="relatorio-opcao-bloco">
+        <h4 class="relatorio-opcao-titulo">1. Forma do relatório</h4>
+        <div class="relatorio-opcoes-lista relatorio-opcoes-inline">
+          <label class="relatorio-opcao-item">
+            <input
+              type="radio"
+              name="printForma"
+              value="analitico"
+              [(ngModel)]="printForma" />
+            <span>Analítico (detalhado)</span>
+          </label>
+          <label class="relatorio-opcao-item">
+            <input
+              type="radio"
+              name="printForma"
+              value="sintetico"
+              [(ngModel)]="printForma" />
+            <span>Sintético (resumo)</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="relatorio-opcao-bloco">
+        <h4 class="relatorio-opcao-titulo">2. Movimentos</h4>
+        <div class="relatorio-opcoes-lista relatorio-opcoes-inline">
+          <label class="relatorio-opcao-item">
+            <input
+              type="radio"
+              name="printMovimento"
+              value="todos"
+              [(ngModel)]="printMovimento" />
+            <span>Todos</span>
+          </label>
+          <label class="relatorio-opcao-item">
+            <input
+              type="radio"
+              name="printMovimento"
+              value="recebido"
+              [(ngModel)]="printMovimento" />
+            <span>Recebidos</span>
+          </label>
+          <label class="relatorio-opcao-item">
+            <input
+              type="radio"
+              name="printMovimento"
+              value="rejeitado"
+              [(ngModel)]="printMovimento" />
+            <span>Rejeitados</span>
+          </label>
+        </div>
+      </section>
+    </div>
+    <div class="modal-rodape visitacao-acomp-modal-relatorio-rodape">
+      <button type="button" class="btn btn-cancelar" (click)="closePrintModal()">
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-imprimir" (click)="confirmGerarRelatorio()">
+        <i class="fas fa-print"></i>
+        Gerar relatório
+      </button>
+    </div>
+  </div>
+</div>
+
+<div
+  *ngIf="processamentoAtivo"
+  class="visitacao-acomp-processing-overlay"
+  role="alertdialog"
+  aria-modal="true"
+  aria-busy="true"
+  aria-labelledby="va-proc-titulo"
+  [attr.aria-describedby]="subtituloProcessamento ? 'va-proc-sub' : null">
+  <div class="visitacao-acomp-processing-modal">
+    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+    <h3 id="va-proc-titulo">{{ tituloProcessamento }}</h3>
+    <p id="va-proc-sub" *ngIf="subtituloProcessamento">{{ subtituloProcessamento }}</p>
+  </div>
+</div>

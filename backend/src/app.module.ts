@@ -27,6 +27,7 @@ import { ProducaoProdutividadeModule } from './modules/producao-produtividade/pr
 import { ProducaoAcompanhamentoModule } from './modules/producao-acompanhamento/producao-acompanhamento.module';
 import { ProducaoPainelModule } from './modules/producao-painel/producao-painel.module';
 import { VisitacaoPainelMedicoModule } from './modules/visitacao-painel-medico/visitacao-painel-medico.module';
+import { VisitacaoAcompanhamentoModule } from './modules/visitacao-acompanhamento/visitacao-acompanhamento.module';
 import { ImportacaoManualProgressModule } from './common/importacao-manual/importacao-manual-progress.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
@@ -74,6 +75,7 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     ProducaoAcompanhamentoModule,
     ProducaoPainelModule,
     VisitacaoPainelMedicoModule,
+    VisitacaoAcompanhamentoModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],

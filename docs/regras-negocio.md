@@ -331,6 +331,40 @@
 - Seção **Integração ERP** agrupa: `codigoUsuarioErp`, `codigoFuncionarioErp`, `painelContratoRepresentante`, `painelCodigoRepresentante`.
 - Alteração via `POST/PATCH …/folha/funcionarios` com as mesmas validações de par e unicidade do painel (**RN-VIS-005**).
 
+### RN-VIS-007 — Acesso ao acompanhamento (visitação)
+
+- Tela **`/visitacao/acompanhamento`** (título **Acompanhamento Visitação**); permissão **`visitacao-acompanhamento:read`**.
+- Menu lateral **Visitação → Acompanhamento** e rota protegidos com a mesma permissão (OR).
+- Impressão, cards e detalhe do movimento usam a mesma permissão de leitura.
+
+### RN-VIS-008 — Fonte e cruzamento do acompanhamento
+
+- **Recebido:** itens ERP de requisição (`caixa_itens_erp`, `tipo_item = REQUISICAO`, valor `valor_liquido_linha`); eixo de data **`data_operacao`** (mesmo dia do Caixa Detalhado). Prescritor: `caixa_requisicoes_pagas` (CRM/UF) quando houver, senão orçamento `nrorc = numero_requisicao` (preferência pela mesma unidade do caixa; fallback em outra filial).
+- **Rejeitado:** `orcamentos.precoVenda` com `status = REJEITADO`; eixo de data **`dataOrcamento`**.
+- Join do médico: **CRM + UF**. A **unidade da linha** é a do movimento (caixa ou orçamento), sem duplicar o valor.
+- **Indicação / carteira:** se o médico está no painel da unidade do usuário (ou do filtro Unidade), o recebido/rejeitado em **outra filial** entra para o representante dessa carteira, **exceto** se o mesmo CRM+UF já estiver no painel de um representante **na unidade do movimento**. Nesse caso o crédito fica só na unidade do movimento (evita comissão duplicada). A linha de indicação mostra a unidade em que o movimento ocorreu e o indicador **Outra unidade**.
+- Registro **sem CRM ou UF** (nem no caixa pago nem no orçamento da requisição) não entra na grid.
+- Endpoints: **`GET /visitacao/acompanhamento`** (grid paginada + totais), **`GET /visitacao/acompanhamento/detalhe`** e **`GET /visitacao/acompanhamento/opcoes-filtro`**.
+
+### RN-VIS-009 — Universo, filtros e período
+
+- Universo: médicos com CRM+UF que tenham **recebido ou rejeitado** no período (não lista a carteira inteira sem movimento).
+- Filtro **Unidade** (rótulo na tela): significa o **painel daquela filial**, não “somente caixa desta filial”. Usuário com `unidade` cadastrada tem o filtro fixo na própria unidade e **vê também** movimentos desses médicos em outras filiais, salvo quando o médico já está no painel da unidade do movimento (RN-VIS-008).
+- Usuário **sem** unidade: uma linha por evento (unidade = onde recebeu/rejeitou); o representante vem do painel (indicação), sem duplicar valor.
+- **No Painel:** **Todos** (padrão, sem chip), **Sim** (só médicos da carteira) ou **Não** (movimentos da filial cujo CRM não está no painel). **Todos** = carteira + movimentos locais da filial.
+- Filtro **Representante** restringe à carteira do funcionário vinculado (par filial/código), incluindo baixas/rejeições em outras unidades **somente** quando o médico não estiver no painel da unidade do movimento.
+- Filtro de **médicos** usa o mesmo seletor da tela de orçamentos (`NOME - UNIDADE` da unidade do movimento). Endpoint de opções: **`GET /visitacao/acompanhamento/opcoes-filtro`**.
+- Período padrão na UI: **mês corrente** (dia 1 até o último dia do mês, data local). Chip inicial só o período. Ordenação padrão: **Recebido** do maior para o menor. Clique no cabeçalho da coluna reordena a grid (paginação no servidor).
+- Durante a busca (listagem ou impressão), overlay no mesmo padrão do painel de retirada bloqueia nova pesquisa até a consulta terminar.
+- Escopo de carteira do usuário conforme **RN-VIS-003** / **RN-007**, com a extensão de indicação interunidade acima.
+
+### RN-VIS-010 — Cards, detalhe e impressão
+
+- Cards abaixo dos filtros, no mesmo padrão: **Total** primeiro e em seguida **um card por representante** (recebido, rejeitado e quantidade de médicos).
+- Clique na linha abre detalhe: requisições pagas do caixa e orçamentos rejeitados **da unidade do movimento**; permitido se a unidade for a do usuário **ou** o CRM estiver na carteira dele **e** o médico **não** estiver no painel da unidade do movimento.
+- Impressão da listagem abre modal de opções: **Analítico** (detalhado, padrão) ou **Sintético** (resumo por representante/unidade); movimentos **Todos** (padrão), **Recebidos** ou **Rejeitados**. Analítico agrupa **Representante → Unidade** sem cards no topo; o rodapé de cada tabela alinha quantidade de médicos e totais nas colunas Recebido/Rejeitado.
+- Impressão de **detalhes** (recebidos, rejeitados e totais) somente no modal do médico.
+
 ---
 
 ## Etapas de produção (SLA resumo)
@@ -447,7 +481,7 @@
 
 ### RN-PCP-007 — Acompanhamento da fila de produção (operacional)
 
-- Tela **`/producao/acompanhamento`**, menu **Produção → Acompanhamento**; permissão **`producao-acompanhamento:read`** (independente de produtividade e config).
+- Tela **`/producao/acompanhamento`** (título **Acompanhamento Produção**), menu **Produção → Acompanhamento**; permissão **`producao-acompanhamento:read`** (independente de produtividade e config).
 - **Escopo de unidades:** idêntico à produtividade (RN-PCP-005): `unidadesPermitidasProdutividade` / campo **`usuarios.unidades_produtividade`** + unidade principal; API valida com `assertUnidadeProducao`.
 - **Somente fila (MVP):** não há filtro de período histórico; exibe etapas com **`emAndamentoFila = true`** e `dataEntradaFila` preenchida (não usa `dataSaida IS NULL` do fechamento).
 - **Em andamento na etapa:** último movimento PCP na etapa (`tppcp`) é **`01`**; retorno/correção com operação posterior **`≠ 01`** remove a fórmula da fila naquela etapa.
@@ -593,7 +627,7 @@ Responder formalmente antes de alterar importação ou fechamento oficial:
 - Requisições pagas: `{unidade}-{numero_requisicao}-{numero_cupom}-{data_pagamento}`.
 - Reimportar o mesmo dia **sempre atualiza** registros existentes (upsert por `chave_erp`); não duplica linhas.
 - **Sync do período importado:** após buscar pagamentos, itens e requisições no agente, o backend **remove** de `caixa_pagamentos_erp`, `caixa_itens_erp` e `caixa_requisicoes_pagas` os registros da `(unidade, data)` do segmento cuja `chave_erp` **não** veio no snapshot (ex.: movimento excluído e recriado no ERP com novo cupom/`operid`). Em seguida faz upsert das linhas retornadas. **Não** altera baixas de terceiro.
-- **`caixa_requisicoes_pagas`:** orçamento (`NRORC`), qtd/valor de fórmulas e prescritor usam **fallback agregado** em `FC12100` por requisição (prioriza série `0`, depois outras fórmulas e requisição-fonte `NRRQUFON`). Considera apenas `NRORC > 0`. **Não altera** `valor_pago_requisicao` nem totais de `caixa_pagamentos_erp`.
+- **`caixa_requisicoes_pagas`:** orçamento (`NRORC`), qtd/valor de fórmulas e prescritor usam **fallback agregado** em `FC12100` por requisição (prioriza série `0`, depois outras fórmulas e requisição-fonte `NRRQUFON`). Considera apenas `NRORC > 0`. A busca inclui `FC17000.dtefe` **ou** requisição presente no cupom do dia (`FC31200.dtope`), para não perder baixa cujo `dtefe` difere da data do caixa. **Não altera** `valor_pago_requisicao` nem totais de `caixa_pagamentos_erp`.
 
 ### RN-CXA-004 — Valor líquido e formas de pagamento (ERP)
 

@@ -177,6 +177,8 @@ export enum Permission {
 
   /** Visitação — painel médico (médicos × representantes sincronizados). */
   VISITACAO_PAINEL_MEDICO_READ = 'visitacao-painel-medico:read',
+  /** Visitação — acompanhamento (caixa recebido × orçamentos rejeitados). */
+  VISITACAO_ACOMPANHAMENTO_READ = 'visitacao-acompanhamento:read',
 }
 
 export const PERMISSION_GROUPS = {
@@ -543,6 +545,12 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.VISITACAO_PAINEL_MEDICO_READ,
       label: 'Visualizar painel médico (visitação)',
+    },
+  ],
+  'Visitação — Acompanhamento': [
+    {
+      key: Permission.VISITACAO_ACOMPANHAMENTO_READ,
+      label: 'Visualizar acompanhamento (visitação)',
     },
   ],
 };

@@ -1036,13 +1036,22 @@ export class DatabaseService {
          AND fonte.serier = direct.serierfon
          AND COALESCE(direct.nrrqufon, 0) > 0
         WHERE direct.cdfil = ?
-          AND EXISTS (
-            SELECT 1
-            FROM fc17000 r0
-            WHERE r0.cdfil = direct.cdfil
-              AND r0.nrrqu = direct.nrrqu
-              AND r0.dtefe BETWEEN ? AND ?
-              AND COALESCE(r0.vrliq, 0) <> 0
+          AND (
+            EXISTS (
+              SELECT 1
+              FROM fc17000 r0
+              WHERE r0.cdfil = direct.cdfil
+                AND r0.nrrqu = direct.nrrqu
+                AND r0.dtefe BETWEEN ? AND ?
+                AND COALESCE(r0.vrliq, 0) <> 0
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM fc31200 req0
+              WHERE req0.cdfil = direct.cdfil
+                AND req0.nrrqu = direct.nrrqu
+                AND req0.dtope BETWEEN ? AND ?
+            )
           )
         GROUP BY direct.cdfil, direct.nrrqu
       ) form
@@ -1060,12 +1069,24 @@ export class DatabaseService {
         ON fun.cdfun = vend.cdfun
        AND fun.cdcon = vend.cdcon
       WHERE r.cdfil = ?
-        AND r.dtefe BETWEEN ? AND ?
         AND COALESCE(r.vrliq, 0) <> 0
+        AND (
+          r.dtefe BETWEEN ? AND ?
+          OR EXISTS (
+            SELECT 1
+            FROM fc31200 req
+            WHERE req.cdfil = r.cdfil
+              AND req.nrrqu = r.nrrqu
+              AND req.dtope BETWEEN ? AND ?
+          )
+        )
       ORDER BY r.dtefe, r.nrcpm, r.nrrqu
     `;
 
-    return { sql, params: [unit, start, end, unit, start, end] };
+    return {
+      sql,
+      params: [unit, start, end, start, end, unit, start, end, start, end],
+    };
   }
 
   private buildCaixaFechamentoDiaQuery(

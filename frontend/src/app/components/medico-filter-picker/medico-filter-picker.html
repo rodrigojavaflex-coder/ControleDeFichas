@@ -58,10 +58,9 @@
               class="form-control picker-ordenacao-select"
               [(ngModel)]="ordenacaoModal"
               aria-label="Ordenar médicos">
-              <option value="total">Mais orçamentos</option>
-              <option value="aprovados">Mais orçamentos aprovados</option>
-              <option value="rejeitados">Mais orçamentos rejeitados</option>
-              <option value="alfabetica">Ordem alfabética</option>
+              <option *ngFor="let opcao of ordenacaoOpcoes" [value]="opcao.value">
+                {{ opcao.label }}
+              </option>
             </select>
           </div>
           <div class="picker-limite-row">

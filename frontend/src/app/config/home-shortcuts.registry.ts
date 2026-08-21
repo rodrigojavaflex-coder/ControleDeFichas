@@ -325,7 +325,7 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
   },
   {
     id: 'producao-acompanhamento',
-    label: 'Acompanhamento',
+    label: 'Acompanhamento Produção',
     route: '/producao/acompanhamento',
     icon: 'feather-activity',
     category: 'Produção',
@@ -346,6 +346,14 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     icon: 'feather-user-plus',
     category: 'Visitação',
     requiredPermissions: [Permission.VISITACAO_PAINEL_MEDICO_READ],
+  },
+  {
+    id: 'visitacao-acompanhamento',
+    label: 'Acompanhamento Visitação',
+    route: '/visitacao/acompanhamento',
+    icon: 'feather-activity',
+    category: 'Visitação',
+    requiredPermissions: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
   },
 ] as const;
 

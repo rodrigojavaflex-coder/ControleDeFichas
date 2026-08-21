@@ -337,6 +337,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
           icon: 'feather-user-plus',
           requiredPermissions: [Permission.VISITACAO_PAINEL_MEDICO_READ],
         },
+        {
+          label: 'Acompanhamento',
+          route: '/visitacao/acompanhamento',
+          icon: 'feather-activity',
+          requiredPermissions: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
+        },
       ],
     },
     {

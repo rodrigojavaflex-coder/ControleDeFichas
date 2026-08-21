@@ -42,6 +42,7 @@ export const PERMISSION_GROUP_ICON_KEYS: Record<string, string> = {
   'Produção — Acompanhamento': 'feather-activity',
   'Produção — Produtividade': 'feather-bar-chart-2',
   'Visitação — Painel Médico': 'feather-user-plus',
+  'Visitação — Acompanhamento': 'feather-activity',
 };
 
 export function getPermissionModuleIconKey(moduleKey: string): string {

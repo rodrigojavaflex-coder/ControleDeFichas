@@ -67,7 +67,7 @@ export class ProducaoAcompanhamentoPage implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.pageCtx.setContext({
-      title: 'Acompanhamento',
+      title: 'Acompanhamento Produção',
       description:
         'Fila operacional: etapas em andamento conforme dados importados do PCP.',
     });

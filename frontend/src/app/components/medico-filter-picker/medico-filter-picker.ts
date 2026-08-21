@@ -41,6 +41,15 @@ export class MedicoFilterPickerComponent implements OnDestroy {
   @Input() confirmLabel = 'Adicionar e aplicar';
   @Input() resumoVazio = 'todos';
   @Input() hintTodos = 'Todos os médicos';
+  @Input() ordenacaoOpcoes: Array<{
+    value: MedicoOrdenacaoFiltro;
+    label: string;
+  }> = [
+    { value: 'total', label: 'Mais orçamentos' },
+    { value: 'aprovados', label: 'Mais orçamentos aprovados' },
+    { value: 'rejeitados', label: 'Mais orçamentos rejeitados' },
+    { value: 'alfabetica', label: 'Ordem alfabética' },
+  ];
 
   @Output() selectedMedicosChange = new EventEmitter<Set<string>>();
   @Output() confirmed = new EventEmitter<void>();
