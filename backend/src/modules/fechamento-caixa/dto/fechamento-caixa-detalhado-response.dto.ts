@@ -74,6 +74,25 @@ export class CaixaErpPagamentoDetalheDto {
   nomeOperadorCaixa?: string | null;
 }
 
+export class CaixaErpCortesiaDetalheDto {
+  @ApiProperty()
+  numeroCupom: number;
+
+  @ApiProperty()
+  numeroRequisicao: number;
+
+  @ApiProperty({
+    description: 'Valor da fórmula (informativo; não entra no caixa)',
+  })
+  valorInformativo: number;
+
+  @ApiProperty({ required: false, nullable: true })
+  nomeMedico?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  crmMedico?: string | null;
+}
+
 export class FechamentoCaixaDetalhadoResponseDto {
   @ApiProperty()
   unidade: string;
@@ -86,6 +105,13 @@ export class FechamentoCaixaDetalhadoResponseDto {
 
   @ApiProperty({ type: [CaixaErpPagamentoDetalheDto] })
   erpPagamentos: CaixaErpPagamentoDetalheDto[];
+
+  @ApiProperty({
+    type: [CaixaErpCortesiaDetalheDto],
+    description:
+      'Baixas TPRQU=C do dia (informativo; não somam no total do caixa)',
+  })
+  cortesias: CaixaErpCortesiaDetalheDto[];
 
   @ApiProperty()
   totalBaixas: number;

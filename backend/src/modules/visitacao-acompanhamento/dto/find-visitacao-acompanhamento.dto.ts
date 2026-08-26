@@ -2,9 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
-  IsDateString,
   IsEnum,
   IsIn,
+  IsInt,
   IsOptional,
   IsPositive,
   IsString,
@@ -62,19 +62,19 @@ export class FindVisitacaoAcompanhamentoDto {
   @Max(200)
   limit?: number = 50;
 
-  @ApiProperty({ example: '2026-08-19' })
-  @IsDateString(
-    {},
-    { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' },
-  )
-  dataInicial: string;
+  @ApiProperty({ example: 2026, description: 'Ano da competência (2026–2033)' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2026)
+  @Max(2033)
+  ano: number;
 
-  @ApiProperty({ example: '2026-08-20' })
-  @IsDateString(
-    {},
-    { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
-  )
-  dataFinal: string;
+  @ApiProperty({ example: 7, description: 'Mês da competência (1–12)' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  mes: number;
 
   @ApiPropertyOptional({
     enum: Unidade,

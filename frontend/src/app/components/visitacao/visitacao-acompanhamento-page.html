@@ -7,7 +7,15 @@
   </section>
 
   <section class="results-card" *ngIf="!error">
-    <div class="results-header visitacao-painel-header-actions">
+    <div class="results-header visitacao-painel-header-actions visitacao-acomp-header-actions">
+      <aside
+        class="visitacao-acomp-du-legend"
+        *ngIf="rotuloCompetenciaLegenda"
+        aria-label="Competência, dias úteis e dias realizados">
+        <strong>{{ rotuloCompetenciaLegenda }}</strong>
+        <span *ngIf="rotuloDiasUteis">{{ rotuloDiasUteis }}</span>
+        <span *ngIf="rotuloDiasRealizados">{{ rotuloDiasRealizados }}</span>
+      </aside>
       <div class="header-actions">
         <button
           type="button"
@@ -22,45 +30,44 @@
           Preparando…
         </span>
       </div>
-    </div>
+      <div class="filters-inline">
+        <div
+          class="filters-panel-top"
+          role="button"
+          tabindex="0"
+          (click)="onContainerClick($event)"
+          (keydown)="onFiltersToggleKey($event)">
+          <div class="filters-controls">
+            <button
+              type="button"
+              class="filters-toggle btn btn-toggle-filtros"
+              (click)="toggleFiltersVisibility(); $event.stopPropagation()"
+              (mousedown)="$event.stopPropagation()">
+              <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
+              <span class="filters-count" *ngIf="appliedFilters.length">{{ appliedFilters.length }}</span>
+              <i class="fas" [class.fa-chevron-up]="filtersPanelOpen" [class.fa-chevron-down]="!filtersPanelOpen"></i>
+            </button>
 
-    <div class="filters-inline">
-      <div
-        class="filters-panel-top"
-        role="button"
-        tabindex="0"
-        (click)="onContainerClick($event)"
-        (keydown)="onFiltersToggleKey($event)">
-        <div class="filters-controls">
-          <button
-            type="button"
-            class="filters-toggle btn btn-toggle-filtros"
-            (click)="toggleFiltersVisibility(); $event.stopPropagation()"
-            (mousedown)="$event.stopPropagation()">
-            <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
-            <span class="filters-count" *ngIf="appliedFilters.length">{{ appliedFilters.length }}</span>
-            <i class="fas" [class.fa-chevron-up]="filtersPanelOpen" [class.fa-chevron-down]="!filtersPanelOpen"></i>
-          </button>
-
-          <div class="applied-filters-container" *ngIf="appliedFilters.length || totalItems">
-            <div class="results-count" (click)="$event.stopPropagation()">
-              <i class="fas fa-filter"></i>
-              <span>{{ totalItems }} resultado(s)</span>
-            </div>
-            <div class="applied-filters-wrapper" *ngIf="appliedFilters.length">
-              <div class="applied-filters-list">
-                <span class="filter-chip" *ngFor="let filter of appliedFilters" [title]="filter.value">
-                  <strong>{{ filter.label }}:</strong>
-                  <span class="filter-value">{{ filter.value }}</span>
-                  <button
-                    *ngIf="canRemoveFilter(filter.key)"
-                    type="button"
-                    class="filter-chip-remove"
-                    (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
-                    [attr.aria-label]="'Remover filtro ' + filter.label">
-                    <i class="fas fa-times"></i>
-                  </button>
-                </span>
+            <div class="applied-filters-container" *ngIf="appliedFilters.length || totalItems">
+              <div class="results-count" (click)="$event.stopPropagation()">
+                <i class="fas fa-filter"></i>
+                <span>{{ totalItems }} resultado(s)</span>
+              </div>
+              <div class="applied-filters-wrapper" *ngIf="appliedFilters.length">
+                <div class="applied-filters-list">
+                  <span class="filter-chip" *ngFor="let filter of appliedFilters" [title]="filter.value">
+                    <strong>{{ filter.label }}:</strong>
+                    <span class="filter-value">{{ filter.value }}</span>
+                    <button
+                      *ngIf="canRemoveFilter(filter.key)"
+                      type="button"
+                      class="filter-chip-remove"
+                      (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
+                      [attr.aria-label]="'Remover filtro ' + filter.label">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -70,7 +77,7 @@
 
     <div
       class="visitacao-acomp-rep-cards-wrap"
-      *ngIf="totaisPorRepresentante.length">
+      *ngIf="cardsResumo.length">
       <div class="visitacao-acomp-kpi-grid">
         <article
           class="visitacao-acomp-rep-card"
@@ -78,17 +85,28 @@
           *ngFor="let card of cardsResumo">
           <header class="visitacao-acomp-rep-card-head">
             <h3>{{ card.nomeRepresentante }}</h3>
-            <span class="visitacao-acomp-rep-medicos">
-              {{ card.quantidadeMedicos }} médico(s)
-            </span>
+            <div class="visitacao-acomp-rep-medicos" *ngIf="!isCardTotal(card)">
+              <span>
+                <strong>{{ card.quantidadeMedicos }}</strong>
+                com movimento
+              </span>
+              <span>
+                <strong>{{ card.quantidadeMedicosPainel ?? 0 }}</strong>
+                ativos no painel
+              </span>
+              <span>
+                <strong>{{ card.quantidadeMedicosForaAtendimento ?? 0 }}</strong>
+                fora do atendimento
+              </span>
+            </div>
           </header>
           <div
             class="visitacao-acomp-rep-metrics"
             [class.has-painel]="!isCardTotal(card)">
             <div class="visitacao-acomp-rep-metric is-success">
               <span class="label">Recebido</span>
-              <span class="value">{{ formatarMoeda(card.valorRecebido) }}</span>
-              <span class="sub">{{ card.quantidadeRecebido }} requisição(ões)</span>
+              <span class="value">{{ formatarMoeda(valorRecebidoCard(card)) }}</span>
+              <span class="sub">{{ quantidadeRecebidoCard(card) }} requisição(ões)</span>
             </div>
             <div class="visitacao-acomp-rep-metric is-danger">
               <span class="label">Rejeitado</span>
@@ -98,12 +116,69 @@
             <div
               class="visitacao-acomp-rep-metric is-primary"
               *ngIf="!isCardTotal(card)">
-              <span class="label">% Painel</span>
+              <span class="label">Representatividade</span>
               <span
                 class="value"
-                title="Participação no total recebido">
+                title="Participação no recebido do caixa no escopo">
                 {{ formatarRepresentatividade(card) }}
               </span>
+            </div>
+          </div>
+          <div
+            class="visitacao-acomp-rep-desempenho"
+            [class.has-projecao]="card.mesAberto"
+            *ngIf="!isCardTotal(card)">
+            <div class="visitacao-acomp-rep-metric">
+              <span class="label">Meta</span>
+              <span
+                class="value"
+                [title]="temMeta(card) ? formatarMoeda(card.valorMeta) : 'Sem meta'">
+                {{ temMeta(card) ? formatarMoeda(card.valorMeta) : 'Sem meta' }}
+              </span>
+            </div>
+            <div class="visitacao-acomp-rep-metric">
+              <span class="label">% Meta</span>
+              <span class="value">{{ temMeta(card) ? formatarPercentualMeta(card.percentualMeta) : '—' }}</span>
+              <span
+                class="visitacao-acomp-meta-bar"
+                *ngIf="temMeta(card)"
+                [attr.aria-valuenow]="card.percentualMeta"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                role="progressbar">
+                <span
+                  class="visitacao-acomp-meta-bar-fill"
+                  [class.is-ok]="(card.percentualMeta ?? 0) >= 100"
+                  [style.width.%]="larguraBarraMeta(card.percentualMeta)"></span>
+              </span>
+            </div>
+            <div class="visitacao-acomp-rep-metric" *ngIf="card.mesAberto">
+              <span class="label">Projeção</span>
+              <span class="value">{{ formatarMoeda(card.valorProjetado) }}</span>
+              <span class="sub" *ngIf="temMeta(card)">
+                {{ formatarPercentualMeta(card.percentualProjecao) }} da meta
+              </span>
+            </div>
+          </div>
+          <div
+            class="visitacao-acomp-rep-comissao"
+            [class.has-projecao]="temComissaoProjetada(card)"
+            *ngIf="!isCardTotal(card) && temComissao(card)">
+            <div class="visitacao-acomp-rep-metric">
+              <span class="label">Faixa</span>
+              <span class="value">{{ formatarPercentualMeta(card.percentualComissaoFaixa) }}</span>
+            </div>
+            <div class="visitacao-acomp-rep-metric">
+              <span class="label">Comissão</span>
+              <span class="value">{{ formatarMoeda(card.valorComissao) }}</span>
+            </div>
+            <div class="visitacao-acomp-rep-metric" *ngIf="temComissaoProjetada(card)">
+              <span class="label">Faixa proj.</span>
+              <span class="value">{{ formatarPercentualMeta(card.percentualComissaoFaixaProjetada) }}</span>
+            </div>
+            <div class="visitacao-acomp-rep-metric" *ngIf="temComissaoProjetada(card)">
+              <span class="label">Comissão proj.</span>
+              <span class="value">{{ formatarMoeda(card.valorComissaoProjetado) }}</span>
             </div>
           </div>
         </article>
@@ -262,13 +337,18 @@
 
     <div class="modal-corpo">
       <div class="filters-grid vendas-filtros-grid">
-        <div class="filter-group filter-group-wide">
-          <app-date-range-filter
-            label="Período"
-            [start]="dataInicialFilter"
-            [end]="dataFinalFilter"
-            (rangeChange)="onDateRangeChange($event)">
-          </app-date-range-filter>
+        <div class="filter-group">
+          <label for="va-mes" class="label-campo">Mês</label>
+          <select id="va-mes" class="campo" [(ngModel)]="mesFiltro">
+            <option *ngFor="let m of MESES_PT" [ngValue]="m.numero">{{ m.nome }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="va-ano" class="label-campo">Ano</label>
+          <select id="va-ano" class="campo" [(ngModel)]="anoFiltro">
+            <option *ngFor="let a of anosDisponiveis" [ngValue]="a">{{ a }}</option>
+          </select>
         </div>
 
         <div class="filter-group filter-group-wide filter-group-medico" (click)="$event.stopPropagation()">

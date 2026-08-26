@@ -1,10 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Funcionario } from '../folha/entities/funcionario.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
-import { resolverEscopoListaFechamentoPorUsuario } from '../folha/utils/folha-unidade-scope.util';
+import {
+  ListaFechamentoEscopo,
+  resolverEscopoListaFechamentoPorUsuario,
+} from '../folha/utils/folha-unidade-scope.util';
 import { PaginationMetaDto } from '../../common/dto/paginated-response.dto';
 import { FindVisitacaoAcompanhamentoDto } from './dto/find-visitacao-acompanhamento.dto';
 import { FindVisitacaoAcompanhamentoDetalheDto } from './dto/find-visitacao-acompanhamento-detalhe.dto';
@@ -15,6 +18,24 @@ import { VisitacaoAcompanhamentoTotaisDto } from './dto/visitacao-acompanhamento
 import { VisitacaoAcompanhamentoTotaisRepresentanteDto } from './dto/visitacao-acompanhamento-totais-representante.dto';
 import { VisitacaoPainelMedicoRepresentanteDto } from '../visitacao-painel-medico/dto/visitacao-painel-medico-representante.dto';
 import { VisitacaoAcompanhamentoOpcoesFiltroDto } from './dto/visitacao-acompanhamento-opcoes-filtro.dto';
+import { VisitacaoMetaRepresentante } from '../visitacao-meta/entities/visitacao-meta-representante.entity';
+import { VisitacaoComissaoFaixa } from '../visitacao-meta/entities/visitacao-comissao-faixa.entity';
+import { CalendarioUnidade } from '../producao-config/entities/calendario-unidade.entity';
+import { ProducaoFeriado } from '../producao-config/entities/producao-feriado.entity';
+import { CaixaFechamento } from '../fechamento-caixa/entities/caixa-fechamento.entity';
+import { CaixaFechamentoStatus } from '../fechamento-caixa/enums/caixa-fechamento-status.enum';
+import { Permission } from '../../common/enums/permission.enum';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
+import {
+  competenciaAberta,
+  PeriodoCompetencia,
+  periodoCompetencia,
+  somarDiasUteisVisitacao,
+  somarDiasRealizadosVisitacao,
+  ymdHojeSp,
+} from './utils/visitacao-dias-uteis.util';
+
+const NOME_SEM_REPRESENTANTE = 'Sem representante';
 
 type SqlBuild = {
   sql: string;
@@ -46,6 +67,7 @@ type TotaisRow = {
 
 type TotaisRepresentanteRow = TotaisRow & {
   nome_representante: string | null;
+  funcionario_id: string | null;
 };
 
 type RecebidoRow = {
@@ -72,6 +94,16 @@ export class VisitacaoAcompanhamentoService {
     private readonly dataSource: DataSource,
     @InjectRepository(Funcionario)
     private readonly funcionarioRepository: Repository<Funcionario>,
+    @InjectRepository(VisitacaoMetaRepresentante)
+    private readonly metaRepository: Repository<VisitacaoMetaRepresentante>,
+    @InjectRepository(VisitacaoComissaoFaixa)
+    private readonly faixaRepository: Repository<VisitacaoComissaoFaixa>,
+    @InjectRepository(CalendarioUnidade)
+    private readonly calendarioRepository: Repository<CalendarioUnidade>,
+    @InjectRepository(ProducaoFeriado)
+    private readonly feriadoRepository: Repository<ProducaoFeriado>,
+    @InjectRepository(CaixaFechamento)
+    private readonly caixaFechamentoRepository: Repository<CaixaFechamento>,
   ) {}
 
   async findAll(
@@ -80,17 +112,18 @@ export class VisitacaoAcompanhamentoService {
   ): Promise<VisitacaoAcompanhamentoListResponseDto> {
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 50;
-    this.assertPeriodo(dto.dataInicial, dto.dataFinal);
+    const periodo = periodoCompetencia(dto.ano, dto.mes);
 
     const filtroRep = await this.resolverFiltroRepresentante(usuario, dto);
     if (filtroRep === 'VAZIO') {
-      return this.respostaVazia(page, limit);
+      return this.respostaVazia(page, limit, periodo);
     }
 
     const { sql: baseSql, params } = this.montarSqlFiltrado(
       usuario,
       dto,
       filtroRep === 'NENHUM' ? null : filtroRep,
+      periodo,
     );
 
     const orderSql = this.montarOrderBy(dto);
@@ -116,11 +149,41 @@ export class VisitacaoAcompanhamentoService {
       data: RowAgregado[] | null;
     }>;
     const combined = combinedRows[0];
-    const totaisPorRepresentante = this.asJsonArray<TotaisRepresentanteRow>(
+    const grupos = this.asJsonArray<TotaisRepresentanteRow>(
       combined?.totais_por_representante,
-    ).map((row) => this.mapTotaisRepresentante(row));
-    const totais = this.somarTotais(totaisPorRepresentante);
+    ).map((row) => this.mapTotaisRepresentante(row, periodo));
+    const totais = this.somarTotais(grupos, periodo);
+    const totaisPorRepresentante = grupos.filter(
+      (g) => g.nomeRepresentante !== NOME_SEM_REPRESENTANTE,
+    );
     const rows = this.asJsonArray<RowAgregado>(combined?.data);
+
+    const escopo = resolverEscopoListaFechamentoPorUsuario(
+      usuario,
+      dto.unidade,
+    );
+    const unidadePainel = escopo === 'ALL' ? null : escopo;
+    const caixa = await this.consultarRecebidoCaixa(escopo, periodo);
+    totais.valorRecebidoCaixa = caixa.valor;
+    totais.quantidadeRecebidoCaixa = caixa.quantidade;
+
+    const exporComissao = getUsuarioPermissoes(usuario).includes(
+      Permission.VISITACAO_ACOMPANHAMENTO_COMISSAO,
+    );
+
+    await this.anexarDesempenho(
+      totaisPorRepresentante,
+      totais,
+      periodo,
+      dto.unidade ?? unidadePainel,
+      exporComissao,
+    );
+    await this.anexarEstatisticasPainel(
+      totaisPorRepresentante,
+      totais,
+      periodo,
+      unidadePainel,
+    );
 
     return {
       data: rows.map((row) => this.mapItem(row)),
@@ -134,7 +197,7 @@ export class VisitacaoAcompanhamentoService {
     usuario: Usuario,
     dto: FindVisitacaoAcompanhamentoDto,
   ): Promise<VisitacaoAcompanhamentoOpcoesFiltroDto> {
-    this.assertPeriodo(dto.dataInicial, dto.dataFinal);
+    const periodo = periodoCompetencia(dto.ano, dto.mes);
     const dtoOpcoes = { ...dto, nomesMedico: undefined };
     const filtroRep = await this.resolverFiltroRepresentante(usuario, dtoOpcoes);
     if (filtroRep === 'VAZIO') {
@@ -145,6 +208,7 @@ export class VisitacaoAcompanhamentoService {
       usuario,
       dtoOpcoes,
       filtroRep === 'NENHUM' ? null : filtroRep,
+      periodo,
     );
 
     const sql = `
@@ -228,44 +292,51 @@ export class VisitacaoAcompanhamentoService {
 
     const recebidosSql = `
       SELECT
-        i.data_operacao AS data_pagamento,
-        i.numero_cupom,
-        i.numero_requisicao,
-        COALESCE(c.numero_orcamento, o.numero_orcamento) AS numero_orcamento,
-        i.valor_liquido_linha AS valor_pago,
-        COALESCE(c.nome_medico, o.nome_medico) AS nome_medico
-      FROM caixa_itens_erp i
-      LEFT JOIN caixa_requisicoes_pagas c
-        ON c.unidade = i.unidade
-        AND c.numero_requisicao = i.numero_requisicao
-        AND c.numero_cupom = i.numero_cupom
-      LEFT JOIN LATERAL (
-        SELECT
-          BTRIM(o0."crmMedico") AS crm,
-          UPPER(BTRIM(o0."ufcrmMedico")) AS uf,
-          MAX(o0."nomeMedico") AS nome_medico,
-          MAX(o0.nrorc) AS numero_orcamento
-        FROM orcamentos o0
-        WHERE o0.nrorc = i.numero_requisicao
-          AND BTRIM(o0."crmMedico") = $2
-          AND UPPER(BTRIM(o0."ufcrmMedico")) = $3
-        GROUP BY BTRIM(o0."crmMedico"), UPPER(BTRIM(o0."ufcrmMedico"))
-        ORDER BY MAX(CASE WHEN o0.unidade = i.unidade THEN 0 ELSE 1 END)
-        LIMIT 1
-      ) o ON (
-        NULLIF(BTRIM(c.crm_medico), '') IS NULL
-        OR NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NULL
-      )
-      WHERE i.tipo_item = 'REQUISICAO'
-        AND i.numero_requisicao IS NOT NULL
-        AND i.unidade = $1
-        AND i.data_operacao >= $4
-        AND i.data_operacao <= $5
-        AND (
-          (BTRIM(c.crm_medico) = $2 AND UPPER(BTRIM(c.uf_crm_medico)) = $3)
-          OR o.crm IS NOT NULL
+        t.data_pagamento,
+        t.numero_cupom,
+        t.numero_requisicao,
+        t.numero_orcamento,
+        t.valor_pago,
+        t.nome_medico
+      FROM (
+        SELECT DISTINCT ON (i.numero_cupom, i.numero_requisicao)
+          i.data_operacao AS data_pagamento,
+          i.numero_cupom,
+          i.numero_requisicao,
+          COALESCE(c.numero_orcamento, o.numero_orcamento) AS numero_orcamento,
+          ${this.sqlValorRecebidoPrescritor()} AS valor_pago,
+          COALESCE(c.nome_medico, o.nome_medico) AS nome_medico
+        FROM caixa_itens_erp i
+        ${this.sqlJoinCaixaPago()}
+        LEFT JOIN LATERAL (
+          SELECT
+            BTRIM(o0."crmMedico") AS crm,
+            UPPER(BTRIM(o0."ufcrmMedico")) AS uf,
+            MAX(o0."nomeMedico") AS nome_medico,
+            MAX(o0.nrorc) AS numero_orcamento
+          FROM orcamentos o0
+          WHERE o0.nrorc = i.numero_requisicao
+            AND BTRIM(o0."crmMedico") = $2
+            AND UPPER(BTRIM(o0."ufcrmMedico")) = $3
+          GROUP BY BTRIM(o0."crmMedico"), UPPER(BTRIM(o0."ufcrmMedico"))
+          ORDER BY MAX(CASE WHEN o0.unidade = i.unidade THEN 0 ELSE 1 END)
+          LIMIT 1
+        ) o ON (
+          NULLIF(BTRIM(c.crm_medico), '') IS NULL
+          OR NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NULL
         )
-      ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.numero_requisicao ASC
+        WHERE i.tipo_item = 'REQUISICAO'
+          AND i.numero_requisicao IS NOT NULL
+          AND i.unidade = $1
+          ${this.sqlFiltroPeriodoRecebido('$4', '$5')}
+          ${this.sqlFiltroRecebidoVisitacao()}
+          AND (
+            (BTRIM(c.crm_medico) = $2 AND UPPER(BTRIM(c.uf_crm_medico)) = $3)
+            OR o.crm IS NOT NULL
+          )
+        ORDER BY i.numero_cupom, i.numero_requisicao, i.id
+      ) t
+      ORDER BY t.data_pagamento ASC, t.numero_cupom ASC, t.numero_requisicao ASC
     `;
 
     const rejeitadosSql = `
@@ -372,13 +443,14 @@ export class VisitacaoAcompanhamentoService {
             FROM (
               SELECT
                 COALESCE(NULLIF(BTRIM(filtered.nome_representante), ''), 'Sem representante') AS nome_representante,
+                filtered.funcionario_id,
                 COALESCE(SUM(filtered.valor_recebido), 0) AS valor_recebido,
                 COALESCE(SUM(filtered.qtd_recebido), 0) AS qtd_recebido,
                 COALESCE(SUM(filtered.valor_rejeitado), 0) AS valor_rejeitado,
                 COALESCE(SUM(filtered.qtd_rejeitado), 0) AS qtd_rejeitado,
                 COUNT(*)::int AS qtd_medicos
               FROM filtered
-              GROUP BY 1
+              GROUP BY 1, 2
             ) t
           ),
           '[]'::jsonb
@@ -402,8 +474,9 @@ export class VisitacaoAcompanhamentoService {
       contrato: number;
       codigo: number;
     } | null,
+    periodo: PeriodoCompetencia,
   ): SqlBuild {
-    const params: unknown[] = [dto.dataInicial, dto.dataFinal];
+    const params: unknown[] = [periodo.dataInicial, periodo.dataFinal];
     let idx = 3;
 
     const escopo = resolverEscopoListaFechamentoPorUsuario(
@@ -458,12 +531,14 @@ export class VisitacaoAcompanhamentoService {
           pc.nome_funcionario,
           pc.nome_representante_erp
         )`;
+    const funcionarioIdExpr = idxCarteira
+      ? `COALESCE(
+          CASE WHEN pc.unidade = $${idxCarteira} THEN pc.funcionario_id END,
+          pe.funcionario_id
+        )`
+      : `COALESCE(pe.funcionario_id, pc.funcionario_id)`;
 
-    const joinCaixaPago = `
-          LEFT JOIN caixa_requisicoes_pagas c
-            ON c.unidade = i.unidade
-            AND c.numero_requisicao = i.numero_requisicao
-            AND c.numero_cupom = i.numero_cupom`;
+    const joinCaixaPago = this.sqlJoinCaixaPago();
     const lateralOrcamento = `
           LEFT JOIN LATERAL (
             SELECT
@@ -483,6 +558,8 @@ export class VisitacaoAcompanhamentoService {
           )`;
     const selectRecebido = `
             i.unidade,
+            i.numero_cupom,
+            i.numero_requisicao,
             COALESCE(
               NULLIF(BTRIM(c.crm_medico), ''),
               NULLIF(BTRIM(o.crm), '')
@@ -492,12 +569,12 @@ export class VisitacaoAcompanhamentoService {
               o.uf
             ) AS uf,
             COALESCE(NULLIF(BTRIM(c.nome_medico), ''), o.nome_medico) AS nome_medico,
-            i.valor_liquido_linha AS valor_recebido`;
+            ${this.sqlValorRecebidoPrescritor()} AS valor_recebido`;
     const whereCaixaPeriodo = `
             i.tipo_item = 'REQUISICAO'
             AND i.numero_requisicao IS NOT NULL
-            AND i.data_operacao >= $1
-            AND i.data_operacao <= $2`;
+            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
+            ${this.sqlFiltroRecebidoVisitacao()}`;
     const semCrmCaixa = `(
               c.id IS NULL
               OR NULLIF(BTRIM(c.crm_medico), '') IS NULL
@@ -508,10 +585,12 @@ export class VisitacaoAcompanhamentoService {
           SELECT * FROM (
             SELECT DISTINCT ON (i.id)
               i.unidade,
+              i.numero_cupom,
+              i.numero_requisicao,
               BTRIM(o0."crmMedico") AS crm,
               UPPER(BTRIM(o0."ufcrmMedico")) AS uf,
               o0."nomeMedico" AS nome_medico,
-              i.valor_liquido_linha AS valor_recebido
+              ${this.sqlValorRecebidoPrescritor()} AS valor_recebido
             FROM caixa_itens_erp i
             ${joinCaixaPago}
             INNER JOIN orcamentos o0
@@ -537,19 +616,19 @@ export class VisitacaoAcompanhamentoService {
       ? `
           SELECT
             i.unidade,
+            i.numero_cupom,
+            i.numero_requisicao,
             BTRIM(c.crm_medico) AS crm,
             UPPER(BTRIM(c.uf_crm_medico)) AS uf,
             NULLIF(BTRIM(c.nome_medico), '') AS nome_medico,
-            i.valor_liquido_linha AS valor_recebido
+            ${this.sqlValorRecebidoPrescritor()} AS valor_recebido
           FROM caixa_itens_erp i
-          INNER JOIN caixa_requisicoes_pagas c
-            ON c.unidade = i.unidade
-            AND c.numero_requisicao = i.numero_requisicao
-            AND c.numero_cupom = i.numero_cupom
+          ${joinCaixaPago}
           INNER JOIN crms_carteira cc
             ON cc.crm = BTRIM(c.crm_medico)
             AND cc.uf = UPPER(BTRIM(c.uf_crm_medico))
           WHERE ${whereCaixaPeriodo}
+            AND c.id IS NOT NULL
             AND NULLIF(BTRIM(c.crm_medico), '') IS NOT NULL
             AND NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NOT NULL
             ${modoPainel === 'todos' ? `AND i.unidade IS DISTINCT FROM $${idxCarteira}` : ''}
@@ -561,15 +640,28 @@ export class VisitacaoAcompanhamentoService {
             )}`
       : '';
 
+    const wrapRecebidoUnico = (innerSql: string): string => `
+        FROM (
+          SELECT DISTINCT ON (g.unidade, g.numero_cupom, g.numero_requisicao)
+            g.unidade,
+            g.crm,
+            g.uf,
+            g.nome_medico,
+            g.valor_recebido
+          FROM (
+            ${innerSql}
+          ) g
+          ORDER BY g.unidade, g.numero_cupom, g.numero_requisicao
+        ) src`;
+
     let recebidosFrom: string;
     let rejeitadosExtra = '';
     if (idxCarteira && modoPainel === 'sim') {
-      recebidosFrom = `
-        FROM (
+      recebidosFrom = wrapRecebidoUnico(`
           ${recebidosCaixaCarteira}
           UNION ALL
           ${fallbackOrcamentoCarteira}
-        ) src`;
+      `);
       rejeitadosExtra = `
           AND EXISTS (
             SELECT 1 FROM crms_carteira cc
@@ -583,19 +675,17 @@ export class VisitacaoAcompanhamentoService {
             'UPPER(BTRIM(o."ufcrmMedico"))',
           )}`;
     } else if (idxCarteira && modoPainel === 'nao') {
-      recebidosFrom = `
-        FROM (
+      recebidosFrom = wrapRecebidoUnico(`
           SELECT ${selectRecebido}
           FROM caixa_itens_erp i
           ${joinCaixaPago}
           ${lateralOrcamento}
           WHERE ${whereCaixaPeriodo}
             AND i.unidade = $${idxCarteira}
-        ) src`;
+      `);
       rejeitadosExtra = ` AND o.unidade = $${idxCarteira}`;
     } else if (idxCarteira && modoPainel === 'todos') {
-      recebidosFrom = `
-        FROM (
+      recebidosFrom = wrapRecebidoUnico(`
           SELECT ${selectRecebido}
           FROM caixa_itens_erp i
           ${joinCaixaPago}
@@ -606,7 +696,7 @@ export class VisitacaoAcompanhamentoService {
           ${recebidosCaixaCarteira}
           UNION ALL
           ${fallbackOrcamentoCarteira}
-        ) src`;
+      `);
       rejeitadosExtra = `
           AND (
             o.unidade = $${idxCarteira}
@@ -624,14 +714,13 @@ export class VisitacaoAcompanhamentoService {
             )
           )`;
     } else {
-      recebidosFrom = `
-        FROM (
+      recebidosFrom = wrapRecebidoUnico(`
           SELECT ${selectRecebido}
           FROM caixa_itens_erp i
           ${joinCaixaPago}
           ${lateralOrcamento}
           WHERE ${whereCaixaPeriodo}
-        ) src`;
+      `);
     }
 
     const crmsCte = idxCarteira
@@ -711,6 +800,7 @@ export class VisitacaoAcompanhamentoService {
           UPPER(BTRIM(p."ufCrmMedico")) AS uf,
           p."nomeMedico" AS nome_painel,
           p."nomeRepresentante" AS nome_representante_erp,
+          f.id AS funcionario_id,
           f.nome AS nome_funcionario
         FROM painel_medicos_representantes p
         LEFT JOIN funcionarios f
@@ -731,6 +821,7 @@ export class VisitacaoAcompanhamentoService {
           n.uf,
           n.nome_painel,
           n.nome_representante_erp,
+          n.funcionario_id,
           n.nome_funcionario
         FROM painel_norm n
         ORDER BY
@@ -750,6 +841,7 @@ export class VisitacaoAcompanhamentoService {
         b.crm,
         b.uf,
         ${nomeRepExpr} AS nome_representante,
+        ${funcionarioIdExpr} AS funcionario_id,
         ${naCarteiraExpr} AS na_carteira,
         ${unidadeCarteiraExpr} AS unidade_carteira,
         ${movimentoForaExpr} AS movimento_fora_carteira,
@@ -988,35 +1080,81 @@ export class VisitacaoAcompanhamentoService {
     return rows.length > 0;
   }
 
-  private mapTotais(row?: TotaisRow): VisitacaoAcompanhamentoTotaisDto {
+  private desempenhoBase(periodo: PeriodoCompetencia): Pick<
+    VisitacaoAcompanhamentoTotaisDto,
+    | 'valorMeta'
+    | 'percentualMeta'
+    | 'valorProjetado'
+    | 'percentualProjecao'
+    | 'diasUteisMes'
+    | 'diasUteisDecorridos'
+    | 'diasRealizados'
+    | 'mesAberto'
+    | 'quantidadeRepresentantes'
+    | 'quantidadeComMeta'
+  > {
+    const hoje = ymdHojeSp();
+    return {
+      valorMeta: null,
+      percentualMeta: null,
+      valorProjetado: null,
+      percentualProjecao: null,
+      diasUteisMes: null,
+      diasUteisDecorridos: null,
+      diasRealizados: null,
+      mesAberto: competenciaAberta(hoje, periodo.dataInicial, periodo.dataFinal),
+      quantidadeRepresentantes: 0,
+      quantidadeComMeta: 0,
+    };
+  }
+
+  private mapTotais(
+    row: TotaisRow | undefined,
+    periodo: PeriodoCompetencia,
+  ): VisitacaoAcompanhamentoTotaisDto {
     return {
       valorRecebido: this.toNumber(row?.valor_recebido),
       quantidadeRecebido: this.toInt(row?.qtd_recebido),
       valorRejeitado: this.toNumber(row?.valor_rejeitado),
       quantidadeRejeitado: this.toInt(row?.qtd_rejeitado),
       quantidadeMedicos: this.toInt(row?.qtd_medicos),
+      valorRecebidoCaixa: 0,
+      quantidadeRecebidoCaixa: 0,
+      quantidadeMedicosPainel: 0,
+      quantidadeMedicosForaAtendimento: 0,
+      ...this.desempenhoBase(periodo),
     };
   }
 
   private mapTotaisRepresentante(
     row: TotaisRepresentanteRow,
+    periodo: PeriodoCompetencia,
   ): VisitacaoAcompanhamentoTotaisRepresentanteDto {
+    const funcionarioId = row.funcionario_id?.trim() || null;
     return {
-      nomeRepresentante: row.nome_representante?.trim() || 'Sem representante',
-      ...this.mapTotais(row),
+      nomeRepresentante:
+        row.nome_representante?.trim() || NOME_SEM_REPRESENTANTE,
+      funcionarioId,
+      ...this.mapTotais(row, periodo),
     };
   }
 
   private somarTotais(
     grupos: VisitacaoAcompanhamentoTotaisRepresentanteDto[],
+    periodo: PeriodoCompetencia,
   ): VisitacaoAcompanhamentoTotaisDto {
-    return grupos.reduce(
-      (acc, grupo) => ({
-        valorRecebido: acc.valorRecebido + grupo.valorRecebido,
-        quantidadeRecebido: acc.quantidadeRecebido + grupo.quantidadeRecebido,
-        valorRejeitado: acc.valorRejeitado + grupo.valorRejeitado,
-        quantidadeRejeitado: acc.quantidadeRejeitado + grupo.quantidadeRejeitado,
-        quantidadeMedicos: acc.quantidadeMedicos + grupo.quantidadeMedicos,
+    const acc = grupos.reduce(
+      (atual, grupo) => ({
+        valorRecebido: atual.valorRecebido + grupo.valorRecebido,
+        quantidadeRecebido: atual.quantidadeRecebido + grupo.quantidadeRecebido,
+        valorRejeitado: atual.valorRejeitado + grupo.valorRejeitado,
+        quantidadeRejeitado:
+          atual.quantidadeRejeitado + grupo.quantidadeRejeitado,
+        quantidadeMedicos: atual.quantidadeMedicos + grupo.quantidadeMedicos,
+        valorRecebidoCaixa: 0,
+        quantidadeRecebidoCaixa: 0,
+        quantidadeMedicosPainel: 0,
+        quantidadeMedicosForaAtendimento: 0,
       }),
       {
         valorRecebido: 0,
@@ -1024,13 +1162,526 @@ export class VisitacaoAcompanhamentoService {
         valorRejeitado: 0,
         quantidadeRejeitado: 0,
         quantidadeMedicos: 0,
+        valorRecebidoCaixa: 0,
+        quantidadeRecebidoCaixa: 0,
+        quantidadeMedicosPainel: 0,
+        quantidadeMedicosForaAtendimento: 0,
       },
     );
+    return { ...acc, ...this.desempenhoBase(periodo) };
+  }
+
+  private async anexarDesempenho(
+    grupos: VisitacaoAcompanhamentoTotaisRepresentanteDto[],
+    totais: VisitacaoAcompanhamentoTotaisDto,
+    periodo: PeriodoCompetencia,
+    unidadeFiltro: Unidade | null,
+    exporComissao: boolean,
+  ): Promise<void> {
+    const ids = [
+      ...new Set(
+        grupos
+          .map((g) => g.funcionarioId)
+          .filter((id): id is string => !!id),
+      ),
+    ];
+    const hoje = ymdHojeSp();
+    const mesAberto = competenciaAberta(
+      hoje,
+      periodo.dataInicial,
+      periodo.dataFinal,
+    );
+    totais.mesAberto = mesAberto;
+    for (const g of grupos) {
+      g.mesAberto = mesAberto;
+    }
+
+    const funcionarios = ids.length
+      ? await this.funcionarioRepository.find({ where: { id: In(ids) } })
+      : [];
+    const metas = ids.length
+      ? await this.metaRepository
+          .createQueryBuilder('m')
+          .innerJoinAndSelect('m.funcionario', 'func')
+          .where('m.anoMes = :anoMes', { anoMes: periodo.anoMes })
+          .andWhere('func.id IN (:...ids)', { ids })
+          .getMany()
+      : [];
+    const funcPorId = new Map(funcionarios.map((f) => [f.id, f]));
+    const metaPorFunc = new Map<string, number>();
+    for (const m of metas) {
+      const fid = m.funcionario?.id;
+      if (fid && m.valorMeta > 0) {
+        metaPorFunc.set(fid, Number(m.valorMeta));
+      }
+    }
+    const unidades = new Set<Unidade>();
+    for (const f of funcionarios) {
+      unidades.add(f.unidade);
+    }
+    if (unidadeFiltro) {
+      unidades.add(unidadeFiltro);
+    }
+    const unidadesList = [...unidades];
+    const [calendarios, feriadosRows, caixasFechados] = await Promise.all([
+      unidadesList.length
+        ? this.calendarioRepository.find({
+            where: { unidade: In(unidadesList) },
+          })
+        : Promise.resolve([]),
+      unidadesList.length
+        ? this.feriadoRepository
+            .createQueryBuilder('f')
+            .where('f.unidade IN (:...unidades)', { unidades: unidadesList })
+            .andWhere('f.data >= :ini AND f.data <= :fim', {
+              ini: periodo.dataInicial,
+              fim: periodo.dataFinal,
+            })
+            .getMany()
+        : Promise.resolve([]),
+      unidadesList.length
+        ? this.caixaFechamentoRepository
+            .createQueryBuilder('c')
+            .select('c.unidade', 'unidade')
+            .addSelect("MAX(TO_CHAR(c.dataOperacao, 'YYYY-MM-DD'))", 'ultima')
+            .where('c.status = :status', {
+              status: CaixaFechamentoStatus.CONFIRMADO,
+            })
+            .andWhere('c.unidade IN (:...unidades)', { unidades: unidadesList })
+            .groupBy('c.unidade')
+            .getRawMany<{ unidade: Unidade; ultima: string }>()
+        : Promise.resolve([]),
+    ]);
+    const sabadoPorUnidade = new Map<Unidade, boolean>();
+    for (const c of calendarios) {
+      sabadoPorUnidade.set(c.unidade, c.sabadoDiaUtil);
+    }
+    const feriadosPorUnidade = new Map<Unidade, Set<string>>();
+    for (const u of unidadesList) {
+      feriadosPorUnidade.set(u, new Set());
+    }
+    for (const f of feriadosRows) {
+      feriadosPorUnidade.get(f.unidade)?.add(f.data);
+    }
+    const ultimaConfirmadaPorUnidade = new Map<Unidade, string>();
+    for (const row of caixasFechados) {
+      if (row.unidade && row.ultima) {
+        ultimaConfirmadaPorUnidade.set(row.unidade, row.ultima);
+      }
+    }
+
+    const duDe = (unidade: Unidade, ate: string): number => {
+      const sabado = sabadoPorUnidade.get(unidade) ?? false;
+      const feriados = feriadosPorUnidade.get(unidade) ?? new Set<string>();
+      return somarDiasUteisVisitacao(
+        periodo.dataInicial,
+        ate,
+        sabado,
+        feriados,
+      );
+    };
+    const realizadosDe = (unidade: Unidade): number => {
+      const sabado = sabadoPorUnidade.get(unidade) ?? false;
+      const feriados = feriadosPorUnidade.get(unidade) ?? new Set<string>();
+      return somarDiasRealizadosVisitacao(
+        periodo.dataInicial,
+        periodo.dataFinal,
+        ultimaConfirmadaPorUnidade.get(unidade) ?? null,
+        sabado,
+        feriados,
+      );
+    };
+
+    for (const grupo of grupos) {
+      const fid = grupo.funcionarioId;
+      if (!fid) continue;
+      const meta = metaPorFunc.get(fid);
+      if (meta != null) {
+        grupo.valorMeta = meta;
+        grupo.percentualMeta =
+          meta > 0 ? (grupo.valorRecebido / meta) * 100 : null;
+        grupo.quantidadeRepresentantes = 1;
+        grupo.quantidadeComMeta = 1;
+      } else {
+        grupo.quantidadeRepresentantes = 1;
+        grupo.quantidadeComMeta = 0;
+      }
+      const unidadeRep = funcPorId.get(fid)?.unidade;
+      if (!unidadeRep) continue;
+      const duMes = duDe(unidadeRep, periodo.dataFinal);
+      const duDec = mesAberto ? duDe(unidadeRep, hoje) : duMes;
+      const realizados = realizadosDe(unidadeRep);
+      grupo.diasUteisMes = duMes;
+      grupo.diasUteisDecorridos = duDec;
+      grupo.diasRealizados = realizados;
+      if (mesAberto && realizados > 0) {
+        grupo.valorProjetado = this.round2(
+          (grupo.valorRecebido / realizados) * duMes,
+        );
+        if (meta != null && meta > 0) {
+          grupo.percentualProjecao =
+            (grupo.valorProjetado / meta) * 100;
+        }
+      }
+    }
+
+    if (exporComissao && ids.length) {
+      const faixas = await this.faixaRepository
+        .createQueryBuilder('faixa')
+        .innerJoinAndSelect('faixa.funcionario', 'func')
+        .where('func.id IN (:...ids)', { ids })
+        .orderBy('faixa.percentualMetaDe', 'ASC')
+        .getMany();
+      const faixasPorFunc = new Map<string, VisitacaoComissaoFaixa[]>();
+      for (const faixa of faixas) {
+        const fid = faixa.funcionario?.id;
+        if (!fid) continue;
+        const lista = faixasPorFunc.get(fid) ?? [];
+        lista.push(faixa);
+        faixasPorFunc.set(fid, lista);
+      }
+      for (const grupo of grupos) {
+        const fid = grupo.funcionarioId;
+        if (!fid) continue;
+        const lista = faixasPorFunc.get(fid) ?? [];
+        if (grupo.percentualMeta != null) {
+          const faixa = this.resolverFaixaComissao(lista, grupo.percentualMeta);
+          if (faixa) {
+            grupo.percentualComissaoFaixa = Number(faixa.percentualComissao);
+            grupo.valorComissao = this.round2(
+              (grupo.valorRecebido * grupo.percentualComissaoFaixa) / 100,
+            );
+          }
+        }
+        if (grupo.percentualProjecao != null && grupo.valorProjetado != null) {
+          const faixaProj = this.resolverFaixaComissao(
+            lista,
+            grupo.percentualProjecao,
+          );
+          if (faixaProj) {
+            grupo.percentualComissaoFaixaProjetada = Number(
+              faixaProj.percentualComissao,
+            );
+            grupo.valorComissaoProjetado = this.round2(
+              (grupo.valorProjetado * grupo.percentualComissaoFaixaProjetada) /
+                100,
+            );
+          }
+        }
+      }
+    }
+
+    const vinculados = grupos.filter((g) => g.funcionarioId);
+    const comMeta = vinculados.filter(
+      (g) => g.valorMeta != null && g.valorMeta > 0,
+    );
+    totais.quantidadeRepresentantes = vinculados.length;
+    totais.quantidadeComMeta = comMeta.length;
+    const somaMeta = comMeta.reduce((s, g) => s + (g.valorMeta ?? 0), 0);
+    totais.valorMeta = comMeta.length ? somaMeta : null;
+    totais.percentualMeta =
+      somaMeta > 0 ? (totais.valorRecebido / somaMeta) * 100 : null;
+
+    const unidadesVinculo = [
+      ...new Set(
+        vinculados
+          .map((g) => funcPorId.get(g.funcionarioId ?? '')?.unidade)
+          .filter((u): u is Unidade => !!u),
+      ),
+    ];
+    const unidadeCalendario =
+      unidadeFiltro ??
+      (unidadesVinculo.length === 1 ? unidadesVinculo[0] : null) ??
+      unidadesList[0] ??
+      null;
+    if (unidadeCalendario) {
+      const duMes = duDe(unidadeCalendario, periodo.dataFinal);
+      const duDec = mesAberto ? duDe(unidadeCalendario, hoje) : duMes;
+      const realizados = realizadosDe(unidadeCalendario);
+      totais.diasUteisMes = duMes;
+      totais.diasUteisDecorridos = duDec;
+      totais.diasRealizados = realizados;
+      if (mesAberto && realizados > 0) {
+        totais.valorProjetado = this.round2(
+          (totais.valorRecebido / realizados) * duMes,
+        );
+        if (totais.valorMeta != null && totais.valorMeta > 0) {
+          totais.percentualProjecao =
+            (totais.valorProjetado / totais.valorMeta) * 100;
+        }
+      }
+    } else {
+      const comDu = grupos.find((g) => g.diasUteisMes != null);
+      if (comDu?.diasUteisMes != null) {
+        totais.diasUteisMes = comDu.diasUteisMes;
+        totais.diasUteisDecorridos = comDu.diasUteisDecorridos ?? null;
+        totais.diasRealizados = comDu.diasRealizados ?? null;
+      }
+    }
+  }
+
+  private resolverFaixaComissao(
+    faixas: VisitacaoComissaoFaixa[],
+    percentualMeta: number,
+  ): VisitacaoComissaoFaixa | null {
+    const ordenadas = [...faixas].sort(
+      (a, b) => Number(a.percentualMetaDe) - Number(b.percentualMetaDe),
+    );
+    for (const faixa of ordenadas) {
+      const de = Number(faixa.percentualMetaDe);
+      const ate =
+        faixa.percentualMetaAte == null ? null : Number(faixa.percentualMetaAte);
+      if (percentualMeta + 1e-9 < de) continue;
+      if (ate != null && percentualMeta - 1e-9 > ate) continue;
+      return faixa;
+    }
+    return null;
+  }
+
+  private async consultarRecebidoCaixa(
+    escopo: ListaFechamentoEscopo,
+    periodo: PeriodoCompetencia,
+  ): Promise<{ valor: number; quantidade: number }> {
+    const params: unknown[] = [periodo.dataInicial, periodo.dataFinal];
+    const join = this.sqlJoinCaixaPago();
+    const valor = this.sqlValorRecebidoPrescritor();
+    const where = `
+            i.tipo_item = 'REQUISICAO'
+            AND i.numero_requisicao IS NOT NULL
+            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
+            ${this.sqlFiltroRecebidoVisitacao()}`;
+
+    let inner: string;
+    if (escopo === 'ALL') {
+      inner = `
+          SELECT
+            i.unidade,
+            i.numero_cupom,
+            i.numero_requisicao,
+            ${valor} AS valor_recebido
+          FROM caixa_itens_erp i
+          ${join}
+          WHERE ${where}`;
+    } else {
+      params.push(escopo);
+      inner = `
+          SELECT
+            i.unidade,
+            i.numero_cupom,
+            i.numero_requisicao,
+            ${valor} AS valor_recebido
+          FROM caixa_itens_erp i
+          ${join}
+          WHERE ${where}
+            AND i.unidade = $3
+          UNION ALL
+          SELECT
+            i.unidade,
+            i.numero_cupom,
+            i.numero_requisicao,
+            ${valor} AS valor_recebido
+          FROM caixa_itens_erp i
+          ${join}
+          INNER JOIN painel_medicos_representantes p
+            ON p.unidade = $3
+            AND BTRIM(p."crmMedico") = BTRIM(c.crm_medico)
+            AND UPPER(BTRIM(p."ufCrmMedico")) = UPPER(BTRIM(c.uf_crm_medico))
+            AND NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
+            AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL
+          WHERE ${where}
+            AND i.unidade IS DISTINCT FROM $3
+            AND c.id IS NOT NULL
+            AND NULLIF(BTRIM(c.crm_medico), '') IS NOT NULL
+            AND NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NOT NULL
+            AND ${this.sqlMedicoSemPainelNaUnidade(
+              'i.unidade',
+              'BTRIM(c.crm_medico)',
+              'UPPER(BTRIM(c.uf_crm_medico))',
+            )}
+          UNION ALL
+          SELECT i.unidade, i.numero_cupom, i.numero_requisicao, i.valor_recebido
+          FROM (
+            SELECT DISTINCT ON (i.id)
+              i.unidade,
+              i.numero_cupom,
+              i.numero_requisicao,
+              ${valor} AS valor_recebido
+            FROM caixa_itens_erp i
+            ${join}
+            INNER JOIN orcamentos o0
+              ON o0.nrorc = i.numero_requisicao
+              AND o0."crmMedico" IS NOT NULL AND BTRIM(o0."crmMedico") <> ''
+              AND o0."ufcrmMedico" IS NOT NULL AND BTRIM(o0."ufcrmMedico") <> ''
+            INNER JOIN painel_medicos_representantes p
+              ON p.unidade = $3
+              AND BTRIM(p."crmMedico") = BTRIM(o0."crmMedico")
+              AND UPPER(BTRIM(p."ufCrmMedico")) = UPPER(BTRIM(o0."ufcrmMedico"))
+            WHERE ${where}
+              AND i.unidade IS DISTINCT FROM $3
+              AND (
+                c.id IS NULL
+                OR NULLIF(BTRIM(c.crm_medico), '') IS NULL
+                OR NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NULL
+              )
+              AND ${this.sqlMedicoSemPainelNaUnidade(
+                'i.unidade',
+                'BTRIM(o0."crmMedico")',
+                'UPPER(BTRIM(o0."ufcrmMedico"))',
+              )}
+            ORDER BY i.id, CASE WHEN o0.unidade = i.unidade THEN 0 ELSE 1 END
+          ) i`;
+    }
+
+    const sql = `
+      SELECT
+        COALESCE(SUM(t.valor_recebido), 0) AS valor,
+        COUNT(*)::int AS qtd
+      FROM (
+        SELECT DISTINCT ON (g.unidade, g.numero_cupom, g.numero_requisicao)
+          g.valor_recebido
+        FROM (
+          ${inner}
+        ) g
+        ORDER BY g.unidade, g.numero_cupom, g.numero_requisicao
+      ) t
+    `;
+    const rows = (await this.dataSource.query(sql, params)) as Array<{
+      valor: string | number | null;
+      qtd: string | number | null;
+    }>;
+    return {
+      valor: this.round2(this.toNumber(rows[0]?.valor)),
+      quantidade: this.toInt(rows[0]?.qtd),
+    };
+  }
+
+  private async anexarEstatisticasPainel(
+    grupos: VisitacaoAcompanhamentoTotaisRepresentanteDto[],
+    totais: VisitacaoAcompanhamentoTotaisDto,
+    periodo: PeriodoCompetencia,
+    unidadePainel: Unidade | null,
+  ): Promise<void> {
+    const params: unknown[] = [periodo.dataInicial, periodo.dataFinal];
+    const filtroUnidade = unidadePainel
+      ? `AND p.unidade = $3`
+      : '';
+    if (unidadePainel) {
+      params.push(unidadePainel);
+    }
+
+    const sql = `
+      WITH mov AS (
+        SELECT DISTINCT crm, uf FROM (
+          SELECT
+            BTRIM(c.crm_medico) AS crm,
+            UPPER(BTRIM(c.uf_crm_medico)) AS uf
+          FROM caixa_itens_erp i
+          ${this.sqlJoinCaixaPago()}
+          WHERE i.tipo_item = 'REQUISICAO'
+            AND i.numero_requisicao IS NOT NULL
+            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
+            ${this.sqlFiltroRecebidoVisitacao()}
+            AND NULLIF(BTRIM(c.crm_medico), '') IS NOT NULL
+            AND NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NOT NULL
+          UNION
+          SELECT
+            BTRIM(o0."crmMedico") AS crm,
+            UPPER(BTRIM(o0."ufcrmMedico")) AS uf
+          FROM caixa_itens_erp i
+          ${this.sqlJoinCaixaPago()}
+          INNER JOIN orcamentos o0
+            ON o0.nrorc = i.numero_requisicao
+            AND o0."crmMedico" IS NOT NULL AND BTRIM(o0."crmMedico") <> ''
+            AND o0."ufcrmMedico" IS NOT NULL AND BTRIM(o0."ufcrmMedico") <> ''
+          WHERE i.tipo_item = 'REQUISICAO'
+            AND i.numero_requisicao IS NOT NULL
+            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
+            ${this.sqlFiltroRecebidoVisitacao()}
+            AND (
+              c.id IS NULL
+              OR NULLIF(BTRIM(c.crm_medico), '') IS NULL
+              OR NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NULL
+            )
+          UNION
+          SELECT
+            BTRIM(o."crmMedico") AS crm,
+            UPPER(BTRIM(o."ufcrmMedico")) AS uf
+          FROM orcamentos o
+          WHERE o.status = 'REJEITADO'
+            AND o."crmMedico" IS NOT NULL AND BTRIM(o."crmMedico") <> ''
+            AND o."ufcrmMedico" IS NOT NULL AND BTRIM(o."ufcrmMedico") <> ''
+            AND o."dataOrcamento" >= $1
+            AND o."dataOrcamento" <= $2
+        ) x
+        WHERE NULLIF(BTRIM(crm), '') IS NOT NULL
+          AND NULLIF(BTRIM(uf), '') IS NOT NULL
+      ),
+      painel AS (
+        SELECT DISTINCT
+          p.unidade,
+          BTRIM(p."crmMedico") AS crm,
+          UPPER(BTRIM(p."ufCrmMedico")) AS uf,
+          p."contratoRepresentante" AS contrato,
+          p."codigoRepresentante" AS codigo
+        FROM painel_medicos_representantes p
+        WHERE NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
+          AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL
+          ${filtroUnidade}
+      )
+      SELECT
+        f.id AS funcionario_id,
+        COUNT(*)::int AS ativos,
+        COUNT(*) FILTER (WHERE m.crm IS NULL)::int AS fora
+      FROM painel p
+      INNER JOIN funcionarios f
+        ON f.unidade = p.unidade
+        AND f."painelContratoRepresentante" = p.contrato
+        AND f."painelCodigoRepresentante" = p.codigo
+      LEFT JOIN mov m ON m.crm = p.crm AND m.uf = p.uf
+      GROUP BY f.id
+      UNION ALL
+      SELECT
+        NULL::uuid AS funcionario_id,
+        COUNT(*)::int AS ativos,
+        COUNT(*) FILTER (WHERE m.crm IS NULL)::int AS fora
+      FROM painel p
+      LEFT JOIN mov m ON m.crm = p.crm AND m.uf = p.uf
+    `;
+
+    const rows = (await this.dataSource.query(sql, params)) as Array<{
+      funcionario_id: string | null;
+      ativos: string | number | null;
+      fora: string | number | null;
+    }>;
+
+    const porFunc = new Map<string, { ativos: number; fora: number }>();
+    for (const row of rows) {
+      const ativos = this.toInt(row.ativos);
+      const fora = this.toInt(row.fora);
+      if (!row.funcionario_id) {
+        totais.quantidadeMedicosPainel = ativos;
+        totais.quantidadeMedicosForaAtendimento = fora;
+        continue;
+      }
+      porFunc.set(row.funcionario_id, { ativos, fora });
+    }
+    for (const grupo of grupos) {
+      const fid = grupo.funcionarioId;
+      if (!fid) continue;
+      const stats = porFunc.get(fid);
+      grupo.quantidadeMedicosPainel = stats?.ativos ?? 0;
+      grupo.quantidadeMedicosForaAtendimento = stats?.fora ?? 0;
+    }
+  }
+
+  private round2(n: number): number {
+    return Math.round(n * 100) / 100;
   }
 
   private respostaVazia(
     page: number,
     limit: number,
+    periodo: PeriodoCompetencia,
   ): VisitacaoAcompanhamentoListResponseDto {
     return {
       data: [],
@@ -1041,6 +1692,11 @@ export class VisitacaoAcompanhamentoService {
         valorRejeitado: 0,
         quantidadeRejeitado: 0,
         quantidadeMedicos: 0,
+        valorRecebidoCaixa: 0,
+        quantidadeRecebidoCaixa: 0,
+        quantidadeMedicosPainel: 0,
+        quantidadeMedicosForaAtendimento: 0,
+        ...this.desempenhoBase(periodo),
       },
       totaisPorRepresentante: [],
     };
@@ -1067,6 +1723,84 @@ export class VisitacaoAcompanhamentoService {
     return Array.isArray(value) ? value : [];
   }
 
+  private sqlJoinCaixaPago(): string {
+    return `
+          LEFT JOIN LATERAL (
+            SELECT c0.*
+            FROM caixa_requisicoes_pagas c0
+            WHERE c0.unidade = i.unidade
+              AND c0.numero_requisicao = i.numero_requisicao
+            ORDER BY
+              CASE WHEN c0.numero_cupom = i.numero_cupom THEN 0 ELSE 1 END,
+              c0.data_pagamento DESC
+            LIMIT 1
+          ) c ON TRUE`;
+  }
+
+  private sqlValorBaseCupomPrescritor(): string {
+    return `CASE
+      WHEN c.valor_pago_requisicao IS NOT NULL
+       AND COALESCE(i.valor_liquido_item, 0) > 0
+       AND i.valor_liquido_item < c.valor_pago_requisicao
+      THEN i.valor_liquido_item
+      ELSE COALESCE(c.valor_pago_requisicao, i.valor_liquido_item)
+    END`;
+  }
+
+  private sqlValorFormulasPrescritor(): string {
+    return `CASE
+      WHEN c.valor_formulas IS NOT NULL
+       AND c.valor_formulas > 0
+       AND COALESCE(c.valor_pago_requisicao, 0) > COALESCE(c.valor_requisicao_bruto, 0)
+       AND COALESCE(c.valor_requisicao_bruto, 0) > 0
+      THEN ROUND(
+        (c.valor_formulas * c.valor_requisicao_bruto
+          / c.valor_pago_requisicao)::numeric,
+        2
+      )
+      ELSE c.valor_formulas
+    END`;
+  }
+
+  private sqlValorRecebidoPrescritor(): string {
+    const base = this.sqlValorBaseCupomPrescritor();
+    const formulas = this.sqlValorFormulasPrescritor();
+    return `CASE
+      WHEN (${formulas}) IS NOT NULL
+       AND (${formulas}) > 0
+       AND (${base}) > (${formulas})
+      THEN ${formulas}
+      ELSE ${base}
+    END`;
+  }
+
+  private sqlFiltroPeriodoRecebido(inicio: string, fim: string): string {
+    return `AND (
+              (
+                c.data_pagamento IS NOT NULL
+                AND c.data_pagamento >= ${inicio}
+                AND c.data_pagamento <= ${fim}
+              )
+              OR (
+                c.data_pagamento IS NULL
+                AND i.data_operacao >= ${inicio}
+                AND i.data_operacao <= ${fim}
+              )
+            )`;
+  }
+
+  private sqlFiltroRecebidoVisitacao(): string {
+    return `AND COALESCE(c.tipo_requisicao, '') <> 'C'
+            AND (
+              COALESCE(c.tipo_requisicao, '') <> ''
+              OR COALESCE(i.valor_liquido_linha, 0) <> 0
+            )
+            AND NOT (
+              COALESCE(c.tipo_requisicao, '') = 'N'
+              AND COALESCE(c.valor_formulas, 0) = 0
+            )`;
+  }
+
   private toNumber(value: string | number | null | undefined): number {
     if (value == null || value === '') return 0;
     const n = typeof value === 'number' ? value : Number(value);
@@ -1077,3 +1811,4 @@ export class VisitacaoAcompanhamentoService {
     return Math.trunc(this.toNumber(value));
   }
 }
+

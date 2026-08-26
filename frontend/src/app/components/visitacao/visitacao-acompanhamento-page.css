@@ -1,10 +1,100 @@
+app-visitacao-acompanhamento-page {
+  display: block;
+}
+
+.visitacao-acompanhamento-page.vendas-page {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.visitacao-acompanhamento-page .results-card {
+  flex: 0 0 auto;
+  overflow: visible;
+  min-height: 0;
+}
+
+.visitacao-acompanhamento-page .results-card > .table-wrapper {
+  flex: 0 0 auto;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: clip;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-header-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  width: 100%;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-header-actions .header-actions {
+  justify-content: flex-start;
+  flex-shrink: 0;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-header-actions .filters-inline {
+  flex: 1 1 16rem;
+  min-width: 12rem;
+  margin-bottom: 0;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-du-legend {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  border-radius: 8px;
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  box-shadow: var(--sombra-sm, none);
+  color: var(--text-primary, #1e293b);
+  white-space: nowrap;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-du-legend strong {
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-du-legend span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+@media (max-width: 640px) {
+  .visitacao-acompanhamento-page .visitacao-acomp-header-actions {
+    flex-wrap: wrap;
+  }
+
+  .visitacao-acompanhamento-page .visitacao-acomp-header-actions .filters-inline {
+    flex-basis: 100%;
+  }
+
+  .visitacao-acompanhamento-page .visitacao-acomp-du-legend {
+    white-space: normal;
+  }
+}
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-du-legend,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-du-legend {
+  color: var(--text-primary, #e2e8f0);
+  background: var(--cor-superficie, var(--bg-primary, #1e293b));
+  border-color: var(--cor-borda, var(--border-color, #334155));
+}
+
 .visitacao-acompanhamento-page .visitacao-acomp-rep-cards-wrap {
   margin: 0.75rem 0 1rem;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
   gap: 0.75rem;
 }
 
@@ -14,13 +104,14 @@
   border-radius: 10px;
   padding: 0.85rem 1rem;
   box-shadow: var(--sombra-sm, none);
+  min-width: 0;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-card-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
   margin-bottom: 0.75rem;
 }
 
@@ -35,22 +126,42 @@
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-medicos {
-  flex-shrink: 0;
-  font-size: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.85rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-secondary, #64748b);
+  line-height: 1.3;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-medicos span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
   white-space: nowrap;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-medicos strong {
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-medicos strong,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-rep-medicos strong {
+  color: var(--text-primary, #e2e8f0);
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metrics {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.75rem;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metrics.has-painel {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 4.5rem;
-  column-gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metric {
@@ -58,7 +169,6 @@
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
-  overflow: hidden;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metric .label {
@@ -67,17 +177,16 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-secondary, #64748b);
+  line-height: 1.2;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metric .value {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary, #1e293b);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metric .sub {
@@ -94,15 +203,67 @@
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-primary {
-  padding-left: 0.65rem;
-  border-left: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
-  width: 4.5rem;
-  max-width: 4.5rem;
-  text-align: right;
+  text-align: left;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-primary .value {
   color: var(--cor-primaria, #2563eb);
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-desempenho {
+  display: grid;
+  grid-template-columns: minmax(8.4rem, 1.2fr) minmax(4.8rem, 0.7fr);
+  gap: 0.65rem 0.85rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  align-items: start;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-desempenho.has-projecao {
+  grid-template-columns: minmax(8.4rem, 1.2fr) minmax(4.8rem, 0.7fr) minmax(8.4rem, 1.2fr);
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-comissao {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--cor-borda, var(--border-color, #e2e8f0));
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-comissao.has-projecao {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-comissao .label {
+  letter-spacing: 0.02em;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-comissao .value {
+  font-size: 0.85rem;
+  white-space: normal;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-meta-bar {
+  display: block;
+  height: 0.4rem;
+  margin-top: 0.25rem;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--cor-borda, var(--border-color, #e2e8f0));
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-meta-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--cor-primaria, var(--color-primary, #2563eb));
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-meta-bar-fill.is-ok {
+  background: var(--cor-sucesso, var(--color-success, #16a34a));
 }
 
 @media (max-width: 480px) {
@@ -110,30 +271,19 @@
     grid-template-columns: 1fr;
   }
 
-  .visitacao-acompanhamento-page .visitacao-acomp-rep-card-head {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
+  .visitacao-acompanhamento-page .visitacao-acomp-rep-desempenho,
+  .visitacao-acompanhamento-page .visitacao-acomp-rep-desempenho.has-projecao {
+    grid-template-columns: 1fr;
+  }
+
+  .visitacao-acompanhamento-page .visitacao-acomp-rep-comissao,
+  .visitacao-acompanhamento-page .visitacao-acomp-rep-comissao.has-projecao {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .visitacao-acompanhamento-page .visitacao-acomp-rep-metrics.has-painel {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     row-gap: 0.55rem;
-  }
-
-  .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-primary {
-    grid-column: 1 / -1;
-    width: auto;
-    max-width: none;
-    padding-left: 0;
-    padding-top: 0.45rem;
-    border-left: none;
-    border-top: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
-    text-align: left;
-  }
-
-  .visitacao-acompanhamento-page .visitacao-acomp-rep-metric .value {
-    font-size: 0.95rem;
   }
 }
 
@@ -277,10 +427,6 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-card-head h3
   color: var(--text-primary, #e2e8f0);
 }
 
-body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-primary {
-  border-left-color: var(--cor-borda, #334155);
-  border-top-color: var(--cor-borda, #334155);
-}
 
 body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-primary .value {
   color: var(--cor-primaria, #93c5fd);

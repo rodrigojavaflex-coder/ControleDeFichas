@@ -59,6 +59,18 @@ export class CaixaRequisicaoPaga {
   @Column({ type: 'integer', name: 'numero_cupom' })
   numeroCupom: number;
 
+  @ApiProperty({
+    required: false,
+    description: 'FC17000.TPRQU: C=cortesia, D/N/S=baixa paga',
+  })
+  @Column({
+    type: 'varchar',
+    length: 2,
+    nullable: true,
+    name: 'tipo_requisicao',
+  })
+  tipoRequisicao?: string | null;
+
   @ApiProperty({ required: false })
   @Column({ type: 'integer', nullable: true, name: 'numero_orcamento' })
   numeroOrcamento?: number | null;
@@ -110,6 +122,21 @@ export class CaixaRequisicaoPaga {
     transformer: numericColumnTransformer,
   })
   valorPagoRequisicao: number;
+
+  @ApiProperty({
+    required: false,
+    description:
+      'Preço das fórmulas (FC12100.PRCOBR) rateado pelo % pago no caixa (VRLIQ/VRRQU); teto do prescritor. Ex. 97510: 368,70 × 520/682,30 = 281',
+  })
+  @Column({
+    type: 'numeric',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+    name: 'valor_formulas',
+    transformer: nullableNumericColumnTransformer,
+  })
+  valorFormulas?: number | null;
 
   @ApiProperty()
   @Column({

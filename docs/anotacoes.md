@@ -1,6 +1,6 @@
 # Anotações / Demandas
 
-> Última revisão: 2026-07-28
+> Última revisão: 2026-08-25
 
 ## Decisões operacionais
 
@@ -12,10 +12,57 @@
 - Subir Node na filial no futuro: fazer **junto** com deploy de sync; após trocar Node no servidor, `npm ci --omit=dev` em `C:\agente` — **não** exige regerar pacote na dev só por causa da versão do Node.
 - Referência deploy: `agent/scripts/deploy.ps1`, `agent/scripts/atualiza-agente.ps1`, `agent/README.md`.
 
+### Acompanhamento Visitação — carteira por período (painel + histórico)
 
+**Status (2026-08-25):** não implementar agora. O acompanhamento continua lendo só o painel **ativo** (`painel_medicos_representantes`). Registrar aqui para tratar depois.
+
+**Como está hoje**
+
+- `crms_carteira`, filtro Representante e `painel_norm` usam apenas `painel_medicos_representantes` (foto atual).
+- Histórico (`painel_medicos_representantes_historico`, RN-REP-002) só grava **remoção** (append-only): snapshot CRM/UF/contrato/código/nome, `motivoRemocao`, `removidoEm`, `criadoEmPainel` (= `criadoEm` da linha ativa no momento da exclusão).
+- Não é linha do tempo do ERP (`FC04200` é foto atual). `criadoEm` / `criadoEmPainel` = data do **nosso sync**, não entrada no FC.
+
+**Regra desejada (carteira do período)**
+
+```
+painel atual da unidade/representante
+  ∪
+histórico cuja vigência cruza [dataInicial, dataFinal]
+```
+
+- Vigência no histórico: `[criadoEmPainel, removidoEm)`.
+- Cruza o filtro se: `criadoEmPainel <= dataFinal` **e** `removidoEm >= dataInicial` (se `criadoEmPainel` nulo, usar só `removidoEm >= dataInicial`).
+- **Não** usar só “`removidoEm` ∈ [início, fim]”: médico removido em 01/08 some do julho mesmo tendo estado no painel o mês inteiro.
+- Exemplo ok: removido 15/07 + filtro 01–31/07 → entra junto com o painel atual.
+
+**Dois jeitos de crédito**
+
+1. Só carteira (mais simples): UNION no CRM; o médico removido em 15/07 leva **todo** o movimento do período (inclusive 20/07).
+2. Carteira + data do movimento (mais fiel): crédito só se a data do recebido/rejeitado (`DTEFE` / `dataOrcamento`) estiver dentro da vigência (`>= criadoEmPainel` e `< removidoEm`). Preferível para comissão.
+
+**Onde plugar (quando for implementar)**
+
+- CTE `crms_carteira` (indicação / No Painel = Sim)
+- `filtroRep` (`EXISTS` em `painel_medicos_representantes`)
+- `painel_norm` / nome do representante na grade
+- Mesma chave: unidade + CRM + UF + contrato + código
+- Arquivo: `backend/src/modules/visitacao-acompanhamento/visitacao-acompanhamento.service.ts`
+
+**Quem entrou depois do período e ainda está no ativo**
+
+- Histórico não registra entrada, só saída. Quem entrou no ERP depois do filtro e ainda está no ativo **continua aparecendo** no mês antigo.
+- Corte no ativo: `criadoEm::date <= dataFinal` (par do `criadoEmPainel` no histórico). Update do sync **não** altera `criadoEm`; insert novo sim.
+- **Não aplicar esse corte** se o primeiro import do painel foi **depois** do período (ex.: carga em agosto + filtro julho): todo mundo ganha o mesmo `criadoEm` e o card do mês histórico zera. Só usar `criadoEm` quando o sync já rodava **antes** do início do filtro.
+- Linha apagada e recriada (saiu → histórico → voltou): `criadoEm` do ativo é da volta; o período antigo depende do histórico.
+
+**O que isso não resolve**
+
+- Não reconstrói `FC04200` de um mês anterior ao primeiro sync.
+- Não explica médicos a mais vs PDF se eles já estão no painel atual (ex.: Rayssa/Euler no Marcos).
 
 ## Pendente
 
+- [ ] **Acompanhamento Visitação — carteira por período (painel + histórico)** — UNION do painel ativo com `painel_medicos_representantes_historico` (vigência cruzando o filtro); depois avaliar corte `criadoEm` no ativo. **Não implementar agora.** Detalhe na seção “Decisões operacionais” acima. (2026-08-25)
 - [ ] **Configurar envio de e-mail** — recuperação de senha e notificações (pendências de fechamento, pendências de vendas, resumo de folha, etc.).
 - [ ] **Orçamentos aprovados em aberto** — com os dados importados, trabalhar informações de orçamentos aprovados não recebidos; avaliar se em relatório ou painel.
 - [ ] **Painel de folha de pagamento** — gastos por unidade, setor, função e cargo.

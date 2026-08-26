@@ -336,15 +336,16 @@
 - Tela **`/visitacao/acompanhamento`** (título **Acompanhamento Visitação**); permissão **`visitacao-acompanhamento:read`**.
 - Menu lateral **Visitação → Acompanhamento** e rota protegidos com a mesma permissão (OR).
 - Impressão, cards e detalhe do movimento usam a mesma permissão de leitura.
+- Faixa de comissão e valor em R$ nos cards exigem permissão extra **`visitacao-acompanhamento:comissao`** (catálogo; atribuição **manual** em Perfis). Sem ela, a API **não** envia esses campos.
 
 ### RN-VIS-008 — Fonte e cruzamento do acompanhamento
 
-- **Recebido:** itens ERP de requisição (`caixa_itens_erp`, `tipo_item = REQUISICAO`, valor `valor_liquido_linha`); eixo de data **`data_operacao`** (mesmo dia do Caixa Detalhado). Prescritor: `caixa_requisicoes_pagas` (CRM/UF) quando houver, senão orçamento `nrorc = numero_requisicao` (preferência pela mesma unidade do caixa; fallback em outra filial).
+- **Recebido:** itens ERP de requisição (`caixa_itens_erp`, `tipo_item = REQUISICAO`) definem o universo. **Eixo de data:** se houver paga, **`data_pagamento` (FC17000.DTEFE / DT PAGTO do PDF)**; se a paga não veio na sync, `data_operacao` do cupom. Cupom no período com DTEFE fora **não entra** (ex. 97987, paga 03/08). Cupom fora com DTEFE no período **entra** (ex. 96677, parcela 30/06 paga em 03/07). **Valor:** `caixa_requisicoes_pagas.valor_pago_requisicao` (FC17000.VRLIQ **pago** da requisição); se não houver linha paga, usa `caixa_itens_erp.valor_liquido_item` (FC31110.VRLIQ). A paga é ligada por **unidade + número da requisição** (preferência pelo mesmo cupom; se o cupom da parcela for outro, usa a paga da req). Se o **item do cupom** for menor que o `valor_pago_requisicao` (parcelamento `TPRQU=S` em dois cupons, ex. 97494: VRLIQ 210 no total, R$ 105 em 16/07 e R$ 105 em 27/07), o prescritor recebe só a **parcela do cupom**, não o VRLIQ cheio de novo. Se `valor_pago_requisicao` (ou a parcela) for **maior** que `valor_formulas`, o prescritor recebe só `valor_formulas`. `valor_formulas` = soma `FC12100.PRCOBR` × `LEAST(1, VRLIQ/VRRQU)` — rateio no máximo 100% da fórmula (ex. 97510: 368,70 × 520/682,30 = **281,00**; tipo N com extra no caixa, ex. 97220: PDF **155,50**, não 415). **Cortesia** (`tipo_requisicao = C` / FC17000.TPRQU, ou item com `valor_liquido_linha = 0` ainda sem tipo) **não** entra no recebido. **Tipo N** (`TPRQU=N`) **sem** `valor_formulas` (sem fórmula em `FC12100`, ex. 97785 + taxa de caixa) **não** entra no recebido. **Uma linha por** `unidade + cupom + numero_requisicao` (não somar o VRLIQ em cada item/fórmula do cupom). **Não** usar `valor_liquido_linha` (total do cupom): várias requisições do mesmo cliente, inclusive de médicos diferentes, baixadas no mesmo cupom creditam só o valor pago da requisição daquele prescritor. Prescritor: `caixa_requisicoes_pagas` (CRM/UF) quando houver, senão orçamento `nrorc = numero_requisicao` (preferência pela mesma unidade do caixa; fallback em outra filial). Indicação em **outra filial** (ex.: Uberaba) entra para a carteira do representante (exceto se o CRM já estiver no painel da unidade do movimento).
 - **Rejeitado:** `orcamentos.precoVenda` com `status = REJEITADO`; eixo de data **`dataOrcamento`**.
 - Join do médico: **CRM + UF**. A **unidade da linha** é a do movimento (caixa ou orçamento), sem duplicar o valor.
 - **Indicação / carteira:** se o médico está no painel da unidade do usuário (ou do filtro Unidade), o recebido/rejeitado em **outra filial** entra para o representante dessa carteira, **exceto** se o mesmo CRM+UF já estiver no painel de um representante **na unidade do movimento**. Nesse caso o crédito fica só na unidade do movimento (evita comissão duplicada). A linha de indicação mostra a unidade em que o movimento ocorreu e o indicador **Outra unidade**.
-- Registro **sem CRM ou UF** (nem no caixa pago nem no orçamento da requisição) não entra na grid.
-- Endpoints: **`GET /visitacao/acompanhamento`** (grid paginada + totais), **`GET /visitacao/acompanhamento/detalhe`** e **`GET /visitacao/acompanhamento/opcoes-filtro`**.
+- Registro **sem CRM ou UF** (nem no caixa pago nem no orçamento da requisição) não entra na grid. Se o dia tiver itens de requisição no cupom e **não** tiver `caixa_requisicoes_pagas` (falha do complemento da sync), o recebido daquele médico some da grade — o valor do PDF de visitação do ERP não é a fonte; a fonte é a linha paga.
+- Endpoints: **`GET /visitacao/acompanhamento`** (grid paginada + totais; query **`ano`** + **`mes`**), **`GET /visitacao/acompanhamento/detalhe`** (intervalo derivado da competência) e **`GET /visitacao/acompanhamento/opcoes-filtro`**.
 
 ### RN-VIS-009 — Universo, filtros e período
 
@@ -354,14 +355,20 @@
 - **No Painel:** **Todos** (padrão, sem chip), **Sim** (só médicos da carteira) ou **Não** (movimentos da filial cujo CRM não está no painel). **Todos** = carteira + movimentos locais da filial.
 - Filtro **Representante** restringe à carteira do funcionário vinculado (par filial/código), incluindo baixas/rejeições em outras unidades **somente** quando o médico não estiver no painel da unidade do movimento.
 - Filtro de **médicos** usa o mesmo seletor da tela de orçamentos (`NOME - UNIDADE` da unidade do movimento). Endpoint de opções: **`GET /visitacao/acompanhamento/opcoes-filtro`**.
-- Período padrão na UI: **mês corrente** (dia 1 até o último dia do mês, data local). Chip inicial só o período. Ordenação padrão: **Recebido** do maior para o menor. Clique no cabeçalho da coluna reordena a grid (paginação no servidor).
+- Período: competência **mês + ano** (2026–2033), padrão o mês corrente. O backend deriva o intervalo civil (`YYYY-MM-01` até o último dia). Chip **Competência** (não removível). Ordenação padrão: **Recebido** do maior para o menor. Clique no cabeçalho da coluna reordena a grid (paginação no servidor).
 - Durante a busca (listagem ou impressão), overlay no mesmo padrão do painel de retirada bloqueia nova pesquisa até a consulta terminar.
 - Escopo de carteira do usuário conforme **RN-VIS-003** / **RN-007**, com a extensão de indicação interunidade acima.
 
 ### RN-VIS-010 — Cards, detalhe e impressão
 
-- Cards abaixo dos filtros, no mesmo padrão: **Total** primeiro (recebido e rejeitado) e em seguida **um card por representante**, com **Recebido**, **Rejeitado** e **% Painel** (participação do recebido daquele representante no total recebido). O card Total **não** exibe % Painel.
-- Clique na linha ou no link **Detalhes** (coluna **Ações**, após Rejeitado) abre o detalhe: requisições pagas do caixa e orçamentos rejeitados **da unidade do movimento**; permitido se a unidade for a do usuário **ou** o CRM estiver na carteira dele **e** o médico **não** estiver no painel da unidade do movimento. Valores de **Recebido** em verde e **Rejeitado** em vermelho na grid.
+- Cards abaixo dos filtros, no mesmo padrão: **Total** primeiro e em seguida **um card por representante** (não exibe o card **Sem representante**; as linhas da grade sem vínculo continuam visíveis). Faixa operacional: **Recebido**, **Rejeitado** e **Representatividade**. O card Total **não** exibe Representatividade, **nem** Meta / % da meta / Projeção.
+- **Recebido do Total:** soma de **todas** as requisições do caixa na competência no **escopo** (RN-VIS-008: `REQUISICAO`, DTEFE, sem cortesia C, tipo N sem fórmula fora, teto de fórmula), **sem** exigir CRM. Com unidade de painel no filtro: caixa **dessa unidade** (incluindo reqs sem prescritor) **mais** indicações em outras filiais da carteira. Sem unidade (`ALL`): caixa de **todas** as unidades do escopo. Independente dos filtros de representante/médico/No Painel.
+- **Representatividade** (cards de representante): recebido do representante ÷ **recebido do caixa no escopo** (não o total atribuído da grade).
+- No cabeçalho dos cards de **representante**: **com movimento** (linhas da grade no filtro), **ativos no painel** (carteira atual em `painel_medicos_representantes`) e **fora do atendimento** (ativos sem recebido/rejeitado na competência). O card **Total** não exibe essas contagens.
+- Faixa de desempenho **só nos cards de representante** (mesma competência do filtro): **Meta** (`visitacao_meta_representante`), **% Meta** (recebido ÷ meta) e, se a competência **ainda estiver aberta** (hoje em America/Sao_Paulo dentro do mês), **Projeção** = `(recebido ÷ dias realizados) × dias úteis do mês` e **% da projeção** (projeção ÷ meta). **Dias realizados** = dias úteis da competência com data **≤ último caixa CONFIRMADO** da unidade (mesmo critério Fechado/Bloqueado da RN-CXA-009): sábado = **0,5**; feriado/domingo = 0. Se o último confirmado for depois do mês, conta o mês inteiro. Sem confirmação, 0 e não projeta. Sem meta cadastrada: **Sem meta** (não 0%).
+- **Faixa e comissão** no card do representante somente com **`visitacao-acompanhamento:comissao`**: faixa vigente em `visitacao_comissao_faixa` pelo **% da meta**; valor = `% da faixa × recebido`. Com mês aberto: também **Faixa proj.** e **Comissão proj.** pelo **% da projeção** (`% da faixa projetada × valor projetado`), na **mesma linha** (Faixa, Comissão, Faixa proj., Comissão proj.). Sem permissão, os campos não vêm na API.
+- **Quadro de legenda** no topo (**antes** do Imprimir): competência (**mês ano**, ex. `Agosto 2026`), **total de dias úteis** da competência (ex.: `21 dias úteis`) e **dias realizados** (ex.: `18 dias realizados`). Calendário pela unidade do filtro (ou a unidade dos representantes).
+- Clique na linha ou no link **Detalhes** (coluna **Ações**, após Rejeitado) abre o detalhe: requisições pagas do caixa e orçamentos rejeitados **da unidade do movimento**; permitido se a unidade for a do usuário **ou** o CRM estiver na carteira dele **e** o médico **não** estiver no painel da unidade do movimento. **Valor Pago** do recebido é o da requisição (RN-VIS-008), não o total do cupom. Valores de **Recebido** em verde e **Rejeitado** em vermelho na grid.
 - Impressão da listagem abre modal de opções: **Analítico** (detalhado, padrão) ou **Sintético** (resumo por representante/unidade); movimentos **Todos** (padrão), **Recebidos** ou **Rejeitados**. Analítico agrupa **Representante → Unidade** sem cards no topo; o rodapé de cada tabela alinha quantidade de médicos e totais nas colunas Recebido/Rejeitado.
 - Impressão de **detalhes** (recebidos, rejeitados e totais) somente no modal do médico.
 
@@ -372,7 +379,7 @@
 - Grade: somente funcionários da unidade filtrada que sejam **representantes do painel** (RN-VIS-005): **Filial do painel** (`painelContratoRepresentante` / cdcon) **e** **Código representante painel** (`painelCodigoRepresentante` / cdfun) preenchidos e maiores que zero.
 - Campo **Meta** exibido como valor em R$. Sem meta: **Incluir**; com meta: **Alterar**; em edição: **Salvar** / **Cancelar**. Persistência em `visitacao_meta_representante` (unique `funcionarioId + anoMes`).
 - Ação **Copiar mês anterior**: disponível só com um mês específico selecionado; replica as metas da competência anterior para os representantes ainda vinculados; valores já existentes no destino são substituídos.
-- **Fora deste ciclo:** cálculo de comissão, % da meta e proporcional a dias úteis.
+- **% da meta, projeção, faixa e comissão** no acompanhamento: **RN-VIS-010** / **RN-VIS-007**.
 
 ### RN-VIS-012 — Faixas de comissão por representante
 
@@ -381,6 +388,7 @@
 - Persistência: `visitacao_comissao_faixa` (FK `funcionarioId`). Intervalos **sem sobreposição** **dentro do mesmo representante**; no máximo **uma** faixa sem teto (`percentualMetaAte` nulo), que deve ser a de maior início.
 - Combo do representante: **nome (cdcon/cdfun)** sem rótulos, ex. `MARCOS ROBERTO VIEIRA (9999/99)`.
 - Inclusão e edição **na grade**: **Incluir faixa** adiciona uma linha em edição; **Alterar** / **Salvar** / **Cancelar** / **Excluir** na coluna Ações. Botão **Carregar faixas padrão** (permissão **`visitacao-comissao:create`**): aplica 0–79,99% → 0%; 80–89,99% → 1%; 90–99,99% → 1,5%; 100–104,99% → 2%; 105% em diante → 2,5%. **Não** é automático. Se já houver faixas, pede confirmação e **substitui**.
+- Visualização da faixa vigente e do valor em R$ no acompanhamento: **RN-VIS-010** (permissão **`visitacao-acompanhamento:comissao`**, distinta das permissões de cadastro).
 
 ---
 
@@ -391,7 +399,7 @@
 - Tela **`/sistema/feriados`** (menu **Sistema → Feriados**). Permissões **`feriado:read`**, **`feriado:update`**, **`feriado:import`**, **`feriado:delete`**. Catálogo antigo `producao-feriado:*` foi retirado; quem gerencia a tela precisa da permissão nova no perfil.
 - Feriados continuam **por unidade** na tabela `producao_feriado` (unique `unidade + data`). Produção (tempo útil da RN-PCP-007/010) **continua lendo** esses registros; a aba Feriados saiu de **Produção → Configuração**.
 - Inclusão manual, exclusão e importação nacional (Brasil API) reutilizam o painel existente.
-- **Sábado é dia útil:** checkbox **por unidade** em `calendario_unidade.sabadoDiaUtil` (default **false**). Independente da jornada de produção. Uso em dias úteis de visitação fica para o cálculo de comissão (fora deste ciclo).
+- **Sábado é dia útil:** checkbox **por unidade** em `calendario_unidade.sabadoDiaUtil` (default **false**). Independente da jornada de produção. Na **visitação** (projeção da RN-VIS-010), sábado marcado vale **meio dia útil** (0,5); feriado no sábado zera o dia.
 
 ---
 
@@ -655,13 +663,15 @@ Responder formalmente antes de alterar importação ou fechamento oficial:
 - Requisições pagas: `{unidade}-{numero_requisicao}-{numero_cupom}-{data_pagamento}`.
 - Reimportar o mesmo dia **sempre atualiza** registros existentes (upsert por `chave_erp`); não duplica linhas.
 - **Sync do período importado:** após buscar pagamentos, itens e requisições no agente, o backend **remove** de `caixa_pagamentos_erp`, `caixa_itens_erp` e `caixa_requisicoes_pagas` os registros da `(unidade, data)` do segmento cuja `chave_erp` **não** veio no snapshot (ex.: movimento excluído e recriado no ERP com novo cupom/`operid`). Em seguida faz upsert das linhas retornadas. **Não** altera baixas de terceiro.
-- **`caixa_requisicoes_pagas`:** orçamento (`NRORC`), qtd/valor de fórmulas e prescritor usam **fallback agregado** em `FC12100` por requisição (prioriza série `0`, depois outras fórmulas e requisição-fonte `NRRQUFON`). Considera apenas `NRORC > 0`. A busca inclui `FC17000.dtefe` **ou** requisição presente no cupom do dia (`FC31200.dtope`), para não perder baixa cujo `dtefe` difere da data do caixa. **Não altera** `valor_pago_requisicao` nem totais de `caixa_pagamentos_erp`.
+- **Proteção do complemento:** se o snapshot de **requisições pagas** vier **vazio** e o mesmo segmento trouxer itens `tipo_item = REQUISICAO`, o backend **não** apaga `caixa_requisicoes_pagas` daquele período (o complemento do agente falhou ou ficou vazio; apagar zeraria o dia na visitação). Reimportar o dia depois.
+- **`caixa_requisicoes_pagas`:** orçamento (`NRORC`), qtd/valor de fórmulas e prescritor usam **fallback agregado** em `FC12100` por requisição (prioriza série `0`, depois outras fórmulas e requisição-fonte `NRRQUFON`). Considera apenas `NRORC > 0`. A busca inclui `FC17000.dtefe` **ou** requisição presente no cupom do dia (`FC31200.dtope`), para não perder baixa cujo `dtefe` difere da data do caixa. Grava também `tipo_requisicao` (`TPRQU`) e `valor_formulas` = soma `FC12100.PRCOBR` × `LEAST(1, VRLIQ/VRRQU)` (não inflar a fórmula quando o líquido do caixa é maior que o bruto da req). **Não altera** totais de `caixa_pagamentos_erp`.
 
 ### RN-CXA-004 — Valor líquido e formas de pagamento (ERP)
 
 - Valor líquido: `vrpag - COALESCE(vrtrc, 0)` (dinheiro e convênio-dinheiro).
 - Mapeamento FMPAG: `1` → DINHEIRO; `1` + `INDRECCONV = S` → CONVENIO-DINHEIRO (linha no bloco **DINHEIRO**, somada ao total de dinheiro); `4` → DEPOSITO; `6` → CARTAO PRE.
 - Totais ERP do dia: agregação sobre `caixa_pagamentos_erp` filtrada por `unidade` e `data_operacao`.
+- **Cortesia (`FC17000.TPRQU = C`):** não gera pagamento (`FC31600`). Persistida em `caixa_requisicoes_pagas.tipo_requisicao` + `valor_formulas` (soma FC12100). No **Caixa Detalhado** (impressão) aparece bloco **Cortesias (informativo)** — **não** soma no total do dia nem nos cards. Visitação não credita cortesia (**RN-VIS-008**).
 
 ### RN-CXA-005 — Fechamento consolidado
 

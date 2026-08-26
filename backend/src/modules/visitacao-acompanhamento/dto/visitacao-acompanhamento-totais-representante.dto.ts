@@ -1,23 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { VisitacaoAcompanhamentoTotaisDto } from './visitacao-acompanhamento-totais.dto';
 
-export class VisitacaoAcompanhamentoTotaisRepresentanteDto {
+export class VisitacaoAcompanhamentoTotaisRepresentanteDto extends VisitacaoAcompanhamentoTotaisDto {
   @ApiProperty()
   nomeRepresentante: string;
 
-  @ApiProperty()
-  valorRecebido: number;
-
-  @ApiProperty()
-  quantidadeRecebido: number;
-
-  @ApiProperty()
-  valorRejeitado: number;
-
-  @ApiProperty()
-  quantidadeRejeitado: number;
-
-  @ApiProperty({
-    description: 'Quantidade de médicos (linhas unidade+CRM) do representante no filtro.',
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Funcionário vinculado ao painel; nulo se sem cadastro.',
   })
-  quantidadeMedicos: number;
+  funcionarioId?: string | null;
 }

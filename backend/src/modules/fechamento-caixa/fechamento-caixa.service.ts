@@ -38,6 +38,7 @@ import { CaixaFechamentoStatus } from './enums/caixa-fechamento-status.enum';
 import { CaixaTerceiroOrigemTotalDto } from './dto/caixa-terceiro-origem-total.dto';
 import {
   CaixaBaixaDetalheDto,
+  CaixaErpCortesiaDetalheDto,
   CaixaErpPagamentoDetalheDto,
   FechamentoCaixaDetalhadoResponseDto,
 } from './dto/fechamento-caixa-detalhado-response.dto';
@@ -102,6 +103,8 @@ interface AgenteCaixaRequisicaoRow {
   valor_requisicao_bruto: number;
   desconto_requisicao: number;
   valor_pago_requisicao: number;
+  tipo_requisicao: string | null;
+  valor_formulas: number | null;
   diferenca_calculo: number;
   gap_orcamento_vs_pago: number | null;
   codigo_vendedor: number | null;
@@ -819,6 +822,10 @@ export class FechamentoCaixaService {
         valorRequisicaoBruto: row.valor_requisicao_bruto,
         descontoRequisicao: row.desconto_requisicao,
         valorPagoRequisicao: row.valor_pago_requisicao,
+        tipoRequisicao: row.tipo_requisicao
+          ? String(row.tipo_requisicao).trim() || null
+          : null,
+        valorFormulas: row.valor_formulas,
         diferencaInternaRequisicao: row.diferenca_calculo,
         diferencaOrcamentoVsPago: row.gap_orcamento_vs_pago,
         codigoVendedor: row.codigo_vendedor,
@@ -878,9 +885,10 @@ export class FechamentoCaixaService {
   ): Promise<FechamentoCaixaDetalhadoResponseDto> {
     const dataNormalizada = normalizarDataIso(data) ?? data;
 
-    const [baixas, erpPagamentos] = await Promise.all([
+    const [baixas, erpPagamentos, cortesias] = await Promise.all([
       this.obterBaixasDetalhe(unidade, dataNormalizada),
       this.obterPagamentosErpDetalhe(unidade, dataNormalizada),
+      this.obterCortesiasDetalhe(unidade, dataNormalizada),
     ]);
 
     const totalBaixas =
@@ -896,6 +904,7 @@ export class FechamentoCaixaService {
       data: dataNormalizada,
       baixas,
       erpPagamentos,
+      cortesias,
       totalBaixas,
       totalErpLiquido,
     };
@@ -924,6 +933,62 @@ export class FechamentoCaixaService {
       observacao: baixa.observacao ?? null,
       dataBaixa: normalizarDataIso(baixa.dataBaixa) ?? data,
     }));
+  }
+
+  private async obterCortesiasDetalhe(
+    unidade: Unidade,
+    data: string,
+  ): Promise<CaixaErpCortesiaDetalheDto[]> {
+    const pagas = await this.requisicaoRepo.find({
+      where: { unidade, dataPagamento: data, tipoRequisicao: 'C' },
+      order: { numeroCupom: 'ASC', numeroRequisicao: 'ASC' },
+    });
+
+    const mapa = new Map<string, CaixaErpCortesiaDetalheDto>();
+    for (const paga of pagas) {
+      const chave = `${paga.numeroCupom}-${paga.numeroRequisicao}`;
+      mapa.set(chave, {
+        numeroCupom: paga.numeroCupom,
+        numeroRequisicao: paga.numeroRequisicao,
+        valorInformativo: Number(paga.valorPagoRequisicao),
+        nomeMedico: paga.nomeMedico ?? null,
+        crmMedico: paga.crmMedico ?? null,
+      });
+    }
+
+    const itensCortesia = await this.itemRepo.find({
+      where: {
+        unidade,
+        dataOperacao: data,
+        tipoItem: CaixaTipoItem.REQUISICAO,
+        valorLiquidoLinha: 0,
+      },
+      order: { numeroCupom: 'ASC', numeroRequisicao: 'ASC' },
+    });
+
+    for (const item of itensCortesia) {
+      if (item.numeroRequisicao == null) {
+        continue;
+      }
+      const chave = `${item.numeroCupom}-${item.numeroRequisicao}`;
+      if (mapa.has(chave)) {
+        continue;
+      }
+      mapa.set(chave, {
+        numeroCupom: item.numeroCupom,
+        numeroRequisicao: item.numeroRequisicao,
+        valorInformativo: Number(item.valorLiquidoItem),
+        nomeMedico: null,
+        crmMedico: null,
+      });
+    }
+
+    return [...mapa.values()].sort((a, b) => {
+      if (a.numeroCupom !== b.numeroCupom) {
+        return a.numeroCupom - b.numeroCupom;
+      }
+      return a.numeroRequisicao - b.numeroRequisicao;
+    });
   }
 
   private async obterPagamentosErpDetalhe(
@@ -1348,6 +1413,9 @@ export class FechamentoCaixaService {
         requisicoesRows.map((r) => this.buildChaveRequisicao(unidade, r)),
       ),
     ];
+    const temItemRequisicao = itensRows.some(
+      (r) => r.tipo_item === 'REQUISICAO',
+    );
 
     const itensRemovidos = await this.excluirCaixaErpPorPeriodoExcetoChaves(
       this.itemRepo,
@@ -1365,8 +1433,14 @@ export class FechamentoCaixaService {
       dataFim,
       chavesPagamentos,
     );
-    const requisicoesRemovidas =
-      await this.excluirCaixaErpPorPeriodoExcetoChaves(
+
+    let requisicoesRemovidas = 0;
+    if (chavesRequisicoes.length === 0 && temItemRequisicao) {
+      this.logger.error(
+        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: agente devolveu 0 requisições pagas, mas o snapshot de itens tem REQUISICAO. Não remove caixa_requisicoes_pagas do período (evita apagar o dia quando o complemento falha).`,
+      );
+    } else {
+      requisicoesRemovidas = await this.excluirCaixaErpPorPeriodoExcetoChaves(
         this.requisicaoRepo,
         'data_pagamento',
         unidade,
@@ -1374,6 +1448,7 @@ export class FechamentoCaixaService {
         dataFim,
         chavesRequisicoes,
       );
+    }
 
     const total =
       itensRemovidos + pagamentosRemovidos + requisicoesRemovidas;

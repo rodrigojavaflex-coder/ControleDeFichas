@@ -14,7 +14,10 @@ export class VisitacaoAcompanhamentoMovimentoRecebidoDto {
   @ApiPropertyOptional({ nullable: true })
   numeroOrcamento?: number | null;
 
-  @ApiProperty()
+  @ApiProperty({
+    description:
+      'Valor da requisição (valor_pago_requisicao); não o total do cupom quando várias requisições são baixadas juntas.',
+  })
   valorPago: number;
 }
 

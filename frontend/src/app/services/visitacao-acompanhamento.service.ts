@@ -70,8 +70,8 @@ export class VisitacaoAcompanhamentoService {
 
   private buildParams(filters: FindVisitacaoAcompanhamentoDto): HttpParams {
     let params = new HttpParams()
-      .set('dataInicial', filters.dataInicial)
-      .set('dataFinal', filters.dataFinal);
+      .set('ano', String(filters.ano))
+      .set('mes', String(filters.mes));
 
     if (filters.page != null && !filters.todos) {
       params = params.set('page', String(filters.page));

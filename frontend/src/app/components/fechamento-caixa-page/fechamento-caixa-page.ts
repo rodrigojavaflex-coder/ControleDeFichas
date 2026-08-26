@@ -10,6 +10,7 @@ import { Permission, Unidade } from '../../models/usuario.model';
 import { VendaOrigem } from '../../models/venda.model';
 import {
   CaixaBaixaDetalhe,
+  CaixaErpCortesiaDetalhe,
   CaixaErpPagamentoDetalhe,
   CaixaFechamentoStatus,
   CaixaFechamentoStatusExibicao,
@@ -678,12 +679,65 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       </tr>
     `;
 
+    const blocoCortesia = this.montarBlocoCortesiasRelatorio(
+      detalhado.cortesias ?? [],
+    );
+
     return `
       ${blocosHtml}
+      ${blocoCortesia}
       <section class="detalhe-bloco resumo-total">
         <h2 class="detalhe-bloco-titulo">Resumo total</h2>
         <table class="detalhe-table resumo-table">
           <tbody>${linhasResumo}${linhaTotalDia}</tbody>
+        </table>
+      </section>
+    `;
+  }
+
+  private montarBlocoCortesiasRelatorio(
+    cortesias: CaixaErpCortesiaDetalhe[],
+  ): string {
+    if (!cortesias.length) {
+      return '';
+    }
+
+    const totalInformativo = Math.round(
+      cortesias.reduce((acc, item) => acc + item.valorInformativo, 0) * 100,
+    ) / 100;
+
+    const linhas = cortesias
+      .map(
+        (item) => `
+          <tr>
+            <td>${item.numeroRequisicao}</td>
+            <td>${item.numeroCupom}</td>
+            <td>${this.escapeHtml(item.nomeMedico || '-')}</td>
+            <td class="valor">${this.formatCurrency(item.valorInformativo)}</td>
+          </tr>
+        `,
+      )
+      .join('');
+
+    return `
+      <section class="detalhe-bloco detalhe-bloco-cortesia">
+        <h2 class="detalhe-bloco-titulo">Cortesias (informativo)</h2>
+        <table class="detalhe-table">
+          <thead>
+            <tr>
+              <th>Requisição</th>
+              <th>Cupom</th>
+              <th>Prescritor</th>
+              <th class="valor">Valor fórmula</th>
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+          <tfoot>
+            <tr class="subtotal">
+              <td colspan="3">Total informativo</td>
+              <td class="valor">${this.formatCurrency(totalInformativo)}</td>
+            </tr>
+          </tfoot>
         </table>
       </section>
     `;

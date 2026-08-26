@@ -34,18 +34,37 @@ export interface VisitacaoAcompanhamentoTotais {
   valorRejeitado: number;
   quantidadeRejeitado: number;
   quantidadeMedicos: number;
+  valorRecebidoCaixa?: number;
+  quantidadeRecebidoCaixa?: number;
+  quantidadeMedicosPainel?: number;
+  quantidadeMedicosForaAtendimento?: number;
+  percentualComissaoFaixa?: number | null;
+  valorComissao?: number | null;
+  valorMeta?: number | null;
+  percentualMeta?: number | null;
+  valorProjetado?: number | null;
+  percentualProjecao?: number | null;
+  percentualComissaoFaixaProjetada?: number | null;
+  valorComissaoProjetado?: number | null;
+  diasUteisMes?: number | null;
+  diasUteisDecorridos?: number | null;
+  diasRealizados?: number | null;
+  mesAberto?: boolean;
+  quantidadeRepresentantes?: number;
+  quantidadeComMeta?: number;
 }
 
 export interface VisitacaoAcompanhamentoTotaisRepresentante
   extends VisitacaoAcompanhamentoTotais {
   nomeRepresentante: string;
+  funcionarioId?: string | null;
 }
 
 export interface FindVisitacaoAcompanhamentoDto {
   page?: number;
   limit?: number;
-  dataInicial: string;
-  dataFinal: string;
+  ano: number;
+  mes: number;
   unidade?: Unidade;
   nomeMedico?: string;
   crmMedico?: string;

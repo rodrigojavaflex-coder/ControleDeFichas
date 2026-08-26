@@ -992,6 +992,19 @@ export class DatabaseService {
         r.vrrqu AS valor_requisicao_bruto,
         r.vrdsc AS desconto_requisicao,
         r.vrliq AS valor_pago_requisicao,
+        TRIM(r.tprqu) AS tipo_requisicao,
+        CAST(
+          (SELECT SUM(f.prcobr)
+           FROM fc12100 f
+           WHERE f.cdfil = r.cdfil
+             AND f.nrrqu = r.nrrqu)
+          * CASE
+              WHEN COALESCE(r.vrrqu, 0) = 0 THEN 0
+              WHEN r.vrliq > r.vrrqu THEN 1
+              ELSE r.vrliq / r.vrrqu
+            END
+          AS NUMERIC(15,2)
+        ) AS valor_formulas,
         r.vrrqu - r.vrdsc - r.vrliq AS diferenca_calculo,
         (SELECT SUM(o.prcobr - COALESCE(o.vrdsc, 0))
          FROM fc15100 o
@@ -1238,6 +1251,13 @@ export class DatabaseService {
       valor_requisicao_bruto: Number(get('valor_requisicao_bruto') ?? 0),
       desconto_requisicao: Number(get('desconto_requisicao') ?? 0),
       valor_pago_requisicao: Number(get('valor_pago_requisicao') ?? 0),
+      tipo_requisicao: get('tipo_requisicao')
+        ? String(get('tipo_requisicao')).trim() || null
+        : null,
+      valor_formulas:
+        get('valor_formulas') != null
+          ? Math.round(Number(get('valor_formulas')) * 100) / 100
+          : null,
       diferenca_calculo: Number(get('diferenca_calculo') ?? 0),
       gap_orcamento_vs_pago:
         nrOrcamento != null && get('gap_orcamento_vs_pago') != null

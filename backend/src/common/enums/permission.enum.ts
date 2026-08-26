@@ -179,6 +179,8 @@ export enum Permission {
   VISITACAO_PAINEL_MEDICO_READ = 'visitacao-painel-medico:read',
   /** Visitação — acompanhamento (caixa recebido × orçamentos rejeitados). */
   VISITACAO_ACOMPANHAMENTO_READ = 'visitacao-acompanhamento:read',
+  /** Visitação — ver faixa e valor de comissão nos cards do acompanhamento. */
+  VISITACAO_ACOMPANHAMENTO_COMISSAO = 'visitacao-acompanhamento:comissao',
   /** Visitação — configuração de metas mensais. */
   VISITACAO_META_READ = 'visitacao-meta:read',
   VISITACAO_META_UPDATE = 'visitacao-meta:update',
@@ -547,6 +549,10 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.VISITACAO_ACOMPANHAMENTO_READ,
       label: 'Visualizar acompanhamento (visitação)',
+    },
+    {
+      key: Permission.VISITACAO_ACOMPANHAMENTO_COMISSAO,
+      label: 'Visualizar faixa e valor de comissão no acompanhamento',
     },
   ],
   'Visitação — Configuração Metas': [

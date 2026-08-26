@@ -24,16 +24,21 @@
             </select>
           </div>
           @if (unidadeFiltro) {
-            <label class="sistema-feriados-sabado" for="sf-sabado">
-              <input
-                id="sf-sabado"
-                type="checkbox"
-                class="form-checkbox"
-                [(ngModel)]="sabadoDiaUtil"
-                [disabled]="!podeEditar() || salvandoSabado"
-                (ngModelChange)="onSabadoChange()" />
-              <span>Sábado é dia útil</span>
-            </label>
+            <div class="sistema-feriados-sabado-wrap">
+              <label class="sistema-feriados-sabado" for="sf-sabado">
+                <input
+                  id="sf-sabado"
+                  type="checkbox"
+                  class="form-checkbox"
+                  [(ngModel)]="sabadoDiaUtil"
+                  [disabled]="!podeEditar() || salvandoSabado"
+                  (ngModelChange)="onSabadoChange()" />
+                <span>Sábado é dia útil</span>
+              </label>
+              <small class="sistema-feriados-hint">
+                Na visitação, sábado marcado conta como meio dia útil.
+              </small>
+            </div>
           }
         </div>
       </section>

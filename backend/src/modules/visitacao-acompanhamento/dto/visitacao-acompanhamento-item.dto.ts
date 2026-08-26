@@ -38,7 +38,8 @@ export class VisitacaoAcompanhamentoItemDto {
   movimentoForaCarteira: boolean;
 
   @ApiProperty({
-    description: 'Soma de valor_liquido_linha das requisições no período.',
+    description:
+      'Soma do valor pago da requisição (uma linha por cupom+requisição) no período; fallback valor_liquido_item.',
   })
   valorRecebido: number;
 

@@ -22,11 +22,8 @@ import { OrcamentoMedicoOpcaoFiltro } from '../../models/orcamento.model';
 import { Permission, Unidade } from '../../models/usuario.model';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
-import {
-  DateRangeFilterComponent,
-  DateRangeValue,
-} from '../date-range-filter/date-range-filter';
 import { MedicoFilterPickerComponent } from '../medico-filter-picker/medico-filter-picker';
+import { MESES_PT, nomeMesPt } from '../folha/folha-meses';
 
 interface AppliedFilter {
   key: string;
@@ -35,8 +32,8 @@ interface AppliedFilter {
 }
 
 interface AcompanhamentoFilterSnapshot {
-  dataInicial: string;
-  dataFinal: string;
+  ano: number;
+  mes: number;
   nomesMedico: string[];
   crmMedico: string;
   ufCrmMedico: string;
@@ -59,12 +56,30 @@ const TOTAIS_VAZIOS: VisitacaoAcompanhamentoTotais = {
   valorRejeitado: 0,
   quantidadeRejeitado: 0,
   quantidadeMedicos: 0,
+  valorRecebidoCaixa: 0,
+  quantidadeRecebidoCaixa: 0,
+  quantidadeMedicosPainel: 0,
+  quantidadeMedicosForaAtendimento: 0,
+  percentualComissaoFaixa: null,
+  valorComissao: null,
+  valorMeta: null,
+  percentualMeta: null,
+  valorProjetado: null,
+  percentualProjecao: null,
+  percentualComissaoFaixaProjetada: null,
+  valorComissaoProjetado: null,
+  diasUteisMes: null,
+  diasUteisDecorridos: null,
+  diasRealizados: null,
+  mesAberto: false,
+  quantidadeRepresentantes: 0,
+  quantidadeComMeta: 0,
 };
 
 @Component({
   selector: 'app-visitacao-acompanhamento-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, DateRangeFilterComponent, MedicoFilterPickerComponent],
+  imports: [CommonModule, FormsModule, MedicoFilterPickerComponent],
   templateUrl: './visitacao-acompanhamento-page.html',
   styleUrls: [
     '../vendas-list/vendas-list.css',
@@ -105,8 +120,10 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   totalItems = 0;
   totalPages = 0;
 
-  dataInicialFilter = '';
-  dataFinalFilter = '';
+  MESES_PT = MESES_PT;
+  anosDisponiveis: number[] = [];
+  anoFiltro = 2026;
+  mesFiltro = 1;
   crmMedicoFilter = '';
   ufCrmMedicoFilter = '';
   funcionarioIdFilter = '';
@@ -143,7 +160,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
         'Recebidos e rejeitados da carteira (painel), inclusive quando o movimento ocorre em outra unidade.',
     });
 
-    this.initializeDateFilters();
+    this.initializeCompetenciaFilter();
     this.initializeUnidadeFilter();
     this.updateAppliedFiltersSnapshot();
     this.carregarConfiguracao();
@@ -164,25 +181,39 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     );
   }
 
+  get canVerComissao(): boolean {
+    return this.authService.hasPermission(
+      Permission.VISITACAO_ACOMPANHAMENTO_COMISSAO,
+    );
+  }
+
   get cardsResumo(): VisitacaoAcompanhamentoTotaisRepresentante[] {
-    if (!this.totaisPorRepresentante.length) {
+    const reps = this.totaisPorRepresentante.filter(
+      (card) => !this.isSemRepresentante(card),
+    );
+    const temTotal =
+      this.totais.quantidadeMedicos > 0 ||
+      (this.totais.valorRecebidoCaixa ?? 0) > 0 ||
+      this.totais.valorRecebido > 0 ||
+      this.totais.valorRejeitado > 0;
+    if (!temTotal && !reps.length) {
       return [];
     }
     return [
       {
         nomeRepresentante: 'Total',
-        valorRecebido: this.totais.valorRecebido,
-        quantidadeRecebido: this.totais.quantidadeRecebido,
-        valorRejeitado: this.totais.valorRejeitado,
-        quantidadeRejeitado: this.totais.quantidadeRejeitado,
-        quantidadeMedicos: this.totais.quantidadeMedicos,
+        ...this.totais,
       },
-      ...this.totaisPorRepresentante,
+      ...reps,
     ];
   }
 
   isCardTotal(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {
     return card.nomeRepresentante === 'Total';
+  }
+
+  isSemRepresentante(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {
+    return card.nomeRepresentante.trim().toLowerCase() === 'sem representante';
   }
 
   get processamentoAtivo(): boolean {
@@ -203,13 +234,11 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     const filters: AppliedFilter[] = [];
     const s = this.appliedFiltersSnapshot;
 
-    if (s.dataInicial || s.dataFinal) {
-      const from = s.dataInicial ? this.formatarData(s.dataInicial) : '';
-      const to = s.dataFinal ? this.formatarData(s.dataFinal) : '';
+    if (s.ano && s.mes) {
       filters.push({
         key: 'periodo',
-        label: 'Período',
-        value: from && to ? `${from} a ${to}` : from || to,
+        label: 'Competência',
+        value: `${nomeMesPt(s.mes)}/${s.ano}`,
       });
     }
     if (s.nomesMedico.length) {
@@ -259,8 +288,8 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     const filters: FindVisitacaoAcompanhamentoDto = {
       page,
       limit,
-      dataInicial: s.dataInicial,
-      dataFinal: s.dataFinal,
+      ano: s.ano,
+      mes: s.mes,
     };
 
     if (s.nomesMedico.length) filters.nomesMedico = [...s.nomesMedico];
@@ -286,21 +315,36 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     }
   }
 
-  /** Mês corrente: dia 1 até o último dia do mês (data local). */
-  private initializeDateFilters(): void {
+  /** Competência atual (ano 2026–2033). */
+  private initializeCompetenciaFilter(): void {
+    this.anosDisponiveis = [];
+    for (let a = 2026; a <= 2033; a += 1) {
+      this.anosDisponiveis.push(a);
+    }
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const lastDay = new Date(year, month + 1, 0).getDate();
+    let ano = now.getFullYear();
+    if (ano < 2026) ano = 2026;
+    if (ano > 2033) ano = 2033;
+    this.anoFiltro = ano;
+    this.mesFiltro = now.getMonth() + 1;
+  }
+
+  private datasDaCompetencia(ano: number, mes: number): {
+    dataInicial: string;
+    dataFinal: string;
+  } {
+    const lastDay = new Date(ano, mes, 0).getDate();
     const pad = (n: number) => String(n).padStart(2, '0');
-    this.dataInicialFilter = `${year}-${pad(month + 1)}-01`;
-    this.dataFinalFilter = `${year}-${pad(month + 1)}-${pad(lastDay)}`;
+    return {
+      dataInicial: `${ano}-${pad(mes)}-01`,
+      dataFinal: `${ano}-${pad(mes)}-${pad(lastDay)}`,
+    };
   }
 
   private createFilterSnapshot(): AcompanhamentoFilterSnapshot {
     return {
-      dataInicial: this.dataInicialFilter || '',
-      dataFinal: this.dataFinalFilter || '',
+      ano: this.anoFiltro,
+      mes: this.mesFiltro,
       nomesMedico: Array.from(this.selectedMedicos),
       crmMedico: this.crmMedicoFilter || '',
       ufCrmMedico: this.ufCrmMedicoFilter || '',
@@ -312,11 +356,6 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
 
   private updateAppliedFiltersSnapshot(): void {
     this.appliedFiltersSnapshot = this.createFilterSnapshot();
-  }
-
-  onDateRangeChange(range: DateRangeValue): void {
-    this.dataInicialFilter = range.start;
-    this.dataFinalFilter = range.end;
   }
 
   loadRepresentantes(): void {
@@ -336,8 +375,8 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   loadItems(): void {
     if (!this.canRead() || this.loading) return;
     const s = this.appliedFiltersSnapshot;
-    if (!s.dataInicial || !s.dataFinal) {
-      this.initializeDateFilters();
+    if (!s.ano || !s.mes) {
+      this.initializeCompetenciaFilter();
       this.updateAppliedFiltersSnapshot();
     }
 
@@ -374,13 +413,14 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     this.detalheAberto = true;
     this.carregandoDetalhe = true;
 
+    const periodo = this.datasDaCompetencia(s.ano, s.mes);
     this.service
       .detalhe({
         unidade: item.unidade,
         crmMedico: item.crmMedico,
         ufCrmMedico: item.ufCrmMedico,
-        dataInicial: s.dataInicial,
-        dataFinal: s.dataFinal,
+        dataInicial: periodo.dataInicial,
+        dataFinal: periodo.dataFinal,
         nomeMedico: item.nomeMedico,
       })
       .subscribe({
@@ -1010,10 +1050,8 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     partes.push(
       unidadeLabel ? `Unidade: ${unidadeLabel}` : 'Unidades: Todas do escopo',
     );
-    if (s.dataInicial || s.dataFinal) {
-      partes.push(
-        `Período: ${this.formatarData(s.dataInicial)} a ${this.formatarData(s.dataFinal)}`,
-      );
+    if (s.ano && s.mes) {
+      partes.push(`Competência: ${nomeMesPt(s.mes)}/${s.ano}`);
     }
     if (s.nomesMedico.length) {
       partes.push(
@@ -1148,13 +1186,13 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   }
 
   loadOpcoesMedico(): void {
-    if (!this.dataInicialFilter || !this.dataFinalFilter) {
-      this.initializeDateFilters();
+    if (!this.anoFiltro || !this.mesFiltro) {
+      this.initializeCompetenciaFilter();
     }
     this.loadingOpcoesMedico = true;
     const dto: FindVisitacaoAcompanhamentoDto = {
-      dataInicial: this.dataInicialFilter,
-      dataFinal: this.dataFinalFilter,
+      ano: this.anoFiltro,
+      mes: this.mesFiltro,
     };
     if (this.unidadeFilter) dto.unidade = this.unidadeFilter as Unidade;
     if (this.crmMedicoFilter.trim()) dto.crmMedico = this.crmMedicoFilter.trim();
@@ -1191,8 +1229,8 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
 
   applyFilters(): void {
     if (this.processamentoAtivo) return;
-    if (!this.dataInicialFilter || !this.dataFinalFilter) {
-      this.initializeDateFilters();
+    if (!this.anoFiltro || !this.mesFiltro) {
+      this.initializeCompetenciaFilter();
     }
     this.currentPage = 1;
     this.updateAppliedFiltersSnapshot();
@@ -1208,9 +1246,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     this.ufCrmMedicoFilter = '';
     this.funcionarioIdFilter = '';
     this.naCarteiraFilter = 'todos';
-    this.dataInicialFilter = '';
-    this.dataFinalFilter = '';
-    this.initializeDateFilters();
+    this.initializeCompetenciaFilter();
     this.sortField = 'valorRecebido';
     this.sortDirection = 'desc';
     if (!this.unidadeDisabled) {
@@ -1227,9 +1263,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     if (this.processamentoAtivo) return;
     switch (key) {
       case 'periodo':
-        this.dataInicialFilter = '';
-        this.dataFinalFilter = '';
-        this.initializeDateFilters();
+        this.initializeCompetenciaFilter();
         break;
       case 'nomesMedico':
         this.selectedMedicos = new Set();
@@ -1286,13 +1320,106 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   }
 
   formatarRepresentatividade(card: { valorRecebido: number }): string {
-    const totalRecebido = Number(this.totais.valorRecebido) || 0;
-    if (totalRecebido <= 0) return '—';
+    const totalCaixa =
+      Number(this.totais.valorRecebidoCaixa) ||
+      Number(this.totais.valorRecebido) ||
+      0;
+    if (totalCaixa <= 0) return '—';
     const recebido = Number(card.valorRecebido) || 0;
-    const percentual = (recebido / totalRecebido) * 100;
+    const percentual = (recebido / totalCaixa) * 100;
     return `${percentual.toLocaleString('pt-BR', {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     })}%`;
+  }
+
+  valorRecebidoCard(card: VisitacaoAcompanhamentoTotaisRepresentante): number {
+    if (this.isCardTotal(card)) {
+      return Number(card.valorRecebidoCaixa ?? card.valorRecebido) || 0;
+    }
+    return Number(card.valorRecebido) || 0;
+  }
+
+  quantidadeRecebidoCard(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    if (this.isCardTotal(card)) {
+      return Number(card.quantidadeRecebidoCaixa ?? card.quantidadeRecebido) || 0;
+    }
+    return Number(card.quantidadeRecebido) || 0;
+  }
+
+  temComissao(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {
+    return (
+      this.canVerComissao &&
+      (card.percentualComissaoFaixa != null ||
+        card.percentualComissaoFaixaProjetada != null)
+    );
+  }
+
+  temComissaoProjetada(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): boolean {
+    return (
+      this.canVerComissao &&
+      card.mesAberto === true &&
+      card.percentualComissaoFaixaProjetada != null &&
+      card.valorComissaoProjetado != null
+    );
+  }
+
+  temMeta(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {
+    return card.valorMeta != null && card.valorMeta > 0;
+  }
+
+  formatarPercentualMeta(valor: number | null | undefined): string {
+    if (valor == null) return '—';
+    return `${Number(valor).toLocaleString('pt-BR', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })}%`;
+  }
+
+  larguraBarraMeta(valor: number | null | undefined): number {
+    if (valor == null || valor <= 0) return 0;
+    return Math.min(100, valor);
+  }
+
+  formatarDiasUteis(valor: number | null | undefined): string {
+    if (valor == null) return '—';
+    return Number(valor).toLocaleString('pt-BR', {
+      minimumFractionDigits: valor % 1 === 0 ? 0 : 1,
+      maximumFractionDigits: 1,
+    });
+  }
+
+  get rotuloCompetenciaLegenda(): string {
+    const s = this.appliedFiltersSnapshot;
+    if (!s.ano || !s.mes) {
+      return '';
+    }
+    return `${nomeMesPt(s.mes)} ${s.ano}`;
+  }
+
+  get rotuloDiasUteis(): string {
+    const mes =
+      this.totais.diasUteisMes ??
+      this.totaisPorRepresentante.find((c) => c.diasUteisMes != null)
+        ?.diasUteisMes;
+    if (mes == null) {
+      return '';
+    }
+    return `${this.formatarDiasUteis(mes)} dias úteis`;
+  }
+
+  get rotuloDiasRealizados(): string {
+    const realizados =
+      this.totais.diasRealizados ??
+      this.totaisPorRepresentante.find((c) => c.diasRealizados != null)
+        ?.diasRealizados;
+    if (realizados == null) {
+      return '';
+    }
+    return `${this.formatarDiasUteis(realizados)} dias realizados`;
   }
 }

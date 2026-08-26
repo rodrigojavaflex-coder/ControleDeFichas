@@ -127,11 +127,20 @@ export interface CaixaErpPagamentoDetalhe {
   nomeOperadorCaixa?: string | null;
 }
 
+export interface CaixaErpCortesiaDetalhe {
+  numeroCupom: number;
+  numeroRequisicao: number;
+  valorInformativo: number;
+  nomeMedico?: string | null;
+  crmMedico?: string | null;
+}
+
 export interface FechamentoCaixaDetalhado {
   unidade: string;
   data: string;
   baixas: CaixaBaixaDetalhe[];
   erpPagamentos: CaixaErpPagamentoDetalhe[];
+  cortesias?: CaixaErpCortesiaDetalhe[];
   totalBaixas: number;
   totalErpLiquido: number;
 }
