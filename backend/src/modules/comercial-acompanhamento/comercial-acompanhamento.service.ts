@@ -33,6 +33,8 @@ import {
 } from './dto/comercial-acompanhamento.dto';
 
 const NOME_SEM_VINCULO = 'Sem vínculo';
+/** Agrupa movimento sem `codigo_vendedor` na paga; não gera card (RN-COM-004). */
+const CODIGO_SEM_VINCULO = -1;
 
 type MovimentoRow = {
   codigo_vendedor: number | null;
@@ -226,7 +228,6 @@ export class ComercialAcompanhamentoService {
         ${this.sqlJoinCaixaPago()}
         WHERE i.tipo_item = 'REQUISICAO'
           AND i.unidade = $1
-          AND c.codigo_vendedor IS NOT NULL
           ${this.sqlFiltroPeriodoRecebido('$2', '$3')}
           ${this.sqlFiltroRecebidoVisitacao()}
       )
@@ -302,12 +303,21 @@ export class ComercialAcompanhamentoService {
   private mapMovimentoRows(rows: MovimentoRow[]): MapaMovimento {
     const map: MapaMovimento = new Map();
     for (const row of rows) {
-      const codigo = row.codigo_vendedor;
-      if (codigo == null) continue;
-      map.set(Number(codigo), {
+      const bruto = row.codigo_vendedor == null ? NaN : Number(row.codigo_vendedor);
+      const codigo =
+        Number.isFinite(bruto) && bruto > 0 ? bruto : CODIGO_SEM_VINCULO;
+      const atual = map.get(codigo);
+      const valor = this.toNumber(row.valor);
+      const qtd = this.toInt(row.qtd);
+      if (atual) {
+        atual.valor += valor;
+        atual.qtd += qtd;
+        continue;
+      }
+      map.set(codigo, {
         nome: row.nome_vendedor?.trim() || NOME_SEM_VINCULO,
-        valor: this.toNumber(row.valor),
-        qtd: this.toInt(row.qtd),
+        valor,
+        qtd,
       });
     }
     return map;

@@ -1413,9 +1413,6 @@ export class FechamentoCaixaService {
         requisicoesRows.map((r) => this.buildChaveRequisicao(unidade, r)),
       ),
     ];
-    const temItemRequisicao = itensRows.some(
-      (r) => r.tipo_item === 'REQUISICAO',
-    );
 
     const itensRemovidos = await this.excluirCaixaErpPorPeriodoExcetoChaves(
       this.itemRepo,
@@ -1435,9 +1432,12 @@ export class FechamentoCaixaService {
     );
 
     let requisicoesRemovidas = 0;
-    if (chavesRequisicoes.length === 0 && temItemRequisicao) {
+    if (
+      this.snapshotRequisicoesPagasIncompleto(itensRows, requisicoesRows)
+    ) {
+      const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
       this.logger.error(
-        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: agente devolveu 0 requisições pagas, mas o snapshot de itens tem REQUISICAO. Não remove caixa_requisicoes_pagas do período (evita apagar o dia quando o complemento falha).`,
+        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: complemento incompleto (${requisicoesRows.length} paga(s) vs ${nrrquItens} requisição(ões) nos itens). Não remove caixa_requisicoes_pagas do período.`,
       );
     } else {
       requisicoesRemovidas = await this.excluirCaixaErpPorPeriodoExcetoChaves(
@@ -1457,6 +1457,38 @@ export class FechamentoCaixaService {
         `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: removidos ${pagamentosRemovidos} pagamento(s), ${itensRemovidos} item(ns), ${requisicoesRemovidas} requisição(ões) ausentes no agente`,
       );
     }
+  }
+
+  private contarRequisicoesDistintasItens(
+    itensRows: AgenteCaixaItemRow[],
+  ): number {
+    return new Set(
+      itensRows
+        .filter(
+          (r) =>
+            r.tipo_item === 'REQUISICAO' &&
+            r.requisicao != null &&
+            r.requisicao > 0,
+        )
+        .map((r) => r.requisicao as number),
+    ).size;
+  }
+
+  /** Complemento FC17000 vazio ou muito menor que as REQUISICAO do cupom — não apagar pagas. */
+  private snapshotRequisicoesPagasIncompleto(
+    itensRows: AgenteCaixaItemRow[],
+    requisicoesRows: AgenteCaixaRequisicaoRow[],
+  ): boolean {
+    const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
+    if (nrrquItens === 0) {
+      return false;
+    }
+    const nrrquPagas = new Set(
+      requisicoesRows
+        .filter((r) => r.requisicao > 0)
+        .map((r) => r.requisicao),
+    ).size;
+    return nrrquPagas * 2 < nrrquItens;
   }
 
   private async excluirCaixaErpPorPeriodoExcetoChaves(

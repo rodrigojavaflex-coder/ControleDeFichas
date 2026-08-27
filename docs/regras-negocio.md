@@ -411,7 +411,7 @@
 
 ### RN-COM-003 — Fonte do acompanhamento
 
-- **Manipulados (requisição):** mesmas regras de valor da **RN-VIS-008** (teto `valor_formulas`, parcelamento, exclusão cortesia/tipo N sem fórmula), agregados por `caixa_requisicoes_pagas.codigo_vendedor`.
+- **Manipulados (requisição):** mesmas regras de valor da **RN-VIS-008** (teto `valor_formulas`, parcelamento, exclusão cortesia/tipo N sem fórmula). Universo = `caixa_itens_erp` (`tipo_item = REQUISICAO`); atribuição ao vendedor por `caixa_requisicoes_pagas.codigo_vendedor`. Sem paga/`codigo_vendedor`, o valor **entra no Total** e **não** gera card de vendedor.
 - **Marca própria (produtos):** `caixa_itens_erp` com `tipo_item = PRODUTO`; valor = `valor_liquido_item`; atribuição ao vendedor via `codigo_operador_caixa` do pagamento (`caixa_pagamentos_erp`), vinculado a `codigoVendedorErp` do funcionário.
 - **Rejeitados:** `orcamentos` com `status = REJEITADO` e **`codigoVendedor` preenchido**; eixo de data `dataOrcamento`. Sem vendedor no orçamento, **não entra**.
 
@@ -726,7 +726,7 @@ Responder formalmente antes de alterar importação ou fechamento oficial:
 - Requisições pagas: `{unidade}-{numero_requisicao}-{numero_cupom}-{data_pagamento}`.
 - Reimportar o mesmo dia **sempre atualiza** registros existentes (upsert por `chave_erp`); não duplica linhas.
 - **Sync do período importado:** após buscar pagamentos, itens e requisições no agente, o backend **remove** de `caixa_pagamentos_erp`, `caixa_itens_erp` e `caixa_requisicoes_pagas` os registros da `(unidade, data)` do segmento cuja `chave_erp` **não** veio no snapshot (ex.: movimento excluído e recriado no ERP com novo cupom/`operid`). Em seguida faz upsert das linhas retornadas. **Não** altera baixas de terceiro.
-- **Proteção do complemento:** se o snapshot de **requisições pagas** vier **vazio** e o mesmo segmento trouxer itens `tipo_item = REQUISICAO`, o backend **não** apaga `caixa_requisicoes_pagas` daquele período (o complemento do agente falhou ou ficou vazio; apagar zeraria o dia na visitação). Reimportar o dia depois.
+- **Proteção do complemento:** se o snapshot de **requisições pagas** vier **vazio** **ou incompleto** (menos da metade das requisições distintas dos itens `REQUISICAO` do mesmo segmento), o backend **não** apaga `caixa_requisicoes_pagas` daquele período (o complemento do agente falhou ou veio parcial; apagar zeraria o dia na visitação/comercial). Reimportar o dia depois.
 - **`caixa_requisicoes_pagas`:** orçamento (`NRORC`), qtd/valor de fórmulas e prescritor usam **fallback agregado** em `FC12100` por requisição (prioriza série `0`, depois outras fórmulas e requisição-fonte `NRRQUFON`). Considera apenas `NRORC > 0`. A busca inclui `FC17000.dtefe` **ou** requisição presente no cupom do dia (`FC31200.dtope`), para não perder baixa cujo `dtefe` difere da data do caixa. Grava também `tipo_requisicao` (`TPRQU`) e `valor_formulas` = soma `FC12100.PRCOBR` × `LEAST(1, VRLIQ/VRRQU)` (não inflar a fórmula quando o líquido do caixa é maior que o bruto da req). **Não altera** totais de `caixa_pagamentos_erp`.
 
 ### RN-CXA-004 — Valor líquido e formas de pagamento (ERP)
