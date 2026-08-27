@@ -2,6 +2,8 @@
 :host {
   display: block;
   height: 100%;
+  min-height: 0;
+  max-height: 100%;
 }
 
 .sidebar {
@@ -9,13 +11,17 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  min-height: calc((100vh - 64px) / var(--app-zoom-factor, 1));
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
   background: var(--cor-superficie);
   border-right: 1px solid var(--cor-borda);
   display: flex;
   flex-direction: column;
   transition: background-color var(--duracao-base) var(--easing-ease-in-out),
     border-color var(--duracao-base) var(--easing-ease-in-out);
+  /* visible: botões de controle saem 8px à direita; a rolagem fica em .sidebar-content */
   overflow: visible;
   z-index: 100;
   margin-right: 0;
@@ -155,15 +161,18 @@
 
 /* Conteúdo da sidebar */
 .sidebar-content {
-  flex: 1;
+  flex: 1 1 auto;
   padding: var(--espacamento-md) 0;
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cor-borda-escura) transparent;
 }
 
 .sidebar-content::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .sidebar-content::-webkit-scrollbar-track {
