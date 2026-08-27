@@ -39,6 +39,7 @@ interface FolhaFuncFormValue {
   dataDemissao: string;
   codigoUsuarioErp: string | number;
   codigoFuncionarioErp: string | number;
+  codigoVendedorErp: string | number;
   painelContratoRepresentante: string | number;
   painelCodigoRepresentante: string | number;
   ativo: boolean;
@@ -150,6 +151,21 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           ],
         ],
         codigoFuncionarioErp: [
+          '',
+          [
+            Validators.min(1),
+            (c: AbstractControl): ValidationErrors | null => {
+              const v = c.value;
+              if (v === '' || v == null) return null;
+              const n = Number(v);
+              if (!Number.isInteger(n) || n < 1) {
+                return { codigoErpInvalido: true };
+              }
+              return null;
+            },
+          ],
+        ],
+        codigoVendedorErp: [
           '',
           [
             Validators.min(1),
@@ -824,6 +840,8 @@ export class FolhaFuncionarioFormComponent implements OnInit {
             f.codigoUsuarioErp != null ? String(f.codigoUsuarioErp) : '',
           codigoFuncionarioErp:
             f.codigoFuncionarioErp != null ? String(f.codigoFuncionarioErp) : '',
+          codigoVendedorErp:
+            f.codigoVendedorErp != null ? String(f.codigoVendedorErp) : '',
           painelContratoRepresentante:
             f.painelContratoRepresentante != null
               ? String(f.painelContratoRepresentante)
@@ -908,6 +926,16 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       payload['codigoFuncionarioErp'] = Number(codFunErp);
     } else if (this.isEditMode) {
       payload['codigoFuncionarioErp'] = null;
+    }
+
+    const codVenErp =
+      v.codigoVendedorErp != null && v.codigoVendedorErp !== ''
+        ? String(v.codigoVendedorErp).trim()
+        : '';
+    if (codVenErp) {
+      payload['codigoVendedorErp'] = Number(codVenErp);
+    } else if (this.isEditMode) {
+      payload['codigoVendedorErp'] = null;
     }
 
     const painelContrato =

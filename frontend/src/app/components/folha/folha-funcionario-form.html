@@ -294,6 +294,25 @@
 
         <div class="form-row form-row-2">
           <div class="form-group">
+            <label class="form-label" for="ff-cod-vendedor-erp">Código vendedor ERP (cdfun)</label>
+            <input
+              id="ff-cod-vendedor-erp"
+              type="number"
+              min="1"
+              step="1"
+              class="form-control"
+              formControlName="codigoVendedorErp"
+              placeholder="Ex.: 42"
+            />
+            <div class="form-help">Vendedor no caixa para metas e comissões comerciais.</div>
+            @if (form.get('codigoVendedorErp')?.invalid && form.get('codigoVendedorErp')?.touched) {
+              <div class="error-message">Informe um código inteiro maior que zero.</div>
+            }
+          </div>
+        </div>
+
+        <div class="form-row form-row-2">
+          <div class="form-group">
             <label class="form-label" for="ff-painel-contrato">Filial do painel (cdcon)</label>
             <input
               id="ff-painel-contrato"

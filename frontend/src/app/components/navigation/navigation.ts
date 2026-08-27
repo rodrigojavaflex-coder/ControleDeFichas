@@ -363,6 +363,31 @@ export class NavigationComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      label: 'Comercial',
+      icon: 'feather-briefcase',
+      requiredPermissions: [],
+      children: [
+        {
+          label: 'Acompanhamento',
+          route: '/comercial/acompanhamento',
+          icon: 'feather-activity',
+          requiredPermissions: [Permission.COMERCIAL_ACOMPANHAMENTO_READ],
+        },
+        {
+          label: 'Configuração Metas',
+          route: '/comercial/configuracao-metas',
+          icon: 'feather-target',
+          requiredPermissions: [Permission.COMERCIAL_META_READ],
+        },
+        {
+          label: 'Configuração Comissões',
+          route: '/comercial/configuracao-comissoes',
+          icon: 'feather-dollar-sign',
+          requiredPermissions: [Permission.COMERCIAL_COMISSAO_READ],
+        },
+      ],
+    },
+    {
       label: 'Relatórios',
       icon: 'feather-bar-chart-2',
       requiredPermissions: [],

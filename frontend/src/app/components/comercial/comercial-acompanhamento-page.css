@@ -1,0 +1,299 @@
+.comercial-acompanhamento-page.vendas-page {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.comercial-acompanhamento-page .results-card {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.comercial-acomp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 1rem;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 8px;
+}
+
+.comercial-acomp-toolbar .filter-group {
+  flex: 0 1 200px;
+  min-width: 150px;
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.comercial-acomp-toolbar .filter-group.comercial-acomp-vendedor {
+  flex: 1 1 280px;
+  max-width: 36rem;
+}
+
+.comercial-acomp-toolbar .form-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-acomp-toolbar .form-control {
+  min-height: 2.375rem;
+  width: 100%;
+}
+
+.comercial-acomp-du-legend {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  margin-left: auto;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  border-radius: 8px;
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  box-shadow: var(--sombra-sm, none);
+  color: var(--text-primary, #1e293b);
+  white-space: nowrap;
+}
+
+.comercial-acomp-du-legend strong {
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.comercial-acomp-du-legend span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-acomp-cards-wrap {
+  margin: 0 0 1rem;
+}
+
+.comercial-acomp-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 0.75rem;
+}
+
+.comercial-acomp-card {
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  box-shadow: var(--sombra-sm, none);
+  min-width: 0;
+}
+
+.comercial-acomp-card.is-total {
+  border-color: color-mix(in srgb, var(--color-primary, #2563eb) 35%, var(--cor-borda, #e2e8f0));
+}
+
+.comercial-acomp-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.comercial-acomp-card-head h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.comercial-acomp-competencia {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-acomp-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.comercial-acomp-desempenho {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 0.65rem 0.85rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  align-items: start;
+}
+
+.comercial-acomp-desempenho.has-projecao {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.7fr) minmax(0, 1.1fr);
+}
+
+.comercial-acomp-comissao {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--cor-borda, var(--border-color, #e2e8f0));
+}
+
+.comercial-acomp-meta-bar {
+  display: block;
+  height: 0.35rem;
+  margin-top: 0.25rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-secondary, #94a3b8) 28%, transparent);
+  overflow: hidden;
+}
+
+.comercial-acomp-meta-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary, #2563eb);
+}
+
+.comercial-acomp-meta-bar-fill.is-ok {
+  background: var(--cor-sucesso, var(--color-success, #16a34a));
+}
+
+.comercial-acomp-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.comercial-acomp-metric .label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-acomp-metric .value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary, #1e293b);
+}
+
+.comercial-acomp-metric .sub,
+.comercial-acomp-metric .meta-pct {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-acomp-metric.is-success .value {
+  color: var(--cor-sucesso, var(--color-success, #16a34a));
+}
+
+.comercial-acomp-metric.is-primary .value {
+  color: var(--cor-primaria, var(--color-primary, #2563eb));
+}
+
+.comercial-acomp-table th.col-num,
+.comercial-acomp-table td.col-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.comercial-acomp-table td.col-num.is-recebido {
+  color: var(--cor-sucesso, var(--color-success, #16a34a));
+  font-weight: 600;
+}
+
+.comercial-acomp-table td.col-num.is-primary {
+  color: var(--cor-primaria, var(--color-primary, #2563eb));
+  font-weight: 600;
+}
+
+.comercial-acomp-table td.col-num.is-rejeitado {
+  color: var(--cor-perigo, var(--color-danger, #dc2626));
+  font-weight: 600;
+}
+
+body.theme-dark .comercial-acomp-toolbar,
+[data-theme='dark'] .comercial-acomp-toolbar {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+
+body.theme-dark .comercial-acomp-du-legend,
+[data-theme='dark'] .comercial-acomp-du-legend {
+  color: var(--text-primary, #e2e8f0);
+  background: var(--cor-superficie, var(--bg-primary, #1e293b));
+  border-color: var(--cor-borda, var(--border-color, #334155));
+}
+
+body.theme-dark .comercial-acomp-card,
+[data-theme='dark'] .comercial-acomp-card {
+  background: var(--cor-superficie, #1e293b);
+  border-color: var(--cor-borda, #334155);
+}
+
+body.theme-dark .comercial-acomp-card-head h3,
+[data-theme='dark'] .comercial-acomp-card-head h3 {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .comercial-acomp-metric.is-primary .value,
+[data-theme='dark'] .comercial-acomp-metric.is-primary .value {
+  color: var(--cor-primaria, #93c5fd);
+}
+
+body.theme-dark .comercial-acomp-table td.col-num.is-recebido,
+[data-theme='dark'] .comercial-acomp-table td.col-num.is-recebido {
+  color: var(--cor-sucesso, #4ade80);
+}
+
+body.theme-dark .comercial-acomp-table td.col-num.is-primary,
+[data-theme='dark'] .comercial-acomp-table td.col-num.is-primary {
+  color: var(--cor-primaria, #93c5fd);
+}
+
+body.theme-dark .comercial-acomp-table td.col-num.is-rejeitado,
+[data-theme='dark'] .comercial-acomp-table td.col-num.is-rejeitado {
+  color: var(--cor-perigo, #f87171);
+}
+
+@media (max-width: 720px) {
+  .comercial-acomp-toolbar .filter-group,
+  .comercial-acomp-toolbar .filter-group.comercial-acomp-vendedor {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .comercial-acomp-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comercial-acomp-card-metrics,
+  .comercial-acomp-desempenho,
+  .comercial-acomp-desempenho.has-projecao,
+  .comercial-acomp-comissao {
+    grid-template-columns: 1fr;
+  }
+
+  .comercial-acomp-du-legend {
+    margin-left: 0;
+    white-space: normal;
+  }
+}

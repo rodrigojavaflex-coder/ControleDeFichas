@@ -166,6 +166,15 @@ export enum Permission {
   VISITACAO_COMISSAO_CREATE = 'visitacao-comissao:create',
   VISITACAO_COMISSAO_UPDATE = 'visitacao-comissao:update',
   VISITACAO_COMISSAO_DELETE = 'visitacao-comissao:delete',
+
+  COMERCIAL_ACOMPANHAMENTO_READ = 'comercial-acompanhamento:read',
+  COMERCIAL_ACOMPANHAMENTO_COMISSAO = 'comercial-acompanhamento:comissao',
+  COMERCIAL_META_READ = 'comercial-meta:read',
+  COMERCIAL_META_UPDATE = 'comercial-meta:update',
+  COMERCIAL_COMISSAO_READ = 'comercial-comissao:read',
+  COMERCIAL_COMISSAO_CREATE = 'comercial-comissao:create',
+  COMERCIAL_COMISSAO_UPDATE = 'comercial-comissao:update',
+  COMERCIAL_COMISSAO_DELETE = 'comercial-comissao:delete',
 }
 
 export interface PermissionGroup {

@@ -137,6 +137,9 @@ const PERMS = {
   visitacaoAcompanhamento: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
   visitacaoMetas: [Permission.VISITACAO_META_READ],
   visitacaoComissoes: [Permission.VISITACAO_COMISSAO_READ],
+  comercialAcompanhamento: [Permission.COMERCIAL_ACOMPANHAMENTO_READ],
+  comercialMetas: [Permission.COMERCIAL_META_READ],
+  comercialComissoes: [Permission.COMERCIAL_COMISSAO_READ],
   feriados: [Permission.FERIADO_READ],
 } as const;
 
@@ -585,6 +588,33 @@ export const routes: Routes = [
     path: 'visitacao/metas',
     redirectTo: '/visitacao/configuracao-metas',
     pathMatch: 'full',
+  },
+  {
+    path: 'comercial/acompanhamento',
+    loadComponent: () =>
+      import('./components/comercial/comercial-acompanhamento-page').then(
+        (m) => m.ComercialAcompanhamentoPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.comercialAcompanhamento] },
+  },
+  {
+    path: 'comercial/configuracao-metas',
+    loadComponent: () =>
+      import('./components/comercial/comercial-metas-page').then(
+        (m) => m.ComercialMetasPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.comercialMetas] },
+  },
+  {
+    path: 'comercial/configuracao-comissoes',
+    loadComponent: () =>
+      import('./components/comercial/comercial-comissoes-page').then(
+        (m) => m.ComercialComissoesPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.comercialComissoes] },
   },
   {
     path: 'orcamentos/dashboard',

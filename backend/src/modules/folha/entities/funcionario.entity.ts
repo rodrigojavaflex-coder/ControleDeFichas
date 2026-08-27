@@ -39,6 +39,15 @@ export class Funcionario extends BaseEntity {
 
   @ApiProperty({
     required: false,
+    description:
+      'Código do vendedor no ERP (CDFUN / caixa) para metas e comissões comerciais.',
+    example: 42,
+  })
+  @Column({ type: 'integer', nullable: true })
+  codigoVendedorErp?: number | null;
+
+  @ApiProperty({
+    required: false,
     description: 'Filial do painel médico (cdcon / contratoRepresentante).',
     example: 9999,
   })

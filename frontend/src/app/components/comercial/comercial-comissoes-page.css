@@ -1,0 +1,246 @@
+.comercial-comissoes-page .filters-panel-top::after {
+  content: none;
+  display: none;
+}
+
+.comercial-comissoes-page .comercial-comissoes-resultado {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #bbf7d0);
+  background: color-mix(in srgb, var(--cor-sucesso, var(--color-success, #16a34a)) 10%, transparent);
+  color: var(--cor-sucesso-texto, var(--text-primary, #14532d));
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
+[data-theme='dark'] .comercial-comissoes-page .comercial-comissoes-resultado {
+  border-color: var(--border-color, #166534);
+  background: color-mix(in srgb, var(--cor-sucesso, var(--color-success, #22c55e)) 16%, transparent);
+  color: var(--text-primary, #dcfce7);
+}
+
+.comercial-comissoes-page .comercial-comissoes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 1rem;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.comercial-comissoes-page .comercial-comissoes-unidade-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+}
+
+.comercial-comissoes-page .comercial-comissoes-toolbar .filter-group {
+  flex: 0 0 220px;
+  min-width: 160px;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.comercial-comissoes-page .comercial-comissoes-unidade-row .filter-group {
+  flex: 0 0 220px;
+}
+
+.comercial-comissoes-page .comercial-comissoes-toolbar-acoes {
+  display: flex;
+  align-items: flex-end;
+  flex: 0 0 auto;
+}
+
+.comercial-comissoes-page .comercial-comissoes-toolbar-acoes .btn {
+  white-space: nowrap;
+}
+
+.comercial-comissoes-page .comercial-comissoes-toolbar .filter-group.comercial-comissoes-vendedor {
+  flex: 1 1 280px;
+  min-width: 200px;
+  max-width: 42rem;
+}
+
+.comercial-comissoes-page .comercial-comissoes-toolbar .form-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-comissoes-page .comercial-comissoes-toolbar .form-control {
+  min-height: 2.375rem;
+  width: 100%;
+}
+
+.comercial-comissoes-page .comercial-faixas-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 1rem;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  width: 100%;
+}
+
+.comercial-faixas-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  border-radius: var(--border-radius, 8px);
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.comercial-faixas-tipo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.comercial-faixas-titulo {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+
+.comercial-faixas-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.comercial-politica-panel {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 8px;
+  background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+}
+
+.comercial-politica-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.comercial-politica-row .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 11rem;
+  min-width: 10rem;
+}
+
+.comercial-politica-row .form-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-politica-acoes {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 1px;
+}
+
+.comercial-comissoes-page .comercial-faixas-panel .table-container {
+  flex: 0 1 auto;
+  overflow: visible;
+}
+
+.comercial-comissoes-page .comercial-faixas-panel .vendas-table {
+  font-size: 0.85rem;
+}
+
+.comercial-comissoes-page .comercial-faixas-panel .vendas-table th,
+.comercial-comissoes-page .comercial-faixas-panel .vendas-table td {
+  padding: 0.45rem 0.5rem;
+  white-space: nowrap;
+}
+
+.comercial-comissoes-page .comercial-faixas-panel .action-buttons {
+  flex-wrap: nowrap;
+}
+
+.comercial-faixa-valor {
+  max-width: 9rem;
+  text-align: right;
+}
+
+.comercial-comissoes-page tr.editing {
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 8%, transparent);
+}
+
+.comercial-comissoes-page .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+body.theme-dark .comercial-comissoes-page .comercial-comissoes-toolbar,
+[data-theme='dark'] .comercial-comissoes-page .comercial-comissoes-toolbar,
+body.theme-dark .comercial-faixas-panel,
+[data-theme='dark'] .comercial-faixas-panel,
+body.theme-dark .comercial-politica-panel,
+[data-theme='dark'] .comercial-politica-panel {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+
+body.theme-dark .comercial-faixas-titulo,
+[data-theme='dark'] .comercial-faixas-titulo {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .comercial-comissoes-page tr.editing,
+[data-theme='dark'] .comercial-comissoes-page tr.editing {
+  background: color-mix(in srgb, var(--color-primary, #60a5fa) 14%, transparent);
+}
+
+@media (max-width: 1100px) {
+  .comercial-comissoes-page .comercial-faixas-split {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .comercial-comissoes-page .comercial-comissoes-unidade-row,
+  .comercial-comissoes-page .comercial-comissoes-toolbar .filter-group,
+  .comercial-comissoes-page .comercial-comissoes-toolbar .filter-group.comercial-comissoes-vendedor {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .comercial-comissoes-page .comercial-comissoes-unidade-row .filter-group {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}

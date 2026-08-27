@@ -18,25 +18,15 @@ import {
   VisitacaoAcompanhamentoTotaisRepresentante,
 } from '../../models/visitacao-acompanhamento.model';
 import { VisitacaoPainelMedicoRepresentante } from '../../models/visitacao-painel-medico.model';
-import { OrcamentoMedicoOpcaoFiltro } from '../../models/orcamento.model';
 import { Permission, Unidade } from '../../models/usuario.model';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
-import { MedicoFilterPickerComponent } from '../medico-filter-picker/medico-filter-picker';
 import { MESES_PT, nomeMesPt } from '../folha/folha-meses';
-
-interface AppliedFilter {
-  key: string;
-  label: string;
-  value: string;
-}
 
 interface AcompanhamentoFilterSnapshot {
   ano: number;
   mes: number;
-  nomesMedico: string[];
-  crmMedico: string;
-  ufCrmMedico: string;
+  nomeMedico: string;
   funcionarioId: string;
   unidade: string;
   naCarteira: NaCarteiraFiltro;
@@ -79,7 +69,7 @@ const TOTAIS_VAZIOS: VisitacaoAcompanhamentoTotais = {
 @Component({
   selector: 'app-visitacao-acompanhamento-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MedicoFilterPickerComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './visitacao-acompanhamento-page.html',
   styleUrls: [
     '../vendas-list/vendas-list.css',
@@ -95,23 +85,13 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   private errorModalService = inject(ErrorModalService);
   private configuracaoService = inject(ConfiguracaoService);
 
-  readonly medicoOrdenacaoOpcoes = [
-    { value: 'total' as const, label: 'Mais movimentos' },
-    { value: 'aprovados' as const, label: 'Mais recebidos' },
-    { value: 'rejeitados' as const, label: 'Mais rejeitados' },
-    { value: 'alfabetica' as const, label: 'Ordem alfabética' },
-  ];
-
   configuracao: Configuracao | null = null;
   items: VisitacaoAcompanhamentoItem[] = [];
   totais: VisitacaoAcompanhamentoTotais = { ...TOTAIS_VAZIOS };
   totaisPorRepresentante: VisitacaoAcompanhamentoTotaisRepresentante[] = [];
   representantesVinculados: VisitacaoPainelMedicoRepresentante[] = [];
-  opcoesMedico: OrcamentoMedicoOpcaoFiltro[] = [];
-  selectedMedicos = new Set<string>();
   loading = false;
   loadingRepresentantes = false;
-  loadingOpcoesMedico = false;
   imprimindo = false;
   error = '';
 
@@ -124,8 +104,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   anosDisponiveis: number[] = [];
   anoFiltro = 2026;
   mesFiltro = 1;
-  crmMedicoFilter = '';
-  ufCrmMedicoFilter = '';
+  nomeMedicoFilter = '';
   funcionarioIdFilter = '';
   unidadeFilter: Unidade | '' = '';
   naCarteiraFilter: NaCarteiraFiltro = 'todos';
@@ -134,7 +113,6 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   unidades = Object.values(Unidade);
   unidadeDisabled = false;
 
-  filtersPanelOpen = false;
   private appliedFiltersSnapshot: AcompanhamentoFilterSnapshot =
     this.createFilterSnapshot();
 
@@ -164,8 +142,10 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     this.initializeUnidadeFilter();
     this.updateAppliedFiltersSnapshot();
     this.carregarConfiguracao();
-    this.loadRepresentantes();
-    this.loadItems();
+    if (this.unidadeFilter) {
+      this.loadRepresentantes();
+      this.loadItems();
+    }
   }
 
   private carregarConfiguracao(): void {
@@ -230,59 +210,6 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
       : '';
   }
 
-  get appliedFilters(): AppliedFilter[] {
-    const filters: AppliedFilter[] = [];
-    const s = this.appliedFiltersSnapshot;
-
-    if (s.ano && s.mes) {
-      filters.push({
-        key: 'periodo',
-        label: 'Competência',
-        value: `${nomeMesPt(s.mes)}/${s.ano}`,
-      });
-    }
-    if (s.nomesMedico.length) {
-      filters.push({
-        key: 'nomesMedico',
-        label: 'Médicos',
-        value:
-          s.nomesMedico.length <= 2
-            ? s.nomesMedico.join(', ')
-            : `${s.nomesMedico.length} selecionado(s)`,
-      });
-    }
-    if (s.crmMedico.trim()) {
-      filters.push({ key: 'crmMedico', label: 'CRM', value: s.crmMedico.trim() });
-    }
-    if (s.ufCrmMedico.trim()) {
-      filters.push({
-        key: 'ufCrmMedico',
-        label: 'UF',
-        value: s.ufCrmMedico.trim().toUpperCase(),
-      });
-    }
-    if (s.funcionarioId) {
-      const rep = this.representantesVinculados.find((r) => r.id === s.funcionarioId);
-      filters.push({
-        key: 'funcionarioId',
-        label: 'Representante',
-        value: rep?.nome ?? s.funcionarioId,
-      });
-    }
-    if (s.naCarteira !== 'todos') {
-      filters.push({
-        key: 'naCarteira',
-        label: 'No Painel',
-        value: s.naCarteira === 'sim' ? 'Sim' : 'Não',
-      });
-    }
-    if (s.unidade && !this.unidadeDisabled) {
-      filters.push({ key: 'unidade', label: 'Unidade', value: s.unidade });
-    }
-
-    return filters;
-  }
-
   private buildFindDto(page: number, limit: number): FindVisitacaoAcompanhamentoDto {
     const s = this.appliedFiltersSnapshot;
     const filters: FindVisitacaoAcompanhamentoDto = {
@@ -292,9 +219,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
       mes: s.mes,
     };
 
-    if (s.nomesMedico.length) filters.nomesMedico = [...s.nomesMedico];
-    if (s.crmMedico.trim()) filters.crmMedico = s.crmMedico.trim();
-    if (s.ufCrmMedico.trim()) filters.ufCrmMedico = s.ufCrmMedico.trim().toUpperCase();
+    if (s.nomeMedico.trim()) filters.nomeMedico = s.nomeMedico.trim();
     if (s.funcionarioId) filters.funcionarioId = s.funcionarioId;
     if (s.naCarteira !== 'todos') filters.naCarteira = s.naCarteira;
     if (s.unidade) filters.unidade = s.unidade as Unidade;
@@ -345,9 +270,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     return {
       ano: this.anoFiltro,
       mes: this.mesFiltro,
-      nomesMedico: Array.from(this.selectedMedicos),
-      crmMedico: this.crmMedicoFilter || '',
-      ufCrmMedico: this.ufCrmMedicoFilter || '',
+      nomeMedico: this.nomeMedicoFilter || '',
       funcionarioId: this.funcionarioIdFilter || '',
       unidade: this.unidadeFilter || '',
       naCarteira: this.naCarteiraFilter,
@@ -359,11 +282,23 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   }
 
   loadRepresentantes(): void {
+    if (!this.unidadeFilter) {
+      this.representantesVinculados = [];
+      this.funcionarioIdFilter = '';
+      this.loadingRepresentantes = false;
+      return;
+    }
     this.loadingRepresentantes = true;
-    const unidade = this.unidadeFilter || undefined;
+    const unidade = this.unidadeFilter;
     this.service.listarRepresentantes(unidade).subscribe({
       next: (rows) => {
         this.representantesVinculados = rows;
+        if (
+          this.funcionarioIdFilter &&
+          !rows.some((r) => r.id === this.funcionarioIdFilter)
+        ) {
+          this.funcionarioIdFilter = '';
+        }
         this.loadingRepresentantes = false;
       },
       error: () => {
@@ -374,6 +309,14 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
 
   loadItems(): void {
     if (!this.canRead() || this.loading) return;
+    if (!this.unidadeFilter) {
+      this.items = [];
+      this.totais = { ...TOTAIS_VAZIOS };
+      this.totaisPorRepresentante = [];
+      this.totalItems = 0;
+      this.totalPages = 0;
+      return;
+    }
     const s = this.appliedFiltersSnapshot;
     if (!s.ano || !s.mes) {
       this.initializeCompetenciaFilter();
@@ -382,7 +325,6 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
 
     this.loading = true;
     this.error = '';
-    this.filtersPanelOpen = false;
 
     this.service.findAll(this.buildFindDto(this.currentPage, this.pageSize)).subscribe({
       next: (response) => {
@@ -1053,18 +995,8 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     if (s.ano && s.mes) {
       partes.push(`Competência: ${nomeMesPt(s.mes)}/${s.ano}`);
     }
-    if (s.nomesMedico.length) {
-      partes.push(
-        s.nomesMedico.length <= 2
-          ? `Médicos: ${s.nomesMedico.join(', ')}`
-          : `Médicos: ${s.nomesMedico.length} selecionado(s)`,
-      );
-    }
-    if (s.crmMedico.trim()) {
-      partes.push(`CRM contém: «${s.crmMedico.trim()}»`);
-    }
-    if (s.ufCrmMedico.trim()) {
-      partes.push(`UF: ${s.ufCrmMedico.trim().toUpperCase()}`);
+    if (s.nomeMedico.trim()) {
+      partes.push(`Médico contém: «${s.nomeMedico.trim()}»`);
     }
     if (s.funcionarioId) {
       const rep = this.representantesVinculados.find(
@@ -1173,127 +1105,25 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     }
   }
 
-  toggleFiltersVisibility(): void {
+  onUnidadeChange(): void {
     if (this.processamentoAtivo) return;
-    this.filtersPanelOpen = !this.filtersPanelOpen;
-    if (this.filtersPanelOpen) {
-      this.loadOpcoesMedico();
-    }
-  }
-
-  onMedicosSelected(medicos: Set<string>): void {
-    this.selectedMedicos = medicos;
-  }
-
-  loadOpcoesMedico(): void {
-    if (!this.anoFiltro || !this.mesFiltro) {
-      this.initializeCompetenciaFilter();
-    }
-    this.loadingOpcoesMedico = true;
-    const dto: FindVisitacaoAcompanhamentoDto = {
-      ano: this.anoFiltro,
-      mes: this.mesFiltro,
-    };
-    if (this.unidadeFilter) dto.unidade = this.unidadeFilter as Unidade;
-    if (this.crmMedicoFilter.trim()) dto.crmMedico = this.crmMedicoFilter.trim();
-    if (this.ufCrmMedicoFilter.trim()) {
-      dto.ufCrmMedico = this.ufCrmMedicoFilter.trim().toUpperCase();
-    }
-    if (this.funcionarioIdFilter) dto.funcionarioId = this.funcionarioIdFilter;
-    if (this.naCarteiraFilter !== 'todos') dto.naCarteira = this.naCarteiraFilter;
-
-    this.service.opcoesFiltro(dto).subscribe({
-      next: (opcoes) => {
-        this.opcoesMedico = opcoes.medicos;
-        this.loadingOpcoesMedico = false;
-      },
-      error: () => {
-        this.loadingOpcoesMedico = false;
-      },
-    });
-  }
-
-  onFiltersToggleKey(event: KeyboardEvent): void {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      this.toggleFiltersVisibility();
-    }
-  }
-
-  onContainerClick(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-    if (target.closest('.filters-toggle')) return;
-    if (target.closest('.filter-chip button')) return;
-    this.toggleFiltersVisibility();
-  }
-
-  applyFilters(): void {
-    if (this.processamentoAtivo) return;
-    if (!this.anoFiltro || !this.mesFiltro) {
-      this.initializeCompetenciaFilter();
-    }
-    this.currentPage = 1;
-    this.updateAppliedFiltersSnapshot();
-    this.filtersPanelOpen = false;
-    this.loadRepresentantes();
-    this.loadItems();
-  }
-
-  clearFilters(): void {
-    if (this.processamentoAtivo) return;
-    this.selectedMedicos = new Set();
-    this.crmMedicoFilter = '';
-    this.ufCrmMedicoFilter = '';
     this.funcionarioIdFilter = '';
+    this.nomeMedicoFilter = '';
     this.naCarteiraFilter = 'todos';
-    this.initializeCompetenciaFilter();
-    this.sortField = 'valorRecebido';
-    this.sortDirection = 'desc';
-    if (!this.unidadeDisabled) {
-      this.unidadeFilter = '';
-    }
     this.currentPage = 1;
-    this.filtersPanelOpen = false;
     this.updateAppliedFiltersSnapshot();
     this.loadRepresentantes();
     this.loadItems();
   }
 
-  clearAppliedFilter(key: string): void {
+  onFiltroChange(): void {
     if (this.processamentoAtivo) return;
-    switch (key) {
-      case 'periodo':
-        this.initializeCompetenciaFilter();
-        break;
-      case 'nomesMedico':
-        this.selectedMedicos = new Set();
-        break;
-      case 'crmMedico':
-        this.crmMedicoFilter = '';
-        break;
-      case 'ufCrmMedico':
-        this.ufCrmMedicoFilter = '';
-        break;
-      case 'funcionarioId':
-        this.funcionarioIdFilter = '';
-        break;
-      case 'naCarteira':
-        this.naCarteiraFilter = 'todos';
-        break;
-      case 'unidade':
-        if (!this.unidadeDisabled) this.unidadeFilter = '';
-        break;
+    if (!this.anoFiltro || !this.mesFiltro) {
+      this.initializeCompetenciaFilter();
     }
     this.currentPage = 1;
     this.updateAppliedFiltersSnapshot();
-    this.loadRepresentantes();
     this.loadItems();
-  }
-
-  canRemoveFilter(key: string): boolean {
-    if (key === 'unidade' && this.unidadeDisabled) return false;
-    if (key === 'periodo') return false;
-    return true;
   }
 
   formatCrm(item: { crmMedico: string; ufCrmMedico: string }): string {
@@ -1394,11 +1224,8 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   }
 
   get rotuloCompetenciaLegenda(): string {
-    const s = this.appliedFiltersSnapshot;
-    if (!s.ano || !s.mes) {
-      return '';
-    }
-    return `${nomeMesPt(s.mes)} ${s.ano}`;
+    if (!this.unidadeFilter || this.loading) return '';
+    return `${nomeMesPt(this.mesFiltro)} ${this.anoFiltro}`;
   }
 
   get rotuloDiasUteis(): string {

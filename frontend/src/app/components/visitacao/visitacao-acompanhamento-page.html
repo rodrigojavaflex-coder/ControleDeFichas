@@ -7,21 +7,87 @@
   </section>
 
   <section class="results-card" *ngIf="!error">
-    <div class="results-header visitacao-painel-header-actions visitacao-acomp-header-actions">
-      <aside
-        class="visitacao-acomp-du-legend"
-        *ngIf="rotuloCompetenciaLegenda"
-        aria-label="Competência, dias úteis e dias realizados">
-        <strong>{{ rotuloCompetenciaLegenda }}</strong>
-        <span *ngIf="rotuloDiasUteis">{{ rotuloDiasUteis }}</span>
-        <span *ngIf="rotuloDiasRealizados">{{ rotuloDiasRealizados }}</span>
-      </aside>
-      <div class="header-actions">
+    <section class="visitacao-acomp-toolbar" aria-label="Filtros de acompanhamento">
+      <div class="filter-group">
+        <label class="form-label" for="va-unidade">Unidade</label>
+        <select
+          id="va-unidade"
+          class="form-control"
+          [(ngModel)]="unidadeFilter"
+          [disabled]="unidadeDisabled"
+          (ngModelChange)="onUnidadeChange()">
+          <option *ngIf="!unidadeDisabled" [ngValue]="''">Selecione…</option>
+          <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="form-label" for="va-mes">Mês</label>
+        <select
+          id="va-mes"
+          class="form-control"
+          [(ngModel)]="mesFiltro"
+          [disabled]="!unidadeFilter"
+          (ngModelChange)="onFiltroChange()">
+          <option *ngFor="let m of MESES_PT" [ngValue]="m.numero">{{ m.nome }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="form-label" for="va-ano">Ano</label>
+        <select
+          id="va-ano"
+          class="form-control"
+          [(ngModel)]="anoFiltro"
+          [disabled]="!unidadeFilter"
+          (ngModelChange)="onFiltroChange()">
+          <option *ngFor="let a of anosDisponiveis" [ngValue]="a">{{ a }}</option>
+        </select>
+      </div>
+      <div class="filter-group visitacao-acomp-toolbar-rep">
+        <label class="form-label" for="va-representante">Representante</label>
+        <select
+          id="va-representante"
+          class="form-control"
+          [(ngModel)]="funcionarioIdFilter"
+          [disabled]="!unidadeFilter || loadingRepresentantes"
+          (ngModelChange)="onFiltroChange()">
+          <option value="">Todos</option>
+          <option *ngFor="let rep of representantesVinculados" [value]="rep.id">
+            {{ labelRepresentanteOption(rep) }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group visitacao-acomp-toolbar-medico">
+        <label class="form-label" for="va-medico">Médico</label>
+        <input
+          id="va-medico"
+          type="text"
+          class="form-control"
+          [(ngModel)]="nomeMedicoFilter"
+          [disabled]="!unidadeFilter"
+          placeholder="Filtrar por nome"
+          autocomplete="off"
+          (keyup.enter)="onFiltroChange()"
+          (change)="onFiltroChange()" />
+      </div>
+      <div class="filter-group">
+        <label class="form-label" for="va-na-painel">No Painel</label>
+        <select
+          id="va-na-painel"
+          class="form-control"
+          [(ngModel)]="naCarteiraFilter"
+          [disabled]="!unidadeFilter"
+          (ngModelChange)="onFiltroChange()">
+          <option value="todos">Todos</option>
+          <option value="sim">Sim</option>
+          <option value="nao">Não</option>
+        </select>
+      </div>
+      <div class="visitacao-acomp-toolbar-acoes">
         <button
           type="button"
           class="btn btn-imprimir"
           (click)="imprimir()"
-          [disabled]="loading || imprimindo || totalItems === 0"
+          [disabled]="!unidadeFilter || loading || imprimindo || totalItems === 0"
           title="Configurar e imprimir o relatório">
           <i class="fas fa-print"></i>
           Imprimir
@@ -30,51 +96,21 @@
           Preparando…
         </span>
       </div>
-      <div class="filters-inline">
-        <div
-          class="filters-panel-top"
-          role="button"
-          tabindex="0"
-          (click)="onContainerClick($event)"
-          (keydown)="onFiltersToggleKey($event)">
-          <div class="filters-controls">
-            <button
-              type="button"
-              class="filters-toggle btn btn-toggle-filtros"
-              (click)="toggleFiltersVisibility(); $event.stopPropagation()"
-              (mousedown)="$event.stopPropagation()">
-              <span>{{ filtersPanelOpen ? 'Fechar filtros' : 'Abrir filtros' }}</span>
-              <span class="filters-count" *ngIf="appliedFilters.length">{{ appliedFilters.length }}</span>
-              <i class="fas" [class.fa-chevron-up]="filtersPanelOpen" [class.fa-chevron-down]="!filtersPanelOpen"></i>
-            </button>
+      <aside
+        class="visitacao-acomp-du-legend"
+        *ngIf="unidadeFilter && rotuloCompetenciaLegenda && rotuloDiasUteis"
+        aria-label="Competência, dias úteis e dias realizados">
+        <strong>{{ rotuloCompetenciaLegenda }}</strong>
+        <span>{{ rotuloDiasUteis }}</span>
+        <span *ngIf="rotuloDiasRealizados">{{ rotuloDiasRealizados }}</span>
+      </aside>
+    </section>
 
-            <div class="applied-filters-container" *ngIf="appliedFilters.length || totalItems">
-              <div class="results-count" (click)="$event.stopPropagation()">
-                <i class="fas fa-filter"></i>
-                <span>{{ totalItems }} resultado(s)</span>
-              </div>
-              <div class="applied-filters-wrapper" *ngIf="appliedFilters.length">
-                <div class="applied-filters-list">
-                  <span class="filter-chip" *ngFor="let filter of appliedFilters" [title]="filter.value">
-                    <strong>{{ filter.label }}:</strong>
-                    <span class="filter-value">{{ filter.value }}</span>
-                    <button
-                      *ngIf="canRemoveFilter(filter.key)"
-                      type="button"
-                      class="filter-chip-remove"
-                      (click)="clearAppliedFilter(filter.key); $event.stopPropagation()"
-                      [attr.aria-label]="'Remover filtro ' + filter.label">
-                      <i class="fas fa-times"></i>
-                    </button>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="loading-message" *ngIf="!unidadeFilter">
+      Selecione uma unidade para carregar o acompanhamento.
     </div>
 
+    <ng-container *ngIf="unidadeFilter">
     <div
       class="visitacao-acomp-rep-cards-wrap"
       *ngIf="cardsResumo.length">
@@ -323,116 +359,8 @@
         Próxima
       </button>
     </div>
+    </ng-container>
   </section>
-</div>
-
-<div class="modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
-  <div class="modal-conteudo modal-filtros visitacao-acomp-modal-filtros" (click)="$event.stopPropagation()">
-    <div class="modal-cabecalho">
-      <h3 class="modal-titulo">Filtros — Acompanhamento Visitação</h3>
-      <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-
-    <div class="modal-corpo">
-      <div class="filters-grid vendas-filtros-grid">
-        <div class="filter-group">
-          <label for="va-mes" class="label-campo">Mês</label>
-          <select id="va-mes" class="campo" [(ngModel)]="mesFiltro">
-            <option *ngFor="let m of MESES_PT" [ngValue]="m.numero">{{ m.nome }}</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="va-ano" class="label-campo">Ano</label>
-          <select id="va-ano" class="campo" [(ngModel)]="anoFiltro">
-            <option *ngFor="let a of anosDisponiveis" [ngValue]="a">{{ a }}</option>
-          </select>
-        </div>
-
-        <div class="filter-group filter-group-wide filter-group-medico" (click)="$event.stopPropagation()">
-          <app-medico-filter-picker
-            [opcoes]="opcoesMedico"
-            [loading]="loadingOpcoesMedico"
-            [selectedMedicos]="selectedMedicos"
-            [ordenacaoOpcoes]="medicoOrdenacaoOpcoes"
-            (selectedMedicosChange)="onMedicosSelected($event)" />
-        </div>
-
-        <div class="filter-group">
-          <label for="va-crm" class="label-campo">CRM</label>
-          <input
-            id="va-crm"
-            type="text"
-            class="campo"
-            [(ngModel)]="crmMedicoFilter"
-            placeholder="Número do CRM"
-            (keyup.enter)="applyFilters()" />
-        </div>
-
-        <div class="filter-group">
-          <label for="va-uf" class="label-campo">UF</label>
-          <input
-            id="va-uf"
-            type="text"
-            class="campo"
-            maxlength="2"
-            [(ngModel)]="ufCrmMedicoFilter"
-            placeholder="UF"
-            (keyup.enter)="applyFilters()" />
-        </div>
-
-        <div class="filter-group">
-          <label for="va-representante" class="label-campo">Representante</label>
-          <select id="va-representante" class="campo" [(ngModel)]="funcionarioIdFilter">
-            <option value="">Todos</option>
-            <option *ngFor="let rep of representantesVinculados" [value]="rep.id">
-              {{ labelRepresentanteOption(rep) }}
-            </option>
-          </select>
-          <small class="visitacao-filter-hint" *ngIf="!loadingRepresentantes && representantesVinculados.length === 0">
-            Nenhum funcionário com vínculo ao painel nesta unidade.
-          </small>
-        </div>
-
-        <div class="filter-group">
-          <label for="va-na-painel" class="label-campo">No Painel</label>
-          <select id="va-na-painel" class="campo" [(ngModel)]="naCarteiraFilter">
-            <option value="todos">Todos</option>
-            <option value="sim">Sim</option>
-            <option value="nao">Não</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="va-unidade" class="label-campo">Unidade</label>
-          <select
-            id="va-unidade"
-            class="campo"
-            [(ngModel)]="unidadeFilter"
-            [disabled]="unidadeDisabled">
-            <option value="">Todas</option>
-            <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
-          </select>
-          <small class="visitacao-filter-hint">
-            Painel desta unidade, inclusive recebido/rejeitado em outras filiais.
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-rodape">
-      <button type="button" class="botao botao-fantasma" (click)="clearFilters()">
-        <i class="fas fa-eraser"></i>
-        Limpar filtros
-      </button>
-      <button type="button" class="botao botao-primario" (click)="applyFilters()">
-        <i class="fas fa-filter"></i>
-        Aplicar filtros
-      </button>
-    </div>
-  </div>
 </div>
 
 <div class="modal-overlay" *ngIf="detalheAberto" (click)="fecharDetalhe()">

@@ -136,10 +136,8 @@ export class VisitacaoMetasPage implements OnInit {
     row.salvando = false;
   }
 
-  formatarDraftBlur(row: MetaRow): void {
-    const n = this.parseValor(row.draft);
-    if (n == null) return;
-    row.draft = this.formatarMoedaInput(n);
+  formatarDraftDigitacao(row: MetaRow): void {
+    row.draft = this.formatarMoedaDigitacao(row.draft);
   }
 
   salvarLinha(row: MetaRow): void {
@@ -214,24 +212,20 @@ export class VisitacaoMetasPage implements OnInit {
     return this.moedaFmt.format(valor);
   }
 
+  private formatarMoedaDigitacao(texto: string): string {
+    const digits = texto.replace(/\D/g, '');
+    if (!digits) return '';
+    const cents = Number.parseInt(digits, 10);
+    if (!Number.isFinite(cents) || cents < 0) return '';
+    return this.moedaFmt.format(cents / 100);
+  }
+
   private parseValor(texto: string): number | null {
-    let t = texto.trim().replace(/\s/g, '').replace(/r\$/gi, '');
-    if (t === '') return null;
-    if (t.includes(',') && /\.\d{3}/.test(t)) {
-      t = t.replace(/\./g, '').replace(',', '.');
-    } else if (t.includes(',') && t.includes('.')) {
-      const lastComma = t.lastIndexOf(',');
-      const lastDot = t.lastIndexOf('.');
-      t =
-        lastComma > lastDot
-          ? t.replace(/\./g, '').replace(',', '.')
-          : t.replace(/,/g, '');
-    } else if (t.includes(',')) {
-      t = t.replace(',', '.');
-    }
-    const n = Number.parseFloat(t);
-    if (!Number.isFinite(n) || n < 0) return null;
-    return Math.round(n * 100) / 100;
+    const digits = texto.replace(/\D/g, '');
+    if (!digits) return null;
+    const cents = Number.parseInt(digits, 10);
+    if (!Number.isFinite(cents) || cents < 0) return null;
+    return Math.round(cents) / 100;
   }
 
   private copiarMesAnterior(origem: string, destino: string): void {

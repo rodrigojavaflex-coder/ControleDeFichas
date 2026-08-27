@@ -1,0 +1,268 @@
+<div class="vendas-page comercial-acompanhamento-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar o acompanhamento comercial.
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="comercial-acomp-toolbar" aria-label="Filtros de acompanhamento">
+        <div class="filter-group">
+          <label class="form-label" for="ca-unidade">Unidade</label>
+          <select
+            id="ca-unidade"
+            class="form-control"
+            [(ngModel)]="unidadeFiltro"
+            [disabled]="unidadeDisabled"
+            (ngModelChange)="onFiltroChange()">
+            @if (!unidadeDisabled) {
+              <option [ngValue]="''">Selecione…</option>
+            }
+            @for (u of unidadesVisiveis; track u) {
+              <option [ngValue]="u">{{ u }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label" for="ca-mes">Mês</label>
+          <select
+            id="ca-mes"
+            class="form-control"
+            [(ngModel)]="mesFiltro"
+            (ngModelChange)="onFiltroChange()">
+            @for (m of MESES_PT; track m.numero) {
+              <option [ngValue]="m.numero">{{ m.nome }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label" for="ca-ano">Ano</label>
+          <select
+            id="ca-ano"
+            class="form-control"
+            [(ngModel)]="anoFiltro"
+            (ngModelChange)="onFiltroChange()">
+            @for (a of anosDisponiveis; track a) {
+              <option [ngValue]="a">{{ a }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group comercial-acomp-vendedor">
+          <label class="form-label" for="ca-vendedor">Vendedor</label>
+          <select
+            id="ca-vendedor"
+            class="form-control"
+            [(ngModel)]="funcionarioIdFiltro"
+            [disabled]="!unidadeFiltro || carregandoVendedores"
+            (ngModelChange)="onFiltroChange()">
+            <option [ngValue]="''">Todos</option>
+            @for (v of vendedores; track v.funcionarioId) {
+              <option [ngValue]="v.funcionarioId">
+                {{ v.nome }} ({{ v.codigoVendedorErp }})
+              </option>
+            }
+          </select>
+        </div>
+        @if (rotuloCompetenciaLegenda && rotuloDiasUteis) {
+          <aside
+            class="comercial-acomp-du-legend"
+            aria-label="Competência, dias úteis e dias realizados">
+            <strong>{{ rotuloCompetenciaLegenda }}</strong>
+            <span>{{ rotuloDiasUteis }}</span>
+            @if (rotuloDiasRealizados) {
+              <span>{{ rotuloDiasRealizados }}</span>
+            }
+          </aside>
+        }
+      </section>
+
+      @if (!unidadeFiltro) {
+        <div class="loading-message">Selecione uma unidade para carregar o acompanhamento.</div>
+      } @else if (carregando) {
+        <div class="loading-message">Carregando acompanhamento…</div>
+      } @else {
+        @if (cardsResumo.length) {
+          <div class="comercial-acomp-cards-wrap">
+            <div class="comercial-acomp-kpi-grid">
+              @for (card of cardsResumo; track card.titulo) {
+                <article
+                  class="comercial-acomp-card"
+                  [class.is-total]="card.isTotal">
+                  <header class="comercial-acomp-card-head">
+                    <h3>{{ card.titulo }}</h3>
+                  </header>
+                  <div class="comercial-acomp-card-metrics">
+                    <div class="comercial-acomp-metric is-success">
+                      <span class="label">Manipulados</span>
+                      <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
+                      <span class="sub">{{ card.quantidadeRecebidoRequisicao }} requisição(ões)</span>
+                    </div>
+                    <div class="comercial-acomp-metric is-primary">
+                      <span class="label">Marca própria</span>
+                      <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
+                      <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+                    </div>
+                  </div>
+                  <div
+                    class="comercial-acomp-desempenho"
+                    [class.has-projecao]="card.mesAberto">
+                    <div class="comercial-acomp-metric">
+                      <span class="label">Meta manipulados</span>
+                      <span class="value">
+                        {{ temMetaCadastrada(card.valorMetaRequisicao)
+                          ? formatarMoeda(card.valorMetaRequisicao)
+                          : 'Sem meta' }}
+                      </span>
+                    </div>
+                    <div class="comercial-acomp-metric">
+                      <span class="label">% Meta manip.</span>
+                      <span class="value">
+                        {{ temMetaCadastrada(card.valorMetaRequisicao)
+                          ? formatarPercentualMeta(card.percentualMetaRequisicao)
+                          : '—' }}
+                      </span>
+                      @if (temMetaCadastrada(card.valorMetaRequisicao)) {
+                        <span
+                          class="comercial-acomp-meta-bar"
+                          role="progressbar"
+                          [attr.aria-valuenow]="card.percentualMetaRequisicao"
+                          aria-valuemin="0"
+                          aria-valuemax="100">
+                          <span
+                            class="comercial-acomp-meta-bar-fill"
+                            [class.is-ok]="(card.percentualMetaRequisicao ?? 0) >= 100"
+                            [style.width.%]="larguraBarraMeta(card.percentualMetaRequisicao)"></span>
+                        </span>
+                      }
+                    </div>
+                    @if (card.mesAberto) {
+                      <div class="comercial-acomp-metric">
+                        <span class="label">Projeção manip.</span>
+                        <span class="value">{{ formatarMoeda(card.valorProjetadoRequisicao) }}</span>
+                        @if (temMetaCadastrada(card.valorMetaRequisicao)) {
+                          <span class="sub">
+                            {{ formatarPercentualMeta(card.percentualProjecaoRequisicao) }} da meta
+                          </span>
+                        }
+                      </div>
+                    }
+                    <div class="comercial-acomp-metric">
+                      <span class="label">Meta marca própria</span>
+                      <span class="value">
+                        {{ temMetaCadastrada(card.valorMetaMarcaPropria)
+                          ? formatarMoeda(card.valorMetaMarcaPropria)
+                          : 'Sem meta' }}
+                      </span>
+                    </div>
+                    <div class="comercial-acomp-metric">
+                      <span class="label">% Meta marca</span>
+                      <span class="value">
+                        {{ temMetaCadastrada(card.valorMetaMarcaPropria)
+                          ? formatarPercentualMeta(card.percentualMetaMarcaPropria)
+                          : '—' }}
+                      </span>
+                      @if (temMetaCadastrada(card.valorMetaMarcaPropria)) {
+                        <span
+                          class="comercial-acomp-meta-bar"
+                          role="progressbar"
+                          [attr.aria-valuenow]="card.percentualMetaMarcaPropria"
+                          aria-valuemin="0"
+                          aria-valuemax="100">
+                          <span
+                            class="comercial-acomp-meta-bar-fill"
+                            [class.is-ok]="(card.percentualMetaMarcaPropria ?? 0) >= 100"
+                            [style.width.%]="larguraBarraMeta(card.percentualMetaMarcaPropria)"></span>
+                        </span>
+                      }
+                    </div>
+                    @if (card.mesAberto) {
+                      <div class="comercial-acomp-metric">
+                        <span class="label">Projeção marca</span>
+                        <span class="value">{{ formatarMoeda(card.valorProjetadoMarcaPropria) }}</span>
+                        @if (temMetaCadastrada(card.valorMetaMarcaPropria)) {
+                          <span class="sub">
+                            {{ formatarPercentualMeta(card.percentualProjecaoMarcaPropria) }} da meta
+                          </span>
+                        }
+                      </div>
+                    }
+                  </div>
+                  @if (podeVerComissao() && !card.isTotal) {
+                    <div class="comercial-acomp-comissao">
+                      @if (card.valorComissaoRequisicao != null) {
+                        <div class="comercial-acomp-metric">
+                          <span class="label">Comissão manip.</span>
+                          <span class="value">{{ formatarMoeda(card.valorComissaoRequisicao) }}</span>
+                          @if (card.valorBonusRequisicao) {
+                            <span class="sub">Bônus: {{ formatarMoeda(card.valorBonusRequisicao) }}</span>
+                          }
+                        </div>
+                      }
+                      @if (card.valorComissaoMarcaPropria != null) {
+                        <div class="comercial-acomp-metric">
+                          <span class="label">Comissão marca</span>
+                          <span class="value">{{ formatarMoeda(card.valorComissaoMarcaPropria) }}</span>
+                          @if (card.valorBonusMarcaPropria) {
+                            <span class="sub">Bônus: {{ formatarMoeda(card.valorBonusMarcaPropria) }}</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="table-container">
+          <table class="vendas-table comercial-acomp-table">
+            <thead>
+              <tr>
+                <th>Vendedor</th>
+                <th class="col-num">Manipulados</th>
+                <th class="col-num">Marca própria</th>
+                <th class="col-num">Rejeitado</th>
+                <th class="col-num">Meta Manip.</th>
+                <th class="col-num">% Meta Manip.</th>
+                <th class="col-num">Meta Marca Própria</th>
+                <th class="col-num">% Meta Marca Própria</th>
+                @if (podeVerComissao()) {
+                  <th class="col-num">Comissão Manip.</th>
+                  <th class="col-num">Bônus Manip.</th>
+                  <th class="col-num">Comissão Marca</th>
+                  <th class="col-num">Bônus Marca</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of itens; track item.funcionarioId ?? item.nomeVendedor) {
+                <tr>
+                  <td>{{ rotuloVendedor(item) }}</td>
+                  <td class="col-num is-recebido">{{ formatarMoeda(item.valorRecebidoRequisicao) }}</td>
+                  <td class="col-num is-primary">{{ formatarMoeda(item.valorRecebidoMarcaPropria) }}</td>
+                  <td class="col-num is-rejeitado">{{ formatarMoeda(item.valorRejeitado) }}</td>
+                  <td class="col-num">{{ formatarMoeda(item.valorMetaRequisicao) }}</td>
+                  <td class="col-num">{{ formatarPercentualMeta(item.percentualMetaRequisicao) }}</td>
+                  <td class="col-num">{{ formatarMoeda(item.valorMetaMarcaPropria) }}</td>
+                  <td class="col-num">{{ formatarPercentualMeta(item.percentualMetaMarcaPropria) }}</td>
+                  @if (podeVerComissao()) {
+                    <td class="col-num">{{ formatarMoeda(item.valorComissaoRequisicao) }}</td>
+                    <td class="col-num">{{ formatarMoeda(item.valorBonusRequisicao) }}</td>
+                    <td class="col-num">{{ formatarMoeda(item.valorComissaoMarcaPropria) }}</td>
+                    <td class="col-num">{{ formatarMoeda(item.valorBonusMarcaPropria) }}</td>
+                  }
+                </tr>
+              } @empty {
+                <tr class="no-data">
+                  <td [attr.colspan]="podeVerComissao() ? 12 : 8">
+                    <i class="fas fa-inbox"></i> Nenhum movimento encontrado no período
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</div>

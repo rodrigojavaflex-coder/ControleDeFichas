@@ -328,7 +328,7 @@
 
 ### RN-VIS-006 — Integração ERP no cadastro de funcionário
 
-- Seção **Integração ERP** agrupa: `codigoUsuarioErp`, `codigoFuncionarioErp`, `painelContratoRepresentante`, `painelCodigoRepresentante`.
+- Seção **Integração ERP** agrupa: `codigoUsuarioErp`, `codigoFuncionarioErp`, `codigoVendedorErp`, `painelContratoRepresentante`, `painelCodigoRepresentante`.
 - Alteração via `POST/PATCH …/folha/funcionarios` com as mesmas validações de par e unicidade do painel (**RN-VIS-005**).
 
 ### RN-VIS-007 — Acesso ao acompanhamento (visitação)
@@ -350,12 +350,13 @@
 ### RN-VIS-009 — Universo, filtros e período
 
 - Universo: médicos com CRM+UF que tenham **recebido ou rejeitado** no período (não lista a carteira inteira sem movimento).
+- Filtros **inline** no mesmo padrão do acompanhamento comercial: **Unidade**, **mês**, **ano**, **Representante** (combo), **Médico** (texto, busca parcial por nome) e **No Painel**. **Não** há filtro de CRM/UF. A listagem **só carrega depois que a unidade está informada** (usuário com `unidade` no cadastro já entra com o filtro fixo).
 - Filtro **Unidade** (rótulo na tela): significa o **painel daquela filial**, não “somente caixa desta filial”. Usuário com `unidade` cadastrada tem o filtro fixo na própria unidade e **vê também** movimentos desses médicos em outras filiais, salvo quando o médico já está no painel da unidade do movimento (RN-VIS-008).
 - Usuário **sem** unidade: uma linha por evento (unidade = onde recebeu/rejeitou); o representante vem do painel (indicação), sem duplicar valor.
-- **No Painel:** **Todos** (padrão, sem chip), **Sim** (só médicos da carteira) ou **Não** (movimentos da filial cujo CRM não está no painel). **Todos** = carteira + movimentos locais da filial.
-- Filtro **Representante** restringe à carteira do funcionário vinculado (par filial/código), incluindo baixas/rejeições em outras unidades **somente** quando o médico não estiver no painel da unidade do movimento.
-- Filtro de **médicos** usa o mesmo seletor da tela de orçamentos (`NOME - UNIDADE` da unidade do movimento). Endpoint de opções: **`GET /visitacao/acompanhamento/opcoes-filtro`**.
-- Período: competência **mês + ano** (2026–2033), padrão o mês corrente. O backend deriva o intervalo civil (`YYYY-MM-01` até o último dia). Chip **Competência** (não removível). Ordenação padrão: **Recebido** do maior para o menor. Clique no cabeçalho da coluna reordena a grid (paginação no servidor).
+- **No Painel:** **Todos** (padrão), **Sim** (só médicos da carteira) ou **Não** (movimentos da filial cujo CRM não está no painel). **Todos** = carteira + movimentos locais da filial.
+- Filtro **Representante** (combo) restringe à carteira do funcionário vinculado (par filial/código), incluindo baixas/rejeições em outras unidades **somente** quando o médico não estiver no painel da unidade do movimento.
+- Filtro de **médico** por **nome** (parcial, `ILIKE`). Endpoint de listagem: **`GET /visitacao/acompanhamento`**.
+- Período: competência **mês + ano** (2026–2033), padrão o mês corrente. O backend deriva o intervalo civil (`YYYY-MM-01` até o último dia). Ordenação padrão: **Recebido** do maior para o menor. Clique no cabeçalho da coluna reordena a grid (paginação no servidor).
 - Durante a busca (listagem ou impressão), overlay no mesmo padrão do painel de retirada bloqueia nova pesquisa até a consulta terminar.
 - Escopo de carteira do usuário conforme **RN-VIS-003** / **RN-007**, com a extensão de indicação interunidade acima.
 
@@ -367,7 +368,7 @@
 - No cabeçalho dos cards de **representante**: **com movimento** (linhas da grade no filtro), **ativos no painel** (carteira atual em `painel_medicos_representantes`) e **fora do atendimento** (ativos sem recebido/rejeitado na competência). O card **Total** não exibe essas contagens.
 - Faixa de desempenho **só nos cards de representante** (mesma competência do filtro): **Meta** (`visitacao_meta_representante`), **% Meta** (recebido ÷ meta) e, se a competência **ainda estiver aberta** (hoje em America/Sao_Paulo dentro do mês), **Projeção** = `(recebido ÷ dias realizados) × dias úteis do mês` e **% da projeção** (projeção ÷ meta). **Dias realizados** = dias úteis da competência com data **≤ último caixa CONFIRMADO** da unidade (mesmo critério Fechado/Bloqueado da RN-CXA-009): sábado = **0,5**; feriado/domingo = 0. Se o último confirmado for depois do mês, conta o mês inteiro. Sem confirmação, 0 e não projeta. Sem meta cadastrada: **Sem meta** (não 0%).
 - **Faixa e comissão** no card do representante somente com **`visitacao-acompanhamento:comissao`**: faixa vigente em `visitacao_comissao_faixa` pelo **% da meta**; valor = `% da faixa × recebido`. Com mês aberto: também **Faixa proj.** e **Comissão proj.** pelo **% da projeção** (`% da faixa projetada × valor projetado`), na **mesma linha** (Faixa, Comissão, Faixa proj., Comissão proj.). Sem permissão, os campos não vêm na API.
-- **Quadro de legenda** no topo (**antes** do Imprimir): competência (**mês ano**, ex. `Agosto 2026`), **total de dias úteis** da competência (ex.: `21 dias úteis`) e **dias realizados** (ex.: `18 dias realizados`). Calendário pela unidade do filtro (ou a unidade dos representantes).
+- **Quadro de legenda** à direita da barra de filtros: competência (**mês ano**, ex. `Agosto 2026`), **total de dias úteis** da competência (ex.: `21 dias úteis`) e **dias realizados** (ex.: `18 dias realizados`). Calendário pela unidade do filtro.
 - Clique na linha ou no link **Detalhes** (coluna **Ações**, após Rejeitado) abre o detalhe: requisições pagas do caixa e orçamentos rejeitados **da unidade do movimento**; permitido se a unidade for a do usuário **ou** o CRM estiver na carteira dele **e** o médico **não** estiver no painel da unidade do movimento. **Valor Pago** do recebido é o da requisição (RN-VIS-008), não o total do cupom. Valores de **Recebido** em verde e **Rejeitado** em vermelho na grid.
 - Impressão da listagem abre modal de opções: **Analítico** (detalhado, padrão) ou **Sintético** (resumo por representante/unidade); movimentos **Todos** (padrão), **Recebidos** ou **Rejeitados**. Analítico agrupa **Representante → Unidade** sem cards no topo; o rodapé de cada tabela alinha quantidade de médicos e totais nas colunas Recebido/Rejeitado.
 - Impressão de **detalhes** (recebidos, rejeitados e totais) somente no modal do médico.
@@ -389,6 +390,68 @@
 - Combo do representante: **nome (cdcon/cdfun)** sem rótulos, ex. `MARCOS ROBERTO VIEIRA (9999/99)`.
 - Inclusão e edição **na grade**: **Incluir faixa** adiciona uma linha em edição; **Alterar** / **Salvar** / **Cancelar** / **Excluir** na coluna Ações. Botão **Carregar faixas padrão** (permissão **`visitacao-comissao:create`**): aplica 0–79,99% → 0%; 80–89,99% → 1%; 90–99,99% → 1,5%; 100–104,99% → 2%; 105% em diante → 2,5%. **Não** é automático. Se já houver faixas, pede confirmação e **substitui**.
 - Visualização da faixa vigente e do valor em R$ no acompanhamento: **RN-VIS-010** (permissão **`visitacao-acompanhamento:comissao`**, distinta das permissões de cadastro).
+
+---
+
+## Comercial — Acompanhamento por vendedor
+
+### RN-COM-001 — Vínculo funcionário × vendedor ERP
+
+- Campo opcional em `funcionarios`: **`codigoVendedorErp`** (CDFUN do vendedor no caixa/orçamento).
+- Preenchimento **manual** no cadastro de funcionário (seção **Integração ERP**).
+- Unicidade por unidade: `(unidade, codigoVendedorErp)` quando preenchido.
+- **Não** reutilizar `codigoFuncionarioErp` (produtividade) nem campos do painel médico (representante).
+- Cadastro legado `vendedores` permanece para usuários; metas/comissões comerciais usam **funcionário** vinculado.
+
+### RN-COM-002 — Escopo por unidade
+
+- Usuário **com** `unidade` cadastrada: escopo fixo na própria unidade (mesmo critério folha/visitação — **RN-VIS-003** / **RN-007**).
+- Movimentos considerados: **somente da unidade** do vendedor (caixa importado e orçamentos rejeitados da mesma filial).
+- Usuário **sem** unidade: informa unidade no filtro.
+
+### RN-COM-003 — Fonte do acompanhamento
+
+- **Manipulados (requisição):** mesmas regras de valor da **RN-VIS-008** (teto `valor_formulas`, parcelamento, exclusão cortesia/tipo N sem fórmula), agregados por `caixa_requisicoes_pagas.codigo_vendedor`.
+- **Marca própria (produtos):** `caixa_itens_erp` com `tipo_item = PRODUTO`; valor = `valor_liquido_item`; atribuição ao vendedor via `codigo_operador_caixa` do pagamento (`caixa_pagamentos_erp`), vinculado a `codigoVendedorErp` do funcionário.
+- **Rejeitados:** `orcamentos` com `status = REJEITADO` e **`codigoVendedor` preenchido**; eixo de data `dataOrcamento`. Sem vendedor no orçamento, **não entra**.
+
+### RN-COM-004 — Acesso e cards
+
+- Tela **`/comercial/acompanhamento`**; permissão **`comercial-acompanhamento:read`**.
+- Cards: **Total** + **um card por vendedor vinculado** (funcionário da unidade com **`codigoVendedorErp` > 0** no cadastro). Movimento de caixa/orçamento **sem** esse vínculo **não** gera card nem linha. Exibe recebido manipulados, recebido produtos, **meta**, **% meta** e, com competência aberta, **projeção** `(recebido ÷ dias realizados) × dias úteis` e **% da projeção** (calendário **RN-CAL-001** + último caixa CONFIRMADO — **RN-CXA-009**; sábado = 0,5 como **RN-VIS-010**). **Legenda** no filtro: competência (`Agosto 2026`), total de dias úteis e dias realizados. O **Total** usa a **meta da loja** (RN-COM-007); se não cadastrada, soma as metas dos vendedores. Os valores do Total consideram **todo** o movimento da unidade (incluindo sem vínculo). Sem meta: **Sem meta** (não 0%).
+- Faixa, comissão e bônus (manipulados e marca própria separados) exigem **`comercial-acompanhamento:comissao`**. Comissão percentual = `% da faixa × valor da incidência` (RN-COM-008). Bônus = `valorBonus` da faixa atingida, zerado se a trava da loja não for cumprida. Sem permissão, esses campos não vêm na API.
+
+### RN-COM-005 — Metas mensais por vendedor (duas bases)
+
+- Tela **`/comercial/configuracao-metas`**; permissões **`comercial-meta:read`** / **`comercial-meta:update`**.
+- Grade: funcionários da unidade com **`codigoVendedorErp` > 0**.
+- **Duas metas** por vendedor/competência: **Manipulados** (`REQUISICAO`) e **Marca própria** (`MARCA_PROPRIA`), persistidas em `comercial_meta_vendedor` (unique `funcionarioId + anoMes + tipoBase`).
+- **Meta da loja** (RN-COM-007) no topo da mesma tela, na competência filtrada.
+- Ação **Copiar mês anterior**: replica metas da loja e ambas as bases dos vendedores ainda vinculados. No diálogo, informa **% de aumento de Manipulados** e **% de aumento de Marca própria** (0 = copia o valor). Destino já cadastrado é substituído. Fórmula: `valorOrigem × (1 + % / 100)`, arredondado em 2 casas.
+
+### RN-COM-006 — Faixas de comissão por vendedor e tipo
+
+- Tela **`/comercial/configuracao-comissoes`**; permissões **`comercial-comissao:read/create/update/delete`**.
+- Cadastro **por vendedor** nas duas bases (Manipulados e Marca própria). Ao selecionar o vendedor, a tela exibe **as duas grades ao mesmo tempo**. Persistência: `comercial_comissao_faixa`.
+- Cada faixa tem **% de comissão** e **bônus em R$** (`valorBonus`, default 0). Ao atingir a faixa no acompanhamento, o bônus é **somado** ao valor da comissão daquele tipo.
+- Mesmas regras de intervalo da **RN-VIS-012** (sem sobreposição dentro do mesmo vendedor+tipo). Botão **Carregar faixas padrão** (permissão **`comercial-comissao:create`**) **não** é automático; se já houver faixas do tipo, pede confirmação e **substitui**. Faixas padrão nascem com bônus **R$ 0,00**.
+- Botão **Carregar faixas pendentes** (à direita de Unidade; mesma permissão **`comercial-comissao:create`**) aplica o padrão de **Manipulados** e **Marca própria** a todos os vendedores da unidade que **ainda não** tiverem faixa naquela base. **Não substitui** faixas já cadastradas. Endpoint `POST /comercial/comissoes/carregar-padrao-pendentes`.
+  - **Manipulados:** 0–79,99% → 0%; 80–89,99% → 1%; 90–99,99% → 1,25%; 100–104,99% → 1,35%; 105% em diante → 2%.
+  - **Marca própria:** 0–79,99% → 0%; 80–89,99% → 1,5%; 90–99,99% → 2%; 100–104,99% → 2,5%; 105% em diante → 3,5%.
+
+### RN-COM-007 — Meta mensal da unidade (loja)
+
+- Mesma tela **`/comercial/configuracao-metas`** (bloco **Meta da loja** acima da grade de vendedores), visível quando um **mês** está filtrado.
+- **Duas metas** por unidade/competência: Manipulados e Marca própria, persistidas em `comercial_meta_unidade` (unique `unidade + anoMes + tipoBase`).
+- **Copiar mês anterior** também replica as metas da loja, com os mesmos % de aumento.
+- No acompanhamento, o card **Total** usa a meta da loja cadastrada. Se ainda não houver, cai na soma das metas dos vendedores.
+
+### RN-COM-008 — Incidência e trava da loja na comissão
+
+- Configurada na **Configuração Comissões**, por vendedor e tipo de base (ao lado das faixas). Persistência: `comercial_comissao_politica` (unique `funcionarioId + tipoBase`). Sem cadastro: incidência **próprias** e **sem trava**.
+- **Incidência:** **Vendas próprias** (recebido do vendedor) ou **Vendas da loja** (recebido da unidade, todos os movimentos da base).
+- **Trava:** campo **Só pagar se a loja atingir (%)**. Vazio = paga sempre. Preenchido (ex.: 100) = zera comissão e bônus daquela base se o % da meta da **loja** (RN-COM-007) for menor que o informado.
+- A faixa (RN-COM-006) continua definindo o % e o bônus; o % comparado à faixa é o da incidência (próprio ou loja). Comissão = `% da faixa × valor da incidência`.
 
 ---
 

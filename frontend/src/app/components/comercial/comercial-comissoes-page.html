@@ -1,0 +1,290 @@
+<div class="vendas-page producao-config-page comercial-comissoes-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar a configuração de comissões comerciais.
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="comercial-comissoes-toolbar" aria-label="Unidade e vendedor">
+        <div class="comercial-comissoes-unidade-row">
+          <div class="filter-group">
+            <label class="form-label" for="cc-unidade">Unidade</label>
+            <select
+              id="cc-unidade"
+              class="form-control"
+              [(ngModel)]="unidadeFiltro"
+              [disabled]="unidadeDisabled"
+              (ngModelChange)="onUnidadeChange()">
+              @if (!unidadeDisabled) {
+                <option [ngValue]="''">Selecione…</option>
+              }
+              @for (u of unidadesVisiveis; track u) {
+                <option [ngValue]="u">{{ u }}</option>
+              }
+            </select>
+          </div>
+          @if (podeIncluirFaixa() && unidadeFiltro) {
+            <div class="comercial-comissoes-toolbar-acoes">
+              <button
+                type="button"
+                class="btn btn-imprimir"
+                title="Carrega faixas padrão apenas nos vendedores da unidade que ainda não têm cadastro em Manipulados e/ou Marca própria. Não altera faixas já cadastradas."
+                [disabled]="carregandoPendentes || carregandoVendedores || temLinhaEmEdicao()"
+                (click)="pedirCarregarPendentes()">
+                <i class="fas fa-download"></i>
+                {{ carregandoPendentes ? 'Carregando…' : 'Carregar faixas pendentes' }}
+              </button>
+            </div>
+          }
+        </div>
+        <div class="filter-group comercial-comissoes-vendedor">
+          <label class="form-label" for="cc-vendedor">Vendedor</label>
+          <select
+            id="cc-vendedor"
+            class="form-control"
+            [(ngModel)]="funcionarioId"
+            [disabled]="!unidadeFiltro || carregandoVendedores"
+            (ngModelChange)="onVendedorChange()">
+            <option [ngValue]="''">Selecione…</option>
+            @for (v of vendedores; track v.funcionarioId) {
+              <option [ngValue]="v.funcionarioId">
+                {{ rotuloVendedor(v) }}
+              </option>
+            }
+          </select>
+        </div>
+      </section>
+
+      @if (mensagemResultado) {
+        <div class="comercial-comissoes-resultado" role="status">
+          {{ mensagemResultado }}
+        </div>
+      }
+
+      @if (!unidadeFiltro) {
+        <div class="loading-message">Selecione uma unidade para listar os vendedores.</div>
+      } @else if (carregandoVendedores) {
+        <div class="loading-message">Carregando vendedores…</div>
+      } @else if (vendedores.length === 0) {
+        <div class="loading-message">
+          Nenhum vendedor com código ERP nesta unidade.
+        </div>
+      } @else if (!funcionarioId) {
+        <div class="loading-message">Selecione um vendedor para configurar as faixas.</div>
+      } @else {
+        <div class="comercial-faixas-split">
+          @for (grade of grades; track grade.tipoBase) {
+            <section class="producao-config-panel comercial-faixas-panel">
+              <div class="comercial-faixas-tipo-row">
+                <h3 class="comercial-faixas-titulo">{{ grade.titulo }}</h3>
+                @if (podeIncluirFaixa()) {
+                  <div class="comercial-faixas-toolbar">
+                    <button
+                      type="button"
+                      class="btn btn-salvar"
+                      [disabled]="temLinhaEmEdicao() || grade.carregando || grade.carregandoPadrao"
+                      (click)="incluirFaixaNaGrade(grade)">
+                      Incluir faixa
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-imprimir"
+                      [disabled]="temLinhaEmEdicao() || grade.carregandoPadrao || grade.carregando"
+                      (click)="pedirCarregarPadrao(grade)">
+                      <i class="fas fa-download"></i>
+                      {{ grade.carregandoPadrao ? 'Carregando…' : 'Carregar faixas padrão' }}
+                    </button>
+                  </div>
+                }
+              </div>
+
+              @if (grade.carregando) {
+                <div class="loading-message">Carregando faixas…</div>
+              } @else {
+                <div class="table-container">
+                  <table class="vendas-table">
+                    <thead>
+                      <tr>
+                        <th>De (%)</th>
+                        <th>Até (%)</th>
+                        <th>% comissão</th>
+                        <th>Bônus</th>
+                        @if (mostrarAcoesFaixa()) {
+                          <th>Ações</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of grade.linhas; track row.localId) {
+                        <tr [class.editing]="row.editando">
+                          <td>
+                            @if (row.editando) {
+                              <input
+                                class="form-control comercial-faixa-valor"
+                                type="text"
+                                inputmode="decimal"
+                                autocomplete="off"
+                                [(ngModel)]="row.draftDe"
+                                [disabled]="row.salvando"
+                                placeholder="0,00"
+                                [attr.aria-label]="'Percentual de — ' + grade.titulo" />
+                            } @else {
+                              {{ formatarPercentual(row.percentualMetaDe) }}
+                            }
+                          </td>
+                          <td>
+                            @if (row.editando) {
+                              <input
+                                class="form-control comercial-faixa-valor"
+                                type="text"
+                                inputmode="decimal"
+                                autocomplete="off"
+                                [(ngModel)]="row.draftAte"
+                                [disabled]="row.salvando"
+                                placeholder="vazio = sem teto"
+                                [attr.aria-label]="'Percentual até — ' + grade.titulo" />
+                            } @else {
+                              {{ formatarPercentual(row.percentualMetaAte) }}
+                            }
+                          </td>
+                          <td>
+                            @if (row.editando) {
+                              <input
+                                class="form-control comercial-faixa-valor"
+                                type="text"
+                                inputmode="decimal"
+                                autocomplete="off"
+                                [(ngModel)]="row.draftComissao"
+                                [disabled]="row.salvando"
+                                placeholder="0,00"
+                                [attr.aria-label]="'Percentual de comissão — ' + grade.titulo" />
+                            } @else {
+                              {{ formatarPercentual(row.percentualComissao) }}
+                            }
+                          </td>
+                          <td>
+                            @if (row.editando) {
+                              <input
+                                class="form-control comercial-faixa-valor"
+                                type="text"
+                                inputmode="numeric"
+                                autocomplete="off"
+                                [(ngModel)]="row.draftBonus"
+                                (ngModelChange)="formatarDraftBonus(row)"
+                                [disabled]="row.salvando"
+                                placeholder="R$ 0,00"
+                                [attr.aria-label]="'Bônus em reais — ' + grade.titulo" />
+                            } @else {
+                              {{ formatarBonus(row.valorBonus) }}
+                            }
+                          </td>
+                          @if (mostrarAcoesFaixa()) {
+                            <td class="action-buttons">
+                              @if (row.editando) {
+                                <button
+                                  type="button"
+                                  class="btn btn-sm btn-salvar"
+                                  [disabled]="row.salvando || !podeSalvarLinha(row)"
+                                  (click)="salvarLinha(row, grade)">
+                                  {{ row.salvando ? 'Salvando…' : 'Salvar' }}
+                                </button>
+                                <button
+                                  type="button"
+                                  class="btn btn-sm btn-cancelar"
+                                  [disabled]="row.salvando"
+                                  (click)="cancelarEdicao(row, grade)">
+                                  Cancelar
+                                </button>
+                              } @else {
+                                @if (podeEditarFaixa()) {
+                                  <button
+                                    type="button"
+                                    class="btn btn-sm btn-editar"
+                                    [disabled]="temLinhaEmEdicao()"
+                                    (click)="alterarLinha(row)">
+                                    Alterar
+                                  </button>
+                                }
+                                @if (podeExcluirFaixa() && row.id) {
+                                  <button
+                                    type="button"
+                                    class="btn btn-sm btn-excluir"
+                                    [disabled]="temLinhaEmEdicao()"
+                                    (click)="pedirExcluirFaixa(row, grade)">
+                                    Excluir
+                                  </button>
+                                }
+                              }
+                            </td>
+                          }
+                        </tr>
+                      } @empty {
+                        <tr class="no-data">
+                          <td [attr.colspan]="mostrarAcoesFaixa() ? 5 : 4">
+                            <i class="fas fa-inbox"></i> Nenhuma faixa cadastrada para {{ grade.titulo }}.
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+
+              <section
+                class="comercial-politica-panel"
+                [attr.aria-label]="'Incidência — ' + grade.titulo">
+                <div class="comercial-politica-row">
+                  <div class="filter-group">
+                    <label class="form-label" [attr.for]="'cc-incidencia-' + grade.tipoBase">Incidência</label>
+                    <select
+                      [id]="'cc-incidencia-' + grade.tipoBase"
+                      class="form-control"
+                      [(ngModel)]="grade.draftIncidencia"
+                      [disabled]="!podeEditarPolitica() || grade.politicaSalvando">
+                      <option [ngValue]="ComercialIncidenciaComissao.PROPRIAS">Vendas próprias</option>
+                      <option [ngValue]="ComercialIncidenciaComissao.LOJA">Vendas da loja</option>
+                    </select>
+                  </div>
+                  <div class="filter-group">
+                    <label class="form-label" [attr.for]="'cc-trava-' + grade.tipoBase">Só pagar se a loja atingir (%)</label>
+                    <input
+                      [id]="'cc-trava-' + grade.tipoBase"
+                      class="form-control comercial-faixa-valor"
+                      type="text"
+                      inputmode="decimal"
+                      autocomplete="off"
+                      [(ngModel)]="grade.draftMinimoLoja"
+                      [disabled]="!podeEditarPolitica() || grade.politicaSalvando"
+                      placeholder="vazio = sempre" />
+                  </div>
+                  @if (podeEditarPolitica()) {
+                    <div class="comercial-politica-acoes">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-salvar"
+                        [disabled]="grade.politicaSalvando || temLinhaEmEdicao()"
+                        (click)="salvarPolitica(grade)">
+                        {{ grade.politicaSalvando ? 'Salvando…' : 'Salvar regra' }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              </section>
+            </section>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <app-confirmation-modal
+    [isVisible]="confirmVisivel"
+    [title]="confirmTitulo"
+    [message]="confirmMensagem"
+    confirmText="Confirmar"
+    cancelText="Cancelar"
+    [confirmVariant]="confirmVariante"
+    (confirmed)="confirmarAcao()"
+    (cancelled)="cancelarConfirmacao()">
+  </app-confirmation-modal>
+</div>

@@ -69,6 +69,10 @@ export class FolhaFuncionariosService {
       dto.unidade,
       dto.codigoFuncionarioErp ?? null,
     );
+    await this.assertCodigoVendedorErpUnico(
+      dto.unidade,
+      dto.codigoVendedorErp ?? null,
+    );
     this.assertPainelRepresentantePar(
       dto.painelContratoRepresentante,
       dto.painelCodigoRepresentante,
@@ -83,6 +87,7 @@ export class FolhaFuncionariosService {
       unidade: dto.unidade,
       codigoUsuarioErp: dto.codigoUsuarioErp ?? null,
       codigoFuncionarioErp: dto.codigoFuncionarioErp ?? null,
+      codigoVendedorErp: dto.codigoVendedorErp ?? null,
       painelContratoRepresentante: dto.painelContratoRepresentante ?? null,
       painelCodigoRepresentante: dto.painelCodigoRepresentante ?? null,
       cpf: dto.cpf?.trim() ? dto.cpf.trim() : undefined,
@@ -397,6 +402,15 @@ export class FolhaFuncionariosService {
       );
       entity.codigoFuncionarioErp = dto.codigoFuncionarioErp ?? null;
     }
+    if (dto.codigoVendedorErp !== undefined) {
+      const unidadeAlvo = dto.unidade ?? entity.unidade;
+      await this.assertCodigoVendedorErpUnico(
+        unidadeAlvo,
+        dto.codigoVendedorErp ?? null,
+        id,
+      );
+      entity.codigoVendedorErp = dto.codigoVendedorErp ?? null;
+    }
 
     const painelContrato =
       dto.painelContratoRepresentante !== undefined
@@ -636,6 +650,27 @@ export class FolhaFuncionariosService {
     if (existente) {
       throw new BadRequestException(
         `Já existe funcionário «${existente.nome}» com o código funcionário ERP ${codigo} nesta unidade.`,
+      );
+    }
+  }
+
+  private async assertCodigoVendedorErpUnico(
+    unidade: Unidade,
+    codigo: number | null | undefined,
+    ignorarFuncionarioId?: string,
+  ): Promise<void> {
+    if (codigo == null) return;
+    const qb = this.funcionarioRepo
+      .createQueryBuilder('f')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere('f.codigoVendedorErp = :codigo', { codigo });
+    if (ignorarFuncionarioId) {
+      qb.andWhere('f.id != :id', { id: ignorarFuncionarioId });
+    }
+    const existente = await qb.getOne();
+    if (existente) {
+      throw new BadRequestException(
+        `Já existe funcionário «${existente.nome}» com o código vendedor ERP ${codigo} nesta unidade.`,
       );
     }
   }

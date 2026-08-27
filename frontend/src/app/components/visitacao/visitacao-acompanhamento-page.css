@@ -14,31 +14,56 @@ app-visitacao-acompanhamento-page {
   min-height: 0;
 }
 
-.visitacao-acompanhamento-page .results-card > .table-wrapper {
-  flex: 0 0 auto;
-  max-height: none;
-  overflow-x: auto;
-  overflow-y: clip;
+.visitacao-acomp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 1rem;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 1rem;
+  background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 8px;
 }
 
-.visitacao-acompanhamento-page .visitacao-acomp-header-actions {
+.visitacao-acomp-toolbar .filter-group {
+  flex: 0 1 180px;
+  min-width: 140px;
+  max-width: 240px;
   display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-rep {
+  flex: 1 1 240px;
+  max-width: 28rem;
+}
+
+.visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-medico {
+  flex: 1 1 220px;
+  max-width: 24rem;
+}
+
+.visitacao-acomp-toolbar .form-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.visitacao-acomp-toolbar .form-control {
+  min-height: 2.375rem;
   width: 100%;
 }
 
-.visitacao-acompanhamento-page .visitacao-acomp-header-actions .header-actions {
-  justify-content: flex-start;
-  flex-shrink: 0;
-}
-
-.visitacao-acompanhamento-page .visitacao-acomp-header-actions .filters-inline {
-  flex: 1 1 16rem;
-  min-width: 12rem;
-  margin-bottom: 0;
+.visitacao-acomp-toolbar-acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-du-legend {
@@ -46,6 +71,7 @@ app-visitacao-acompanhamento-page {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.15rem;
+  margin-left: auto;
   padding: 0.45rem 0.75rem;
   border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
   border-radius: 8px;
@@ -53,6 +79,13 @@ app-visitacao-acompanhamento-page {
   box-shadow: var(--sombra-sm, none);
   color: var(--text-primary, #1e293b);
   white-space: nowrap;
+}
+
+.visitacao-acompanhamento-page .results-card > .table-wrapper {
+  flex: 0 0 auto;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: clip;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-du-legend strong {
@@ -67,18 +100,24 @@ app-visitacao-acompanhamento-page {
   color: var(--text-secondary, #64748b);
 }
 
-@media (max-width: 640px) {
-  .visitacao-acompanhamento-page .visitacao-acomp-header-actions {
-    flex-wrap: wrap;
-  }
-
-  .visitacao-acompanhamento-page .visitacao-acomp-header-actions .filters-inline {
-    flex-basis: 100%;
+@media (max-width: 720px) {
+  .visitacao-acomp-toolbar .filter-group,
+  .visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-rep,
+  .visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-medico {
+    flex: 1 1 100%;
+    max-width: none;
   }
 
   .visitacao-acompanhamento-page .visitacao-acomp-du-legend {
+    margin-left: 0;
     white-space: normal;
   }
+}
+
+body.theme-dark .visitacao-acomp-toolbar,
+[data-theme='dark'] .visitacao-acomp-toolbar {
+  background: var(--bg-card, #1e293b);
+  border-color: var(--border-color, #334155);
 }
 
 body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-du-legend,

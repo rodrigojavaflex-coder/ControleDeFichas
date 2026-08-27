@@ -90,12 +90,12 @@
                       <input
                         class="form-control visitacao-metas-valor"
                         type="text"
-                        inputmode="decimal"
+                        inputmode="numeric"
                         autocomplete="off"
                         [(ngModel)]="row.draft"
+                        (ngModelChange)="formatarDraftDigitacao(row)"
                         [disabled]="row.salvando"
                         placeholder="R$ 0,00"
-                        (blur)="formatarDraftBlur(row)"
                         [attr.aria-label]="'Valor da meta de ' + row.nome" />
                     } @else {
                       {{ formatarMoeda(row.valorMeta) }}

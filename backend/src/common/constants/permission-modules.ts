@@ -72,4 +72,13 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
       'Visitação — Configuração Comissões',
     ],
   },
+  {
+    key: 'comercial',
+    label: 'Comercial',
+    groupKeys: [
+      'Comercial — Acompanhamento',
+      'Comercial — Configuração Metas',
+      'Comercial — Configuração Comissões',
+    ],
+  },
 ];

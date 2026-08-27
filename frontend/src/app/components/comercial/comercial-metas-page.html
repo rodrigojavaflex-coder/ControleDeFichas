@@ -1,0 +1,315 @@
+<div class="vendas-page producao-config-page comercial-metas-page">
+  @if (!podeLer()) {
+    <div class="alert alert-error">
+      Você não possui permissão para visualizar a configuração de metas comerciais.
+    </div>
+  } @else {
+    <div class="results-card">
+      <section class="comercial-metas-toolbar" aria-label="Unidade e competência">
+        <div class="filter-group">
+          <label class="form-label" for="cm-unidade">Unidade</label>
+          <select
+            id="cm-unidade"
+            class="form-control"
+            [(ngModel)]="unidadeFiltro"
+            [disabled]="unidadeDisabled"
+            (ngModelChange)="onFiltroChange()">
+            @if (!unidadeDisabled) {
+              <option [ngValue]="''">Selecione…</option>
+            }
+            @for (u of unidadesVisiveis; track u) {
+              <option [ngValue]="u">{{ u }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label" for="cm-mes">Mês</label>
+          <select
+            id="cm-mes"
+            class="form-control"
+            [(ngModel)]="mesFiltro"
+            (ngModelChange)="onFiltroChange()">
+            <option [ngValue]="0">Todos</option>
+            @for (m of MESES_PT; track m.numero) {
+              <option [ngValue]="m.numero">{{ m.nome }}</option>
+            }
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="form-label" for="cm-ano">Ano</label>
+          <select
+            id="cm-ano"
+            class="form-control"
+            [(ngModel)]="anoFiltro"
+            (ngModelChange)="onFiltroChange()">
+            @for (a of anosDisponiveis; track a) {
+              <option [ngValue]="a">{{ a }}</option>
+            }
+          </select>
+        </div>
+        @if (podeEditarMeta() && unidadeFiltro && mesFiltro > 0) {
+          <div class="comercial-metas-toolbar-acoes">
+            <button
+              type="button"
+              class="btn btn-imprimir"
+              [disabled]="copiando || carregando || temLinhaEmEdicao()"
+              (click)="pedirCopiarMesAnterior()">
+              <i class="fas fa-copy"></i>
+              {{ copiando ? 'Copiando…' : 'Copiar mês anterior' }}
+            </button>
+          </div>
+        }
+      </section>
+
+      @if (!unidadeFiltro) {
+        <div class="loading-message">Selecione uma unidade para carregar as metas.</div>
+      } @else if (carregando) {
+        <div class="loading-message">Carregando metas…</div>
+      } @else {
+        @if (mostrarMetaUnidade()) {
+          <section class="comercial-meta-unidade-panel" aria-label="Meta da loja">
+            <h3>Meta da loja</h3>
+            <div class="comercial-meta-unidade-campos">
+              <div class="comercial-meta-unidade-campo">
+                <label class="form-label" for="cm-meta-loja-req">Manipulados</label>
+                @if (editandoUnidade) {
+                  <input
+                    id="cm-meta-loja-req"
+                    class="form-control comercial-metas-valor"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    [(ngModel)]="draftUnidadeRequisicao"
+                    (ngModelChange)="formatarDraftUnidade('requisicao')"
+                    [disabled]="salvandoUnidade"
+                    placeholder="R$ 0,00" />
+                } @else {
+                  <div class="comercial-meta-unidade-valor">
+                    {{ formatarMoeda(metaUnidadeRequisicao) }}
+                  </div>
+                }
+              </div>
+              <div class="comercial-meta-unidade-campo">
+                <label class="form-label" for="cm-meta-loja-mp">Marca própria</label>
+                @if (editandoUnidade) {
+                  <input
+                    id="cm-meta-loja-mp"
+                    class="form-control comercial-metas-valor"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    [(ngModel)]="draftUnidadeMarcaPropria"
+                    (ngModelChange)="formatarDraftUnidade('marcaPropria')"
+                    [disabled]="salvandoUnidade"
+                    placeholder="R$ 0,00" />
+                } @else {
+                  <div class="comercial-meta-unidade-valor">
+                    {{ formatarMoeda(metaUnidadeMarcaPropria) }}
+                  </div>
+                }
+              </div>
+            </div>
+            @if (podeEditarMeta()) {
+              <div class="action-buttons comercial-meta-unidade-acoes">
+                @if (editandoUnidade) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-salvar"
+                    [disabled]="salvandoUnidade"
+                    (click)="salvarUnidade()">
+                    {{ salvandoUnidade ? 'Salvando…' : 'Salvar' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-cancelar"
+                    [disabled]="salvandoUnidade"
+                    (click)="cancelarUnidade()">
+                    Cancelar
+                  </button>
+                } @else if (!temMetaUnidadeCadastrada()) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-salvar"
+                    [disabled]="temLinhaEmEdicao()"
+                    (click)="incluirUnidade()">
+                    Incluir
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-editar"
+                    [disabled]="temLinhaEmEdicao()"
+                    (click)="alterarUnidade()">
+                    Alterar
+                  </button>
+                }
+              </div>
+            }
+          </section>
+        }
+        <div class="table-container comercial-metas-table-wrap">
+          <table class="vendas-table">
+            <thead>
+              <tr>
+                <th>Vendedor</th>
+                <th>Unidade</th>
+                <th>Mês</th>
+                <th>Meta Manipulados</th>
+                <th>Meta Marca Própria</th>
+                @if (podeEditarMeta()) {
+                  <th>Ações</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of linhas; track row.funcionarioId + '-' + row.anoMes) {
+                <tr [class.editing]="row.editando">
+                  <td>{{ row.nome }} ({{ row.codigoVendedorErp }})</td>
+                  <td>{{ row.unidade }}</td>
+                  <td>{{ nomeMes(row.mes) }}</td>
+                  <td class="comercial-metas-valor-celula">
+                    @if (row.editando) {
+                      <input
+                        class="form-control comercial-metas-valor"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        [(ngModel)]="row.draftRequisicao"
+                        (ngModelChange)="formatarDraftDigitacao(row, 'requisicao')"
+                        [disabled]="row.salvando"
+                        placeholder="R$ 0,00"
+                        [attr.aria-label]="'Meta manipulados de ' + row.nome" />
+                    } @else {
+                      {{ formatarMoeda(row.valorMetaRequisicao) }}
+                    }
+                  </td>
+                  <td class="comercial-metas-valor-celula">
+                    @if (row.editando) {
+                      <input
+                        class="form-control comercial-metas-valor"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        [(ngModel)]="row.draftMarcaPropria"
+                        (ngModelChange)="formatarDraftDigitacao(row, 'marcaPropria')"
+                        [disabled]="row.salvando"
+                        placeholder="R$ 0,00"
+                        [attr.aria-label]="'Meta marca própria de ' + row.nome" />
+                    } @else {
+                      {{ formatarMoeda(row.valorMetaMarcaPropria) }}
+                    }
+                  </td>
+                  @if (podeEditarMeta()) {
+                    <td class="action-buttons">
+                      @if (row.editando) {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-salvar"
+                          [disabled]="row.salvando"
+                          (click)="salvarLinha(row)">
+                          {{ row.salvando ? 'Salvando…' : 'Salvar' }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-cancelar"
+                          [disabled]="row.salvando"
+                          (click)="cancelarEdicao(row)">
+                          Cancelar
+                        </button>
+                      } @else if (!temMetasCadastradas(row)) {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-salvar"
+                          [disabled]="temLinhaEmEdicao()"
+                          (click)="incluirLinha(row)">
+                          Incluir
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-editar"
+                          [disabled]="temLinhaEmEdicao()"
+                          (click)="alterarLinha(row)">
+                          Alterar
+                        </button>
+                      }
+                    </td>
+                  }
+                </tr>
+              } @empty {
+                <tr class="no-data">
+                  <td [attr.colspan]="podeEditarMeta() ? 6 : 5">
+                    <i class="fas fa-inbox"></i> Nenhum vendedor com código ERP nesta unidade.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  @if (copiarModalVisivel) {
+    <div
+      class="comercial-copiar-overlay"
+      (click)="cancelarCopia()"
+      role="presentation">
+      <div
+        class="comercial-copiar-modal"
+        role="dialog"
+        aria-labelledby="cm-copiar-titulo"
+        (click)="$event.stopPropagation()">
+        <div class="comercial-copiar-header">
+          <h3 id="cm-copiar-titulo">Copiar mês anterior</h3>
+        </div>
+        <div class="comercial-copiar-body">
+          <p>
+          Copiar as metas da loja e dos vendedores de <strong>{{ rotuloCopiarOrigem() }}</strong>
+            para <strong>{{ rotuloCopiarDestino() }}</strong>?
+            Valores já cadastrados no destino serão substituídos.
+          </p>
+          <p class="comercial-copiar-ajuda">
+            Informe o aumento percentual (0 = copia o valor sem alteração).
+          </p>
+          <div class="comercial-copiar-campos">
+            <div class="filter-group">
+              <label class="form-label" for="cm-pct-req">% aumento Manipulados</label>
+              <input
+                id="cm-pct-req"
+                class="form-control"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                [(ngModel)]="percentualAumentoRequisicao"
+                placeholder="0" />
+            </div>
+            <div class="filter-group">
+              <label class="form-label" for="cm-pct-mp">% aumento Marca própria</label>
+              <input
+                id="cm-pct-mp"
+                class="form-control"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                [(ngModel)]="percentualAumentoMarcaPropria"
+                placeholder="0" />
+            </div>
+          </div>
+        </div>
+        <div class="comercial-copiar-footer">
+          <button type="button" class="btn btn-cancelar" (click)="cancelarCopia()">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar"
+            [disabled]="copiando"
+            (click)="confirmarCopia()">
+            {{ copiando ? 'Copiando…' : 'Copiar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

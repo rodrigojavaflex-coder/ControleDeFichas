@@ -53,6 +53,17 @@ export class CreateFuncionarioFolhaDto {
   codigoFuncionarioErp?: number | null;
 
   @ApiPropertyOptional({
+    description:
+      'Código do vendedor no ERP (CDFUN / caixa) para metas e comissões comerciais.',
+    example: 42,
+  })
+  @IsOptional()
+  @ValidateIf((_o, v) => v != null && v !== '')
+  @IsInt({ message: 'Código vendedor ERP deve ser um número inteiro.' })
+  @Min(1, { message: 'Código vendedor ERP deve ser maior que zero.' })
+  codigoVendedorErp?: number | null;
+
+  @ApiPropertyOptional({
     description: 'Filial do painel médico (cdcon). Informar junto com painelCodigoRepresentante.',
     example: 9999,
   })

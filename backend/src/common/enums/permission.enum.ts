@@ -189,6 +189,18 @@ export enum Permission {
   VISITACAO_COMISSAO_CREATE = 'visitacao-comissao:create',
   VISITACAO_COMISSAO_UPDATE = 'visitacao-comissao:update',
   VISITACAO_COMISSAO_DELETE = 'visitacao-comissao:delete',
+
+  /** Comercial — acompanhamento de vendas por vendedor. */
+  COMERCIAL_ACOMPANHAMENTO_READ = 'comercial-acompanhamento:read',
+  COMERCIAL_ACOMPANHAMENTO_COMISSAO = 'comercial-acompanhamento:comissao',
+  /** Comercial — configuração de metas mensais. */
+  COMERCIAL_META_READ = 'comercial-meta:read',
+  COMERCIAL_META_UPDATE = 'comercial-meta:update',
+  /** Comercial — configuração de faixas de comissão por vendedor. */
+  COMERCIAL_COMISSAO_READ = 'comercial-comissao:read',
+  COMERCIAL_COMISSAO_CREATE = 'comercial-comissao:create',
+  COMERCIAL_COMISSAO_UPDATE = 'comercial-comissao:update',
+  COMERCIAL_COMISSAO_DELETE = 'comercial-comissao:delete',
 }
 
 export const PERMISSION_GROUPS = {
@@ -581,6 +593,44 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.VISITACAO_COMISSAO_DELETE,
       label: 'Excluir faixas de comissão',
+    },
+  ],
+  'Comercial — Acompanhamento': [
+    {
+      key: Permission.COMERCIAL_ACOMPANHAMENTO_READ,
+      label: 'Visualizar acompanhamento comercial',
+    },
+    {
+      key: Permission.COMERCIAL_ACOMPANHAMENTO_COMISSAO,
+      label: 'Visualizar faixa e valor de comissão no acompanhamento',
+    },
+  ],
+  'Comercial — Configuração Metas': [
+    {
+      key: Permission.COMERCIAL_META_READ,
+      label: 'Visualizar configuração de metas comerciais',
+    },
+    {
+      key: Permission.COMERCIAL_META_UPDATE,
+      label: 'Editar metas comerciais e copiar mês anterior',
+    },
+  ],
+  'Comercial — Configuração Comissões': [
+    {
+      key: Permission.COMERCIAL_COMISSAO_READ,
+      label: 'Visualizar faixas de comissão comercial',
+    },
+    {
+      key: Permission.COMERCIAL_COMISSAO_CREATE,
+      label: 'Incluir faixas de comissão comercial',
+    },
+    {
+      key: Permission.COMERCIAL_COMISSAO_UPDATE,
+      label: 'Editar faixas de comissão comercial',
+    },
+    {
+      key: Permission.COMERCIAL_COMISSAO_DELETE,
+      label: 'Excluir faixas de comissão comercial',
     },
   ],
 };
