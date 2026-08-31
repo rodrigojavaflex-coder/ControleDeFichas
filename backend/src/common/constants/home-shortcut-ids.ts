@@ -32,6 +32,9 @@ export const HOME_SHORTCUT_IDS = [
   'visitacao-acompanhamento',
   'visitacao-metas',
   'visitacao-comissoes',
+  'comercial-acompanhamento',
+  'comercial-metas',
+  'comercial-comissoes',
   'feriados',
 ] as const;
 
