@@ -1,0 +1,57 @@
+crm;nome;pdf;programa_total_inclui_uberaba;uberaba_abater_validacao;programa_sem_uberaba;pago_dtefe_sem_uberaba;orcamento_dtefe_sem_uberaba;bruto_menos_desconto_dtefe;delta_programa_sem_uberaba_vs_pdf;delta_pago_dtefe_vs_pdf;causa
+33543;MATHEUS ROBERTO C. DIAS;46927,14;51778,36;1291,46;50486,90;48707,12;58304,03;48593,62;3559,76;1779,98;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+15626;NATALEE SERENO TOME;16177,11;18993,83;0,00;18993,83;18675,83;21311,56;18373,43;2816,72;2498,72;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+15732;HUGO RAPHAEL CARVALHAES SANTOS;8266,48;9707,62;72,41;9635,21;8597,25;9128,35;8595,05;1368,73;330,77;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+22079;MIGUEL PEREIRA DE QUEIROZ JUNIOR;7037,04;7759,74;0,00;7759,74;7717,24;8334,23;7680,04;722,70;680,20;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+6458;FRANKS AUGUSTO VALIM;1832,82;2489,65;0,00;2489,65;2048,65;2292,89;1789,15;656,83;215,83;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+10432;PATRICIA MARIA DA SILVEIRA;3958,23;4609,11;0,00;4609,11;3646,11;3837,97;3641,01;650,88;-312,12;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+7987;CLAUDIA MARIA DA SILVEIRA;6561,49;7164,22;0,00;7164,22;6701,22;7320,02;6701,22;602,73;139,73;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+15063;RAYSSA MAIA RIBEIRO;0,00;500,00;0,00;500,00;395,00;466,84;395,00;500,00;395,00;No programa e ausente no PDF (baixa dtope julho / prescritor)
+21397;JOSE DIVINO DOS REIS JUNIOR;281,00;520,00;0,00;520,00;520,00;527,44;520,00;239,00;239,00;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+29377;PEDRO H MALTA VICTOR;416,00;649,50;0,00;649,50;649,50;744,60;649,50;233,50;233,50;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+17662;RENATA BALESTRA MARTINS;1094,06;1322,60;0,00;1322,60;1322,60;1465,18;1321,90;228,54;228,54;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+21400;AMANDA REZENDE OLIVEIRA;3188,76;3669,84;273,64;3396,20;3396,20;4099,74;3385,30;207,44;207,44;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+10471;DOUGLAS R GOMES;993,34;1391,90;201,30;1190,60;1190,60;1227,46;1190,60;197,26;197,26;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+12804;EDUARDO JORGE DOMICIANO;2308,49;2741,20;248,68;2492,52;2146,52;2319,49;2146,52;184,03;-161,97;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+8860;KASSIANA PAULA DE ALMEIDA;402,25;638,58;73,58;565,00;389,00;436,25;389,00;162,75;-13,25;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+16717;HOMERO S. NASCIMENTO JR;96,00;238,40;0,00;238,40;238,40;196,27;238,40;142,40;142,40;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+15502;LESLIE C FERREIRA;608,00;726,00;0,00;726,00;608,00;609,15;608,00;118,00;0,00;"Eixo de data: PDF=DTEFE; programa=data_operacao do cupom"
+7602;SALVINO MENDES RODRIGUES;3497,27;3602,60;0,00;3602,60;2857,50;2904,10;2857,50;105,33;-639,77;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+12365;MARCUS V. LOPES DE SOUZA;300,00;400,00;0,00;400,00;300,00;301,83;300,00;100,00;0,00;"Eixo de data: PDF=DTEFE; programa=data_operacao do cupom"
+31023;DANILLO VICENTE GOMES;730,00;820,00;0,00;820,00;730,00;764,40;730,00;90,00;0,00;"Eixo de data: PDF=DTEFE; programa=data_operacao do cupom"
+23892;LEANDRO REZENDE;288,90;198,90;0,00;198,90;198,90;234,00;198,90;-90,00;-90,00;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+16936;WILLIANKLEY ARAUJO DOS SANTOS;176,00;264,00;0,00;264,00;176,00;176,00;176,00;88,00;0,00;"Eixo de data: PDF=DTEFE; programa=data_operacao do cupom"
+5376;EULER SOUZA SANTOS;0,00;87,00;0,00;87,00;87,00;72,60;82,90;87,00;87,00;No programa e ausente no PDF (baixa dtope julho / prescritor)
+7880;JEFFERSON BROCKESTAYER FILHO;574,32;649,00;0,00;649,00;649,00;786,70;649,00;74,68;74,68;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+26195;WELTOIR AVELINO CORREA;1330,80;1389,90;0,00;1389,90;1257,90;1502,14;1257,90;59,10;-72,90;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+22400;MARCOS VINICIUS GUIMARAES;204,13;160,00;0,00;160,00;160,00;161,42;160,00;-44,13;-44,13;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+1910;ITAMAR CRISTINO DE FIGUEIREDO;421,94;459,00;0,00;459,00;459,00;444,50;444,00;37,06;37,06;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+23287;ROBERTA C PRADO TAKENOBU;1780,08;1744,08;0,00;1744,08;1690,08;1743,77;1690,08;-36,00;-90,00;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+9230;NILTON CARVALHO DE S. JUNIOR;628,96;600,00;0,00;600,00;600,00;634,20;600,00;-28,96;-28,96;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+17966;TICIANA GAGGIATO LIMA;291,13;303,00;0,00;303,00;303,00;302,26;277,26;11,87;11,87;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+14623;ANDERSON ARATAKE V V DUARTE;220,41;209,00;0,00;209,00;209,00;331,50;209,00;-11,41;-11,41;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+219131;PATRICK ROGERIO CARVALHAES SANTOS;426,19;747,56;331,56;416,00;250,00;250,00;250,00;-10,19;-176,19;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+21124;LUIZA LELIS NEVES LIMA;1234,08;1240,00;0,00;1240,00;1127,00;1165,24;1127,00;5,92;-107,08;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+15665;GUSTAVO FERRARI PALMEIRA;1145,06;1238,60;92,75;1145,85;1030,85;1019,53;1030,85;0,79;-114,21;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+22108;EDIMAR SILVA JUNIOR;392,24;393,00;0,00;393,00;393,00;373,09;393,00;0,76;0,76;"Ver requisições (prescritor, cupom vs DTEFE ou valor fórmula vs VRLIQ)"
+26811;ALANA C SANTANA;340,00;340,00;0,00;340,00;340,00;344,56;340,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+6777;AMERICO OSORIO S SILVA;377,00;377,00;0,00;377,00;377,00;377,00;377,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+33441;ANA KELLY MENDES VIEIRA;376,40;376,40;0,00;376,40;376,40;377,36;376,40;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+13366;ANDREA CAROLINA FARIAS RIBEIRO;131,92;131,92;0,00;131,92;0,00;0,00;0,00;0,00;-131,92;Fecha com o programa (data_operacao) após abater Uberaba
+2596;ANTONIO NUNES;242,00;242,00;0,00;242,00;242,00;242,00;242,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+13761;CRISTIAN AUGUSTO S SOUZA;2487,48;2624,89;137,41;2487,48;2487,48;2592,54;2487,48;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+37316;DANIELLA REZENDE;145,00;145,00;0,00;145,00;145,00;162,60;145,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+15528;DANILO MAGALHAES TOME;644,00;644,00;0,00;644,00;644,00;1287,40;644,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+10807;ELAINE BITES  DE CARVALHO E FERREIRA CASTRO;490,00;490,00;0,00;490,00;490,00;491,14;490,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+35798;GEZIANY VIEIRA DOS SANTOS CUNHA;160,00;546,16;386,16;160,00;160,00;160,00;160,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+2353;IRDIVAL C. DE FIGUEIREDO;239,00;239,00;0,00;239,00;100,00;100,00;100,00;0,00;-139,00;Fecha com o programa (data_operacao) após abater Uberaba
+2348;JOÃO ANTONIO FERREIRA;100,00;100,00;0,00;100,00;100,00;128,00;100,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+32402;JULIANA ALVARENGA PRADO;281,00;281,00;0,00;281,00;281,00;12285,90;281,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+37979;LUCAS BUOZI;200,00;200,00;0,00;200,00;200,00;200,60;200,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+29080;LUDMILA QUEIROZ RODRIGUES;566,00;566,00;0,00;566,00;566,00;650,78;566,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+27404;MARCOS R.L.CARVALHO;120,00;120,00;0,00;120,00;120,00;120,10;120,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+19866;MAYARA VAZ DAVICO;156,00;156,00;0,00;156,00;156,00;156,16;156,00;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+11985;TAHIS MONIELLE NUNES;506,44;506,44;0,00;506,44;506,44;521,44;506,44;0,00;0,00;Fecha com valor pago (FC17000.VRLIQ) na data de pagamento
+17046;JOSÊ NETO RIBEIRO DE SOUZA;0,00;199,09;199,09;0,00;0,00;0,00;0,00;0,00;0,00;"Somente Uberaba (indicação; abater na validação do PDF)"
+17359;MARCO AURÉLIO DOS SANTOS RODRIGUES;0,00;110,11;110,11;0,00;0,00;0,00;0,00;0,00;0,00;"Somente Uberaba (indicação; abater na validação do PDF)"
+;TOTAL;121351,96;137801,20;3418,15;134383,05;126718,79;155986,33;125942,45;13031,09;5366,83;
