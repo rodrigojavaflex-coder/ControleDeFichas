@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import {
   CaixaFechamentoDiaRow,
@@ -46,15 +46,24 @@ export interface CaixaFechamentoDiaResponse {
 
 @Injectable()
 export class CaixaService {
+  private readonly logger = new Logger(CaixaService.name);
+
   constructor(private readonly databaseService: DatabaseService) {}
 
   async buscarPagamentos(dto: CaixaPeriodoDto): Promise<CaixaPagamentosResponse> {
     const periodo = this.resolverPeriodo(dto);
+    const t0 = Date.now();
+    this.logger.log(
+      `Caixa pagamentos início unit=${periodo.unit} ${periodo.start}..${periodo.end}`,
+    );
     const pagamentos = await this.databaseService.buscarCaixaPagamentos(
       periodo.unit,
       periodo.start,
       periodo.end,
       periodo.filtrarFlagBaixa,
+    );
+    this.logger.log(
+      `Caixa pagamentos fim unit=${periodo.unit} ${pagamentos.length} linha(s) ${Date.now() - t0}ms`,
     );
 
     return {
@@ -67,11 +76,18 @@ export class CaixaService {
 
   async buscarItens(dto: CaixaPeriodoDto): Promise<CaixaItensResponse> {
     const periodo = this.resolverPeriodo(dto);
+    const t0 = Date.now();
+    this.logger.log(
+      `Caixa itens início unit=${periodo.unit} ${periodo.start}..${periodo.end}`,
+    );
     const itens = await this.databaseService.buscarCaixaItens(
       periodo.unit,
       periodo.start,
       periodo.end,
       periodo.filtrarFlagBaixa,
+    );
+    this.logger.log(
+      `Caixa itens fim unit=${periodo.unit} ${itens.length} linha(s) ${Date.now() - t0}ms`,
     );
 
     return {
@@ -86,10 +102,17 @@ export class CaixaService {
     dto: CaixaPeriodoDto,
   ): Promise<CaixaRequisicoesPagasResponse> {
     const periodo = this.resolverPeriodo(dto);
+    const t0 = Date.now();
+    this.logger.log(
+      `Caixa requisicoes-pagas início unit=${periodo.unit} ${periodo.start}..${periodo.end}`,
+    );
     const requisicoes = await this.databaseService.buscarCaixaRequisicoesPagas(
       periodo.unit,
       periodo.start,
       periodo.end,
+    );
+    this.logger.log(
+      `Caixa requisicoes-pagas fim unit=${periodo.unit} ${requisicoes.length} linha(s) ${Date.now() - t0}ms`,
     );
 
     return {

@@ -37,6 +37,30 @@
   max-width: 36rem;
 }
 
+.comercial-acomp-toolbar-acoes {
+  display: flex;
+  align-items: flex-end;
+  flex: 0 0 auto;
+}
+
+.comercial-acomp-toolbar-acoes .btn-exportar {
+  min-height: 2.375rem;
+  min-width: 2.375rem;
+  padding: 0 0.85rem;
+  background: var(--cor-sucesso, var(--color-success, #16a34a));
+  color: #fff;
+  border: none;
+}
+
+.comercial-acomp-toolbar-acoes .btn-exportar:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cor-sucesso, #16a34a) 85%, #000);
+}
+
+.comercial-acomp-toolbar-acoes .btn-exportar:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .comercial-acomp-toolbar .form-label {
   margin: 0;
   font-size: 0.875rem;
@@ -99,6 +123,20 @@
   border-color: color-mix(in srgb, var(--color-primary, #2563eb) 35%, var(--cor-borda, #e2e8f0));
 }
 
+.comercial-acomp-card.is-clickable {
+  cursor: pointer;
+}
+
+.comercial-acomp-card.is-clickable:hover {
+  border-color: color-mix(in srgb, var(--color-primary, #2563eb) 45%, var(--cor-borda, #e2e8f0));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary, #2563eb) 25%, transparent);
+}
+
+.comercial-acomp-card.is-clickable:focus-visible {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 2px;
+}
+
 .comercial-acomp-card-head {
   display: flex;
   flex-wrap: wrap;
@@ -115,6 +153,14 @@
   color: var(--text-primary, #1e293b);
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+.comercial-acomp-card-head-valor {
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary, #1e293b);
+  white-space: nowrap;
 }
 
 .comercial-acomp-competencia {
@@ -208,11 +254,28 @@
   color: var(--cor-primaria, var(--color-primary, #2563eb));
 }
 
+.comercial-acomp-metric.is-rejeitado .value {
+  color: var(--cor-perigo, var(--color-danger, #dc2626));
+}
+
 .comercial-acomp-table th.col-num,
 .comercial-acomp-table td.col-num {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.comercial-acomp-row.is-clickable {
+  cursor: pointer;
+}
+
+.comercial-acomp-row.is-clickable:hover {
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 8%, transparent);
+}
+
+.comercial-acomp-row.is-clickable:focus-visible {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: -2px;
 }
 
 .comercial-acomp-table td.col-num.is-recebido {
@@ -250,7 +313,9 @@ body.theme-dark .comercial-acomp-card,
 }
 
 body.theme-dark .comercial-acomp-card-head h3,
-[data-theme='dark'] .comercial-acomp-card-head h3 {
+[data-theme='dark'] .comercial-acomp-card-head h3,
+body.theme-dark .comercial-acomp-card-head-valor,
+[data-theme='dark'] .comercial-acomp-card-head-valor {
   color: var(--text-primary, #e2e8f0);
 }
 
@@ -272,6 +337,93 @@ body.theme-dark .comercial-acomp-table td.col-num.is-primary,
 body.theme-dark .comercial-acomp-table td.col-num.is-rejeitado,
 [data-theme='dark'] .comercial-acomp-table td.col-num.is-rejeitado {
   color: var(--cor-perigo, #f87171);
+}
+
+body.theme-dark .comercial-acomp-row.is-clickable:hover,
+[data-theme='dark'] .comercial-acomp-row.is-clickable:hover {
+  background: color-mix(in srgb, var(--color-primary, #60a5fa) 14%, transparent);
+}
+
+.comercial-acomp-modal-detalhe {
+  max-width: 960px;
+  width: min(960px, 96vw);
+  max-height: 88vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.comercial-acomp-detalhe-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.comercial-acomp-detalhe-header-actions .btn-exportar {
+  background: var(--cor-sucesso, var(--color-success, #16a34a));
+  color: #fff;
+  border: none;
+}
+
+.comercial-acomp-detalhe-header-actions .btn-exportar:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cor-sucesso, #16a34a) 85%, #000);
+}
+
+.comercial-acomp-detalhe-header-actions .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.comercial-acomp-modal-detalhe .modal-corpo {
+  overflow: auto;
+  flex: 1 1 auto;
+}
+
+.comercial-acomp-detalhe-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-acomp-detalhe-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+}
+
+.comercial-acomp-section-title {
+  margin: 0.85rem 0 0.45rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+}
+
+.comercial-acomp-detalhe-table {
+  margin-bottom: 0.75rem;
+}
+
+.comercial-acomp-modal-detalhe .vendas-table tfoot td {
+  font-weight: 700;
+}
+
+body.theme-dark .comercial-acomp-section-title,
+[data-theme='dark'] .comercial-acomp-section-title {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .comercial-acomp-detalhe-sub,
+[data-theme='dark'] .comercial-acomp-detalhe-sub {
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .comercial-acomp-card.is-clickable:hover,
+[data-theme='dark'] .comercial-acomp-card.is-clickable:hover {
+  border-color: color-mix(in srgb, var(--color-primary, #60a5fa) 50%, var(--cor-borda, #334155));
 }
 
 @media (max-width: 720px) {

@@ -808,29 +808,59 @@ export class DatabaseService {
 
     return new Promise<T[]>((resolve, reject) => {
       Firebird.attach(options, (attachErr: Error, db: any) => {
+        const attachMs = Date.now() - inicio;
         if (attachErr) {
-          this.logger.error('Erro ao conectar ao banco (caixa)', attachErr);
+          this.logger.error(
+            `Erro ao conectar ao banco (caixa ${rotulo}) após ${attachMs}ms`,
+            attachErr,
+          );
           return reject(
             new InternalServerErrorException('Erro de conexão ao banco.'),
           );
         }
 
+        const inicioSql = Date.now();
         db.query(sql, params, (queryErr: Error, result: any[]) => {
+          const sqlMs = Date.now() - inicioSql;
           db.detach();
 
           if (queryErr) {
-            this.logger.error(`Erro ao executar consulta caixa (${rotulo})`, queryErr);
+            this.logger.error(
+              `Erro ao executar consulta caixa (${rotulo}) após attach=${attachMs}ms sql=${sqlMs}ms`,
+              queryErr,
+            );
             return reject(
               new InternalServerErrorException('Erro ao consultar banco.'),
             );
           }
 
-          const rows = (result ?? []).map((row) =>
+          const inicioMap = Date.now();
+    const rows = (result ?? []).map((row) =>
             mapper(converterObjetoFirebird(row, charset) as Record<string, unknown>),
           );
-          this.logger.log(
-            `Consulta caixa ${rotulo}: ${rows.length} registro(s) em ${Date.now() - inicio}ms`,
-          );
+          const mapMs = Date.now() - inicioMap;
+          const totalMs = Date.now() - inicio;
+          const unit = params[0];
+          const start = params[1];
+          const end = params[2];
+          let extra = '';
+          if (rotulo === 'requisicoes-pagas') {
+            const mapped = rows as CaixaRequisicaoPagaRow[];
+            const comVend = mapped.filter(
+              (r) => r.codigo_vendedor != null && r.codigo_vendedor > 0,
+            ).length;
+            const comCrm = mapped.filter((r) => !!r.crm_medico?.trim()).length;
+            extra = ` vendedor=${comVend} crm=${comCrm}`;
+          }
+          const msg =
+            `Consulta caixa ${rotulo}: ${rows.length} registro(s)${extra} ` +
+            `unit=${String(unit)} ${String(start)}..${String(end)} ` +
+            `attach=${attachMs}ms sql=${sqlMs}ms map=${mapMs}ms total=${totalMs}ms`;
+          if (totalMs >= 15_000) {
+            this.logger.warn(`${msg} [lento]`);
+          } else {
+            this.logger.log(msg);
+          }
           resolve(rows);
         });
       });
@@ -972,6 +1002,20 @@ export class DatabaseService {
     start: string,
     end: string,
   ): { sql: string; params: Array<string | number> } {
+    const candNrrqu = `
+        SELECT r0.nrrqu
+        FROM fc17000 r0
+        WHERE r0.cdfil = ?
+          AND r0.dtefe BETWEEN ? AND ?
+          AND COALESCE(r0.vrliq, 0) <> 0
+        UNION
+        SELECT req0.nrrqu
+        FROM fc31200 req0
+        WHERE req0.cdfil = ?
+          AND req0.dtope BETWEEN ? AND ?
+          AND COALESCE(req0.nrrqu, 0) > 0
+    `;
+
     const sql = `
       SELECT
         r.cdfil AS filial,
@@ -994,10 +1038,7 @@ export class DatabaseService {
         r.vrliq AS valor_pago_requisicao,
         TRIM(r.tprqu) AS tipo_requisicao,
         CAST(
-          (SELECT SUM(f.prcobr)
-           FROM fc12100 f
-           WHERE f.cdfil = r.cdfil
-             AND f.nrrqu = r.nrrqu)
+          fval.soma_prcobr
           * CASE
               WHEN COALESCE(r.vrrqu, 0) = 0 THEN 0
               WHEN r.vrliq > r.vrrqu THEN 1
@@ -1011,12 +1052,62 @@ export class DatabaseService {
          WHERE o.cdfil = form.cdfil
            AND o.nrorc = form.nrorc
            AND COALESCE(form.nrorc, 0) > 0) - r.vrliq AS gap_orcamento_vs_pago,
-        vend.cdfun AS codigo_vendedor,
-        fun.nomefun AS vendedor,
-        CAST(form.nrcrm AS VARCHAR(20)) AS crm_medico,
-        TRIM(form.ufcrm) AS uf_crm_medico,
+        COALESCE(
+          (SELECT FIRST 1 v.cdfun
+           FROM fc17200 v
+           WHERE v.cdfil = r.cdfil
+             AND v.nrrqu = r.nrrqu
+             AND TRIM(v.tptar) = 'R'
+             AND COALESCE(v.cdfun, 0) > 0),
+          CASE WHEN COALESCE(r.cdfun, 0) > 0 THEN r.cdfun END
+        ) AS codigo_vendedor,
+        COALESCE(
+          (SELECT FIRST 1 TRIM(fun.nomefun)
+           FROM fc17200 v
+           JOIN fc08000 fun
+             ON fun.cdfun = v.cdfun
+            AND fun.cdcon = v.cdcon
+           WHERE v.cdfil = r.cdfil
+             AND v.nrrqu = r.nrrqu
+             AND TRIM(v.tptar) = 'R'
+             AND COALESCE(v.cdfun, 0) > 0),
+          (SELECT FIRST 1 TRIM(fun2.nomefun)
+           FROM fc08000 fun2
+           WHERE fun2.cdfun = r.cdfun
+             AND fun2.cdcon = r.cdcon
+             AND COALESCE(r.cdfun, 0) > 0)
+        ) AS vendedor,
+        CAST(
+          COALESCE(
+            form.nrcrm,
+            CASE WHEN COALESCE(r.nrcrm, 0) > 0 THEN r.nrcrm END
+          ) AS VARCHAR(20)
+        ) AS crm_medico,
+        TRIM(COALESCE(form.ufcrm, r.ufcrm)) AS uf_crm_medico,
         TRIM(m.nomemed) AS nome_medico
       FROM fc17000 r
+      INNER JOIN (
+        SELECT r1.cdfil, r1.nrrqu, r1.dtefe, r1.nrcpm
+        FROM fc17000 r1
+        WHERE r1.cdfil = ?
+          AND COALESCE(r1.vrliq, 0) <> 0
+          AND r1.dtefe BETWEEN ? AND ?
+        UNION
+        SELECT r2.cdfil, r2.nrrqu, r2.dtefe, r2.nrcpm
+        FROM fc17000 r2
+        JOIN (
+          SELECT DISTINCT req0.nrrqu
+          FROM fc31200 req0
+          WHERE req0.cdfil = ?
+            AND req0.dtope BETWEEN ? AND ?
+            AND COALESCE(req0.nrrqu, 0) > 0
+        ) cup
+          ON cup.nrrqu = r2.nrrqu
+        WHERE r2.cdfil = ?
+          AND COALESCE(r2.vrliq, 0) <> 0
+      ) uni
+        ON uni.cdfil = r.cdfil
+       AND uni.nrrqu = r.nrrqu
       LEFT JOIN (
         SELECT
           direct.cdfil,
@@ -1043,62 +1134,60 @@ export class DatabaseService {
             MIN(CASE WHEN COALESCE(fonte.nrcrm, 0) > 0 THEN fonte.nrcrm END)
           ) AS nrcrm
         FROM fc12100 direct
+        JOIN (${candNrrqu}) cand
+          ON cand.nrrqu = direct.nrrqu
         LEFT JOIN fc12100 fonte
           ON fonte.cdfil = direct.cdfil
          AND fonte.nrrqu = direct.nrrqufon
          AND fonte.serier = direct.serierfon
          AND COALESCE(direct.nrrqufon, 0) > 0
         WHERE direct.cdfil = ?
-          AND (
-            EXISTS (
-              SELECT 1
-              FROM fc17000 r0
-              WHERE r0.cdfil = direct.cdfil
-                AND r0.nrrqu = direct.nrrqu
-                AND r0.dtefe BETWEEN ? AND ?
-                AND COALESCE(r0.vrliq, 0) <> 0
-            )
-            OR EXISTS (
-              SELECT 1
-              FROM fc31200 req0
-              WHERE req0.cdfil = direct.cdfil
-                AND req0.nrrqu = direct.nrrqu
-                AND req0.dtope BETWEEN ? AND ?
-            )
-          )
         GROUP BY direct.cdfil, direct.nrrqu
       ) form
         ON form.cdfil = r.cdfil
        AND form.nrrqu = r.nrrqu
+      LEFT JOIN (
+        SELECT f.cdfil, f.nrrqu, SUM(f.prcobr) AS soma_prcobr
+        FROM fc12100 f
+        JOIN (${candNrrqu}) cand
+          ON cand.nrrqu = f.nrrqu
+        WHERE f.cdfil = ?
+        GROUP BY f.cdfil, f.nrrqu
+      ) fval
+        ON fval.cdfil = r.cdfil
+       AND fval.nrrqu = r.nrrqu
       LEFT JOIN fc04000 m
-        ON m.pfcrm = form.pfcrm
-       AND m.ufcrm = form.ufcrm
-       AND m.nrcrm = form.nrcrm
-      LEFT JOIN fc17200 vend
-        ON vend.cdfil = r.cdfil
-       AND vend.nrrqu = r.nrrqu
-       AND vend.tptar = 'R'
-      LEFT JOIN fc08000 fun
-        ON fun.cdfun = vend.cdfun
-       AND fun.cdcon = vend.cdcon
-      WHERE r.cdfil = ?
-        AND COALESCE(r.vrliq, 0) <> 0
-        AND (
-          r.dtefe BETWEEN ? AND ?
-          OR EXISTS (
-            SELECT 1
-            FROM fc31200 req
-            WHERE req.cdfil = r.cdfil
-              AND req.nrrqu = r.nrrqu
-              AND req.dtope BETWEEN ? AND ?
-          )
-        )
+        ON m.pfcrm = COALESCE(form.pfcrm, r.pfcrm)
+       AND TRIM(m.ufcrm) = TRIM(COALESCE(form.ufcrm, r.ufcrm))
+       AND m.nrcrm = COALESCE(form.nrcrm, r.nrcrm)
       ORDER BY r.dtefe, r.nrcpm, r.nrrqu
     `;
 
     return {
       sql,
-      params: [unit, start, end, start, end, unit, start, end, start, end],
+      params: [
+        unit,
+        start,
+        end,
+        unit,
+        start,
+        end,
+        unit,
+        unit,
+        start,
+        end,
+        unit,
+        start,
+        end,
+        unit,
+        unit,
+        start,
+        end,
+        unit,
+        start,
+        end,
+        unit,
+      ],
     };
   }
 
@@ -1263,8 +1352,7 @@ export class DatabaseService {
         nrOrcamento != null && get('gap_orcamento_vs_pago') != null
           ? Number(get('gap_orcamento_vs_pago'))
           : null,
-      codigo_vendedor:
-        get('codigo_vendedor') != null ? Number(get('codigo_vendedor')) : null,
+      codigo_vendedor: this.parseCodigoPositivo(get('codigo_vendedor')),
       vendedor: get('vendedor') ? String(get('vendedor')).trim() : null,
       crm_medico:
         get('crm_medico') != null && String(get('crm_medico')).trim()
@@ -1287,6 +1375,10 @@ export class DatabaseService {
     }
     const numero = Number(value);
     return Number.isFinite(numero) && numero > 0 ? numero : null;
+  }
+
+  private parseCodigoPositivo(value: unknown): number | null {
+    return this.parseNrOrcamentoPositivo(value);
   }
 
   private mapCaixaFechamentoDiaRow(

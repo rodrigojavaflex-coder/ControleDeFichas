@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { Funcionario } from '../folha/entities/funcionario.entity';
@@ -25,10 +25,12 @@ import {
   ymdHojeSp,
 } from '../visitacao-acompanhamento/utils/visitacao-dias-uteis.util';
 import {
+  ComercialAcompanhamentoDetalheDto,
   ComercialAcompanhamentoItemDto,
   ComercialAcompanhamentoListResponseDto,
   ComercialAcompanhamentoTotaisDto,
   ComercialAcompanhamentoVendedorOpcaoDto,
+  FindComercialAcompanhamentoDetalheDto,
   FindComercialAcompanhamentoDto,
 } from './dto/comercial-acompanhamento.dto';
 
@@ -99,7 +101,16 @@ export class ComercialAcompanhamentoService {
       Permission.COMERCIAL_ACOMPANHAMENTO_COMISSAO,
     );
 
-    const [reqMap, mpMap, rejMap, vinculados] = await Promise.all([
+    const ultimaConfirmada = await this.buscarUltimaDataCaixaConfirmada(
+      dto.unidade,
+    );
+    const tetoLoja = this.dataTetoCaixaConfirmado(
+      periodo.dataInicial,
+      periodo.dataFinal,
+      ultimaConfirmada,
+    );
+
+    const [reqMap, mpMap, rejMap, vinculados, volumeLoja] = await Promise.all([
       this.buscarRecebidoRequisicao(dto.unidade, periodo.dataInicial, periodo.dataFinal),
       this.buscarRecebidoMarcaPropria(dto.unidade, periodo.dataInicial, periodo.dataFinal),
       this.buscarRejeitado(dto.unidade, periodo.dataInicial, periodo.dataFinal),
@@ -110,6 +121,12 @@ export class ComercialAcompanhamentoService {
         .andWhere('f.codigoVendedorErp > 0')
         .orderBy('f.nome', 'ASC')
         .getMany(),
+      tetoLoja
+        ? this.buscarVolumeLoja(dto.unidade, periodo.dataInicial, tetoLoja)
+        : Promise.resolve({
+            requisicao: { valor: 0, qtd: 0 },
+            marcaPropria: { valor: 0, qtd: 0 },
+          }),
     ]);
 
     let itens: ComercialAcompanhamentoItemDto[] = [];
@@ -130,8 +147,8 @@ export class ComercialAcompanhamentoService {
     );
 
     const totais = this.somarTotais(itens);
-    const lojaRecebidoReq = this.somarMapa(reqMap);
-    const lojaRecebidoMp = this.somarMapa(mpMap);
+    const lojaRecebidoReq = volumeLoja.requisicao;
+    const lojaRecebidoMp = volumeLoja.marcaPropria;
     const lojaRejeitado = this.somarMapa(rejMap);
     if (!dto.funcionarioId) {
       totais.valorRecebidoRequisicao = lojaRecebidoReq.valor;
@@ -149,6 +166,7 @@ export class ComercialAcompanhamentoService {
       exporComissao,
       lojaRecebidoReq.valor,
       lojaRecebidoMp.valor,
+      ultimaConfirmada,
     );
 
     return {
@@ -157,6 +175,149 @@ export class ComercialAcompanhamentoService {
       anoMes: periodo.anoMes,
       dataInicial: periodo.dataInicial,
       dataFinal: periodo.dataFinal,
+    };
+  }
+
+  async detalhe(
+    usuario: Usuario,
+    dto: FindComercialAcompanhamentoDetalheDto,
+  ): Promise<ComercialAcompanhamentoDetalheDto> {
+    assertUnidadeFolha(usuario, dto.unidade);
+    const funcionario = await this.funcionarioRepo.findOne({
+      where: { id: dto.funcionarioId, unidade: dto.unidade },
+    });
+    if (
+      !funcionario ||
+      funcionario.codigoVendedorErp == null ||
+      funcionario.codigoVendedorErp <= 0
+    ) {
+      throw new NotFoundException('Vendedor não encontrado na unidade.');
+    }
+
+    const periodo = periodoCompetencia(dto.ano, dto.mes);
+    const codigo = funcionario.codigoVendedorErp;
+    const params = [
+      dto.unidade,
+      periodo.dataInicial,
+      periodo.dataFinal,
+      codigo,
+    ];
+
+    const [reqRows, mpRows, rejRows] = await Promise.all([
+      this.dataSource.query(
+        `
+          SELECT
+            t.data,
+            t.numero_cupom,
+            t.numero_requisicao,
+            t.valor
+          FROM (
+            SELECT DISTINCT ON (i.unidade, i.numero_cupom, COALESCE(i.numero_requisicao, 0))
+              COALESCE(c.data_pagamento, i.data_operacao) AS data,
+              i.numero_cupom,
+              i.numero_requisicao,
+              ${this.sqlValorRecebidoPrescritor()} AS valor
+            FROM caixa_itens_erp i
+            ${this.sqlJoinCaixaPago()}
+            WHERE i.tipo_item = 'REQUISICAO'
+              AND i.unidade = $1
+              AND i.numero_requisicao IS NOT NULL
+              ${this.sqlFiltroPeriodoRecebido('$2', '$3')}
+              ${this.sqlFiltroRecebidoVisitacao()}
+              AND c.codigo_vendedor = $4
+            ORDER BY i.unidade, i.numero_cupom, COALESCE(i.numero_requisicao, 0)
+          ) t
+          ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
+        `,
+        params,
+      ) as Promise<
+        Array<{
+          data: string | Date;
+          numero_cupom: string | number;
+          numero_requisicao: string | number;
+          valor: string | number;
+        }>
+      >,
+      this.dataSource.query(
+        `
+          SELECT
+            i.data_operacao AS data,
+            i.numero_cupom,
+            i.descricao_item,
+            i.quantidade,
+            i.valor_liquido_item AS valor
+          FROM caixa_itens_erp i
+          INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+          WHERE i.tipo_item = 'PRODUTO'
+            AND i.unidade = $1
+            AND i.data_operacao >= $2
+            AND i.data_operacao <= $3
+            AND p.codigo_operador_caixa = $4
+          ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
+        `,
+        params,
+      ) as Promise<
+        Array<{
+          data: string | Date;
+          numero_cupom: string | number;
+          descricao_item: string | null;
+          quantidade: string | number;
+          valor: string | number;
+        }>
+      >,
+      this.dataSource.query(
+        `
+          SELECT
+            o."dataOrcamento" AS data_orcamento,
+            o."nrOrcamento" AS nr_orcamento,
+            o."nomeCliente" AS nome_cliente,
+            o."precoVenda" AS preco_venda,
+            m.descricao AS motivo_rejeicao
+          FROM orcamentos o
+          LEFT JOIN orcamento_motivo_rejeicao m ON m.id = o."motivoRejeicaoId"
+          WHERE o.unidade = $1
+            AND o.status = 'REJEITADO'
+            AND o."dataOrcamento" >= $2
+            AND o."dataOrcamento" <= $3
+            AND o."codigoVendedor" = $4
+          ORDER BY o."dataOrcamento" ASC, o."nrOrcamento" ASC
+        `,
+        params,
+      ) as Promise<
+        Array<{
+          data_orcamento: string | Date;
+          nr_orcamento: string;
+          nome_cliente: string | null;
+          preco_venda: string | number;
+          motivo_rejeicao: string | null;
+        }>
+      >,
+    ]);
+
+    return {
+      funcionarioId: funcionario.id,
+      nomeVendedor: funcionario.nome,
+      codigoVendedorErp: codigo,
+      manipulados: reqRows.map((row) => ({
+        data: this.toYmd(row.data),
+        numeroCupom: this.toInt(row.numero_cupom),
+        numeroRequisicao: this.toInt(row.numero_requisicao),
+        valor: this.round2(this.toNumber(row.valor)),
+      })),
+      marcaPropria: mpRows.map((row) => ({
+        data: this.toYmd(row.data),
+        numeroCupom: this.toInt(row.numero_cupom),
+        descricaoItem: row.descricao_item,
+        quantidade: this.toNumber(row.quantidade),
+        valor: this.round2(this.toNumber(row.valor)),
+      })),
+      rejeitados: rejRows.map((row) => ({
+        dataOrcamento: this.toYmd(row.data_orcamento),
+        nrOrcamento: row.nr_orcamento || '—',
+        nomeCliente: row.nome_cliente,
+        precoVenda: this.round2(this.toNumber(row.preco_venda)),
+        motivoRejeicao: row.motivo_rejeicao,
+      })),
     };
   }
 
@@ -228,6 +389,7 @@ export class ComercialAcompanhamentoService {
         ${this.sqlJoinCaixaPago()}
         WHERE i.tipo_item = 'REQUISICAO'
           AND i.unidade = $1
+          AND i.numero_requisicao IS NOT NULL
           ${this.sqlFiltroPeriodoRecebido('$2', '$3')}
           ${this.sqlFiltroRecebidoVisitacao()}
       )
@@ -246,6 +408,104 @@ export class ComercialAcompanhamentoService {
     return this.mapMovimentoRows(rows);
   }
 
+  /**
+   * Volume da loja (card Total / meta da loja): pagamentos líquidos do caixa
+   * até o último dia CONFIRMADO, eixo data_operacao (RN-COM-003 / RN-CXA-009).
+   * Manipulados = pagamentos − marca própria (itens PRODUTO nos mesmos dias).
+   */
+  private async buscarVolumeLoja(
+    unidade: Unidade,
+    dataInicial: string,
+    dataTeto: string,
+  ): Promise<{
+    requisicao: { valor: number; qtd: number };
+    marcaPropria: { valor: number; qtd: number };
+  }> {
+    const params = [unidade, dataInicial, dataTeto];
+    const [pagRows, reqRows, mpRows] = await Promise.all([
+      this.dataSource.query(
+        `
+          SELECT COALESCE(SUM(p.valor_liquido), 0) AS valor
+          FROM caixa_pagamentos_erp p
+          WHERE p.unidade = $1
+            AND p.data_operacao >= $2
+            AND p.data_operacao <= $3
+        `,
+        params,
+      ) as Promise<Array<{ valor: string | number | null }>>,
+      this.dataSource.query(
+        `
+          SELECT COUNT(*)::int AS qtd
+          FROM (
+            SELECT DISTINCT i.numero_cupom, i.numero_requisicao
+            FROM caixa_itens_erp i
+            WHERE i.tipo_item = 'REQUISICAO'
+              AND i.unidade = $1
+              AND i.numero_requisicao IS NOT NULL
+              AND i.data_operacao >= $2
+              AND i.data_operacao <= $3
+          ) t
+        `,
+        params,
+      ) as Promise<Array<{ qtd: string | number | null }>>,
+      this.dataSource.query(
+        `
+          SELECT
+            COALESCE(SUM(i.valor_liquido_item), 0) AS valor,
+            COUNT(*)::int AS qtd
+          FROM caixa_itens_erp i
+          WHERE i.tipo_item = 'PRODUTO'
+            AND i.unidade = $1
+            AND i.data_operacao >= $2
+            AND i.data_operacao <= $3
+        `,
+        params,
+      ) as Promise<
+        Array<{ valor: string | number | null; qtd: string | number | null }>
+      >,
+    ]);
+
+    const pagamentos = this.round2(this.toNumber(pagRows[0]?.valor));
+    const marcaPropria = {
+      valor: this.round2(this.toNumber(mpRows[0]?.valor)),
+      qtd: this.toInt(mpRows[0]?.qtd),
+    };
+    const manipulados = this.round2(pagamentos - marcaPropria.valor);
+    return {
+      requisicao: {
+        valor: manipulados < 0 ? 0 : manipulados,
+        qtd: this.toInt(reqRows[0]?.qtd),
+      },
+      marcaPropria,
+    };
+  }
+
+  private async buscarUltimaDataCaixaConfirmada(
+    unidade: Unidade,
+  ): Promise<string | null> {
+    const row = await this.caixaFechamentoRepo
+      .createQueryBuilder('c')
+      .select("MAX(TO_CHAR(c.dataOperacao, 'YYYY-MM-DD'))", 'ultima')
+      .where('c.status = :status', {
+        status: CaixaFechamentoStatus.CONFIRMADO,
+      })
+      .andWhere('c.unidade = :unidade', { unidade })
+      .getRawOne<{ ultima: string | null }>();
+    return row?.ultima ?? null;
+  }
+
+  /** Competência até o último caixa CONFIRMADO; sem confirmação no período, null. */
+  private dataTetoCaixaConfirmado(
+    dataInicial: string,
+    dataFinal: string,
+    ultimaConfirmada: string | null,
+  ): string | null {
+    if (!ultimaConfirmada || ultimaConfirmada < dataInicial) {
+      return null;
+    }
+    return ultimaConfirmada < dataFinal ? ultimaConfirmada : dataFinal;
+  }
+
   private async buscarRecebidoMarcaPropria(
     unidade: Unidade,
     dataInicial: string,
@@ -262,7 +522,6 @@ export class ComercialAcompanhamentoService {
         AND i.unidade = $1
         AND i.data_operacao >= $2
         AND i.data_operacao <= $3
-        AND p.codigo_operador_caixa IS NOT NULL
       GROUP BY p.codigo_operador_caixa
     `;
     const rows = (await this.dataSource.query(sql, [
@@ -331,6 +590,7 @@ export class ComercialAcompanhamentoService {
     exporComissao: boolean,
     lojaRecebidoReq: number,
     lojaRecebidoMp: number,
+    ultimaConfirmada: string | null,
   ): Promise<void> {
     const ids = [
       ...new Set(
@@ -346,7 +606,7 @@ export class ComercialAcompanhamentoService {
       periodo.dataFinal,
     );
 
-    const [metas, metasUnidade, faixas, politicas, calendario, feriados, caixaFechado] =
+    const [metas, metasUnidade, faixas, politicas, calendario, feriados] =
       await Promise.all([
         ids.length
           ? this.metaRepo.find({
@@ -381,14 +641,6 @@ export class ComercialAcompanhamentoService {
             fim: periodo.dataFinal,
           })
           .getMany(),
-        this.caixaFechamentoRepo
-          .createQueryBuilder('c')
-          .select("MAX(TO_CHAR(c.dataOperacao, 'YYYY-MM-DD'))", 'ultima')
-          .where('c.status = :status', {
-            status: CaixaFechamentoStatus.CONFIRMADO,
-          })
-          .andWhere('c.unidade = :unidade', { unidade })
-          .getRawOne<{ ultima: string | null }>(),
       ]);
 
     const metaReq = new Map<string, number>();
@@ -422,7 +674,6 @@ export class ComercialAcompanhamentoService {
 
     const sabado = calendario?.sabadoDiaUtil ?? false;
     const feriadosSet = new Set(feriados.map((f) => f.data));
-    const ultimaConfirmada = caixaFechado?.ultima ?? null;
     const duMes = somarDiasUteisVisitacao(
       periodo.dataInicial,
       periodo.dataFinal,
@@ -768,6 +1019,15 @@ export class ComercialAcompanhamentoService {
               COALESCE(c.tipo_requisicao, '') = 'N'
               AND COALESCE(c.valor_formulas, 0) = 0
             )`;
+  }
+
+  private toYmd(value: string | Date | null | undefined): string {
+    if (value == null || value === '') return '';
+    if (value instanceof Date) {
+      return value.toISOString().slice(0, 10);
+    }
+    const s = String(value);
+    return s.includes('T') ? s.split('T')[0] : s.slice(0, 10);
   }
 
   private toNumber(value: string | number | null | undefined): number {

@@ -203,6 +203,26 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-medicos stro
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.visitacao-acompanhamento-page .visitacao-acomp-total-blocos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-total-bloco h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-total-bloco + .visitacao-acomp-total-bloco {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+}
+
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metric {
   display: flex;
   flex-direction: column;
@@ -464,6 +484,16 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-card {
 
 body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-card-head h3 {
   color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-total-bloco h4,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-total-bloco h4 {
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-total-bloco + .visitacao-acomp-total-bloco,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-total-bloco + .visitacao-acomp-total-bloco {
+  border-top-color: var(--cor-borda, #334155);
 }
 
 

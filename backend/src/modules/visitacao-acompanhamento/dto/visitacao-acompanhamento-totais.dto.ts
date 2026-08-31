@@ -28,6 +28,37 @@ export class VisitacaoAcompanhamentoTotaisDto {
   quantidadeRecebidoCaixa?: number;
 
   @ApiPropertyOptional({
+    description:
+      'Recebido em outras filiais (indicação da carteira), RN-VIS-008 / RN-VIS-010.',
+  })
+  valorRecebidoOutrasUnidades?: number;
+
+  @ApiPropertyOptional({
+    description: 'Quantidade de requisições em outras filiais (indicação).',
+  })
+  quantidadeRecebidoOutrasUnidades?: number;
+
+  @ApiPropertyOptional({
+    description: 'Rejeitado da unidade do filtro (loja), sem indicação.',
+  })
+  valorRejeitadoLoja?: number;
+
+  @ApiPropertyOptional({
+    description: 'Quantidade de orçamentos rejeitados da loja.',
+  })
+  quantidadeRejeitadoLoja?: number;
+
+  @ApiPropertyOptional({
+    description: 'Rejeitado em outras filiais (indicação da carteira).',
+  })
+  valorRejeitadoOutrasUnidades?: number;
+
+  @ApiPropertyOptional({
+    description: 'Quantidade de orçamentos rejeitados em outras filiais.',
+  })
+  quantidadeRejeitadoOutrasUnidades?: number;
+
+  @ApiPropertyOptional({
     description: 'Médicos ativos no painel (carteira) do representante ou da unidade.',
   })
   quantidadeMedicosPainel?: number;

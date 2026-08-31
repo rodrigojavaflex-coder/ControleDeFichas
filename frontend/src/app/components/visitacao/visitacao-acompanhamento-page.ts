@@ -48,6 +48,12 @@ const TOTAIS_VAZIOS: VisitacaoAcompanhamentoTotais = {
   quantidadeMedicos: 0,
   valorRecebidoCaixa: 0,
   quantidadeRecebidoCaixa: 0,
+  valorRecebidoOutrasUnidades: 0,
+  quantidadeRecebidoOutrasUnidades: 0,
+  valorRejeitadoLoja: 0,
+  quantidadeRejeitadoLoja: 0,
+  valorRejeitadoOutrasUnidades: 0,
+  quantidadeRejeitadoOutrasUnidades: 0,
   quantidadeMedicosPainel: 0,
   quantidadeMedicosForaAtendimento: 0,
   percentualComissaoFaixa: null,
@@ -174,6 +180,9 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     const temTotal =
       this.totais.quantidadeMedicos > 0 ||
       (this.totais.valorRecebidoCaixa ?? 0) > 0 ||
+      (this.totais.valorRecebidoOutrasUnidades ?? 0) > 0 ||
+      (this.totais.valorRejeitadoLoja ?? 0) > 0 ||
+      (this.totais.valorRejeitadoOutrasUnidades ?? 0) > 0 ||
       this.totais.valorRecebido > 0 ||
       this.totais.valorRejeitado > 0;
     if (!temTotal && !reps.length) {
@@ -181,15 +190,22 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     }
     return [
       {
-        nomeRepresentante: 'Total',
+        nomeRepresentante: this.rotuloCardTotal(),
         ...this.totais,
       },
       ...reps,
     ];
   }
 
+  rotuloCardTotal(): string {
+    return this.unidadeFilter ? `TOTAL ${this.unidadeFilter}` : 'TOTAL';
+  }
+
   isCardTotal(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {
-    return card.nomeRepresentante === 'Total';
+    return (
+      card.nomeRepresentante === this.rotuloCardTotal() ||
+      card.nomeRepresentante === 'Total'
+    );
   }
 
   isSemRepresentante(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {
@@ -1165,7 +1181,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
 
   valorRecebidoCard(card: VisitacaoAcompanhamentoTotaisRepresentante): number {
     if (this.isCardTotal(card)) {
-      return Number(card.valorRecebidoCaixa ?? card.valorRecebido) || 0;
+      return this.valorRecebidoLoja(card);
     }
     return Number(card.valorRecebido) || 0;
   }
@@ -1174,9 +1190,53 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     card: VisitacaoAcompanhamentoTotaisRepresentante,
   ): number {
     if (this.isCardTotal(card)) {
-      return Number(card.quantidadeRecebidoCaixa ?? card.quantidadeRecebido) || 0;
+      return this.quantidadeRecebidoLoja(card);
     }
     return Number(card.quantidadeRecebido) || 0;
+  }
+
+  valorRecebidoLoja(card: VisitacaoAcompanhamentoTotaisRepresentante): number {
+    return Number(card.valorRecebidoCaixa ?? card.valorRecebido) || 0;
+  }
+
+  quantidadeRecebidoLoja(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return Number(card.quantidadeRecebidoCaixa ?? card.quantidadeRecebido) || 0;
+  }
+
+  valorRejeitadoLoja(card: VisitacaoAcompanhamentoTotaisRepresentante): number {
+    return Number(card.valorRejeitadoLoja ?? card.valorRejeitado) || 0;
+  }
+
+  quantidadeRejeitadoLoja(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return Number(card.quantidadeRejeitadoLoja ?? card.quantidadeRejeitado) || 0;
+  }
+
+  valorRecebidoOutrasUnidades(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return Number(card.valorRecebidoOutrasUnidades) || 0;
+  }
+
+  quantidadeRecebidoOutrasUnidades(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return Number(card.quantidadeRecebidoOutrasUnidades) || 0;
+  }
+
+  valorRejeitadoOutrasUnidades(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return Number(card.valorRejeitadoOutrasUnidades) || 0;
+  }
+
+  quantidadeRejeitadoOutrasUnidades(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return Number(card.quantidadeRejeitadoOutrasUnidades) || 0;
   }
 
   temComissao(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {

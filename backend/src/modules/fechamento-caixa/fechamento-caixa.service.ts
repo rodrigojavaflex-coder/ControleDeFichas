@@ -123,6 +123,8 @@ interface UpsertStats {
 export class FechamentoCaixaService {
   private readonly logger = new Logger(FechamentoCaixaService.name);
   private static readonly CAIXA_AGENTE_TIMEOUT_MS = 300_000;
+  /** A partir deste tempo a etapa de sync de caixa é marcada como lenta no log. */
+  private static readonly CAIXA_SYNC_LENTO_MS = 15_000;
 
   constructor(
     private readonly configService: ConfigService,
@@ -156,6 +158,7 @@ export class FechamentoCaixaService {
       );
     }
 
+    const inicioImportacao = Date.now();
     this.logger.log(
       `Importando caixa ERP: unidade=${dto.unidade}, periodo=${dto.dataInicio}..${dto.dataFim}, cdfil=${agente.unit}`,
     );
@@ -226,6 +229,9 @@ export class FechamentoCaixaService {
       });
     } catch (error: any) {
       const msg = error?.message || 'Erro ao importar caixa ERP';
+      this.logger.error(
+        `Caixa sync ${dto.unidade}: importação falhou após ${Date.now() - inicioImportacao}ms (${dto.dataInicio}..${dto.dataFim})`,
+      );
       this.importacaoProgressService.finalizar('error', msg);
       throw error;
     }
@@ -252,6 +258,13 @@ export class FechamentoCaixaService {
     const totalLiquido = this.somarLiquido(totaisPorForma);
     const totalLiquidoTerceiro = this.somarLiquido(totaisTerceiro);
     const totalConsolidado = this.somarLiquido(totaisConsolidados);
+
+    this.logCaixaTempo(
+      dto.unidade,
+      'importação completa',
+      Date.now() - inicioImportacao,
+      `${dto.dataInicio}..${dto.dataFim} pag=${pagamentosStats.importados + pagamentosStats.atualizados} itens=${itensStats.importados + itensStats.atualizados} req=${requisicoesStats.importados + requisicoesStats.atualizados}`,
+    );
 
     this.importacaoProgressService.finalizar(
       'completed',
@@ -328,7 +341,10 @@ export class FechamentoCaixaService {
       end: dataFim,
     };
 
-    this.logger.log(`Importando segmento caixa ERP: ${dataInicio}..${dataFim}`);
+    this.logger.log(
+      `Caixa sync ${unidade}: início segmento ${dataInicio}..${dataFim} (${segmentoAtual}/${segmentosTotal}) cdfil=${agente.unit}`,
+    );
+    const inicioSegmento = Date.now();
 
     const pctBase = Math.round(((segmentoAtual - 1) / segmentosTotal) * 100);
     const pctSlice = Math.round(100 / segmentosTotal);
@@ -374,6 +390,16 @@ export class FechamentoCaixaService {
     const qtdPagamentos = pagamentosRows.length;
     const qtdItens = itensRows.length;
     const qtdRequisicoes = requisicoesRows.length;
+    const reqComVendedor = requisicoesRows.filter(
+      (r) => r.codigo_vendedor != null && r.codigo_vendedor > 0,
+    ).length;
+    const reqComCrm = requisicoesRows.filter(
+      (r) => !!String(r.crm_medico ?? '').trim(),
+    ).length;
+
+    this.logger.log(
+      `Caixa sync ${unidade}: snapshot agente ${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes} (vendedor=${reqComVendedor} crm=${reqComCrm})`,
+    );
 
     this.importacaoProgressService.atualizar({
       fase: 'gravando_postgres',
@@ -381,13 +407,19 @@ export class FechamentoCaixaService {
       percentual: pctBase + Math.round(pctSlice * 0.4),
     });
 
-    await this.removerCaixaErpAusentesNoAgente(
+    await this.cronometrarCaixa(
       unidade,
-      dataInicio,
-      dataFim,
-      pagamentosRows,
-      itensRows,
-      requisicoesRows,
+      'snapshot (apagar ausentes)',
+      `${dataInicio}..${dataFim}`,
+      () =>
+        this.removerCaixaErpAusentesNoAgente(
+          unidade,
+          dataInicio,
+          dataFim,
+          pagamentosRows,
+          itensRows,
+          requisicoesRows,
+        ),
     );
 
     this.importacaoProgressService.atualizar({
@@ -396,16 +428,22 @@ export class FechamentoCaixaService {
       percentual: pctBase + Math.round(pctSlice * 0.45),
     });
 
-    const pagamentosStats = await this.upsertPagamentos(
-      pagamentosRows,
+    const pagamentosStats = await this.cronometrarCaixa(
       unidade,
-      true,
+      'upsert pagamentos',
+      `${qtdPagamentos} linha(s)`,
+      () => this.upsertPagamentos(pagamentosRows, unidade, true),
     );
 
     const pagamentoChaves = pagamentosRows.map((p) =>
       this.buildChavePagamento(unidade, p),
     );
-    const pagamentoMap = await this.carregarMapaPagamentos(pagamentoChaves);
+    const pagamentoMap = await this.cronometrarCaixa(
+      unidade,
+      'mapa pagamentos',
+      `${pagamentoChaves.length} chave(s)`,
+      () => this.carregarMapaPagamentos(pagamentoChaves),
+    );
 
     this.importacaoProgressService.atualizar({
       fase: 'gravando_postgres',
@@ -413,13 +451,19 @@ export class FechamentoCaixaService {
       percentual: pctBase + Math.round(pctSlice * 0.65),
     });
 
-    const itensStats = await this.upsertItens(
-      itensRows,
+    const itensStats = await this.cronometrarCaixa(
       unidade,
-      dataInicio,
-      dataFim,
-      pagamentoMap,
-      true,
+      'upsert itens',
+      `${qtdItens} linha(s)`,
+      () =>
+        this.upsertItens(
+          itensRows,
+          unidade,
+          dataInicio,
+          dataFim,
+          pagamentoMap,
+          true,
+        ),
     );
 
     this.importacaoProgressService.atualizar({
@@ -428,10 +472,11 @@ export class FechamentoCaixaService {
       percentual: pctBase + Math.round(pctSlice * 0.85),
     });
 
-    const requisicoesStats = await this.upsertRequisicoes(
-      requisicoesRows,
+    const requisicoesStats = await this.cronometrarCaixa(
       unidade,
-      true,
+      'upsert requisições pagas',
+      `${qtdRequisicoes} linha(s)`,
+      () => this.upsertRequisicoes(requisicoesRows, unidade, true),
     );
 
     this.importacaoProgressService.atualizar({
@@ -439,6 +484,13 @@ export class FechamentoCaixaService {
       message: `Segmento ${segmentoAtual}/${segmentosTotal} concluído (${qtdPagamentos} pag., ${qtdItens} itens, ${qtdRequisicoes} req.).`,
       percentual: pctBase + pctSlice,
     });
+
+    this.logCaixaTempo(
+      unidade,
+      'segmento total',
+      Date.now() - inicioSegmento,
+      `${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes}`,
+    );
 
     return { pagamentosStats, itensStats, requisicoesStats };
   }
@@ -511,7 +563,11 @@ export class FechamentoCaixaService {
     unidade?: Unidade,
   ): Promise<T> {
     const timeoutMs = FechamentoCaixaService.CAIXA_AGENTE_TIMEOUT_MS;
+    const periodo = `${String(body.start)}..${String(body.end)}`;
     const inicio = Date.now();
+    this.logger.log(
+      `Caixa sync ${unidade ?? '-'}: agente ${rotulo} início ${path} ${periodo}`,
+    );
 
     try {
       const response = await fetchAgenteComRetry(
@@ -532,12 +588,22 @@ export class FechamentoCaixaService {
         },
       );
 
+      const inicioParse = Date.now();
       const resultado = (await response.json()) as T;
-      this.logger.log(
-        `Agente ${rotulo} respondeu em ${Date.now() - inicio}ms (${path}, ${String(body.start)}..${String(body.end)})`,
+      const parseMs = Date.now() - inicioParse;
+      const fetchMs = Date.now() - inicio;
+      const qtd = this.contarLinhasRespostaAgente(resultado);
+      this.logCaixaTempo(
+        unidade ?? '-',
+        `agente ${rotulo}`,
+        fetchMs,
+        `${path} ${periodo} ${qtd} linha(s) parse=${parseMs}ms`,
       );
       return resultado;
     } catch (error: unknown) {
+      this.logger.error(
+        `Caixa sync ${unidade ?? '-'}: agente ${rotulo} falhou após ${Date.now() - inicio}ms (${path}, ${periodo})`,
+      );
       if (error instanceof ServiceUnavailableException) {
         throw error;
       }
@@ -1514,6 +1580,54 @@ export class FechamentoCaixaService {
 
     const result = await qb.execute();
     return result.affected ?? 0;
+  }
+
+  private contarLinhasRespostaAgente(resultado: unknown): number {
+    if (!resultado || typeof resultado !== 'object') {
+      return 0;
+    }
+    const obj = resultado as Record<string, unknown>;
+    for (const chave of ['pagamentos', 'itens', 'requisicoes'] as const) {
+      const valor = obj[chave];
+      if (Array.isArray(valor)) {
+        return valor.length;
+      }
+    }
+    return 0;
+  }
+
+  private logCaixaTempo(
+    unidade: string,
+    etapa: string,
+    ms: number,
+    extra = '',
+  ): void {
+    const detalhe = extra ? ` ${extra}` : '';
+    const msg = `Caixa sync ${unidade}: ${etapa} ${ms}ms${detalhe}`;
+    if (ms >= FechamentoCaixaService.CAIXA_SYNC_LENTO_MS) {
+      this.logger.warn(`${msg} [lento]`);
+    } else {
+      this.logger.log(msg);
+    }
+  }
+
+  private async cronometrarCaixa<T>(
+    unidade: Unidade,
+    etapa: string,
+    extra: string,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const t0 = Date.now();
+    try {
+      const resultado = await fn();
+      this.logCaixaTempo(unidade, etapa, Date.now() - t0, extra);
+      return resultado;
+    } catch (error) {
+      this.logger.error(
+        `Caixa sync ${unidade}: ${etapa} falhou após ${Date.now() - t0}ms ${extra}`,
+      );
+      throw error;
+    }
   }
 
   private buildChavePagamento(

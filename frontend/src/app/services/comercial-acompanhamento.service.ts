@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Unidade } from '../models/usuario.model';
 import {
+  ComercialAcompanhamentoDetalhe,
   ComercialAcompanhamentoListResponse,
   ComercialAcompanhamentoVendedorOpcao,
   FindComercialAcompanhamentoDto,
@@ -36,5 +37,18 @@ export class ComercialAcompanhamentoService {
       `${base}/vendedores`,
       { params },
     );
+  }
+
+  detalhe(
+    dto: FindComercialAcompanhamentoDto & { funcionarioId: string },
+  ): Observable<ComercialAcompanhamentoDetalhe> {
+    const params = new HttpParams()
+      .set('unidade', dto.unidade)
+      .set('ano', String(dto.ano))
+      .set('mes', String(dto.mes))
+      .set('funcionarioId', dto.funcionarioId);
+    return this.http.get<ComercialAcompanhamentoDetalhe>(`${base}/detalhe`, {
+      params,
+    });
   }
 }

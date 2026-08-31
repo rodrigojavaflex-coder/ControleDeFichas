@@ -62,6 +62,17 @@
             }
           </select>
         </div>
+        <div class="comercial-acomp-toolbar-acoes">
+          <button
+            type="button"
+            class="btn btn-exportar"
+            (click)="exportarExcel()"
+            [disabled]="!unidadeFiltro || carregando || !itens.length"
+            title="Exportar planilha para Excel"
+            aria-label="Exportar planilha para Excel">
+            <i class="fas fa-file-excel"></i>
+          </button>
+        </div>
         @if (rotuloCompetenciaLegenda && rotuloDiasUteis) {
           <aside
             class="comercial-acomp-du-legend"
@@ -86,9 +97,21 @@
               @for (card of cardsResumo; track card.titulo) {
                 <article
                   class="comercial-acomp-card"
-                  [class.is-total]="card.isTotal">
+                  [class.is-total]="card.isTotal"
+                  [class.is-clickable]="!card.isTotal"
+                  [attr.role]="card.isTotal ? null : 'button'"
+                  [attr.tabindex]="card.isTotal ? null : 0"
+                  [attr.aria-label]="card.isTotal ? null : 'Detalhes de ' + card.titulo"
+                  (click)="abrirDetalhe(card)"
+                  (keydown.enter)="abrirDetalhe(card)"
+                  (keydown.space)="abrirDetalhe(card); $event.preventDefault()">
                   <header class="comercial-acomp-card-head">
                     <h3>{{ card.titulo }}</h3>
+                    @if (card.isTotal) {
+                      <span class="comercial-acomp-card-head-valor">
+                        {{ formatarMoeda(valorTotalRecebido(card)) }}
+                      </span>
+                    }
                   </header>
                   <div class="comercial-acomp-card-metrics">
                     <div class="comercial-acomp-metric is-success">
@@ -236,7 +259,15 @@
             </thead>
             <tbody>
               @for (item of itens; track item.funcionarioId ?? item.nomeVendedor) {
-                <tr>
+                <tr
+                  class="comercial-acomp-row"
+                  [class.is-clickable]="!!item.funcionarioId"
+                  [attr.role]="item.funcionarioId ? 'button' : null"
+                  [attr.tabindex]="item.funcionarioId ? 0 : null"
+                  [attr.aria-label]="item.funcionarioId ? 'Detalhes de ' + rotuloVendedor(item) : null"
+                  (click)="abrirDetalheItem(item)"
+                  (keydown.enter)="abrirDetalheItem(item)"
+                  (keydown.space)="abrirDetalheItem(item); $event.preventDefault()">
                   <td>{{ rotuloVendedor(item) }}</td>
                   <td class="col-num is-recebido">{{ formatarMoeda(item.valorRecebidoRequisicao) }}</td>
                   <td class="col-num is-primary">{{ formatarMoeda(item.valorRecebidoMarcaPropria) }}</td>
@@ -266,3 +297,219 @@
     </div>
   }
 </div>
+
+@if (detalheAberto) {
+  <div class="modal-overlay" (click)="fecharDetalhe()">
+    <div
+      class="modal-conteudo comercial-acomp-modal-detalhe"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="'ca-detalhe-titulo'">
+      <div class="modal-cabecalho">
+        <div>
+          <h3 class="modal-titulo" id="ca-detalhe-titulo">
+            {{ itemDetalhe ? rotuloVendedor(itemDetalhe) : 'Detalhe do vendedor' }}
+          </h3>
+          @if (itemDetalhe) {
+            <p class="comercial-acomp-detalhe-sub">
+              {{ unidadeFiltro }} · {{ rotuloCompetenciaLegenda }}
+            </p>
+          }
+        </div>
+        <div class="comercial-acomp-detalhe-header-actions">
+          <button
+            type="button"
+            class="btn btn-imprimir"
+            (click)="imprimirDetalhe()"
+            [disabled]="carregandoDetalhe || !detalhe || !itemDetalhe"
+            title="Imprimir detalhe do vendedor">
+            <i class="fas fa-print"></i>
+            Imprimir
+          </button>
+          <button
+            type="button"
+            class="btn btn-exportar"
+            (click)="exportarExcelDetalhe()"
+            [disabled]="carregandoDetalhe || !detalhe || !itemDetalhe"
+            title="Exportar detalhe para Excel">
+            <i class="fas fa-file-excel"></i>
+            Excel
+          </button>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharDetalhe()"
+            aria-label="Fechar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="modal-corpo">
+        @if (itemDetalhe) {
+          <div class="comercial-acomp-detalhe-resumo">
+            <div class="comercial-acomp-metric is-success">
+              <span class="label">Manipulados</span>
+              <span class="value">{{ formatarMoeda(itemDetalhe.valorRecebidoRequisicao) }}</span>
+              <span class="sub">{{ itemDetalhe.quantidadeRecebidoRequisicao }} requisição(ões)</span>
+            </div>
+            <div class="comercial-acomp-metric is-primary">
+              <span class="label">Marca própria</span>
+              <span class="value">{{ formatarMoeda(itemDetalhe.valorRecebidoMarcaPropria) }}</span>
+              <span class="sub">{{ itemDetalhe.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+            </div>
+            <div class="comercial-acomp-metric is-rejeitado">
+              <span class="label">Rejeitado</span>
+              <span class="value">{{ formatarMoeda(itemDetalhe.valorRejeitado) }}</span>
+              <span class="sub">{{ itemDetalhe.quantidadeRejeitado }} orçamento(s)</span>
+            </div>
+            <div class="comercial-acomp-metric">
+              <span class="label">% Meta manip.</span>
+              <span class="value">
+                {{ temMetaCadastrada(itemDetalhe.valorMetaRequisicao)
+                  ? formatarPercentualMeta(itemDetalhe.percentualMetaRequisicao)
+                  : 'Sem meta' }}
+              </span>
+            </div>
+            <div class="comercial-acomp-metric">
+              <span class="label">% Meta marca</span>
+              <span class="value">
+                {{ temMetaCadastrada(itemDetalhe.valorMetaMarcaPropria)
+                  ? formatarPercentualMeta(itemDetalhe.percentualMetaMarcaPropria)
+                  : 'Sem meta' }}
+              </span>
+            </div>
+            @if (podeVerComissao()) {
+              <div class="comercial-acomp-metric">
+                <span class="label">Comissão + bônus</span>
+                <span class="value">{{ formatarMoeda(totalComissaoItem(itemDetalhe)) }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        @if (carregandoDetalhe) {
+          <div class="loading-message">Carregando movimentos…</div>
+        } @else if (detalhe) {
+          <h4 class="comercial-acomp-section-title">Manipulados</h4>
+          <div class="table-wrapper comercial-acomp-detalhe-table">
+            <table class="vendas-table comercial-acomp-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Cupom</th>
+                  <th>Requisição</th>
+                  <th class="col-num">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (rec of detalhe.manipulados; track rec.numeroCupom + '-' + rec.numeroRequisicao) {
+                  <tr>
+                    <td>{{ formatarData(rec.data) }}</td>
+                    <td>{{ rec.numeroCupom }}</td>
+                    <td>{{ rec.numeroRequisicao }}</td>
+                    <td class="col-num is-recebido">{{ formatarMoeda(rec.valor) }}</td>
+                  </tr>
+                } @empty {
+                  <tr class="no-data">
+                    <td colspan="4">Nenhuma requisição no período</td>
+                  </tr>
+                }
+              </tbody>
+              @if (detalhe.manipulados.length) {
+                <tfoot>
+                  <tr>
+                    <td colspan="3"><strong>Total manipulados</strong></td>
+                    <td class="col-num is-recebido">
+                      <strong>{{ formatarMoeda(totalDetalheManipulados) }}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+
+          <h4 class="comercial-acomp-section-title">Marca própria</h4>
+          <div class="table-wrapper comercial-acomp-detalhe-table">
+            <table class="vendas-table comercial-acomp-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Cupom</th>
+                  <th>Item</th>
+                  <th class="col-num">Qtd</th>
+                  <th class="col-num">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (prod of detalhe.marcaPropria; track $index) {
+                  <tr>
+                    <td>{{ formatarData(prod.data) }}</td>
+                    <td>{{ prod.numeroCupom }}</td>
+                    <td>{{ prod.descricaoItem || '—' }}</td>
+                    <td class="col-num">{{ prod.quantidade }}</td>
+                    <td class="col-num is-primary">{{ formatarMoeda(prod.valor) }}</td>
+                  </tr>
+                } @empty {
+                  <tr class="no-data">
+                    <td colspan="5">Nenhum produto no período</td>
+                  </tr>
+                }
+              </tbody>
+              @if (detalhe.marcaPropria.length) {
+                <tfoot>
+                  <tr>
+                    <td colspan="4"><strong>Total marca própria</strong></td>
+                    <td class="col-num is-primary">
+                      <strong>{{ formatarMoeda(totalDetalheMarcaPropria) }}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+
+          <h4 class="comercial-acomp-section-title">Orçamentos rejeitados</h4>
+          <div class="table-wrapper comercial-acomp-detalhe-table">
+            <table class="vendas-table comercial-acomp-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Orçamento</th>
+                  <th>Cliente</th>
+                  <th>Motivo</th>
+                  <th class="col-num">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (rej of detalhe.rejeitados; track rej.nrOrcamento) {
+                  <tr>
+                    <td>{{ formatarData(rej.dataOrcamento) }}</td>
+                    <td>{{ rej.nrOrcamento }}</td>
+                    <td>{{ rej.nomeCliente || '—' }}</td>
+                    <td>{{ rej.motivoRejeicao || 'Sem motivo' }}</td>
+                    <td class="col-num is-rejeitado">{{ formatarMoeda(rej.precoVenda) }}</td>
+                  </tr>
+                } @empty {
+                  <tr class="no-data">
+                    <td colspan="5">Nenhum orçamento rejeitado no período</td>
+                  </tr>
+                }
+              </tbody>
+              @if (detalhe.rejeitados.length) {
+                <tfoot>
+                  <tr>
+                    <td colspan="4"><strong>Total rejeitado</strong></td>
+                    <td class="col-num is-rejeitado">
+                      <strong>{{ formatarMoeda(totalDetalheRejeitado) }}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

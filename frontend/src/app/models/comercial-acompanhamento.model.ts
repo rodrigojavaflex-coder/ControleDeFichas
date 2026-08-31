@@ -74,3 +74,35 @@ export interface ComercialAcompanhamentoVendedorOpcao {
   nome: string;
   codigoVendedorErp: number;
 }
+
+export interface ComercialAcompanhamentoMovimentoRequisicao {
+  data: string;
+  numeroCupom: number;
+  numeroRequisicao: number;
+  valor: number;
+}
+
+export interface ComercialAcompanhamentoMovimentoProduto {
+  data: string;
+  numeroCupom: number;
+  descricaoItem?: string | null;
+  quantidade: number;
+  valor: number;
+}
+
+export interface ComercialAcompanhamentoMovimentoRejeitado {
+  dataOrcamento: string;
+  nrOrcamento: string;
+  nomeCliente?: string | null;
+  precoVenda: number;
+  motivoRejeicao?: string | null;
+}
+
+export interface ComercialAcompanhamentoDetalhe {
+  funcionarioId: string;
+  nomeVendedor: string;
+  codigoVendedorErp: number;
+  manipulados: ComercialAcompanhamentoMovimentoRequisicao[];
+  marcaPropria: ComercialAcompanhamentoMovimentoProduto[];
+  rejeitados: ComercialAcompanhamentoMovimentoRejeitado[];
+}

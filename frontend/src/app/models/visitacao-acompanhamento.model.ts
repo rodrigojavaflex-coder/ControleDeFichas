@@ -36,6 +36,12 @@ export interface VisitacaoAcompanhamentoTotais {
   quantidadeMedicos: number;
   valorRecebidoCaixa?: number;
   quantidadeRecebidoCaixa?: number;
+  valorRecebidoOutrasUnidades?: number;
+  quantidadeRecebidoOutrasUnidades?: number;
+  valorRejeitadoLoja?: number;
+  quantidadeRejeitadoLoja?: number;
+  valorRejeitadoOutrasUnidades?: number;
+  quantidadeRejeitadoOutrasUnidades?: number;
   quantidadeMedicosPainel?: number;
   quantidadeMedicosForaAtendimento?: number;
   percentualComissaoFaixa?: number | null;

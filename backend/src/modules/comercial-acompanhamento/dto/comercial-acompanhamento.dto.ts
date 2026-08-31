@@ -227,3 +227,95 @@ export class ComercialAcompanhamentoVendedorOpcaoDto {
   @ApiProperty()
   codigoVendedorErp: number;
 }
+
+export class FindComercialAcompanhamentoDetalheDto {
+  @ApiProperty({ enum: Unidade })
+  @IsEnum(Unidade)
+  unidade: Unidade;
+
+  @ApiProperty({ example: 2026 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2026)
+  @Max(2033)
+  ano: number;
+
+  @ApiProperty({ example: 8 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  mes: number;
+
+  @ApiProperty()
+  @IsUUID()
+  funcionarioId: string;
+}
+
+export class ComercialAcompanhamentoMovimentoRequisicaoDto {
+  @ApiProperty()
+  data: string;
+
+  @ApiProperty()
+  numeroCupom: number;
+
+  @ApiProperty()
+  numeroRequisicao: number;
+
+  @ApiProperty()
+  valor: number;
+}
+
+export class ComercialAcompanhamentoMovimentoProdutoDto {
+  @ApiProperty()
+  data: string;
+
+  @ApiProperty()
+  numeroCupom: number;
+
+  @ApiPropertyOptional({ nullable: true })
+  descricaoItem?: string | null;
+
+  @ApiProperty()
+  quantidade: number;
+
+  @ApiProperty()
+  valor: number;
+}
+
+export class ComercialAcompanhamentoMovimentoRejeitadoDto {
+  @ApiProperty()
+  dataOrcamento: string;
+
+  @ApiProperty()
+  nrOrcamento: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  nomeCliente?: string | null;
+
+  @ApiProperty()
+  precoVenda: number;
+
+  @ApiPropertyOptional({ nullable: true })
+  motivoRejeicao?: string | null;
+}
+
+export class ComercialAcompanhamentoDetalheDto {
+  @ApiProperty()
+  funcionarioId: string;
+
+  @ApiProperty()
+  nomeVendedor: string;
+
+  @ApiProperty()
+  codigoVendedorErp: number;
+
+  @ApiProperty({ type: [ComercialAcompanhamentoMovimentoRequisicaoDto] })
+  manipulados: ComercialAcompanhamentoMovimentoRequisicaoDto[];
+
+  @ApiProperty({ type: [ComercialAcompanhamentoMovimentoProdutoDto] })
+  marcaPropria: ComercialAcompanhamentoMovimentoProdutoDto[];
+
+  @ApiProperty({ type: [ComercialAcompanhamentoMovimentoRejeitadoDto] })
+  rejeitados: ComercialAcompanhamentoMovimentoRejeitadoDto[];
+}

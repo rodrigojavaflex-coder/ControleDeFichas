@@ -138,7 +138,8 @@
           </header>
           <div
             class="visitacao-acomp-rep-metrics"
-            [class.has-painel]="!isCardTotal(card)">
+            [class.has-painel]="!isCardTotal(card)"
+            *ngIf="!isCardTotal(card)">
             <div class="visitacao-acomp-rep-metric is-success">
               <span class="label">Recebido</span>
               <span class="value">{{ formatarMoeda(valorRecebidoCard(card)) }}</span>
@@ -150,8 +151,7 @@
               <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
             </div>
             <div
-              class="visitacao-acomp-rep-metric is-primary"
-              *ngIf="!isCardTotal(card)">
+              class="visitacao-acomp-rep-metric is-primary">
               <span class="label">Representatividade</span>
               <span
                 class="value"
@@ -159,6 +159,38 @@
                 {{ formatarRepresentatividade(card) }}
               </span>
             </div>
+          </div>
+          <div class="visitacao-acomp-total-blocos" *ngIf="isCardTotal(card)">
+            <section class="visitacao-acomp-total-bloco">
+              <h4>Loja</h4>
+              <div class="visitacao-acomp-rep-metrics">
+                <div class="visitacao-acomp-rep-metric is-success">
+                  <span class="label">Recebido</span>
+                  <span class="value">{{ formatarMoeda(valorRecebidoLoja(card)) }}</span>
+                  <span class="sub">{{ quantidadeRecebidoLoja(card) }} requisição(ões)</span>
+                </div>
+                <div class="visitacao-acomp-rep-metric is-danger">
+                  <span class="label">Rejeitado</span>
+                  <span class="value">{{ formatarMoeda(valorRejeitadoLoja(card)) }}</span>
+                  <span class="sub">{{ quantidadeRejeitadoLoja(card) }} orçamento(s)</span>
+                </div>
+              </div>
+            </section>
+            <section class="visitacao-acomp-total-bloco">
+              <h4>Outras unidades</h4>
+              <div class="visitacao-acomp-rep-metrics">
+                <div class="visitacao-acomp-rep-metric is-success">
+                  <span class="label">Recebido</span>
+                  <span class="value">{{ formatarMoeda(valorRecebidoOutrasUnidades(card)) }}</span>
+                  <span class="sub">{{ quantidadeRecebidoOutrasUnidades(card) }} requisição(ões)</span>
+                </div>
+                <div class="visitacao-acomp-rep-metric is-danger">
+                  <span class="label">Rejeitado</span>
+                  <span class="value">{{ formatarMoeda(valorRejeitadoOutrasUnidades(card)) }}</span>
+                  <span class="sub">{{ quantidadeRejeitadoOutrasUnidades(card) }} orçamento(s)</span>
+                </div>
+              </div>
+            </section>
           </div>
           <div
             class="visitacao-acomp-rep-desempenho"

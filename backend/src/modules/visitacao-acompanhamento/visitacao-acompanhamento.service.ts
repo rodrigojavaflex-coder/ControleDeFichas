@@ -163,9 +163,24 @@ export class VisitacaoAcompanhamentoService {
       dto.unidade,
     );
     const unidadePainel = escopo === 'ALL' ? null : escopo;
-    const caixa = await this.consultarRecebidoCaixa(escopo, periodo);
+    const [caixa, rejeitadoLoja, indicacao] = await Promise.all([
+      this.consultarRecebidoCaixa(escopo, periodo),
+      this.consultarRejeitadoLoja(escopo, periodo),
+      unidadePainel
+        ? this.consultarIndicacaoOutrasUnidades(unidadePainel, periodo)
+        : Promise.resolve({
+            recebido: { valor: 0, quantidade: 0 },
+            rejeitado: { valor: 0, quantidade: 0 },
+          }),
+    ]);
     totais.valorRecebidoCaixa = caixa.valor;
     totais.quantidadeRecebidoCaixa = caixa.quantidade;
+    totais.valorRejeitadoLoja = rejeitadoLoja.valor;
+    totais.quantidadeRejeitadoLoja = rejeitadoLoja.quantidade;
+    totais.valorRecebidoOutrasUnidades = indicacao.recebido.valor;
+    totais.quantidadeRecebidoOutrasUnidades = indicacao.recebido.quantidade;
+    totais.valorRejeitadoOutrasUnidades = indicacao.rejeitado.valor;
+    totais.quantidadeRejeitadoOutrasUnidades = indicacao.rejeitado.quantidade;
 
     const exporComissao = getUsuarioPermissoes(usuario).includes(
       Permission.VISITACAO_ACOMPANHAMENTO_COMISSAO,
@@ -1120,6 +1135,12 @@ export class VisitacaoAcompanhamentoService {
       quantidadeMedicos: this.toInt(row?.qtd_medicos),
       valorRecebidoCaixa: 0,
       quantidadeRecebidoCaixa: 0,
+      valorRecebidoOutrasUnidades: 0,
+      quantidadeRecebidoOutrasUnidades: 0,
+      valorRejeitadoLoja: 0,
+      quantidadeRejeitadoLoja: 0,
+      valorRejeitadoOutrasUnidades: 0,
+      quantidadeRejeitadoOutrasUnidades: 0,
       quantidadeMedicosPainel: 0,
       quantidadeMedicosForaAtendimento: 0,
       ...this.desempenhoBase(periodo),
@@ -1153,6 +1174,12 @@ export class VisitacaoAcompanhamentoService {
         quantidadeMedicos: atual.quantidadeMedicos + grupo.quantidadeMedicos,
         valorRecebidoCaixa: 0,
         quantidadeRecebidoCaixa: 0,
+        valorRecebidoOutrasUnidades: 0,
+        quantidadeRecebidoOutrasUnidades: 0,
+        valorRejeitadoLoja: 0,
+        quantidadeRejeitadoLoja: 0,
+        valorRejeitadoOutrasUnidades: 0,
+        quantidadeRejeitadoOutrasUnidades: 0,
         quantidadeMedicosPainel: 0,
         quantidadeMedicosForaAtendimento: 0,
       }),
@@ -1164,6 +1191,12 @@ export class VisitacaoAcompanhamentoService {
         quantidadeMedicos: 0,
         valorRecebidoCaixa: 0,
         quantidadeRecebidoCaixa: 0,
+        valorRecebidoOutrasUnidades: 0,
+        quantidadeRecebidoOutrasUnidades: 0,
+        valorRejeitadoLoja: 0,
+        quantidadeRejeitadoLoja: 0,
+        valorRejeitadoOutrasUnidades: 0,
+        quantidadeRejeitadoOutrasUnidades: 0,
         quantidadeMedicosPainel: 0,
         quantidadeMedicosForaAtendimento: 0,
       },
@@ -1473,63 +1506,7 @@ export class VisitacaoAcompanhamentoService {
           FROM caixa_itens_erp i
           ${join}
           WHERE ${where}
-            AND i.unidade = $3
-          UNION ALL
-          SELECT
-            i.unidade,
-            i.numero_cupom,
-            i.numero_requisicao,
-            ${valor} AS valor_recebido
-          FROM caixa_itens_erp i
-          ${join}
-          INNER JOIN painel_medicos_representantes p
-            ON p.unidade = $3
-            AND BTRIM(p."crmMedico") = BTRIM(c.crm_medico)
-            AND UPPER(BTRIM(p."ufCrmMedico")) = UPPER(BTRIM(c.uf_crm_medico))
-            AND NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
-            AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL
-          WHERE ${where}
-            AND i.unidade IS DISTINCT FROM $3
-            AND c.id IS NOT NULL
-            AND NULLIF(BTRIM(c.crm_medico), '') IS NOT NULL
-            AND NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NOT NULL
-            AND ${this.sqlMedicoSemPainelNaUnidade(
-              'i.unidade',
-              'BTRIM(c.crm_medico)',
-              'UPPER(BTRIM(c.uf_crm_medico))',
-            )}
-          UNION ALL
-          SELECT i.unidade, i.numero_cupom, i.numero_requisicao, i.valor_recebido
-          FROM (
-            SELECT DISTINCT ON (i.id)
-              i.unidade,
-              i.numero_cupom,
-              i.numero_requisicao,
-              ${valor} AS valor_recebido
-            FROM caixa_itens_erp i
-            ${join}
-            INNER JOIN orcamentos o0
-              ON o0.nrorc = i.numero_requisicao
-              AND o0."crmMedico" IS NOT NULL AND BTRIM(o0."crmMedico") <> ''
-              AND o0."ufcrmMedico" IS NOT NULL AND BTRIM(o0."ufcrmMedico") <> ''
-            INNER JOIN painel_medicos_representantes p
-              ON p.unidade = $3
-              AND BTRIM(p."crmMedico") = BTRIM(o0."crmMedico")
-              AND UPPER(BTRIM(p."ufCrmMedico")) = UPPER(BTRIM(o0."ufcrmMedico"))
-            WHERE ${where}
-              AND i.unidade IS DISTINCT FROM $3
-              AND (
-                c.id IS NULL
-                OR NULLIF(BTRIM(c.crm_medico), '') IS NULL
-                OR NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NULL
-              )
-              AND ${this.sqlMedicoSemPainelNaUnidade(
-                'i.unidade',
-                'BTRIM(o0."crmMedico")',
-                'UPPER(BTRIM(o0."ufcrmMedico"))',
-              )}
-            ORDER BY i.id, CASE WHEN o0.unidade = i.unidade THEN 0 ELSE 1 END
-          ) i`;
+            AND i.unidade = $3`;
     }
 
     const sql = `
@@ -1552,6 +1529,174 @@ export class VisitacaoAcompanhamentoService {
     return {
       valor: this.round2(this.toNumber(rows[0]?.valor)),
       quantidade: this.toInt(rows[0]?.qtd),
+    };
+  }
+
+  private async consultarRejeitadoLoja(
+    escopo: ListaFechamentoEscopo,
+    periodo: PeriodoCompetencia,
+  ): Promise<{ valor: number; quantidade: number }> {
+    const params: unknown[] = [periodo.dataInicial, periodo.dataFinal];
+    const filtroUnidade =
+      escopo === 'ALL' ? '' : 'AND o.unidade = $3';
+    if (escopo !== 'ALL') {
+      params.push(escopo);
+    }
+    const sql = `
+      SELECT
+        COALESCE(SUM(o."precoVenda"), 0) AS valor,
+        COUNT(*)::int AS qtd
+      FROM orcamentos o
+      WHERE o.status = 'REJEITADO'
+        AND o."crmMedico" IS NOT NULL AND BTRIM(o."crmMedico") <> ''
+        AND o."ufcrmMedico" IS NOT NULL AND BTRIM(o."ufcrmMedico") <> ''
+        AND o."dataOrcamento" >= $1
+        AND o."dataOrcamento" <= $2
+        ${filtroUnidade}
+    `;
+    const rows = (await this.dataSource.query(sql, params)) as Array<{
+      valor: string | number | null;
+      qtd: string | number | null;
+    }>;
+    return {
+      valor: this.round2(this.toNumber(rows[0]?.valor)),
+      quantidade: this.toInt(rows[0]?.qtd),
+    };
+  }
+
+  /** Indicação em outras filiais da carteira da unidade (RN-VIS-008), sem filtros da grade. */
+  private async consultarIndicacaoOutrasUnidades(
+    unidade: Unidade,
+    periodo: PeriodoCompetencia,
+  ): Promise<{
+    recebido: { valor: number; quantidade: number };
+    rejeitado: { valor: number; quantidade: number };
+  }> {
+    const params: unknown[] = [periodo.dataInicial, periodo.dataFinal, unidade];
+    const join = this.sqlJoinCaixaPago();
+    const valor = this.sqlValorRecebidoPrescritor();
+    const where = `
+            i.tipo_item = 'REQUISICAO'
+            AND i.numero_requisicao IS NOT NULL
+            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
+            ${this.sqlFiltroRecebidoVisitacao()}`;
+    const semPainelLocal = this.sqlMedicoSemPainelNaUnidade(
+      'i.unidade',
+      'BTRIM(c.crm_medico)',
+      'UPPER(BTRIM(c.uf_crm_medico))',
+    );
+    const semPainelLocalOrc = this.sqlMedicoSemPainelNaUnidade(
+      'i.unidade',
+      'BTRIM(o0."crmMedico")',
+      'UPPER(BTRIM(o0."ufcrmMedico"))',
+    );
+    const semCrmCaixa = `(
+              c.id IS NULL
+              OR NULLIF(BTRIM(c.crm_medico), '') IS NULL
+              OR NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NULL
+            )`;
+    const sqlRecebido = `
+      WITH crms_carteira AS MATERIALIZED (
+        SELECT DISTINCT
+          BTRIM(p."crmMedico") AS crm,
+          UPPER(BTRIM(p."ufCrmMedico")) AS uf
+        FROM painel_medicos_representantes p
+        WHERE p.unidade = $3
+          AND NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
+          AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL
+      )
+      SELECT
+        COALESCE(SUM(t.valor_recebido), 0) AS valor,
+        COUNT(*)::int AS qtd
+      FROM (
+        SELECT DISTINCT ON (g.unidade, g.numero_cupom, g.numero_requisicao)
+          g.valor_recebido
+        FROM (
+          SELECT
+            i.unidade,
+            i.numero_cupom,
+            i.numero_requisicao,
+            ${valor} AS valor_recebido
+          FROM caixa_itens_erp i
+          ${join}
+          INNER JOIN crms_carteira cc
+            ON cc.crm = BTRIM(c.crm_medico)
+            AND cc.uf = UPPER(BTRIM(c.uf_crm_medico))
+          WHERE ${where}
+            AND c.id IS NOT NULL
+            AND NULLIF(BTRIM(c.crm_medico), '') IS NOT NULL
+            AND NULLIF(UPPER(BTRIM(c.uf_crm_medico)), '') IS NOT NULL
+            AND i.unidade IS DISTINCT FROM $3
+            AND ${semPainelLocal}
+          UNION ALL
+          SELECT
+            i.unidade,
+            i.numero_cupom,
+            i.numero_requisicao,
+            ${valor} AS valor_recebido
+          FROM caixa_itens_erp i
+          ${join}
+          INNER JOIN orcamentos o0
+            ON o0.nrorc = i.numero_requisicao
+            AND o0."crmMedico" IS NOT NULL AND BTRIM(o0."crmMedico") <> ''
+            AND o0."ufcrmMedico" IS NOT NULL AND BTRIM(o0."ufcrmMedico") <> ''
+          INNER JOIN crms_carteira cc
+            ON cc.crm = BTRIM(o0."crmMedico")
+            AND cc.uf = UPPER(BTRIM(o0."ufcrmMedico"))
+          WHERE ${where}
+            AND ${semCrmCaixa}
+            AND i.unidade IS DISTINCT FROM $3
+            AND ${semPainelLocalOrc}
+        ) g
+        ORDER BY g.unidade, g.numero_cupom, g.numero_requisicao
+      ) t
+    `;
+    const sqlRejeitado = `
+      WITH crms_carteira AS MATERIALIZED (
+        SELECT DISTINCT
+          BTRIM(p."crmMedico") AS crm,
+          UPPER(BTRIM(p."ufCrmMedico")) AS uf
+        FROM painel_medicos_representantes p
+        WHERE p.unidade = $3
+          AND NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
+          AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL
+      )
+      SELECT
+        COALESCE(SUM(o."precoVenda"), 0) AS valor,
+        COUNT(*)::int AS qtd
+      FROM orcamentos o
+      INNER JOIN crms_carteira cc
+        ON cc.crm = BTRIM(o."crmMedico")
+        AND cc.uf = UPPER(BTRIM(o."ufcrmMedico"))
+      WHERE o.status = 'REJEITADO'
+        AND o."crmMedico" IS NOT NULL AND BTRIM(o."crmMedico") <> ''
+        AND o."ufcrmMedico" IS NOT NULL AND BTRIM(o."ufcrmMedico") <> ''
+        AND o."dataOrcamento" >= $1
+        AND o."dataOrcamento" <= $2
+        AND o.unidade IS DISTINCT FROM $3
+        AND ${this.sqlMedicoSemPainelNaUnidade(
+          'o.unidade',
+          'BTRIM(o."crmMedico")',
+          'UPPER(BTRIM(o."ufcrmMedico"))',
+        )}
+    `;
+    const [recRows, rejRows] = await Promise.all([
+      this.dataSource.query(sqlRecebido, params) as Promise<
+        Array<{ valor: string | number | null; qtd: string | number | null }>
+      >,
+      this.dataSource.query(sqlRejeitado, params) as Promise<
+        Array<{ valor: string | number | null; qtd: string | number | null }>
+      >,
+    ]);
+    return {
+      recebido: {
+        valor: this.round2(this.toNumber(recRows[0]?.valor)),
+        quantidade: this.toInt(recRows[0]?.qtd),
+      },
+      rejeitado: {
+        valor: this.round2(this.toNumber(rejRows[0]?.valor)),
+        quantidade: this.toInt(rejRows[0]?.qtd),
+      },
     };
   }
 
@@ -1694,6 +1839,12 @@ export class VisitacaoAcompanhamentoService {
         quantidadeMedicos: 0,
         valorRecebidoCaixa: 0,
         quantidadeRecebidoCaixa: 0,
+        valorRecebidoOutrasUnidades: 0,
+        quantidadeRecebidoOutrasUnidades: 0,
+        valorRejeitadoLoja: 0,
+        quantidadeRejeitadoLoja: 0,
+        valorRejeitadoOutrasUnidades: 0,
+        quantidadeRejeitadoOutrasUnidades: 0,
         quantidadeMedicosPainel: 0,
         quantidadeMedicosForaAtendimento: 0,
         ...this.desempenhoBase(periodo),

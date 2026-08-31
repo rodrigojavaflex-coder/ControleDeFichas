@@ -8,8 +8,10 @@ import {
 } from '@nestjs/swagger';
 import { ComercialAcompanhamentoService } from './comercial-acompanhamento.service';
 import {
+  ComercialAcompanhamentoDetalheDto,
   ComercialAcompanhamentoListResponseDto,
   ComercialAcompanhamentoVendedorOpcaoDto,
+  FindComercialAcompanhamentoDetalheDto,
   FindComercialAcompanhamentoDto,
 } from './dto/comercial-acompanhamento.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -53,5 +55,16 @@ export class ComercialAcompanhamentoController {
     @Query() query: FindComercialVendedoresOpcoesDto,
   ): Promise<ComercialAcompanhamentoVendedorOpcaoDto[]> {
     return this.service.listarVendedoresOpcoes(req.user, query.unidade);
+  }
+
+  @Get('detalhe')
+  @Permissions(Permission.COMERCIAL_ACOMPANHAMENTO_READ)
+  @ApiOperation({ summary: 'Movimentos do vendedor na competência' })
+  @ApiResponse({ status: 200, type: ComercialAcompanhamentoDetalheDto })
+  detalhe(
+    @Req() req: { user: Usuario },
+    @Query() query: FindComercialAcompanhamentoDetalheDto,
+  ): Promise<ComercialAcompanhamentoDetalheDto> {
+    return this.service.detalhe(req.user, query);
   }
 }
