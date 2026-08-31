@@ -106,7 +106,7 @@
 
 .comercial-acomp-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 0.75rem;
 }
 
@@ -173,6 +173,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+.comercial-acomp-card-metrics.has-rejeitado {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .comercial-acomp-desempenho {
@@ -438,6 +442,7 @@ body.theme-dark .comercial-acomp-card.is-clickable:hover,
   }
 
   .comercial-acomp-card-metrics,
+  .comercial-acomp-card-metrics.has-rejeitado,
   .comercial-acomp-desempenho,
   .comercial-acomp-desempenho.has-projecao,
   .comercial-acomp-comissao {

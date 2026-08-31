@@ -129,37 +129,30 @@ export class ComercialAcompanhamentoService {
           }),
     ]);
 
-    let itens: ComercialAcompanhamentoItemDto[] = [];
-
-    for (const f of vinculados) {
-      if (dto.funcionarioId && f.id !== dto.funcionarioId) continue;
-      const codigo = f.codigoVendedorErp!;
-      itens.push(
-        this.montarItem(f.id, f.nome, codigo, reqMap, mpMap, rejMap),
+    const todosItens: ComercialAcompanhamentoItemDto[] = vinculados
+      .map((f) =>
+        this.montarItem(f.id, f.nome, f.codigoVendedorErp!, reqMap, mpMap, rejMap),
+      )
+      .sort(
+        (a, b) =>
+          b.valorRecebidoRequisicao +
+          b.valorRecebidoMarcaPropria -
+          (a.valorRecebidoRequisicao + a.valorRecebidoMarcaPropria),
       );
-    }
 
-    itens = itens.sort(
-      (a, b) =>
-        b.valorRecebidoRequisicao +
-        b.valorRecebidoMarcaPropria -
-        (a.valorRecebidoRequisicao + a.valorRecebidoMarcaPropria),
-    );
-
-    const totais = this.somarTotais(itens);
+    const totais = this.somarTotais(todosItens);
     const lojaRecebidoReq = volumeLoja.requisicao;
     const lojaRecebidoMp = volumeLoja.marcaPropria;
     const lojaRejeitado = this.somarMapa(rejMap);
-    if (!dto.funcionarioId) {
-      totais.valorRecebidoRequisicao = lojaRecebidoReq.valor;
-      totais.quantidadeRecebidoRequisicao = lojaRecebidoReq.qtd;
-      totais.valorRecebidoMarcaPropria = lojaRecebidoMp.valor;
-      totais.quantidadeRecebidoMarcaPropria = lojaRecebidoMp.qtd;
-      totais.valorRejeitado = lojaRejeitado.valor;
-      totais.quantidadeRejeitado = lojaRejeitado.qtd;
-    }
+    totais.valorRecebidoRequisicao = lojaRecebidoReq.valor;
+    totais.quantidadeRecebidoRequisicao = lojaRecebidoReq.qtd;
+    totais.valorRecebidoMarcaPropria = lojaRecebidoMp.valor;
+    totais.quantidadeRecebidoMarcaPropria = lojaRecebidoMp.qtd;
+    totais.valorRejeitado = lojaRejeitado.valor;
+    totais.quantidadeRejeitado = lojaRejeitado.qtd;
+
     await this.anexarDesempenho(
-      itens,
+      todosItens,
       totais,
       periodo,
       dto.unidade,
@@ -168,6 +161,10 @@ export class ComercialAcompanhamentoService {
       lojaRecebidoMp.valor,
       ultimaConfirmada,
     );
+
+    const itens = dto.funcionarioId
+      ? todosItens.filter((i) => i.funcionarioId === dto.funcionarioId)
+      : todosItens;
 
     return {
       itens,

@@ -24,6 +24,8 @@ interface CardResumo {
   quantidadeRecebidoRequisicao: number;
   valorRecebidoMarcaPropria: number;
   quantidadeRecebidoMarcaPropria: number;
+  valorRejeitado: number;
+  quantidadeRejeitado: number;
   valorMetaRequisicao?: number | null;
   percentualMetaRequisicao?: number | null;
   valorProjetadoRequisicao?: number | null;
@@ -124,6 +126,8 @@ export class ComercialAcompanhamentoPage implements OnInit {
         quantidadeRecebidoRequisicao: this.totais.quantidadeRecebidoRequisicao,
         valorRecebidoMarcaPropria: this.totais.valorRecebidoMarcaPropria,
         quantidadeRecebidoMarcaPropria: this.totais.quantidadeRecebidoMarcaPropria,
+        valorRejeitado: this.totais.valorRejeitado,
+        quantidadeRejeitado: this.totais.quantidadeRejeitado,
         valorMetaRequisicao: this.totais.valorMetaRequisicao,
         percentualMetaRequisicao: this.totais.percentualMetaRequisicao,
         valorProjetadoRequisicao: this.totais.valorProjetadoRequisicao,
@@ -145,6 +149,8 @@ export class ComercialAcompanhamentoPage implements OnInit {
         quantidadeRecebidoRequisicao: item.quantidadeRecebidoRequisicao,
         valorRecebidoMarcaPropria: item.valorRecebidoMarcaPropria,
         quantidadeRecebidoMarcaPropria: item.quantidadeRecebidoMarcaPropria,
+        valorRejeitado: item.valorRejeitado,
+        quantidadeRejeitado: item.quantidadeRejeitado,
         valorMetaRequisicao: item.valorMetaRequisicao,
         percentualMetaRequisicao: item.percentualMetaRequisicao,
         valorProjetadoRequisicao: item.valorProjetadoRequisicao,

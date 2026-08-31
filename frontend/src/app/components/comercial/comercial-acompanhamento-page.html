@@ -113,7 +113,7 @@
                       </span>
                     }
                   </header>
-                  <div class="comercial-acomp-card-metrics">
+                  <div class="comercial-acomp-card-metrics has-rejeitado">
                     <div class="comercial-acomp-metric is-success">
                       <span class="label">Manipulados</span>
                       <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
@@ -123,6 +123,11 @@
                       <span class="label">Marca própria</span>
                       <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
                       <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+                    </div>
+                    <div class="comercial-acomp-metric is-rejeitado">
+                      <span class="label">Rejeitado</span>
+                      <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
+                      <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
                     </div>
                   </div>
                   <div
