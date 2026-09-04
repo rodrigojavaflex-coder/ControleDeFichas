@@ -1609,7 +1609,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     if (valor == null) return '—';
     return Number(valor).toLocaleString('pt-BR', {
       minimumFractionDigits: valor % 1 === 0 ? 0 : 1,
-      maximumFractionDigits: 1,
+      maximumFractionDigits: 2,
     });
   }
 

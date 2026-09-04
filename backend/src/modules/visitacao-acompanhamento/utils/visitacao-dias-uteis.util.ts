@@ -1,5 +1,8 @@
 const OFFSET_SP = '-03:00';
 
+/** Sábado marcado como dia útil (RN-CAL-001): 0,45 — visitação e comercial. */
+export const PESO_SABADO_DIA_UTIL = 0.45;
+
 export const VISITACAO_ANO_MIN = 2026;
 export const VISITACAO_ANO_MAX = 2033;
 
@@ -53,9 +56,13 @@ export function competenciaAberta(
   return hojeYmd >= dataInicial && hojeYmd <= dataFinal;
 }
 
+function roundDiasUteis(valor: number): number {
+  return Math.round(valor * 100) / 100;
+}
+
 /**
- * Peso de dia útil da visitação.
- * Seg–sex = 1; sábado = 0,5 se marcado; domingo = 0; feriado = 0.
+ * Peso de dia útil da visitação e do comercial.
+ * Seg–sex = 1; sábado = 0,45 se marcado; domingo = 0; feriado = 0.
  */
 export function pesoDiaUtilVisitacao(
   ymd: string,
@@ -70,14 +77,14 @@ export function pesoDiaUtilVisitacao(
     return 0;
   }
   if (dow === 6) {
-    return sabadoMeioDia ? 0.5 : 0;
+    return sabadoMeioDia ? PESO_SABADO_DIA_UTIL : 0;
   }
   return 1;
 }
 
 /**
  * Último dia da competência com peso > 0 (RN-CAL-001 / RN-VIS-013).
- * Sábado com `sabadoDiaUtil` conta (peso 0,5). Sem dia útil no mês, null.
+ * Sábado com `sabadoDiaUtil` conta (peso 0,45). Sem dia útil no mês, null.
  */
 export function ultimoDiaUtilCompetencia(
   dataInicial: string,
@@ -113,7 +120,7 @@ export function somarDiasUteisVisitacao(
     soma += pesoDiaUtilVisitacao(cursor, sabadoMeioDia, feriados);
     cursor = addDiasYmd(cursor, 1);
   }
-  return soma;
+  return roundDiasUteis(soma);
 }
 
 /** Soma o peso (RN-CAL-001) das datas informadas, sem duplicar o dia. */
@@ -127,7 +134,7 @@ export function somarPesoDiasVisitacao(
   for (const ymd of unicas) {
     soma += pesoDiaUtilVisitacao(ymd, sabadoMeioDia, feriados);
   }
-  return soma;
+  return roundDiasUteis(soma);
 }
 
 /**

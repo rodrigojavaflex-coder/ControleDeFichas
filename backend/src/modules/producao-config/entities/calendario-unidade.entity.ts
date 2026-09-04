@@ -14,7 +14,7 @@ export class CalendarioUnidade {
 
   @ApiProperty({
     description:
-      'Se verdadeiro, sábado conta como dia útil no calendário da unidade. Na visitação vale meio dia (0,5). Independente da jornada de produção.',
+      'Se verdadeiro, sábado conta como dia útil no calendário da unidade. Na visitação e no comercial vale 0,45 dia. Independente da jornada de produção.',
   })
   @Column({ type: 'boolean', default: false })
   sabadoDiaUtil: boolean;
