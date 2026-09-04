@@ -68,6 +68,28 @@ export class VisitacaoAcompanhamentoService {
     );
   }
 
+  fechar(
+    unidade: Unidade,
+    ano: number,
+    mes: number,
+  ): Observable<VisitacaoAcompanhamentoListResponse> {
+    return this.http.post<VisitacaoAcompanhamentoListResponse>(
+      `${this.apiUrl}/fechar`,
+      { unidade, ano, mes },
+    );
+  }
+
+  reabrir(
+    unidade: Unidade,
+    ano: number,
+    mes: number,
+  ): Observable<VisitacaoAcompanhamentoListResponse> {
+    return this.http.post<VisitacaoAcompanhamentoListResponse>(
+      `${this.apiUrl}/reabrir`,
+      { unidade, ano, mes },
+    );
+  }
+
   private buildParams(filters: FindVisitacaoAcompanhamentoDto): HttpParams {
     let params = new HttpParams()
       .set('ano', String(filters.ano))

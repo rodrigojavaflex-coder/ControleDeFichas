@@ -12,16 +12,19 @@ import {
   NaCarteiraFiltro,
   VisitacaoAcompanhamentoDetalhe,
   VisitacaoAcompanhamentoItem,
+  VisitacaoAcompanhamentoListResponse,
   VisitacaoAcompanhamentoOrdem,
   VisitacaoAcompanhamentoOrdenarPor,
+  VisitacaoAcompanhamentoOutraUnidade,
   VisitacaoAcompanhamentoTotais,
   VisitacaoAcompanhamentoTotaisRepresentante,
 } from '../../models/visitacao-acompanhamento.model';
 import { VisitacaoPainelMedicoRepresentante } from '../../models/visitacao-painel-medico.model';
 import { Permission, Unidade } from '../../models/usuario.model';
 import { Configuracao } from '../../models/configuracao.model';
-import { environment } from '../../../environments/environment';
+import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { MESES_PT, nomeMesPt } from '../folha/folha-meses';
+import { environment } from '../../../environments/environment';
 
 interface AcompanhamentoFilterSnapshot {
   ano: number;
@@ -30,6 +33,13 @@ interface AcompanhamentoFilterSnapshot {
   funcionarioId: string;
   unidade: string;
   naCarteira: NaCarteiraFiltro;
+}
+
+interface LinhaRecebidoCard {
+  unidade: string;
+  valor: number;
+  quantidade: number;
+  isLoja: boolean;
 }
 
 type RelatorioForma = 'analitico' | 'sintetico';
@@ -54,6 +64,7 @@ const TOTAIS_VAZIOS: VisitacaoAcompanhamentoTotais = {
   quantidadeRejeitadoLoja: 0,
   valorRejeitadoOutrasUnidades: 0,
   quantidadeRejeitadoOutrasUnidades: 0,
+  outrasUnidades: [],
   quantidadeMedicosPainel: 0,
   quantidadeMedicosForaAtendimento: 0,
   percentualComissaoFaixa: null,
@@ -72,10 +83,13 @@ const TOTAIS_VAZIOS: VisitacaoAcompanhamentoTotais = {
   quantidadeComMeta: 0,
 };
 
+const ANO_COMPETENCIA_MIN = 2026;
+const ANO_COMPETENCIA_MAX = 2033;
+
 @Component({
   selector: 'app-visitacao-acompanhamento-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ConfirmationModalComponent],
   templateUrl: './visitacao-acompanhamento-page.html',
   styleUrls: [
     '../vendas-list/vendas-list.css',
@@ -99,7 +113,16 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   loading = false;
   loadingRepresentantes = false;
   imprimindo = false;
+  fechando = false;
   error = '';
+  competenciaStatus: 'ABERTO' | 'FECHADO' = 'ABERTO';
+  dataUltimoDiaUtil: string | null = null;
+  caixaUltimoDiaUtilConfirmado = false;
+  podeFechar = false;
+  podeReabrir = false;
+  mensagemGate: string | null = null;
+  confirmFecharVisivel = false;
+  confirmReabrirVisivel = false;
 
   currentPage = 1;
   pageSize = 50;
@@ -173,6 +196,18 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     );
   }
 
+  get canFechar(): boolean {
+    return this.authService.hasPermission(
+      Permission.VISITACAO_FECHAMENTO_FECHAR,
+    );
+  }
+
+  get canReabrir(): boolean {
+    return this.authService.hasPermission(
+      Permission.VISITACAO_FECHAMENTO_REABRIR,
+    );
+  }
+
   get cardsResumo(): VisitacaoAcompanhamentoTotaisRepresentante[] {
     const reps = this.totaisPorRepresentante.filter(
       (card) => !this.isSemRepresentante(card),
@@ -213,17 +248,54 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   }
 
   get processamentoAtivo(): boolean {
-    return this.loading || this.imprimindo;
+    return this.loading || this.imprimindo || this.fechando;
   }
 
   get tituloProcessamento(): string {
+    if (this.fechando) return 'Atualizando fechamento';
     return this.imprimindo ? 'Preparando impressão' : 'Buscando acompanhamento';
   }
 
   get subtituloProcessamento(): string {
+    if (this.fechando) {
+      return this.competenciaStatus === 'FECHADO'
+        ? 'Removendo o retrato e voltando ao cálculo ao vivo.'
+        : 'Gravando o retrato da competência da unidade.';
+    }
     return this.imprimindo
       ? 'Aguarde enquanto montamos o relatório com os filtros atuais.'
       : '';
+  }
+
+  get competenciaFechada(): boolean {
+    return this.competenciaStatus === 'FECHADO';
+  }
+
+  get tituloBotaoFechar(): string {
+    if (this.mensagemGate) return this.mensagemGate;
+    if (this.dataUltimoDiaUtil) {
+      return `Fechar competência (caixa confirmado em ${this.formatarData(this.dataUltimoDiaUtil)})`;
+    }
+    return 'Fechar competência da unidade';
+  }
+
+  get confirmFecharMensagem(): string {
+    const competencia = `${nomeMesPt(this.mesFiltro)}/${this.anoFiltro}`;
+    const dia = this.dataUltimoDiaUtil
+      ? ` O caixa de ${this.formatarData(this.dataUltimoDiaUtil)} está confirmado.`
+      : '';
+    return (
+      `Fechar a visitação de ${this.unidadeFilter} em ${competencia}? ` +
+      `O retrato da loja fica congelado até reabrir.${dia}`
+    );
+  }
+
+  get confirmReabrirMensagem(): string {
+    const competencia = `${nomeMesPt(this.mesFiltro)}/${this.anoFiltro}`;
+    return (
+      `Reabrir a visitação de ${this.unidadeFilter} em ${competencia}? ` +
+      'O cálculo volta ao caixa e ao painel ao vivo.'
+    );
   }
 
   private buildFindDto(page: number, limit: number): FindVisitacaoAcompanhamentoDto {
@@ -259,13 +331,13 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   /** Competência atual (ano 2026–2033). */
   private initializeCompetenciaFilter(): void {
     this.anosDisponiveis = [];
-    for (let a = 2026; a <= 2033; a += 1) {
+    for (let a = ANO_COMPETENCIA_MIN; a <= ANO_COMPETENCIA_MAX; a += 1) {
       this.anosDisponiveis.push(a);
     }
     const now = new Date();
     let ano = now.getFullYear();
-    if (ano < 2026) ano = 2026;
-    if (ano > 2033) ano = 2033;
+    if (ano < ANO_COMPETENCIA_MIN) ano = ANO_COMPETENCIA_MIN;
+    if (ano > ANO_COMPETENCIA_MAX) ano = ANO_COMPETENCIA_MAX;
     this.anoFiltro = ano;
     this.mesFiltro = now.getMonth() + 1;
   }
@@ -295,6 +367,40 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
 
   private updateAppliedFiltersSnapshot(): void {
     this.appliedFiltersSnapshot = this.createFilterSnapshot();
+  }
+
+  private aplicarStatusCompetencia(
+    response: VisitacaoAcompanhamentoListResponse,
+  ): void {
+    this.competenciaStatus = response.competenciaStatus ?? 'ABERTO';
+    this.dataUltimoDiaUtil = response.dataUltimoDiaUtil ?? null;
+    this.caixaUltimoDiaUtilConfirmado =
+      response.caixaUltimoDiaUtilConfirmado === true;
+    this.podeFechar = response.podeFechar === true;
+    this.podeReabrir = response.podeReabrir === true;
+    this.mensagemGate = response.mensagemGate ?? null;
+  }
+
+  private resetarStatusCompetencia(): void {
+    this.competenciaStatus = 'ABERTO';
+    this.dataUltimoDiaUtil = null;
+    this.caixaUltimoDiaUtilConfirmado = false;
+    this.podeFechar = false;
+    this.podeReabrir = false;
+    this.mensagemGate = null;
+  }
+
+  private mensagemHttp(error: unknown, fallback: string): string {
+    const raw = (error as { error?: { message?: string | string[] } })?.error
+      ?.message;
+    if (Array.isArray(raw)) {
+      const joined = raw.filter((m) => typeof m === 'string' && m.trim()).join(' ');
+      return joined || fallback;
+    }
+    if (typeof raw === 'string' && raw.trim()) {
+      return raw;
+    }
+    return fallback;
   }
 
   loadRepresentantes(): void {
@@ -331,6 +437,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
       this.totaisPorRepresentante = [];
       this.totalItems = 0;
       this.totalPages = 0;
+      this.resetarStatusCompetencia();
       return;
     }
     const s = this.appliedFiltersSnapshot;
@@ -347,6 +454,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
         this.items = response.data;
         this.totais = response.totais ?? { ...TOTAIS_VAZIOS };
         this.totaisPorRepresentante = response.totaisPorRepresentante ?? [];
+        this.aplicarStatusCompetencia(response);
         this.totalItems = response.meta.total;
         this.totalPages = response.meta.totalPages;
         this.loading = false;
@@ -355,6 +463,7 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
         this.loading = false;
         this.totaisPorRepresentante = [];
         this.totais = { ...TOTAIS_VAZIOS };
+        this.resetarStatusCompetencia();
         this.errorModalService.show(
           'Erro ao carregar o acompanhamento da visitação.',
           'Erro',
@@ -401,6 +510,85 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     this.detalhe = null;
     this.medicoDetalhe = null;
     this.carregandoDetalhe = false;
+  }
+
+  pedirFechar(): void {
+    if (
+      !this.canFechar ||
+      !this.podeFechar ||
+      !this.unidadeFilter ||
+      this.processamentoAtivo
+    ) {
+      return;
+    }
+    this.confirmFecharVisivel = true;
+  }
+
+  cancelarFechar(): void {
+    this.confirmFecharVisivel = false;
+  }
+
+  confirmarFechar(): void {
+    this.confirmFecharVisivel = false;
+    const unidade = this.unidadeFilter;
+    if (!unidade || !this.canFechar) return;
+    const s = this.appliedFiltersSnapshot;
+    this.fechando = true;
+    this.service.fechar(unidade as Unidade, s.ano, s.mes).subscribe({
+      next: () => {
+        this.fechando = false;
+        this.loadItems();
+      },
+      error: (e: unknown) => {
+        this.fechando = false;
+        this.errorModalService.show(
+          this.mensagemHttp(e, 'Erro ao fechar a visitação.'),
+          'Fechar visitação',
+        );
+      },
+    });
+  }
+
+  pedirReabrir(): void {
+    if (
+      !this.canReabrir ||
+      !this.podeReabrir ||
+      !this.unidadeFilter ||
+      this.processamentoAtivo
+    ) {
+      return;
+    }
+    this.confirmReabrirVisivel = true;
+  }
+
+  cancelarReabrir(): void {
+    this.confirmReabrirVisivel = false;
+  }
+
+  confirmarReabrir(): void {
+    this.confirmReabrirVisivel = false;
+    const unidade = this.unidadeFilter;
+    if (!unidade || !this.canReabrir) return;
+    const s = this.appliedFiltersSnapshot;
+    this.fechando = true;
+    this.service.reabrir(unidade as Unidade, s.ano, s.mes).subscribe({
+      next: () => {
+        this.fechando = false;
+        this.loadItems();
+      },
+      error: (e: unknown) => {
+        this.fechando = false;
+        this.errorModalService.show(
+          this.mensagemHttp(e, 'Erro ao reabrir a visitação.'),
+          'Reabrir visitação',
+        );
+      },
+    });
+  }
+
+  formatarSerie(serie: string | null | undefined): string {
+    const s = serie?.trim();
+    return s ? s : '—';
   }
 
   get totalDetalheRecebido(): number {
@@ -837,11 +1025,12 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
           <td>${r.numeroCupom}</td>
           <td>${r.numeroRequisicao}</td>
           <td>${r.numeroOrcamento ?? '—'}</td>
+          <td>${this.escapeHtml(this.formatarSerie(r.serie))}</td>
           <td class="num">${this.escapeHtml(this.formatarMoeda(r.valorPago))}</td>
         </tr>`,
           )
           .join('\n')
-      : '<tr><td colspan="5">Nenhum recebimento no período</td></tr>';
+      : '<tr><td colspan="6">Nenhum recebimento no período</td></tr>';
     const linhasRej = detalhe.rejeitados.length
       ? detalhe.rejeitados
           .map(
@@ -861,12 +1050,12 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   <h3 class="detalhe-print-subtitle">Recebidos no caixa</h3>
   <table class="lista-funcionarios-table">
     <thead>
-      <tr><th>Data</th><th>Cupom</th><th>Requisição</th><th>Orçamento</th><th class="num">Valor pago</th></tr>
+      <tr><th>Data</th><th>Cupom</th><th>Requisição</th><th>Orçamento</th><th>Série</th><th class="num">Valor pago</th></tr>
     </thead>
     <tbody>${linhasRec}</tbody>
     <tfoot>
       <tr>
-        <td colspan="4"><strong>Total recebido</strong></td>
+        <td colspan="5"><strong>Total recebido</strong></td>
         <td class="num"><strong>${this.escapeHtml(this.formatarMoeda(totalRecebido))}</strong></td>
       </tr>
     </tfoot>
@@ -1142,6 +1331,43 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     this.loadItems();
   }
 
+  get podeMesAnterior(): boolean {
+    return !(
+      this.anoFiltro <= ANO_COMPETENCIA_MIN && this.mesFiltro <= 1
+    );
+  }
+
+  get podeMesProximo(): boolean {
+    return !(
+      this.anoFiltro >= ANO_COMPETENCIA_MAX && this.mesFiltro >= 12
+    );
+  }
+
+  navegarMesAnterior(): void {
+    this.navegarMes(-1);
+  }
+
+  navegarMesProximo(): void {
+    this.navegarMes(1);
+  }
+
+  private navegarMes(delta: number): void {
+    if (!this.unidadeFilter || this.processamentoAtivo) return;
+    let mes = this.mesFiltro + delta;
+    let ano = this.anoFiltro;
+    if (mes < 1) {
+      mes = 12;
+      ano -= 1;
+    } else if (mes > 12) {
+      mes = 1;
+      ano += 1;
+    }
+    if (ano < ANO_COMPETENCIA_MIN || ano > ANO_COMPETENCIA_MAX) return;
+    this.mesFiltro = mes;
+    this.anoFiltro = ano;
+    this.onFiltroChange();
+  }
+
   formatCrm(item: { crmMedico: string; ufCrmMedico: string }): string {
     return `${item.crmMedico}/${item.ufCrmMedico}`;
   }
@@ -1195,6 +1421,66 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     return Number(card.quantidadeRecebido) || 0;
   }
 
+  linhasRecebidoUnidade(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): LinhaRecebidoCard[] {
+    const loja = this.unidadeFilter || '';
+    const porUnidade = [...(card.recebidoPorUnidade ?? [])];
+    const map = new Map(porUnidade.map((item) => [item.unidade, item]));
+    const configuradas = (card.unidadesComissao ?? []).filter(Boolean);
+    const ordem = configuradas.length
+      ? configuradas
+      : loja
+        ? [loja, ...porUnidade.map((item) => item.unidade)]
+        : porUnidade.map((item) => item.unidade);
+    const vistas = new Set<string>();
+    const linhas: LinhaRecebidoCard[] = [];
+    for (const unidade of ordem) {
+      if (!unidade || vistas.has(unidade)) continue;
+      vistas.add(unidade);
+      const item = map.get(unidade);
+      const valor = Number(item?.valor) || 0;
+      const quantidade = Number(item?.quantidade) || 0;
+      if (unidade !== loja && valor <= 0) continue;
+      linhas.push({
+        unidade,
+        valor,
+        quantidade,
+        isLoja: unidade === loja,
+      });
+    }
+    if (!linhas.length) {
+      linhas.push({
+        unidade: loja || 'Loja',
+        valor: this.valorRecebidoCard(card),
+        quantidade: this.quantidadeRecebidoCard(card),
+        isLoja: true,
+      });
+    }
+    return linhas;
+  }
+
+  valorRecebidoTotal(card: VisitacaoAcompanhamentoTotaisRepresentante): number {
+    if (this.isCardTotal(card)) {
+      return (
+        this.valorRecebidoCard(card) + this.valorRecebidoOutrasUnidades(card)
+      );
+    }
+    return this.valorRecebidoCard(card);
+  }
+
+  quantidadeRecebidoTotal(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    if (this.isCardTotal(card)) {
+      return (
+        this.quantidadeRecebidoCard(card) +
+        this.quantidadeRecebidoOutrasUnidades(card)
+      );
+    }
+    return this.quantidadeRecebidoCard(card);
+  }
+
   valorRecebidoLoja(card: VisitacaoAcompanhamentoTotaisRepresentante): number {
     return Number(card.valorRecebidoCaixa ?? card.valorRecebido) || 0;
   }
@@ -1237,6 +1523,50 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
     card: VisitacaoAcompanhamentoTotaisRepresentante,
   ): number {
     return Number(card.quantidadeRejeitadoOutrasUnidades) || 0;
+  }
+
+  outrasUnidadesCard(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): VisitacaoAcompanhamentoOutraUnidade[] {
+    return (card.outrasUnidades ?? []).filter(
+      (bloco) =>
+        (Number(bloco.valorRecebido) || 0) !== 0 ||
+        (Number(bloco.valorRejeitado) || 0) !== 0,
+    );
+  }
+
+  valorRecebidoGrandTotal(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return (
+      this.valorRecebidoLoja(card) + this.valorRecebidoOutrasUnidades(card)
+    );
+  }
+
+  quantidadeRecebidoGrandTotal(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return (
+      this.quantidadeRecebidoLoja(card) +
+      this.quantidadeRecebidoOutrasUnidades(card)
+    );
+  }
+
+  valorRejeitadoGrandTotal(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return (
+      this.valorRejeitadoLoja(card) + this.valorRejeitadoOutrasUnidades(card)
+    );
+  }
+
+  quantidadeRejeitadoGrandTotal(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return (
+      this.quantidadeRejeitadoLoja(card) +
+      this.quantidadeRejeitadoOutrasUnidades(card)
+    );
   }
 
   temComissao(card: VisitacaoAcompanhamentoTotaisRepresentante): boolean {

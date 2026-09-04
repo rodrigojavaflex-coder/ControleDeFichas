@@ -160,6 +160,8 @@ export enum Permission {
   VISITACAO_PAINEL_MEDICO_READ = 'visitacao-painel-medico:read',
   VISITACAO_ACOMPANHAMENTO_READ = 'visitacao-acompanhamento:read',
   VISITACAO_ACOMPANHAMENTO_COMISSAO = 'visitacao-acompanhamento:comissao',
+  VISITACAO_FECHAMENTO_FECHAR = 'visitacao-fechamento:fechar',
+  VISITACAO_FECHAMENTO_REABRIR = 'visitacao-fechamento:reabrir',
   VISITACAO_META_READ = 'visitacao-meta:read',
   VISITACAO_META_UPDATE = 'visitacao-meta:update',
   VISITACAO_COMISSAO_READ = 'visitacao-comissao:read',

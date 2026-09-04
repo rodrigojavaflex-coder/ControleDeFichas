@@ -28,6 +28,14 @@ export interface VisitacaoAcompanhamentoItem {
   quantidadeRejeitado: number;
 }
 
+export interface VisitacaoAcompanhamentoOutraUnidade {
+  unidade: Unidade;
+  valorRecebido: number;
+  quantidadeRecebido: number;
+  valorRejeitado: number;
+  quantidadeRejeitado: number;
+}
+
 export interface VisitacaoAcompanhamentoTotais {
   valorRecebido: number;
   quantidadeRecebido: number;
@@ -42,6 +50,7 @@ export interface VisitacaoAcompanhamentoTotais {
   quantidadeRejeitadoLoja?: number;
   valorRejeitadoOutrasUnidades?: number;
   quantidadeRejeitadoOutrasUnidades?: number;
+  outrasUnidades?: VisitacaoAcompanhamentoOutraUnidade[];
   quantidadeMedicosPainel?: number;
   quantidadeMedicosForaAtendimento?: number;
   percentualComissaoFaixa?: number | null;
@@ -64,6 +73,14 @@ export interface VisitacaoAcompanhamentoTotaisRepresentante
   extends VisitacaoAcompanhamentoTotais {
   nomeRepresentante: string;
   funcionarioId?: string | null;
+  recebidoPorUnidade?: VisitacaoAcompanhamentoRecebidoUnidade[];
+  unidadesComissao?: Unidade[];
+}
+
+export interface VisitacaoAcompanhamentoRecebidoUnidade {
+  unidade: Unidade;
+  valor: number;
+  quantidade: number;
 }
 
 export interface FindVisitacaoAcompanhamentoDto {
@@ -95,6 +112,12 @@ export interface VisitacaoAcompanhamentoListResponse {
   };
   totais: VisitacaoAcompanhamentoTotais;
   totaisPorRepresentante: VisitacaoAcompanhamentoTotaisRepresentante[];
+  competenciaStatus?: 'ABERTO' | 'FECHADO';
+  dataUltimoDiaUtil?: string | null;
+  caixaUltimoDiaUtilConfirmado?: boolean;
+  podeFechar?: boolean;
+  podeReabrir?: boolean;
+  mensagemGate?: string | null;
 }
 
 export interface VisitacaoAcompanhamentoMovimentoRecebido {
@@ -102,6 +125,7 @@ export interface VisitacaoAcompanhamentoMovimentoRecebido {
   numeroCupom: number;
   numeroRequisicao: number;
   numeroOrcamento?: number | null;
+  serie?: string | null;
   valorPago: number;
 }
 

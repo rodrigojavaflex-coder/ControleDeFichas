@@ -1,6 +1,6 @@
 # Anotações / Demandas
 
-> Última revisão: 2026-08-25
+> Última revisão: 2026-09-02
 
 ## Decisões operacionais
 
@@ -12,9 +12,40 @@
 - Subir Node na filial no futuro: fazer **junto** com deploy de sync; após trocar Node no servidor, `npm ci --omit=dev` em `C:\agente` — **não** exige regerar pacote na dev só por causa da versão do Node.
 - Referência deploy: `agent/scripts/deploy.ps1`, `agent/scripts/atualiza-agente.ps1`, `agent/README.md`.
 
+### Acompanhamento Visitação — comissão oficial e fechamento mensal (2026-09-02)
+
+**Status:** implementação ligada (agente + importação + acompanhamento + freeze API/UI). **Não fechar** competência em produção antes de reimportar o caixa com o agente novo (senão o retrato congela série `0`).
+
+**Decisões (RN-VIS-008 / RN-VIS-013)**
+
+- PDF Fórmula Certa = **base da fórmula** (DTEFE, cortesia C, tipo N, rateio `PRCOBR`, crédito por `SERIER`).
+- Comissão oficial = **venda da unidade** (caixa da filial). 99 e 199 são dois representantes no mesmo banco ERP; freeze é **`ano+mês+unidade`** (trava todos os visitadores da loja). CRM nos dois painéis credita **uma vez**, na unidade do DTEFE. Uberaba só na própria unidade.
+- Indicação em outra filial permanece **visível** (grade / Outras unidades); **não** entra em faixa, comissão, representatividade nem no retrato.
+- Gate do fechar: caixa da unidade no **último dia útil** da competência `CONFIRMADO` (`ultimoDiaUtilCompetencia` + RN-CAL-001 / RN-CXA-009).
+- Permissões `visitacao-fechamento:fechar` e `visitacao-fechamento:reabrir` no catálogo; atribuição **manual** em Perfis.
+
+**Modelo (tabelas)**
+
+- `caixa_requisicao_formula` — filha de `caixa_requisicoes_pagas` (paga + `SERIER`); CASCADE no delete da paga.
+- `visitacao_fechamento` + `_carteira` + `_representante` + `_medico` — retrato; unique unidade+ano+mês.
+
+**Substitui** a demanda de carteira por UNION com histórico (2026-08-25): o retrato no fechar copia o painel vivo; o histórico de remoção **não** reconstrói a competência.
+
+#### Próximos passos (ordem)
+
+1. **[x] Sync por série** — agente: emitir linhas `FC12100` por `SERIER` no complemento de pagas; backend: upsert em `caixa_requisicao_formula` (substituir filhas a cada paga); reimportar caixa do período (ago/2026 no mínimo). Contrato: RN-CXA-003.
+2. **[x] Crédito RN-VIS-008 no acompanhamento** — `visitacao-acompanhamento.service.ts` soma `valor_rateado` por CRM da série (fallback legado se a paga não tiver filhas); detalhe/impressão analítica listam série. Aceite: req **98112** Cristian ≈ R$ 1.657,40; Matheus não herda os R$ 510.
+3. **[x] Comissão oficial = Loja** — cards, % meta, faixa, comissão e sintético oficial sem creditar Outras unidades (bloco continua só visibilidade).
+4. **[x] Freeze (API + UI)** — `POST` fechar / reabrir; recusar se o caixa do último dia útil não estiver CONFIRMADO; tela: badge Fechado, esconder projeção, imprimir retrato; sync do painel não altera mês fechado.
+5. **[ ] Conferência** — PDFs 9999/99 e 9999/199 como referência de **fórmula/série**, não de total do visitador. Totais oficiais = caixa da unidade com split por série. Hugo **98842**, Márcio **99121**, Ítalo **27266**: se estão no caixa da unidade, entram (fonte = caixa).
+
+Arquivos-base: `docs/regras-negocio.md` (VIS-008/009/010/013, CXA-003), `agent/src/database/database.service.ts` + `requisicoes-pagas.sql`, `fechamento-caixa.service.ts`, `visitacao-acompanhamento.service.ts` / página.
+
 ### Acompanhamento Visitação — carteira por período (painel + histórico)
 
-**Status (2026-08-25):** não implementar agora. O acompanhamento continua lendo só o painel **ativo** (`painel_medicos_representantes`). Registrar aqui para tratar depois.
+**Status (2026-09-02):** **substituído** pelo fechamento mensal (RN-VIS-013 / seção acima). Não implementar UNION painel ∪ histórico para comissão.
+
+**Status anterior (2026-08-25):** não implementar agora. O acompanhamento continua lendo só o painel **ativo** (`painel_medicos_representantes`) enquanto a competência está **aberta**.
 
 **Como está hoje**
 
@@ -62,7 +93,8 @@ histórico cuja vigência cruza [dataInicial, dataFinal]
 
 ## Pendente
 
-- [ ] **Acompanhamento Visitação — carteira por período (painel + histórico)** — UNION do painel ativo com `painel_medicos_representantes_historico` (vigência cruzando o filtro); depois avaliar corte `criadoEm` no ativo. **Não implementar agora.** Detalhe na seção “Decisões operacionais” acima. (2026-08-25)
+- [ ] **Visitação — sync por série + crédito + Loja + freeze** — passos 1–5 na seção “comissão oficial e fechamento mensal” (2026-09-02). RNs e modelo já gravados.
+- [ ] **Acompanhamento Visitação — carteira por período (painel + histórico)** — **cancelado / substituído** por RN-VIS-013 (retrato no fechar). Não implementar UNION com `painel_medicos_representantes_historico` para comissão.
 - [ ] **Configurar envio de e-mail** — recuperação de senha e notificações (pendências de fechamento, pendências de vendas, resumo de folha, etc.).
 - [ ] **Orçamentos aprovados em aberto** — com os dados importados, trabalhar informações de orçamentos aprovados não recebidos; avaliar se em relatório ou painel.
 - [ ] **Painel de folha de pagamento** — gastos por unidade, setor, função e cargo.

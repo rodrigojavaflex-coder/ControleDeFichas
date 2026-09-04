@@ -22,29 +22,53 @@
             }
           </select>
         </div>
-        <div class="filter-group">
-          <label class="form-label" for="ca-mes">Mês</label>
-          <select
-            id="ca-mes"
-            class="form-control"
-            [(ngModel)]="mesFiltro"
-            (ngModelChange)="onFiltroChange()">
-            @for (m of MESES_PT; track m.numero) {
-              <option [ngValue]="m.numero">{{ m.nome }}</option>
-            }
-          </select>
-        </div>
-        <div class="filter-group">
-          <label class="form-label" for="ca-ano">Ano</label>
-          <select
-            id="ca-ano"
-            class="form-control"
-            [(ngModel)]="anoFiltro"
-            (ngModelChange)="onFiltroChange()">
-            @for (a of anosDisponiveis; track a) {
-              <option [ngValue]="a">{{ a }}</option>
-            }
-          </select>
+        <div class="filter-group comercial-acomp-toolbar-competencia">
+          <label class="form-label" for="ca-mes">Competência</label>
+          <div
+            class="comercial-acomp-competencia-nav"
+            role="group"
+            aria-label="Navegar competência (mês e ano)">
+            <button
+              type="button"
+              class="comercial-acomp-nav-mes"
+              title="Mês anterior"
+              aria-label="Mês anterior"
+              [disabled]="carregando || !podeMesAnterior"
+              (click)="navegarMesAnterior()">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="comercial-acomp-competencia-combo">
+              <select
+                id="ca-mes"
+                class="form-control"
+                [(ngModel)]="mesFiltro"
+                (ngModelChange)="onFiltroChange()"
+                aria-label="Mês da competência">
+                @for (m of MESES_PT; track m.numero) {
+                  <option [ngValue]="m.numero">{{ m.nome }}</option>
+                }
+              </select>
+              <select
+                id="ca-ano"
+                class="form-control"
+                [(ngModel)]="anoFiltro"
+                (ngModelChange)="onFiltroChange()"
+                aria-label="Ano da competência">
+                @for (a of anosDisponiveis; track a) {
+                  <option [ngValue]="a">{{ a }}</option>
+                }
+              </select>
+            </div>
+            <button
+              type="button"
+              class="comercial-acomp-nav-mes"
+              title="Próximo mês"
+              aria-label="Próximo mês"
+              [disabled]="carregando || !podeMesProximo"
+              (click)="navegarMesProximo()">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
         </div>
         <div class="filter-group comercial-acomp-vendedor">
           <label class="form-label" for="ca-vendedor">Vendedor</label>
@@ -78,10 +102,12 @@
             class="comercial-acomp-du-legend"
             aria-label="Competência, dias úteis e dias realizados">
             <strong>{{ rotuloCompetenciaLegenda }}</strong>
-            <span>{{ rotuloDiasUteis }}</span>
-            @if (rotuloDiasRealizados) {
-              <span>{{ rotuloDiasRealizados }}</span>
-            }
+            <span>
+              {{ rotuloDiasUteis }}
+              @if (rotuloDiasRealizados) {
+                · {{ rotuloDiasRealizados }}
+              }
+            </span>
           </aside>
         }
       </section>

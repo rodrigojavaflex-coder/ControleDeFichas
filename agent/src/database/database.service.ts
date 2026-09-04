@@ -5,6 +5,7 @@ import {
   CaixaFechamentoDiaRow,
   CaixaItemRow,
   CaixaPagamentoRow,
+  CaixaRequisicaoFormulaRow,
   CaixaRequisicaoPagaRow,
   OrcamentoRow,
   ValorCompraRow,
@@ -771,12 +772,30 @@ export class DatabaseService {
       start,
       end,
     );
-    return this.executarConsultaCaixa(
+    const pagas = await this.executarConsultaCaixa(
       sql,
       params,
       (row) => this.mapCaixaRequisicaoPagaRow(row),
       'requisicoes-pagas',
     );
+    const { sql: sqlForm, params: paramsForm } =
+      this.buildCaixaRequisicaoFormulasQuery(unit, start, end);
+    const formulaRows = await this.executarConsultaCaixa(
+      sqlForm,
+      paramsForm,
+      (row) => this.mapCaixaRequisicaoFormulaAttachRow(row),
+      'requisicoes-formulas',
+    );
+    const porChave = new Map<string, CaixaRequisicaoFormulaRow[]>();
+    for (const row of formulaRows) {
+      const lista = porChave.get(row.chave_erp) ?? [];
+      lista.push(row.formula);
+      porChave.set(row.chave_erp, lista);
+    }
+    for (const paga of pagas) {
+      paga.formulas = porChave.get(paga.chave_erp) ?? [];
+    }
+    return pagas;
   }
 
   async buscarCaixaFechamentoDia(
@@ -851,6 +870,9 @@ export class DatabaseService {
             ).length;
             const comCrm = mapped.filter((r) => !!r.crm_medico?.trim()).length;
             extra = ` vendedor=${comVend} crm=${comCrm}`;
+          }
+          if (rotulo === 'requisicoes-formulas') {
+            extra = ` series=${rows.length}`;
           }
           const msg =
             `Consulta caixa ${rotulo}: ${rows.length} registro(s)${extra} ` +
@@ -1191,6 +1213,88 @@ export class DatabaseService {
     };
   }
 
+  private buildCaixaRequisicaoFormulasQuery(
+    unit: number,
+    start: string,
+    end: string,
+  ): { sql: string; params: Array<string | number> } {
+    const sql = `
+      SELECT
+        r.cdfil AS filial,
+        r.dtefe AS data_pagamento,
+        r.nrrqu AS requisicao,
+        r.nrcpm AS cupom,
+        TRIM(f.serier) AS serie,
+        MAX(CASE WHEN COALESCE(f.nrorc, 0) > 0 THEN f.nrorc END) AS nr_orcamento,
+        CAST(SUM(f.prcobr) AS NUMERIC(15,2)) AS valor_prcobr,
+        CAST(
+          SUM(f.prcobr)
+          * CASE
+              WHEN COALESCE(r.vrrqu, 0) = 0 THEN 0
+              WHEN r.vrliq > r.vrrqu THEN 1
+              ELSE r.vrliq / r.vrrqu
+            END
+          AS NUMERIC(15,2)
+        ) AS valor_rateado,
+        CAST(
+          COALESCE(
+            MAX(CASE WHEN COALESCE(f.nrcrm, 0) > 0 THEN f.nrcrm END),
+            CASE WHEN COALESCE(r.nrcrm, 0) > 0 THEN r.nrcrm END
+          ) AS VARCHAR(20)
+        ) AS crm_medico,
+        TRIM(
+          COALESCE(
+            MAX(CASE WHEN COALESCE(f.nrcrm, 0) > 0 THEN f.ufcrm END),
+            r.ufcrm
+          )
+        ) AS uf_crm_medico,
+        TRIM(m.nomemed) AS nome_medico
+      FROM fc17000 r
+      INNER JOIN (
+        SELECT r1.cdfil, r1.nrrqu, r1.dtefe, r1.nrcpm
+        FROM fc17000 r1
+        WHERE r1.cdfil = ?
+          AND COALESCE(r1.vrliq, 0) <> 0
+          AND r1.dtefe BETWEEN ? AND ?
+        UNION
+        SELECT r2.cdfil, r2.nrrqu, r2.dtefe, r2.nrcpm
+        FROM fc17000 r2
+        JOIN (
+          SELECT DISTINCT req0.nrrqu
+          FROM fc31200 req0
+          WHERE req0.cdfil = ?
+            AND req0.dtope BETWEEN ? AND ?
+            AND COALESCE(req0.nrrqu, 0) > 0
+        ) cup
+          ON cup.nrrqu = r2.nrrqu
+        WHERE r2.cdfil = ?
+          AND COALESCE(r2.vrliq, 0) <> 0
+      ) uni
+        ON uni.cdfil = r.cdfil
+       AND uni.nrrqu = r.nrrqu
+      INNER JOIN fc12100 f
+        ON f.cdfil = r.cdfil
+       AND f.nrrqu = r.nrrqu
+      LEFT JOIN fc04000 m
+        ON m.pfcrm = COALESCE(f.pfcrm, r.pfcrm)
+       AND TRIM(m.ufcrm) = TRIM(COALESCE(f.ufcrm, r.ufcrm))
+       AND m.nrcrm = COALESCE(
+         CASE WHEN COALESCE(f.nrcrm, 0) > 0 THEN f.nrcrm END,
+         CASE WHEN COALESCE(r.nrcrm, 0) > 0 THEN r.nrcrm END
+       )
+      WHERE f.serier IS NOT NULL
+      GROUP BY
+        r.cdfil, r.dtefe, r.nrrqu, r.nrcpm, f.serier,
+        r.vrrqu, r.vrliq, r.nrcrm, r.ufcrm, r.pfcrm, m.nomemed
+      ORDER BY r.dtefe, r.nrrqu, f.serier
+    `;
+
+    return {
+      sql,
+      params: [unit, start, end, unit, start, end, unit],
+    };
+  }
+
   private buildCaixaFechamentoDiaQuery(
     unit: number,
     start: string,
@@ -1366,6 +1470,43 @@ export class DatabaseService {
         ? String(get('nome_medico')).trim()
         : null,
       chave_erp: `${filial}-${requisicao}-${cupom}-${dataPagamento}`,
+      formulas: [],
+    };
+  }
+
+  private mapCaixaRequisicaoFormulaAttachRow(row: Record<string, unknown>): {
+    chave_erp: string;
+    formula: CaixaRequisicaoFormulaRow;
+  } {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+
+    const filial = Number(get('filial') ?? 0);
+    const dataPagamento = this.formatDateField(get('data_pagamento'));
+    const requisicao = Number(get('requisicao') ?? 0);
+    const cupom = Number(get('cupom') ?? 0);
+    const serie = String(get('serie') ?? '').trim();
+
+    return {
+      chave_erp: `${filial}-${requisicao}-${cupom}-${dataPagamento}`,
+      formula: {
+        serie,
+        nr_orcamento: this.parseNrOrcamentoPositivo(get('nr_orcamento')),
+        valor_prcobr: Math.round(Number(get('valor_prcobr') ?? 0) * 100) / 100,
+        valor_rateado:
+          Math.round(Number(get('valor_rateado') ?? 0) * 100) / 100,
+        crm_medico:
+          get('crm_medico') != null && String(get('crm_medico')).trim()
+            ? String(get('crm_medico')).trim()
+            : null,
+        uf_crm_medico:
+          get('uf_crm_medico') != null && String(get('uf_crm_medico')).trim()
+            ? String(get('uf_crm_medico')).trim()
+            : null,
+        nome_medico: get('nome_medico')
+          ? String(get('nome_medico')).trim()
+          : null,
+      },
     };
   }
 

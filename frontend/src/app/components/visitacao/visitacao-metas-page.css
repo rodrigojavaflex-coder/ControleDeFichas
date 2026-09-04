@@ -68,8 +68,91 @@
 .visitacao-metas-page .action-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.5rem;
   align-items: center;
+  min-width: 16rem;
+  white-space: normal !important;
+}
+
+.visitacao-metas-page .action-buttons .btn {
+  white-space: nowrap;
+  margin: 0 !important;
+  border-radius: var(--raio-botao, 0.375rem) !important;
+}
+
+.visitacao-metas-page .action-buttons .btn:not(:disabled) {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.visitacao-metas-unidades-celula {
+  min-width: 16rem;
+}
+
+.visitacao-metas-unidades {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+}
+
+.visitacao-metas-unidade-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  cursor: pointer;
+}
+
+.visitacao-metas-unidade-opt input {
+  margin: 0;
+}
+
+.visitacao-metas-unidade-opt:has(input:disabled) {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.visitacao-metas-alerta {
+  background-color: var(--color-warning, #d97706) !important;
+  border-color: var(--color-warning, #d97706) !important;
+  color: #fff !important;
+}
+
+.visitacao-metas-alerta:hover:not(:disabled),
+.visitacao-metas-alerta:focus-visible {
+  filter: brightness(0.92);
+}
+
+.visitacao-metas-modal-conflito {
+  max-width: 52rem;
+  width: min(52rem, calc(100vw - 2rem));
+}
+
+.visitacao-metas-modal-conflito .modal-rodape {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.visitacao-metas-modal-conflito .modal-hint {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary, #64748b);
+}
+
+body.theme-dark .visitacao-metas-unidade-opt,
+[data-theme='dark'] .visitacao-metas-unidade-opt {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .visitacao-metas-alerta,
+[data-theme='dark'] .visitacao-metas-alerta {
+  background-color: var(--color-warning, #d97706) !important;
+  border-color: var(--color-warning, #d97706) !important;
+  color: #fff !important;
 }
 
 body.theme-dark .visitacao-metas-page tr.editing,

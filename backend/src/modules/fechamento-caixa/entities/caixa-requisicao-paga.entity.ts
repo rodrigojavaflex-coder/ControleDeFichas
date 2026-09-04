@@ -3,12 +3,14 @@ import {
   Column,
   Index,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Unidade } from '../../../common/enums/unidade.enum';
 import { Orcamento } from '../../orcamentos/entities/orcamento.entity';
+import { CaixaRequisicaoFormula } from './caixa-requisicao-formula.entity';
 
 const dateColumnTransformer = {
   from: (value: string) => value,
@@ -208,4 +210,7 @@ export class CaixaRequisicaoPaga {
     default: () => 'CURRENT_TIMESTAMP',
   })
   atualizadoEm: Date;
+
+  @OneToMany(() => CaixaRequisicaoFormula, (f) => f.requisicaoPaga)
+  formulas?: CaixaRequisicaoFormula[];
 }

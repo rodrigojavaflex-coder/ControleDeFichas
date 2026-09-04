@@ -42,9 +42,62 @@ app-visitacao-acompanhamento-page {
   max-width: 28rem;
 }
 
-.visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-medico {
-  flex: 1 1 220px;
-  max-width: 24rem;
+.visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-competencia {
+  flex: 0 0 auto;
+  min-width: max-content;
+  max-width: none;
+}
+
+.visitacao-acomp-toolbar .visitacao-acomp-competencia-nav {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  width: max-content;
+  max-width: 100%;
+}
+
+.visitacao-acomp-toolbar .visitacao-acomp-competencia-combo {
+  display: grid;
+  grid-template-columns: 8.75rem 5.25rem;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.visitacao-acomp-toolbar .visitacao-acomp-competencia-combo .form-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.visitacao-acomp-toolbar .visitacao-acomp-nav-mes {
+  flex: 0 0 2.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.375rem;
+  width: 2.375rem;
+  min-height: 2.375rem;
+  min-width: 2.375rem;
+  padding: 0;
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 6px;
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+}
+
+.visitacao-acomp-nav-mes:hover:not(:disabled),
+.visitacao-acomp-nav-mes:focus-visible:not(:disabled) {
+  border-color: var(--cor-primaria, #2563eb);
+  color: var(--cor-primaria, #2563eb);
+  outline: none;
+}
+
+.visitacao-acomp-nav-mes:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .visitacao-acomp-toolbar .form-label {
@@ -62,8 +115,47 @@ app-visitacao-acompanhamento-page {
 .visitacao-acomp-toolbar-acoes {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   flex: 0 0 auto;
+}
+
+.visitacao-acomp-toolbar-acoes .btn.btn-excluir {
+  background-color: var(--cor-perigo, #dc3545) !important;
+  border-color: var(--cor-perigo, #dc3545) !important;
+  color: #fff !important;
+}
+
+.visitacao-acomp-toolbar-acoes .btn.btn-excluir:hover:not(:disabled),
+.visitacao-acomp-toolbar-acoes .btn.btn-excluir:focus-visible {
+  background-color: var(--cor-perigo-hover, #bd2130) !important;
+  border-color: var(--cor-perigo-hover, #bd2130) !important;
+}
+
+.visitacao-acomp-toolbar-acoes .btn.btn-cancelar-fechamento {
+  background-color: #ea580c !important;
+  border-color: #ea580c !important;
+  color: #fff !important;
+}
+
+.visitacao-acomp-toolbar-acoes .btn.btn-cancelar-fechamento:hover:not(:disabled),
+.visitacao-acomp-toolbar-acoes .btn.btn-cancelar-fechamento:focus-visible {
+  background-color: #c2410c !important;
+  border-color: #c2410c !important;
+}
+
+body.theme-dark .visitacao-acomp-toolbar-acoes .btn.btn-excluir,
+[data-theme='dark'] .visitacao-acomp-toolbar-acoes .btn.btn-excluir {
+  background-color: var(--cor-perigo, #dc3545) !important;
+  border-color: var(--cor-perigo, #dc3545) !important;
+  color: #fff !important;
+}
+
+body.theme-dark .visitacao-acomp-toolbar-acoes .btn.btn-cancelar-fechamento,
+[data-theme='dark'] .visitacao-acomp-toolbar-acoes .btn.btn-cancelar-fechamento {
+  background-color: #ea580c !important;
+  border-color: #ea580c !important;
+  color: #fff !important;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-du-legend {
@@ -79,6 +171,35 @@ app-visitacao-acompanhamento-page {
   box-shadow: var(--sombra-sm, none);
   color: var(--text-primary, #1e293b);
   white-space: nowrap;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-du-legend-head {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-du-legend .visitacao-acomp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+  background: color-mix(in srgb, var(--cor-superficie, #fff) 70%, var(--cor-borda, #e2e8f0));
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-du-legend .visitacao-acomp-status-badge.is-fechado {
+  color: var(--cor-sucesso, #166534);
+  border-color: color-mix(in srgb, var(--cor-sucesso, #16a34a) 45%, var(--cor-borda, #e2e8f0));
+  background: color-mix(in srgb, var(--cor-sucesso, #16a34a) 14%, var(--cor-superficie, #fff));
 }
 
 .visitacao-acompanhamento-page .results-card > .table-wrapper {
@@ -102,16 +223,43 @@ app-visitacao-acompanhamento-page {
 
 @media (max-width: 720px) {
   .visitacao-acomp-toolbar .filter-group,
+  .visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-competencia,
   .visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-rep,
-  .visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-medico {
+  .visitacao-acomp-toolbar .filter-group.visitacao-acomp-toolbar-medico,
+  .visitacao-acomp-toolbar-acoes {
     flex: 1 1 100%;
     max-width: none;
+  }
+
+  .visitacao-acomp-toolbar .visitacao-acomp-competencia-nav {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .visitacao-acomp-toolbar .visitacao-acomp-competencia-combo {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr) 5.25rem;
   }
 
   .visitacao-acompanhamento-page .visitacao-acomp-du-legend {
     margin-left: 0;
     white-space: normal;
   }
+}
+
+body.theme-dark .visitacao-acomp-nav-mes,
+[data-theme='dark'] .visitacao-acomp-nav-mes {
+  background: var(--cor-superficie, var(--bg-card, #1e293b));
+  border-color: var(--border-color, #334155);
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .visitacao-acomp-nav-mes:hover:not(:disabled),
+body.theme-dark .visitacao-acomp-nav-mes:focus-visible:not(:disabled),
+[data-theme='dark'] .visitacao-acomp-nav-mes:hover:not(:disabled),
+[data-theme='dark'] .visitacao-acomp-nav-mes:focus-visible:not(:disabled) {
+  border-color: var(--cor-primaria, #93c5fd);
+  color: var(--cor-primaria, #93c5fd);
 }
 
 body.theme-dark .visitacao-acomp-toolbar,
@@ -127,13 +275,27 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-du-legend,
   border-color: var(--cor-borda, var(--border-color, #334155));
 }
 
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-du-legend .visitacao-acomp-status-badge,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-du-legend .visitacao-acomp-status-badge {
+  color: var(--text-secondary, #94a3b8);
+  background: color-mix(in srgb, var(--cor-superficie, #1e293b) 70%, var(--cor-borda, #334155));
+  border-color: var(--cor-borda, #334155);
+}
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-du-legend .visitacao-acomp-status-badge.is-fechado,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-du-legend .visitacao-acomp-status-badge.is-fechado {
+  color: var(--cor-sucesso, #86efac);
+  border-color: color-mix(in srgb, var(--cor-sucesso, #22c55e) 45%, var(--cor-borda, #334155));
+  background: color-mix(in srgb, var(--cor-sucesso, #22c55e) 18%, var(--cor-superficie, #1e293b));
+}
+
 .visitacao-acompanhamento-page .visitacao-acomp-rep-cards-wrap {
   margin: 0.75rem 0 1rem;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(580px, 1fr));
   gap: 0.75rem;
 }
 
@@ -200,7 +362,24 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-medicos stro
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-rep-metrics.has-painel {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-recebido-unidades {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-total .label {
+  color: var(--text-primary, #1e293b);
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-total .value {
+  color: var(--text-primary, #1e293b);
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-total-blocos {
@@ -216,6 +395,14 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-medicos stro
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-secondary, #64748b);
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-total-bloco.is-soma h4 {
+  color: var(--text-primary, #1e293b);
+}
+
+.visitacao-acompanhamento-page .visitacao-acomp-total-bloco.is-soma .visitacao-acomp-rep-metric.is-total .value {
+  font-weight: 800;
 }
 
 .visitacao-acompanhamento-page .visitacao-acomp-total-bloco + .visitacao-acomp-total-bloco {
@@ -328,6 +515,10 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-medicos stro
 @media (max-width: 480px) {
   .visitacao-acompanhamento-page .visitacao-acomp-kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .visitacao-acompanhamento-page .visitacao-acomp-rep-recebido-unidades {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .visitacao-acompanhamento-page .visitacao-acomp-rep-desempenho,
@@ -491,11 +682,28 @@ body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-total-bloco h4,
   color: var(--text-secondary, #94a3b8);
 }
 
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-total-bloco.is-soma h4,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-total-bloco.is-soma h4 {
+  color: var(--text-primary, #e2e8f0);
+}
+
 body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-total-bloco + .visitacao-acomp-total-bloco,
 [data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-total-bloco + .visitacao-acomp-total-bloco {
   border-top-color: var(--cor-borda, #334155);
 }
 
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-recebido-unidades,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-rep-recebido-unidades {
+  border-bottom-color: var(--cor-borda, #334155);
+}
+
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-total .label,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-total .label,
+body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-total .value,
+[data-theme='dark'] .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-total .value {
+  color: var(--text-primary, #e2e8f0);
+}
 
 body.theme-dark .visitacao-acompanhamento-page .visitacao-acomp-rep-metric.is-primary .value {
   color: var(--cor-primaria, #93c5fd);

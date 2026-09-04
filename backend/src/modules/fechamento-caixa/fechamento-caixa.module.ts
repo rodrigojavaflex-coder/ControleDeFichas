@@ -7,6 +7,7 @@ import { FechamentoCaixaService } from './fechamento-caixa.service';
 import { CaixaPagamentoErp } from './entities/caixa-pagamento-erp.entity';
 import { CaixaItemErp } from './entities/caixa-item-erp.entity';
 import { CaixaRequisicaoPaga } from './entities/caixa-requisicao-paga.entity';
+import { CaixaRequisicaoFormula } from './entities/caixa-requisicao-formula.entity';
 import { Orcamento } from '../orcamentos/entities/orcamento.entity';
 import { Baixa } from '../baixas/entities/baixa.entity';
 import { Cliente } from '../clientes/entities/cliente.entity';
@@ -23,6 +24,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
       CaixaPagamentoErp,
       CaixaItemErp,
       CaixaRequisicaoPaga,
+      CaixaRequisicaoFormula,
       Orcamento,
       Baixa,
       Cliente,

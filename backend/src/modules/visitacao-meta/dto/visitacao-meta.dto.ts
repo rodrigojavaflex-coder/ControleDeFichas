@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMinSize,
+  IsArray,
   IsEnum,
   IsInt,
   IsNumber,
@@ -92,6 +94,61 @@ export class VisitacaoMetaItemDto {
 
   @ApiPropertyOptional({ nullable: true })
   valorMeta: number | null;
+
+  @ApiProperty({ enum: Unidade, isArray: true })
+  unidadesComissao: Unidade[];
+
+  @ApiProperty()
+  quantidadeConflitosPainel: number;
+}
+
+export class VisitacaoPainelConflitoDto {
+  @ApiProperty()
+  crm: string;
+
+  @ApiProperty()
+  uf: string;
+
+  @ApiProperty()
+  nomeMedico: string;
+
+  @ApiProperty({ enum: Unidade, isArray: true })
+  unidades: Unidade[];
+
+  @ApiProperty({ type: [String] })
+  representantes: string[];
+}
+
+export class SalvarUnidadesComissaoDto {
+  @ApiProperty()
+  @IsUUID()
+  funcionarioId: string;
+
+  @ApiProperty({ enum: Unidade, isArray: true })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsEnum(Unidade, { each: true })
+  unidades: Unidade[];
+}
+
+export class ReavaliarPainelComissaoDto {
+  @ApiProperty()
+  @IsUUID()
+  funcionarioId: string;
+}
+
+export class UnidadesComissaoResponseDto {
+  @ApiProperty()
+  funcionarioId: string;
+
+  @ApiProperty({ enum: Unidade, isArray: true })
+  unidadesComissao: Unidade[];
+
+  @ApiProperty()
+  quantidadeConflitosPainel: number;
+
+  @ApiProperty({ type: [VisitacaoPainelConflitoDto] })
+  conflitos: VisitacaoPainelConflitoDto[];
 }
 
 export class VisitacaoMetaListResponseDto {

@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationMetaDto } from '../../../common/dto/paginated-response.dto';
 import { VisitacaoAcompanhamentoItemDto } from './visitacao-acompanhamento-item.dto';
 import { VisitacaoAcompanhamentoTotaisDto } from './visitacao-acompanhamento-totais.dto';
@@ -16,4 +16,22 @@ export class VisitacaoAcompanhamentoListResponseDto {
 
   @ApiProperty({ type: [VisitacaoAcompanhamentoTotaisRepresentanteDto] })
   totaisPorRepresentante: VisitacaoAcompanhamentoTotaisRepresentanteDto[];
+
+  @ApiProperty({ enum: ['ABERTO', 'FECHADO'] })
+  competenciaStatus: 'ABERTO' | 'FECHADO';
+
+  @ApiPropertyOptional({ nullable: true })
+  dataUltimoDiaUtil?: string | null;
+
+  @ApiProperty()
+  caixaUltimoDiaUtilConfirmado: boolean;
+
+  @ApiProperty()
+  podeFechar: boolean;
+
+  @ApiProperty()
+  podeReabrir: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  mensagemGate?: string | null;
 }

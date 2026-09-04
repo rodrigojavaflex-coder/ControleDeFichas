@@ -42,6 +42,16 @@ export interface CaixaItemRow {
   chave_erp: string;
 }
 
+export interface CaixaRequisicaoFormulaRow {
+  serie: string;
+  nr_orcamento: number | null;
+  valor_prcobr: number;
+  valor_rateado: number;
+  crm_medico: string | null;
+  uf_crm_medico: string | null;
+  nome_medico: string | null;
+}
+
 export interface CaixaRequisicaoPagaRow {
   filial: number;
   data_pagamento: string;
@@ -63,6 +73,7 @@ export interface CaixaRequisicaoPagaRow {
   uf_crm_medico: string | null;
   nome_medico: string | null;
   chave_erp: string;
+  formulas: CaixaRequisicaoFormulaRow[];
 }
 
 export interface CaixaFechamentoDiaRow {

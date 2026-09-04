@@ -32,9 +32,67 @@
   gap: 0.35rem;
 }
 
+.comercial-acomp-toolbar .filter-group.comercial-acomp-toolbar-competencia {
+  flex: 0 0 auto;
+  min-width: max-content;
+  max-width: none;
+}
+
 .comercial-acomp-toolbar .filter-group.comercial-acomp-vendedor {
   flex: 1 1 280px;
   max-width: 36rem;
+}
+
+.comercial-acomp-toolbar .comercial-acomp-competencia-nav {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  width: max-content;
+  max-width: 100%;
+}
+
+.comercial-acomp-toolbar .comercial-acomp-competencia-combo {
+  display: grid;
+  grid-template-columns: 8.75rem 5.25rem;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.comercial-acomp-toolbar .comercial-acomp-competencia-combo .form-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.comercial-acomp-toolbar .comercial-acomp-nav-mes {
+  flex: 0 0 2.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.375rem;
+  width: 2.375rem;
+  min-height: 2.375rem;
+  min-width: 2.375rem;
+  padding: 0;
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 6px;
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+}
+
+.comercial-acomp-nav-mes:hover:not(:disabled),
+.comercial-acomp-nav-mes:focus-visible:not(:disabled) {
+  border-color: var(--cor-primaria, #2563eb);
+  color: var(--cor-primaria, #2563eb);
+  outline: none;
+}
+
+.comercial-acomp-nav-mes:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .comercial-acomp-toolbar-acoes {
@@ -303,6 +361,21 @@ body.theme-dark .comercial-acomp-toolbar,
   border-color: var(--border-color, #334155);
 }
 
+body.theme-dark .comercial-acomp-nav-mes,
+[data-theme='dark'] .comercial-acomp-nav-mes {
+  background: var(--cor-superficie, var(--bg-card, #1e293b));
+  border-color: var(--border-color, #334155);
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .comercial-acomp-nav-mes:hover:not(:disabled),
+body.theme-dark .comercial-acomp-nav-mes:focus-visible:not(:disabled),
+[data-theme='dark'] .comercial-acomp-nav-mes:hover:not(:disabled),
+[data-theme='dark'] .comercial-acomp-nav-mes:focus-visible:not(:disabled) {
+  border-color: var(--cor-primaria, #93c5fd);
+  color: var(--cor-primaria, #93c5fd);
+}
+
 body.theme-dark .comercial-acomp-du-legend,
 [data-theme='dark'] .comercial-acomp-du-legend {
   color: var(--text-primary, #e2e8f0);
@@ -432,9 +505,20 @@ body.theme-dark .comercial-acomp-card.is-clickable:hover,
 
 @media (max-width: 720px) {
   .comercial-acomp-toolbar .filter-group,
+  .comercial-acomp-toolbar .filter-group.comercial-acomp-toolbar-competencia,
   .comercial-acomp-toolbar .filter-group.comercial-acomp-vendedor {
     flex: 1 1 100%;
     max-width: none;
+  }
+
+  .comercial-acomp-toolbar .comercial-acomp-competencia-nav {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .comercial-acomp-toolbar .comercial-acomp-competencia-combo {
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr) 5.25rem;
   }
 
   .comercial-acomp-kpi-grid {

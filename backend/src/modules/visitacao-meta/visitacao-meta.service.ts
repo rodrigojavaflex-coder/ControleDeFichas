@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { VisitacaoMetaRepresentante } from './entities/visitacao-meta-representante.entity';
 import { VisitacaoComissaoFaixa } from './entities/visitacao-comissao-faixa.entity';
+import { VisitacaoRepresentanteUnidadeComissao } from './entities/visitacao-representante-unidade-comissao.entity';
 import { Funcionario } from '../folha/entities/funcionario.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
@@ -18,8 +19,12 @@ import {
   CopiarVisitacaoMetaDto,
   CopiarVisitacaoMetaResponseDto,
   FindVisitacaoMetaDto,
+  ReavaliarPainelComissaoDto,
+  SalvarUnidadesComissaoDto,
   SalvarVisitacaoMetaDto,
+  UnidadesComissaoResponseDto,
   VisitacaoMetaListResponseDto,
+  VisitacaoPainelConflitoDto,
 } from './dto/visitacao-meta.dto';
 import {
   SalvarVisitacaoComissaoFaixaDto,
@@ -53,6 +58,8 @@ export class VisitacaoMetaService {
     private readonly metaRepo: Repository<VisitacaoMetaRepresentante>,
     @InjectRepository(VisitacaoComissaoFaixa)
     private readonly faixaRepo: Repository<VisitacaoComissaoFaixa>,
+    @InjectRepository(VisitacaoRepresentanteUnidadeComissao)
+    private readonly unidadeComissaoRepo: Repository<VisitacaoRepresentanteUnidadeComissao>,
     @InjectRepository(Funcionario)
     private readonly funcionarioRepo: Repository<Funcionario>,
     private readonly dataSource: DataSource,
@@ -93,6 +100,47 @@ export class VisitacaoMetaService {
     await this.metaRepo.save(row);
     const [ano, mes] = dto.anoMes.split('-').map((n) => Number(n));
     return this.montarLista(funcionario.unidade, ano, mes);
+  }
+
+  async salvarUnidadesComissao(
+    usuario: Usuario,
+    dto: SalvarUnidadesComissaoDto,
+  ): Promise<UnidadesComissaoResponseDto> {
+    const funcionario = await this.obterRepresentanteVinculado(
+      dto.funcionarioId,
+    );
+    assertUnidadeFolha(usuario, funcionario.unidade);
+    const unidades = this.normalizarUnidadesComissao(
+      funcionario.unidade,
+      dto.unidades,
+    );
+    await this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(VisitacaoRepresentanteUnidadeComissao);
+      await repo
+        .createQueryBuilder()
+        .delete()
+        .from(VisitacaoRepresentanteUnidadeComissao)
+        .where('"funcionarioId" = :id', { id: funcionario.id })
+        .execute();
+      await repo.save(
+        unidades.map((unidade) =>
+          repo.create({ funcionario, unidade }),
+        ),
+      );
+    });
+    return this.montarUnidadesComissaoResponse(funcionario.id, unidades);
+  }
+
+  async reavaliarPainelComissao(
+    usuario: Usuario,
+    dto: ReavaliarPainelComissaoDto,
+  ): Promise<UnidadesComissaoResponseDto> {
+    const funcionario = await this.obterRepresentanteVinculado(
+      dto.funcionarioId,
+    );
+    assertUnidadeFolha(usuario, funcionario.unidade);
+    const unidades = await this.lerUnidadesComissao(funcionario);
+    return this.montarUnidadesComissaoResponse(funcionario.id, unidades);
   }
 
   async copiarMesAnterior(
@@ -318,8 +366,17 @@ export class VisitacaoMetaService {
     const porChave = new Map(
       metas.map((m) => [`${m.funcionario.id}|${m.anoMes}`, Number(m.valorMeta)]),
     );
+    const unidadesPorFunc = await this.lerUnidadesComissaoEmLote(vinculados);
+    const conflitosPorChave = await this.listarConflitosPorConjuntos(
+      [...unidadesPorFunc.values()],
+    );
     const itens: VisitacaoMetaListResponseDto['itens'] = [];
     for (const f of vinculados) {
+      const unidadesComissao =
+        unidadesPorFunc.get(f.id) ?? [f.unidade];
+      const chaveUnidades = this.chaveUnidades(unidadesComissao);
+      const quantidadeConflitosPainel =
+        conflitosPorChave.get(chaveUnidades)?.length ?? 0;
       for (const m of meses) {
         const anoMes = `${ano}-${String(m).padStart(2, '0')}`;
         itens.push({
@@ -331,6 +388,8 @@ export class VisitacaoMetaService {
           valorMeta: porChave.has(`${f.id}|${anoMes}`)
             ? porChave.get(`${f.id}|${anoMes}`)!
             : null,
+          unidadesComissao,
+          quantidadeConflitosPainel,
         });
       }
     }
@@ -390,6 +449,198 @@ export class VisitacaoMetaService {
       );
     }
     return funcionario;
+  }
+
+  private async montarUnidadesComissaoResponse(
+    funcionarioId: string,
+    unidades: Unidade[],
+  ): Promise<UnidadesComissaoResponseDto> {
+    const conflitos = await this.listarConflitosPainel(unidades);
+    return {
+      funcionarioId,
+      unidadesComissao: unidades,
+      quantidadeConflitosPainel: conflitos.length,
+      conflitos,
+    };
+  }
+
+  private normalizarUnidadesComissao(
+    unidadeHome: Unidade,
+    informadas: Unidade[],
+  ): Unidade[] {
+    const set = new Set<Unidade>(informadas);
+    set.add(unidadeHome);
+    return Object.values(Unidade).filter((u) => set.has(u));
+  }
+
+  private async lerUnidadesComissao(
+    funcionario: Funcionario,
+  ): Promise<Unidade[]> {
+    const rows = await this.unidadeComissaoRepo.find({
+      where: { funcionario: { id: funcionario.id } },
+    });
+    if (!rows.length) {
+      return [funcionario.unidade];
+    }
+    return this.normalizarUnidadesComissao(
+      funcionario.unidade,
+      rows.map((r) => r.unidade),
+    );
+  }
+
+  private async lerUnidadesComissaoEmLote(
+    funcionarios: Funcionario[],
+  ): Promise<Map<string, Unidade[]>> {
+    const mapa = new Map<string, Unidade[]>();
+    if (!funcionarios.length) {
+      return mapa;
+    }
+    const rows = await this.unidadeComissaoRepo.find({
+      where: { funcionario: { id: In(funcionarios.map((f) => f.id)) } },
+      relations: ['funcionario'],
+    });
+    const extras = new Map<string, Unidade[]>();
+    for (const row of rows) {
+      const fid = row.funcionario.id;
+      const lista = extras.get(fid) ?? [];
+      lista.push(row.unidade);
+      extras.set(fid, lista);
+    }
+    for (const f of funcionarios) {
+      mapa.set(
+        f.id,
+        this.normalizarUnidadesComissao(f.unidade, extras.get(f.id) ?? []),
+      );
+    }
+    return mapa;
+  }
+
+  private chaveUnidades(unidades: Unidade[]): string {
+    return [...unidades].sort().join('|');
+  }
+
+  private async listarConflitosPorConjuntos(
+    conjuntos: Unidade[][],
+  ): Promise<Map<string, VisitacaoPainelConflitoDto[]>> {
+    const unicas = new Map<string, Unidade[]>();
+    for (const conjunto of conjuntos) {
+      unicas.set(this.chaveUnidades(conjunto), conjunto);
+    }
+    const unidadesConsulta = [
+      ...new Set(conjuntos.flatMap((c) => c)),
+    ];
+    const linhasPainel = await this.carregarPainelPorUnidades(unidadesConsulta);
+    const out = new Map<string, VisitacaoPainelConflitoDto[]>();
+    for (const [chave, conjunto] of unicas) {
+      out.set(chave, this.conflitosNoConjunto(conjunto, linhasPainel));
+    }
+    return out;
+  }
+
+  private async listarConflitosPainel(
+    unidades: Unidade[],
+  ): Promise<VisitacaoPainelConflitoDto[]> {
+    if (unidades.length < 2) {
+      return [];
+    }
+    const linhas = await this.carregarPainelPorUnidades(unidades);
+    return this.conflitosNoConjunto(unidades, linhas);
+  }
+
+  private async carregarPainelPorUnidades(
+    unidades: Unidade[],
+  ): Promise<
+    Array<{
+      crm: string;
+      uf: string;
+      nome: string;
+      unidade: Unidade;
+      representante: string;
+    }>
+  > {
+    if (!unidades.length) {
+      return [];
+    }
+    const rows = (await this.dataSource.query(
+      `
+      SELECT
+        BTRIM(p."crmMedico") AS crm,
+        UPPER(BTRIM(p."ufCrmMedico")) AS uf,
+        MAX(p."nomeMedico") AS nome,
+        p.unidade,
+        MAX(p."nomeRepresentante") AS representante
+      FROM painel_medicos_representantes p
+      WHERE p.unidade = ANY($1)
+        AND NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
+        AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL
+      GROUP BY BTRIM(p."crmMedico"), UPPER(BTRIM(p."ufCrmMedico")), p.unidade
+      `,
+      [unidades],
+    )) as Array<{
+      crm: string;
+      uf: string;
+      nome: string;
+      unidade: Unidade;
+      representante: string;
+    }>;
+    return rows;
+  }
+
+  private conflitosNoConjunto(
+    unidades: Unidade[],
+    linhas: Array<{
+      crm: string;
+      uf: string;
+      nome: string;
+      unidade: Unidade;
+      representante: string;
+    }>,
+  ): VisitacaoPainelConflitoDto[] {
+    if (unidades.length < 2) {
+      return [];
+    }
+    const set = new Set(unidades);
+    const porCrm = new Map<
+      string,
+      {
+        crm: string;
+        uf: string;
+        nome: string;
+        unidades: Set<Unidade>;
+        representantes: Set<string>;
+      }
+    >();
+    for (const linha of linhas) {
+      if (!set.has(linha.unidade)) continue;
+      const key = `${linha.crm}|${linha.uf}`;
+      const atual = porCrm.get(key) ?? {
+        crm: linha.crm,
+        uf: linha.uf,
+        nome: linha.nome,
+        unidades: new Set<Unidade>(),
+        representantes: new Set<string>(),
+      };
+      atual.unidades.add(linha.unidade);
+      if (linha.representante?.trim()) {
+        atual.representantes.add(linha.representante.trim());
+      }
+      if (!atual.nome && linha.nome) {
+        atual.nome = linha.nome;
+      }
+      porCrm.set(key, atual);
+    }
+    return [...porCrm.values()]
+      .filter((item) => item.unidades.size > 1)
+      .map((item) => ({
+        crm: item.crm,
+        uf: item.uf,
+        nomeMedico: item.nome,
+        unidades: Object.values(Unidade).filter((u) => item.unidades.has(u)),
+        representantes: [...item.representantes].sort((a, b) =>
+          a.localeCompare(b, 'pt-BR'),
+        ),
+      }))
+      .sort((a, b) => a.nomeMedico.localeCompare(b.nomeMedico, 'pt-BR'));
   }
 
   private ehRepresentantePainel(funcionario: Funcionario): boolean {

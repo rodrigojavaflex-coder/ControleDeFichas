@@ -32,6 +32,7 @@ import { ImportarCaixaErpDto } from './dto/importar-caixa-erp.dto';
 import { CaixaItemErp, CaixaTipoItem } from './entities/caixa-item-erp.entity';
 import { CaixaPagamentoErp } from './entities/caixa-pagamento-erp.entity';
 import { CaixaRequisicaoPaga } from './entities/caixa-requisicao-paga.entity';
+import { CaixaRequisicaoFormula } from './entities/caixa-requisicao-formula.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { CaixaFechamento } from './entities/caixa-fechamento.entity';
 import { CaixaFechamentoStatus } from './enums/caixa-fechamento-status.enum';
@@ -93,6 +94,16 @@ interface AgenteCaixaItemRow {
   pagamento_cupom: number;
 }
 
+interface AgenteCaixaRequisicaoFormulaRow {
+  serie: string;
+  nr_orcamento: number | null;
+  valor_prcobr: number;
+  valor_rateado: number;
+  crm_medico: string | null;
+  uf_crm_medico: string | null;
+  nome_medico: string | null;
+}
+
 interface AgenteCaixaRequisicaoRow {
   data_pagamento: string;
   requisicao: number;
@@ -112,6 +123,7 @@ interface AgenteCaixaRequisicaoRow {
   crm_medico: string | null;
   uf_crm_medico: string | null;
   nome_medico: string | null;
+  formulas?: AgenteCaixaRequisicaoFormulaRow[];
 }
 
 interface UpsertStats {
@@ -135,6 +147,8 @@ export class FechamentoCaixaService {
     private readonly itemRepo: Repository<CaixaItemErp>,
     @InjectRepository(CaixaRequisicaoPaga)
     private readonly requisicaoRepo: Repository<CaixaRequisicaoPaga>,
+    @InjectRepository(CaixaRequisicaoFormula)
+    private readonly formulaRepo: Repository<CaixaRequisicaoFormula>,
     @InjectRepository(Orcamento)
     private readonly orcamentoRepo: Repository<Orcamento>,
     @InjectRepository(Baixa)
@@ -397,8 +411,13 @@ export class FechamentoCaixaService {
       (r) => !!String(r.crm_medico ?? '').trim(),
     ).length;
 
+    const qtdFormulas = requisicoesRows.reduce(
+      (acc, r) => acc + (r.formulas?.length ?? 0),
+      0,
+    );
+
     this.logger.log(
-      `Caixa sync ${unidade}: snapshot agente ${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes} (vendedor=${reqComVendedor} crm=${reqComCrm})`,
+      `Caixa sync ${unidade}: snapshot agente ${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes} formulas=${qtdFormulas} (vendedor=${reqComVendedor} crm=${reqComCrm})`,
     );
 
     this.importacaoProgressService.atualizar({
@@ -477,6 +496,13 @@ export class FechamentoCaixaService {
       'upsert requisições pagas',
       `${qtdRequisicoes} linha(s)`,
       () => this.upsertRequisicoes(requisicoesRows, unidade, true),
+    );
+
+    await this.cronometrarCaixa(
+      unidade,
+      'upsert fórmulas da requisição',
+      `${qtdFormulas} linha(s)`,
+      () => this.upsertFormulasDasPagas(requisicoesRows, unidade),
     );
 
     this.importacaoProgressService.atualizar({
@@ -935,6 +961,78 @@ export class FechamentoCaixaService {
       importados: chavesUnicas.filter((c) => !existentesSet.has(c)).length,
       atualizados: chavesUnicas.filter((c) => existentesSet.has(c)).length,
     };
+  }
+
+  private async upsertFormulasDasPagas(
+    rows: AgenteCaixaRequisicaoRow[],
+    unidade: Unidade,
+  ): Promise<void> {
+    if (!rows.length) {
+      return;
+    }
+    const chaves = [
+      ...new Set(rows.map((r) => this.buildChaveRequisicao(unidade, r))),
+    ];
+    const pagas = await this.requisicaoRepo.find({
+      where: { chaveErp: In(chaves) },
+      select: [
+        'id',
+        'chaveErp',
+        'unidade',
+        'dataPagamento',
+        'numeroRequisicao',
+      ],
+    });
+    if (!pagas.length) {
+      return;
+    }
+    const pagaPorChave = new Map(pagas.map((p) => [p.chaveErp, p]));
+    await this.formulaRepo.delete({
+      requisicaoPagaId: In(pagas.map((p) => p.id)),
+    });
+
+    const entities: CaixaRequisicaoFormula[] = [];
+    for (const row of rows) {
+      const paga = pagaPorChave.get(this.buildChaveRequisicao(unidade, row));
+      if (!paga) {
+        continue;
+      }
+      const vistas = new Set<string>();
+      for (const f of row.formulas ?? []) {
+        const serie = String(f.serie ?? '').trim();
+        if (!serie || vistas.has(serie)) {
+          continue;
+        }
+        vistas.add(serie);
+        entities.push(
+          this.formulaRepo.create({
+            requisicaoPagaId: paga.id,
+            unidade: paga.unidade,
+            dataPagamento: paga.dataPagamento,
+            numeroRequisicao: paga.numeroRequisicao,
+            serie,
+            numeroOrcamento: f.nr_orcamento,
+            valorPrcobr: Number(f.valor_prcobr) || 0,
+            valorRateado: Number(f.valor_rateado) || 0,
+            nomeMedico: f.nome_medico
+              ? padronizarNomeDeSistemaLegado(f.nome_medico)
+              : null,
+            crmMedico:
+              f.crm_medico != null && String(f.crm_medico).trim()
+                ? String(f.crm_medico).trim()
+                : null,
+            ufCrmMedico:
+              f.uf_crm_medico != null && String(f.uf_crm_medico).trim()
+                ? String(f.uf_crm_medico).trim().toUpperCase()
+                : null,
+            atualizadoEm: new Date(),
+          }),
+        );
+      }
+    }
+    if (entities.length) {
+      await this.formulaRepo.save(entities);
+    }
   }
 
   async obterTotaisPorFormaPublic(

@@ -20,27 +20,51 @@
           <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
         </select>
       </div>
-      <div class="filter-group">
-        <label class="form-label" for="va-mes">Mês</label>
-        <select
-          id="va-mes"
-          class="form-control"
-          [(ngModel)]="mesFiltro"
-          [disabled]="!unidadeFilter"
-          (ngModelChange)="onFiltroChange()">
-          <option *ngFor="let m of MESES_PT" [ngValue]="m.numero">{{ m.nome }}</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label class="form-label" for="va-ano">Ano</label>
-        <select
-          id="va-ano"
-          class="form-control"
-          [(ngModel)]="anoFiltro"
-          [disabled]="!unidadeFilter"
-          (ngModelChange)="onFiltroChange()">
-          <option *ngFor="let a of anosDisponiveis" [ngValue]="a">{{ a }}</option>
-        </select>
+      <div class="filter-group visitacao-acomp-toolbar-competencia">
+        <label class="form-label" for="va-mes">Competência</label>
+        <div
+          class="visitacao-acomp-competencia-nav"
+          role="group"
+          aria-label="Navegar competência (mês e ano)">
+          <button
+            type="button"
+            class="visitacao-acomp-nav-mes"
+            title="Mês anterior"
+            aria-label="Mês anterior"
+            [disabled]="!unidadeFilter || processamentoAtivo || !podeMesAnterior"
+            (click)="navegarMesAnterior()">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <div class="visitacao-acomp-competencia-combo">
+            <select
+              id="va-mes"
+              class="form-control"
+              [(ngModel)]="mesFiltro"
+              [disabled]="!unidadeFilter"
+              (ngModelChange)="onFiltroChange()"
+              aria-label="Mês da competência">
+              <option *ngFor="let m of MESES_PT" [ngValue]="m.numero">{{ m.nome }}</option>
+            </select>
+            <select
+              id="va-ano"
+              class="form-control"
+              [(ngModel)]="anoFiltro"
+              [disabled]="!unidadeFilter"
+              (ngModelChange)="onFiltroChange()"
+              aria-label="Ano da competência">
+              <option *ngFor="let a of anosDisponiveis" [ngValue]="a">{{ a }}</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            class="visitacao-acomp-nav-mes"
+            title="Próximo mês"
+            aria-label="Próximo mês"
+            [disabled]="!unidadeFilter || processamentoAtivo || !podeMesProximo"
+            (click)="navegarMesProximo()">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
       </div>
       <div class="filter-group visitacao-acomp-toolbar-rep">
         <label class="form-label" for="va-representante">Representante</label>
@@ -92,6 +116,26 @@
           <i class="fas fa-print"></i>
           Imprimir
         </button>
+        <button
+          *ngIf="canFechar && competenciaStatus === 'ABERTO'"
+          type="button"
+          class="btn btn-excluir"
+          (click)="pedirFechar()"
+          [disabled]="!podeFechar || processamentoAtivo || !unidadeFilter"
+          [title]="tituloBotaoFechar">
+          <i class="fas fa-lock"></i>
+          Fechar
+        </button>
+        <button
+          *ngIf="canReabrir && competenciaStatus === 'FECHADO'"
+          type="button"
+          class="btn btn-cancelar-fechamento"
+          (click)="pedirReabrir()"
+          [disabled]="!podeReabrir || processamentoAtivo || !unidadeFilter"
+          title="Reabrir competência e voltar ao cálculo ao vivo">
+          <i class="fas fa-unlock"></i>
+          Reabrir
+        </button>
         <span class="visitacao-painel-imprimir-status" *ngIf="imprimindo" aria-live="polite">
           Preparando…
         </span>
@@ -100,9 +144,25 @@
         class="visitacao-acomp-du-legend"
         *ngIf="unidadeFilter && rotuloCompetenciaLegenda && rotuloDiasUteis"
         aria-label="Competência, dias úteis e dias realizados">
-        <strong>{{ rotuloCompetenciaLegenda }}</strong>
-        <span>{{ rotuloDiasUteis }}</span>
-        <span *ngIf="rotuloDiasRealizados">{{ rotuloDiasRealizados }}</span>
+        <div class="visitacao-acomp-du-legend-head">
+          <strong>{{ rotuloCompetenciaLegenda }}</strong>
+          <span
+            class="visitacao-acomp-status-badge"
+            [class.is-fechado]="competenciaFechada"
+            *ngIf="!loading">
+            {{ competenciaFechada ? 'Fechado' : 'Aberto' }}
+          </span>
+        </div>
+        <span class="visitacao-acomp-du-legend-dias">
+          {{ rotuloDiasUteis }}
+          <ng-container *ngIf="rotuloDiasRealizados">
+            · {{ rotuloDiasRealizados }}
+          </ng-container>
+        </span>
+        <span *ngIf="dataUltimoDiaUtil">
+          Último DU {{ formatarData(dataUltimoDiaUtil) }}
+          {{ caixaUltimoDiaUtilConfirmado ? '(caixa confirmado)' : '(caixa pendente)' }}
+        </span>
       </aside>
     </section>
 
@@ -137,14 +197,31 @@
             </div>
           </header>
           <div
+            class="visitacao-acomp-rep-recebido-unidades"
+            *ngIf="!isCardTotal(card)">
+            <div
+              class="visitacao-acomp-rep-metric is-success"
+              *ngFor="let linha of linhasRecebidoUnidade(card)"
+              [class.is-loja]="linha.isLoja"
+              [attr.title]="linha.isLoja
+                ? 'Unidade do cadastro — entra na comissão, meta e projeção'
+                : 'Unidade configurada — entra na comissão, meta e projeção'">
+              <span class="label">{{ linha.unidade }}</span>
+              <span class="value">{{ formatarMoeda(linha.valor) }}</span>
+              <span class="sub">{{ linha.quantidade }} requisição(ões)</span>
+            </div>
+            <div
+              class="visitacao-acomp-rep-metric is-total"
+              title="Soma das unidades de comissão. Base de % meta, projeção e comissão.">
+              <span class="label">Total</span>
+              <span class="value">{{ formatarMoeda(valorRecebidoTotal(card)) }}</span>
+              <span class="sub">{{ quantidadeRecebidoTotal(card) }} requisição(ões)</span>
+            </div>
+          </div>
+          <div
             class="visitacao-acomp-rep-metrics"
             [class.has-painel]="!isCardTotal(card)"
             *ngIf="!isCardTotal(card)">
-            <div class="visitacao-acomp-rep-metric is-success">
-              <span class="label">Recebido</span>
-              <span class="value">{{ formatarMoeda(valorRecebidoCard(card)) }}</span>
-              <span class="sub">{{ quantidadeRecebidoCard(card) }} requisição(ões)</span>
-            </div>
             <div class="visitacao-acomp-rep-metric is-danger">
               <span class="label">Rejeitado</span>
               <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
@@ -176,18 +253,37 @@
                 </div>
               </div>
             </section>
-            <section class="visitacao-acomp-total-bloco">
-              <h4>Outras unidades</h4>
+            <section
+              class="visitacao-acomp-total-bloco"
+              *ngFor="let bloco of outrasUnidadesCard(card)">
+              <h4>{{ bloco.unidade }}</h4>
               <div class="visitacao-acomp-rep-metrics">
                 <div class="visitacao-acomp-rep-metric is-success">
                   <span class="label">Recebido</span>
-                  <span class="value">{{ formatarMoeda(valorRecebidoOutrasUnidades(card)) }}</span>
-                  <span class="sub">{{ quantidadeRecebidoOutrasUnidades(card) }} requisição(ões)</span>
+                  <span class="value">{{ formatarMoeda(bloco.valorRecebido) }}</span>
+                  <span class="sub">{{ bloco.quantidadeRecebido }} requisição(ões)</span>
                 </div>
                 <div class="visitacao-acomp-rep-metric is-danger">
                   <span class="label">Rejeitado</span>
-                  <span class="value">{{ formatarMoeda(valorRejeitadoOutrasUnidades(card)) }}</span>
-                  <span class="sub">{{ quantidadeRejeitadoOutrasUnidades(card) }} orçamento(s)</span>
+                  <span class="value">{{ formatarMoeda(bloco.valorRejeitado) }}</span>
+                  <span class="sub">{{ bloco.quantidadeRejeitado }} orçamento(s)</span>
+                </div>
+              </div>
+            </section>
+            <section
+              class="visitacao-acomp-total-bloco is-soma"
+              *ngIf="outrasUnidadesCard(card).length">
+              <h4>Total</h4>
+              <div class="visitacao-acomp-rep-metrics">
+                <div class="visitacao-acomp-rep-metric is-success is-total">
+                  <span class="label">Recebido</span>
+                  <span class="value">{{ formatarMoeda(valorRecebidoGrandTotal(card)) }}</span>
+                  <span class="sub">{{ quantidadeRecebidoGrandTotal(card) }} requisição(ões)</span>
+                </div>
+                <div class="visitacao-acomp-rep-metric is-danger is-total">
+                  <span class="label">Rejeitado</span>
+                  <span class="value">{{ formatarMoeda(valorRejeitadoGrandTotal(card)) }}</span>
+                  <span class="sub">{{ quantidadeRejeitadoGrandTotal(card) }} orçamento(s)</span>
                 </div>
               </div>
             </section>
@@ -448,6 +544,7 @@
                 <th>Cupom</th>
                 <th>Requisição</th>
                 <th>Orçamento</th>
+                <th>Série</th>
                 <th class="col-num">Valor pago</th>
               </tr>
             </thead>
@@ -457,15 +554,16 @@
                 <td>{{ rec.numeroCupom }}</td>
                 <td>{{ rec.numeroRequisicao }}</td>
                 <td>{{ rec.numeroOrcamento ?? '—' }}</td>
+                <td>{{ formatarSerie(rec.serie) }}</td>
                 <td class="col-num">{{ formatarMoeda(rec.valorPago) }}</td>
               </tr>
               <tr class="no-data" *ngIf="detalhe.recebidos.length === 0">
-                <td colspan="5">Nenhum recebimento no período</td>
+                <td colspan="6">Nenhum recebimento no período</td>
               </tr>
             </tbody>
             <tfoot *ngIf="detalhe.recebidos.length">
               <tr>
-                <td colspan="4"><strong>Total recebido</strong></td>
+                <td colspan="5"><strong>Total recebido</strong></td>
                 <td class="col-num"><strong>{{ formatarMoeda(totalDetalheRecebido) }}</strong></td>
               </tr>
             </tfoot>
@@ -611,3 +709,24 @@
     <p id="va-proc-sub" *ngIf="subtituloProcessamento">{{ subtituloProcessamento }}</p>
   </div>
 </div>
+
+<app-confirmation-modal
+  [isVisible]="confirmFecharVisivel"
+  title="Fechar visitação"
+  [message]="confirmFecharMensagem"
+  confirmText="Fechar"
+  cancelText="Cancelar"
+  confirmVariant="primary"
+  (confirmed)="confirmarFechar()"
+  (cancelled)="cancelarFechar()">
+</app-confirmation-modal>
+
+<app-confirmation-modal
+  [isVisible]="confirmReabrirVisivel"
+  title="Reabrir visitação"
+  [message]="confirmReabrirMensagem"
+  confirmText="Reabrir"
+  cancelText="Cancelar"
+  (confirmed)="confirmarReabrir()"
+  (cancelled)="cancelarReabrir()">
+</app-confirmation-modal>

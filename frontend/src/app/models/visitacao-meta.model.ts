@@ -1,5 +1,13 @@
 import { Unidade } from './usuario.model';
 
+export interface VisitacaoPainelConflito {
+  crm: string;
+  uf: string;
+  nomeMedico: string;
+  unidades: Unidade[];
+  representantes: string[];
+}
+
 export interface VisitacaoMetaItem {
   funcionarioId: string;
   nome: string;
@@ -7,6 +15,15 @@ export interface VisitacaoMetaItem {
   anoMes: string;
   mes: number;
   valorMeta: number | null;
+  unidadesComissao: Unidade[];
+  quantidadeConflitosPainel: number;
+}
+
+export interface UnidadesComissaoResponse {
+  funcionarioId: string;
+  unidadesComissao: Unidade[];
+  quantidadeConflitosPainel: number;
+  conflitos: VisitacaoPainelConflito[];
 }
 
 export interface VisitacaoMetaListResponse {

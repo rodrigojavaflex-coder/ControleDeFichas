@@ -14,6 +14,12 @@ export class VisitacaoAcompanhamentoMovimentoRecebidoDto {
   @ApiPropertyOptional({ nullable: true })
   numeroOrcamento?: number | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'FC12100.SERIER quando a paga tem fórmulas (RN-VIS-008).',
+  })
+  serie?: string | null;
+
   @ApiProperty({
     description:
       'Valor da requisição (valor_pago_requisicao); não o total do cupom quando várias requisições são baixadas juntas.',

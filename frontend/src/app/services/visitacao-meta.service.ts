@@ -7,6 +7,7 @@ import {
   CopiarVisitacaoMetaDto,
   CopiarVisitacaoMetaResponse,
   SalvarVisitacaoMetaDto,
+  UnidadesComissaoResponse,
   VisitacaoMetaListResponse,
 } from '../models/visitacao-meta.model';
 
@@ -36,5 +37,32 @@ export class VisitacaoMetaService {
 
   copiar(dto: CopiarVisitacaoMetaDto): Observable<CopiarVisitacaoMetaResponse> {
     return this.http.post<CopiarVisitacaoMetaResponse>(`${base}/copiar`, dto);
+  }
+
+  salvarUnidadesComissao(
+    funcionarioId: string,
+    unidades: Unidade[],
+  ): Observable<UnidadesComissaoResponse> {
+    return this.http.put<UnidadesComissaoResponse>(`${base}/unidades-comissao`, {
+      funcionarioId,
+      unidades,
+    });
+  }
+
+  obterUnidadesComissao(
+    funcionarioId: string,
+  ): Observable<UnidadesComissaoResponse> {
+    return this.http.get<UnidadesComissaoResponse>(
+      `${base}/unidades-comissao/${funcionarioId}`,
+    );
+  }
+
+  reavaliarPainel(
+    funcionarioId: string,
+  ): Observable<UnidadesComissaoResponse> {
+    return this.http.post<UnidadesComissaoResponse>(
+      `${base}/unidades-comissao/reavaliar`,
+      { funcionarioId },
+    );
   }
 }

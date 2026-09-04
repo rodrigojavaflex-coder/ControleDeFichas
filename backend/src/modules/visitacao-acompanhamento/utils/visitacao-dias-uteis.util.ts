@@ -75,6 +75,29 @@ export function pesoDiaUtilVisitacao(
   return 1;
 }
 
+/**
+ * Último dia da competência com peso > 0 (RN-CAL-001 / RN-VIS-013).
+ * Sábado com `sabadoDiaUtil` conta (peso 0,5). Sem dia útil no mês, null.
+ */
+export function ultimoDiaUtilCompetencia(
+  dataInicial: string,
+  dataFinal: string,
+  sabadoMeioDia: boolean,
+  feriados: ReadonlySet<string>,
+): string | null {
+  if (dataInicial > dataFinal) {
+    return null;
+  }
+  let cursor = dataFinal;
+  while (cursor >= dataInicial) {
+    if (pesoDiaUtilVisitacao(cursor, sabadoMeioDia, feriados) > 0) {
+      return cursor;
+    }
+    cursor = addDiasYmd(cursor, -1);
+  }
+  return null;
+}
+
 export function somarDiasUteisVisitacao(
   dataInicial: string,
   dataFinal: string,

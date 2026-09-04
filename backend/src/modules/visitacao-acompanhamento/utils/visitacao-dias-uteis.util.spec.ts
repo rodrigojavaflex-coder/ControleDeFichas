@@ -5,6 +5,7 @@ import {
   somarDiasUteisVisitacao,
   somarPesoDiasVisitacao,
   somarDiasRealizadosVisitacao,
+  ultimoDiaUtilCompetencia,
 } from './visitacao-dias-uteis.util';
 
 describe('visitacao-dias-uteis', () => {
@@ -104,5 +105,18 @@ describe('visitacao-dias-uteis', () => {
     expect(competenciaAberta('2026-08-01', '2026-07-01', '2026-07-31')).toBe(
       false,
     );
+  });
+
+  it('ultimoDiaUtilCompetencia: ago/2026 = 31; fev/2026 sem sábado = 27', () => {
+    const nenhum = new Set<string>();
+    expect(
+      ultimoDiaUtilCompetencia('2026-08-01', '2026-08-31', false, nenhum),
+    ).toBe('2026-08-31');
+    expect(
+      ultimoDiaUtilCompetencia('2026-02-01', '2026-02-28', false, nenhum),
+    ).toBe('2026-02-27');
+    expect(
+      ultimoDiaUtilCompetencia('2026-02-01', '2026-02-28', true, nenhum),
+    ).toBe('2026-02-28');
   });
 });

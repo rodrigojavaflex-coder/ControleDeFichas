@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
 import { VisitacaoMetaRepresentante } from './entities/visitacao-meta-representante.entity';
 import { VisitacaoComissaoFaixa } from './entities/visitacao-comissao-faixa.entity';
+import { VisitacaoRepresentanteUnidadeComissao } from './entities/visitacao-representante-unidade-comissao.entity';
 import { Funcionario } from '../folha/entities/funcionario.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { VisitacaoMetaService } from './visitacao-meta.service';
@@ -16,6 +17,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
     TypeOrmModule.forFeature([
       VisitacaoMetaRepresentante,
       VisitacaoComissaoFaixa,
+      VisitacaoRepresentanteUnidadeComissao,
       Funcionario,
       Usuario,
     ]),

@@ -181,6 +181,10 @@ export enum Permission {
   VISITACAO_ACOMPANHAMENTO_READ = 'visitacao-acompanhamento:read',
   /** Visitação — ver faixa e valor de comissão nos cards do acompanhamento. */
   VISITACAO_ACOMPANHAMENTO_COMISSAO = 'visitacao-acompanhamento:comissao',
+  /** Visitação — fechar competência (retrato da unidade). */
+  VISITACAO_FECHAMENTO_FECHAR = 'visitacao-fechamento:fechar',
+  /** Visitação — reabrir competência fechada. */
+  VISITACAO_FECHAMENTO_REABRIR = 'visitacao-fechamento:reabrir',
   /** Visitação — configuração de metas mensais. */
   VISITACAO_META_READ = 'visitacao-meta:read',
   VISITACAO_META_UPDATE = 'visitacao-meta:update',
@@ -565,6 +569,14 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.VISITACAO_ACOMPANHAMENTO_COMISSAO,
       label: 'Visualizar faixa e valor de comissão no acompanhamento',
+    },
+    {
+      key: Permission.VISITACAO_FECHAMENTO_FECHAR,
+      label: 'Fechar competência da visitação (retrato da unidade)',
+    },
+    {
+      key: Permission.VISITACAO_FECHAMENTO_REABRIR,
+      label: 'Reabrir competência da visitação',
     },
   ],
   'Visitação — Configuração Metas': [

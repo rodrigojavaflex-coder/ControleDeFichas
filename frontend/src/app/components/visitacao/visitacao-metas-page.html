@@ -74,9 +74,10 @@
                 <th>Unidade</th>
                 <th>Mês</th>
                 <th>Meta</th>
-                @if (podeEditarMeta()) {
-                  <th>Ações</th>
-                }
+                <th title="Filiais que entram na grade, no card, % meta, projeção e comissão. A unidade do cadastro é obrigatória. Edição só em Alterar/Incluir.">
+                  Unidades comissão
+                </th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -101,46 +102,98 @@
                       {{ formatarMoeda(row.valorMeta) }}
                     }
                   </td>
-                  @if (podeEditarMeta()) {
-                    <td class="action-buttons">
-                      @if (row.editando) {
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-salvar"
-                          [disabled]="row.salvando"
-                          (click)="salvarLinha(row)">
-                          {{ row.salvando ? 'Salvando…' : 'Salvar' }}
-                        </button>
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-cancelar"
-                          [disabled]="row.salvando"
-                          (click)="cancelarEdicao(row)">
-                          Cancelar
-                        </button>
-                      } @else if (row.valorMeta == null) {
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-salvar"
-                          [disabled]="temLinhaEmEdicao()"
-                          (click)="incluirLinha(row)">
-                          Incluir
-                        </button>
-                      } @else {
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-editar"
-                          [disabled]="temLinhaEmEdicao()"
-                          (click)="alterarLinha(row)">
-                          Alterar
-                        </button>
+                  <td class="visitacao-metas-unidades-celula">
+                    <div class="visitacao-metas-unidades">
+                      @for (u of unidadesComissaoOpcoes; track u) {
+                        <label class="visitacao-metas-unidade-opt">
+                          <input
+                            type="checkbox"
+                            [checked]="unidadeComissaoMarcada(row, u)"
+                            [disabled]="
+                              !podeEditarMeta() ||
+                              !row.editando ||
+                              row.salvandoUnidades ||
+                              unidadeComissaoTravada(row, u)
+                            "
+                            (change)="onUnidadeComissaoChange(row, u, $event)" />
+                          <span>{{ u }}</span>
+                        </label>
                       }
-                    </td>
-                  }
+                    </div>
+                  </td>
+                  <td class="action-buttons">
+                    @if (row.quantidadeConflitosPainel > 0) {
+                      <button
+                        type="button"
+                        class="btn visitacao-metas-alerta"
+                        [disabled]="row.salvandoUnidades || reavaliandoPainel"
+                        (click)="abrirConflitos(row); $event.stopPropagation()"
+                        [attr.aria-label]="
+                          'Alerta: ' +
+                          row.quantidadeConflitosPainel +
+                          ' prescritor(es) em conflito'
+                        ">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Alerta ({{ row.quantidadeConflitosPainel }})
+                      </button>
+                    }
+                    @if (podeEditarMeta()) {
+                      <button
+                        type="button"
+                        class="btn btn-editar"
+                        [disabled]="row.salvandoUnidades || reavaliandoPainel"
+                        (click)="reavaliarPainelLinha(row); $event.stopPropagation()">
+                        <i
+                          class="fas fa-sync-alt"
+                          [class.fa-spin]="
+                            reavaliandoPainel &&
+                            reavaliandoFuncionarioId === row.funcionarioId
+                          "></i>
+                        {{
+                          reavaliandoPainel &&
+                          reavaliandoFuncionarioId === row.funcionarioId
+                            ? 'Reavaliando…'
+                            : 'Reavaliar painel'
+                        }}
+                      </button>
+                    }
+                    @if (podeEditarMeta() && row.editando) {
+                      <button
+                        type="button"
+                        class="btn btn-salvar"
+                        [disabled]="row.salvando || row.salvandoUnidades"
+                        (click)="salvarLinha(row)">
+                        {{ row.salvando ? 'Salvando…' : 'Salvar' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-cancelar"
+                        [disabled]="row.salvando || row.salvandoUnidades"
+                        (click)="cancelarEdicao(row)">
+                        Cancelar
+                      </button>
+                    } @else if (podeEditarMeta() && row.valorMeta == null) {
+                      <button
+                        type="button"
+                        class="btn btn-salvar"
+                        [disabled]="temLinhaEmEdicao()"
+                        (click)="incluirLinha(row)">
+                        Incluir
+                      </button>
+                    } @else if (podeEditarMeta()) {
+                      <button
+                        type="button"
+                        class="btn btn-editar"
+                        [disabled]="temLinhaEmEdicao()"
+                        (click)="alterarLinha(row)">
+                        Alterar
+                      </button>
+                    }
+                  </td>
                 </tr>
               } @empty {
                 <tr class="no-data">
-                  <td [attr.colspan]="podeEditarMeta() ? 5 : 4">
+                  <td colspan="6">
                     <i class="fas fa-inbox"></i> Nenhum representante com Filial do painel e Código representante painel nesta unidade.
                   </td>
                 </tr>
@@ -149,6 +202,88 @@
           </table>
         </div>
       }
+    </div>
+  }
+
+  @if (conflitoAberto) {
+    <div class="modal-overlay" (click)="fecharConflitos()">
+      <div
+        class="modal-conteudo visitacao-metas-modal-conflito"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="vm-conflito-titulo">
+        <div class="modal-cabecalho">
+          <h3 class="modal-titulo" id="vm-conflito-titulo">{{ conflitoTitulo }}</h3>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharConflitos()"
+            aria-label="Fechar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-corpo">
+          <p class="modal-hint">
+            O mesmo CRM está no painel de mais de uma unidade selecionada.
+            Ajuste no ERP; na próxima sync do painel o alerta some. Salvar as
+            unidades não é bloqueado.
+          </p>
+          @if (reavaliandoPainel && !conflitoLinhas.length) {
+            <div class="loading-message">Reavaliando painel…</div>
+          } @else if (!conflitoLinhas.length) {
+            <div class="loading-message">Nenhum conflito no painel.</div>
+          } @else {
+            <div class="table-container">
+              <table class="vendas-table">
+                <thead>
+                  <tr>
+                    <th>Médico</th>
+                    <th>CRM</th>
+                    <th>UF</th>
+                    <th>Unidades</th>
+                    <th>Representantes no ERP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of conflitoLinhas; track c.crm + c.uf) {
+                    <tr>
+                      <td>{{ c.nomeMedico }}</td>
+                      <td>{{ c.crm }}</td>
+                      <td>{{ c.uf }}</td>
+                      <td>{{ c.unidades.join(', ') }}</td>
+                      <td>{{ c.representantes.join(', ') }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+        <div class="modal-rodape">
+          <button
+            type="button"
+            class="btn btn-imprimir"
+            [disabled]="!conflitoLinhas.length"
+            (click)="imprimirConflitos()">
+            <i class="fas fa-print"></i>
+            Imprimir
+          </button>
+          @if (podeEditarMeta()) {
+            <button
+              type="button"
+              class="btn btn-editar"
+              [disabled]="reavaliandoPainel"
+              (click)="reavaliarPainelModal()">
+              <i class="fas fa-sync-alt" [class.fa-spin]="reavaliandoPainel"></i>
+              {{ reavaliandoPainel ? 'Reavaliando…' : 'Reavaliar painel' }}
+            </button>
+          }
+          <button type="button" class="btn btn-cancelar" (click)="fecharConflitos()">
+            Fechar
+          </button>
+        </div>
+      </div>
     </div>
   }
 

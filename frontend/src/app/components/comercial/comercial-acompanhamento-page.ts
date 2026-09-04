@@ -50,6 +50,9 @@ const TOTAIS_VAZIOS: ComercialAcompanhamentoTotais = {
   quantidadeVendedores: 0,
 };
 
+const ANO_COMPETENCIA_MIN = 2026;
+const ANO_COMPETENCIA_MAX = 2033;
+
 @Component({
   selector: 'app-comercial-acompanhamento-page',
   standalone: true,
@@ -238,6 +241,43 @@ export class ComercialAcompanhamentoPage implements OnInit {
     }
     this.carregarVendedores();
     this.carregarDados();
+  }
+
+  get podeMesAnterior(): boolean {
+    return !(
+      this.anoFiltro <= ANO_COMPETENCIA_MIN && this.mesFiltro <= 1
+    );
+  }
+
+  get podeMesProximo(): boolean {
+    return !(
+      this.anoFiltro >= ANO_COMPETENCIA_MAX && this.mesFiltro >= 12
+    );
+  }
+
+  navegarMesAnterior(): void {
+    this.navegarMes(-1);
+  }
+
+  navegarMesProximo(): void {
+    this.navegarMes(1);
+  }
+
+  private navegarMes(delta: number): void {
+    if (this.carregando) return;
+    let mes = this.mesFiltro + delta;
+    let ano = this.anoFiltro;
+    if (mes < 1) {
+      mes = 12;
+      ano -= 1;
+    } else if (mes > 12) {
+      mes = 1;
+      ano += 1;
+    }
+    if (ano < ANO_COMPETENCIA_MIN || ano > ANO_COMPETENCIA_MAX) return;
+    this.mesFiltro = mes;
+    this.anoFiltro = ano;
+    this.onFiltroChange();
   }
 
   @HostListener('document:keydown.escape')
@@ -798,13 +838,14 @@ export class ComercialAcompanhamentoPage implements OnInit {
   }
 
   private initializeCompetenciaFilter(): void {
-    for (let a = 2026; a <= 2033; a += 1) {
+    this.anosDisponiveis = [];
+    for (let a = ANO_COMPETENCIA_MIN; a <= ANO_COMPETENCIA_MAX; a += 1) {
       this.anosDisponiveis.push(a);
     }
     const now = new Date();
     let ano = now.getFullYear();
-    if (ano < 2026) ano = 2026;
-    if (ano > 2033) ano = 2033;
+    if (ano < ANO_COMPETENCIA_MIN) ano = ANO_COMPETENCIA_MIN;
+    if (ano > ANO_COMPETENCIA_MAX) ano = ANO_COMPETENCIA_MAX;
     this.anoFiltro = ano;
     this.mesFiltro = now.getMonth() + 1;
   }

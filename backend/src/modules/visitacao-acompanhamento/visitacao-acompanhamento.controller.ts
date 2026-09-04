@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
@@ -15,6 +15,7 @@ import { VisitacaoAcompanhamentoListResponseDto } from './dto/visitacao-acompanh
 import { VisitacaoAcompanhamentoDetalheDto } from './dto/visitacao-acompanhamento-detalhe.dto';
 import { VisitacaoPainelMedicoRepresentanteDto } from '../visitacao-painel-medico/dto/visitacao-painel-medico-representante.dto';
 import { VisitacaoAcompanhamentoOpcoesFiltroDto } from './dto/visitacao-acompanhamento-opcoes-filtro.dto';
+import { FecharVisitacaoDto } from './dto/fechar-visitacao.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
@@ -89,5 +90,30 @@ export class VisitacaoAcompanhamentoController {
     @Query() query: FindVisitacaoAcompanhamentoDto,
   ): Promise<VisitacaoAcompanhamentoListResponseDto> {
     return this.service.findAll(req.user, query);
+  }
+
+  @Post('fechar')
+  @Permissions(Permission.VISITACAO_FECHAMENTO_FECHAR)
+  @ApiOperation({
+    summary:
+      'Fecha a competência da unidade (retrato). Exige caixa do último dia útil CONFIRMADO.',
+  })
+  @ApiResponse({ status: 201, type: VisitacaoAcompanhamentoListResponseDto })
+  fechar(
+    @Req() req: { user: Usuario },
+    @Body() dto: FecharVisitacaoDto,
+  ): Promise<VisitacaoAcompanhamentoListResponseDto> {
+    return this.service.fechar(req.user, dto);
+  }
+
+  @Post('reabrir')
+  @Permissions(Permission.VISITACAO_FECHAMENTO_REABRIR)
+  @ApiOperation({ summary: 'Reabre a competência da unidade (volta ao cálculo ao vivo).' })
+  @ApiResponse({ status: 201, type: VisitacaoAcompanhamentoListResponseDto })
+  reabrir(
+    @Req() req: { user: Usuario },
+    @Body() dto: FecharVisitacaoDto,
+  ): Promise<VisitacaoAcompanhamentoListResponseDto> {
+    return this.service.reabrir(req.user, dto);
   }
 }

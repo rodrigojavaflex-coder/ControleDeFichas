@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { VisitacaoAcompanhamentoOutraUnidadeDto } from './visitacao-acompanhamento-recebido-unidade.dto';
 
 export class VisitacaoAcompanhamentoTotaisDto {
   @ApiProperty()
@@ -29,9 +30,16 @@ export class VisitacaoAcompanhamentoTotaisDto {
 
   @ApiPropertyOptional({
     description:
-      'Recebido em outras filiais (indicação da carteira), RN-VIS-008 / RN-VIS-010.',
+      'Recebido em outras filiais marcadas na Configuração Metas (RN-VIS-011).',
   })
   valorRecebidoOutrasUnidades?: number;
+
+  @ApiPropertyOptional({
+    type: [VisitacaoAcompanhamentoOutraUnidadeDto],
+    description:
+      'Outras filiais do card TOTAL: só unidades de comissão, com recebido/rejeitado por filial.',
+  })
+  outrasUnidades?: VisitacaoAcompanhamentoOutraUnidadeDto[];
 
   @ApiPropertyOptional({
     description: 'Quantidade de requisições em outras filiais (indicação).',
