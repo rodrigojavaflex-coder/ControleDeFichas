@@ -15,6 +15,9 @@ export const AppDataSource = new DataSource({
   entities: [path.join(__dirname, '**', '*.entity{.ts,.js}')],
   migrations: [path.join(__dirname, 'migrations', '*{.ts,.js}')],
   migrationsTableName: 'migrations',
+  // `all` (default) coloca CREATE INDEX CONCURRENTLY na mesma transação das
+  // tabelas novas e o Postgres desfaz o lote inteiro (500 no acompanhamento).
+  migrationsTransactionMode: 'each',
   synchronize: false,
   logging: process.env.DATABASE_LOGGING === 'true',
   ssl:
