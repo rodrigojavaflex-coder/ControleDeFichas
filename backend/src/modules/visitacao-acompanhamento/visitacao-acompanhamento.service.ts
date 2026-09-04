@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Funcionario } from '../folha/entities/funcionario.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
@@ -57,6 +57,8 @@ import {
 } from './utils/visitacao-dias-uteis.util';
 
 const NOME_SEM_REPRESENTANTE = 'Sem representante';
+/** Hobby Render ~1,6 MB; o MATERIALIZED da busca aberta despeja em disco. */
+const WORK_MEM_ACOMPANHAMENTO = '24MB';
 
 const INDICACAO_VAZIA: {
   recebido: { valor: number; quantidade: number };
@@ -228,23 +230,6 @@ export class VisitacaoAcompanhamentoService {
       );
     }
 
-    const combinedRows = (await this.dataSource.query(
-      combinedSql,
-      combinedParams,
-    )) as Array<{
-      totais_por_representante: TotaisRepresentanteRow[] | null;
-      data: RowAgregado[] | null;
-    }>;
-    const combined = combinedRows[0];
-    const grupos = this.asJsonArray<TotaisRepresentanteRow>(
-      combined?.totais_por_representante,
-    ).map((row) => this.mapTotaisRepresentante(row, periodo));
-    const totais = this.somarTotais(grupos, periodo);
-    const totaisPorRepresentante = grupos.filter(
-      (g) => g.nomeRepresentante !== NOME_SEM_REPRESENTANTE,
-    );
-    const rows = this.asJsonArray<RowAgregado>(combined?.data);
-
     const escopo = resolverEscopoListaFechamentoPorUsuario(
       usuario,
       dto.unidade,
@@ -257,36 +242,72 @@ export class VisitacaoAcompanhamentoService {
       ? this.listarUnidadesComissaoExtras(unidadePainel)
       : Promise.resolve([] as Unidade[]);
 
-    const [caixa, rejeitadoLoja, indicacao] = await Promise.all([
-      this.consultarRecebidoCaixa(escopo, periodo),
-      this.consultarRejeitadoLoja(escopo, periodo),
-      unidadePainel
-        ? extrasPromise.then((extras) =>
-            this.consultarIndicacaoOutrasUnidades(
-              unidadePainel,
-              periodo,
-              extras,
-            ),
-          )
-        : Promise.resolve(INDICACAO_VAZIA),
-      this.aplicarUnidadesComissaoNosCards(grupos),
-      this.anexarDesempenho(
-        totaisPorRepresentante,
-        totais,
-        periodo,
-        dto.unidade ?? unidadePainel,
-        exporComissao,
-      ),
-      extrasPromise.then((extras) =>
-        this.anexarEstatisticasPainel(
-          totaisPorRepresentante,
-          totais,
+    const {
+      totais,
+      totaisPorRepresentante,
+      rows,
+      caixa,
+      rejeitadoLoja,
+      indicacao,
+    } = await this.dataSource.transaction(async (manager) => {
+      await this.prepararSessaoBuscaAberta(manager);
+      const combinedRows = (await manager.query(
+        combinedSql,
+        combinedParams,
+      )) as Array<{
+        totais_por_representante: TotaisRepresentanteRow[] | null;
+        data: RowAgregado[] | null;
+      }>;
+      const combined = combinedRows[0];
+      const gruposTx = this.asJsonArray<TotaisRepresentanteRow>(
+        combined?.totais_por_representante,
+      ).map((row) => this.mapTotaisRepresentante(row, periodo));
+      const totaisTx = this.somarTotais(gruposTx, periodo);
+      const totaisPorRepresentanteTx = gruposTx.filter(
+        (g) => g.nomeRepresentante !== NOME_SEM_REPRESENTANTE,
+      );
+      const rowsTx = this.asJsonArray<RowAgregado>(combined?.data);
+      const [caixaTx, rejeitadoLojaTx, indicacaoTx] = await Promise.all([
+        this.consultarRecebidoCaixa(escopo, periodo, manager),
+        this.consultarRejeitadoLoja(escopo, periodo, manager),
+        unidadePainel
+          ? extrasPromise.then((extras) =>
+              this.consultarIndicacaoOutrasUnidades(
+                unidadePainel,
+                periodo,
+                extras,
+                manager,
+              ),
+            )
+          : Promise.resolve(INDICACAO_VAZIA),
+        this.aplicarUnidadesComissaoNosCards(gruposTx),
+        this.anexarDesempenho(
+          totaisPorRepresentanteTx,
+          totaisTx,
           periodo,
-          unidadePainel,
-          extras,
+          dto.unidade ?? unidadePainel,
+          exporComissao,
         ),
-      ),
-    ]);
+        extrasPromise.then((extras) =>
+          this.anexarEstatisticasPainel(
+            totaisPorRepresentanteTx,
+            totaisTx,
+            periodo,
+            unidadePainel,
+            extras,
+            manager,
+          ),
+        ),
+      ]);
+      return {
+        totais: totaisTx,
+        totaisPorRepresentante: totaisPorRepresentanteTx,
+        rows: rowsTx,
+        caixa: caixaTx,
+        rejeitadoLoja: rejeitadoLojaTx,
+        indicacao: indicacaoTx,
+      };
+    });
     totais.valorRecebidoCaixa = caixa.valor;
     totais.quantidadeRecebidoCaixa = caixa.quantidade;
     totais.valorRejeitadoLoja = rejeitadoLoja.valor;
@@ -328,7 +349,7 @@ export class VisitacaoAcompanhamentoService {
     );
 
     const sql = `
-      WITH filtered AS MATERIALIZED (
+      WITH filtered AS (
         ${baseSql}
       )
       SELECT
@@ -344,7 +365,10 @@ export class VisitacaoAcompanhamentoService {
       GROUP BY 1
       ORDER BY nome ASC
     `;
-    const rows = (await this.dataSource.query(sql, params)) as Array<{
+    const rows = (await this.dataSource.transaction(async (manager) => {
+      await this.prepararSessaoBuscaAberta(manager);
+      return manager.query(sql, params);
+    })) as Array<{
       nome: string;
       total: string | number;
       aprovados: string | number;
@@ -1184,7 +1208,7 @@ export class VisitacaoAcompanhamentoService {
       ? `WHERE p._rn > $${pagina.offsetIdx} AND p._rn <= $${pagina.offsetIdx} + $${pagina.limitIdx}`
       : '';
     return `
-      WITH filtered AS MATERIALIZED (
+      WITH filtered AS (
         ${baseSql}
       ),
       ranked AS (
@@ -1355,29 +1379,26 @@ export class VisitacaoAcompanhamentoService {
             ${this.sqlUfPrescritor()} AS uf,
             ${this.sqlNomePrescritor()} AS nome_medico,
             ${this.sqlValorRecebidoPrescritorOuSerie()} AS valor_recebido`;
-    const whereCaixaPeriodo = `
+    const whereCaixaBase = `
             i.tipo_item = 'REQUISICAO'
             AND i.numero_requisicao IS NOT NULL
-            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
             ${this.sqlFiltroRecebidoVisitacao()}`;
+    const selectRecebidoLocal = `
+          SELECT ${selectRecebido}
+          FROM caixa_itens_erp i
+          ${joinCaixaPago}
+          WHERE ${whereCaixaBase}
+            AND ${this.sqlCrmPrescritor()} IS NOT NULL
+            AND ${this.sqlUfPrescritor()} IS NOT NULL`;
     const recebidosCaixaCarteira = idxCarteira
-      ? `
-          SELECT
-            i.unidade,
-            i.numero_cupom,
-            i.numero_requisicao,
-            COALESCE(NULLIF(BTRIM(f.serie), ''), '') AS serie,
-            ${this.sqlCrmPrescritor()} AS crm,
-            ${this.sqlUfPrescritor()} AS uf,
-            ${this.sqlNomePrescritor()} AS nome_medico,
-            ${this.sqlValorRecebidoPrescritorOuSerie()} AS valor_recebido
+      ? this.sqlApenasPagaNoPeriodo(`
+          SELECT ${selectRecebido}
           FROM caixa_itens_erp i
           ${joinCaixaPago}
           INNER JOIN crms_carteira cc
             ON cc.crm = ${this.sqlCrmPrescritor()}
             AND cc.uf = ${this.sqlUfPrescritor()}
-          WHERE ${whereCaixaPeriodo}
-            AND c.id IS NOT NULL
+          WHERE ${whereCaixaBase}
             AND ${this.sqlCrmPrescritor()} IS NOT NULL
             AND ${this.sqlUfPrescritor()} IS NOT NULL
             ${modoPainel === 'todos' ? `AND i.unidade IS DISTINCT FROM $${idxCarteira}` : ''}
@@ -1387,7 +1408,7 @@ export class VisitacaoAcompanhamentoService {
               this.sqlCrmPrescritor(),
               this.sqlUfPrescritor(),
               'cc.funcionario_id',
-            )}`
+            )}`)
       : '';
 
     const wrapRecebidoUnico = (innerSql: string): string => `
@@ -1431,25 +1452,17 @@ export class VisitacaoAcompanhamentoService {
             'UPPER(BTRIM(o."ufcrmMedico"))',
           )}`;
     } else if (idxCarteira && modoPainel === 'nao') {
-      recebidosFrom = wrapRecebidoUnico(`
-          SELECT ${selectRecebido}
-          FROM caixa_itens_erp i
-          ${joinCaixaPago}
-          WHERE ${whereCaixaPeriodo}
-            AND i.unidade = $${idxCarteira}
-            AND ${this.sqlCrmPrescritor()} IS NOT NULL
-            AND ${this.sqlUfPrescritor()} IS NOT NULL
-      `);
+      recebidosFrom = wrapRecebidoUnico(
+        this.sqlUnionPeriodoRecebido(`
+          ${selectRecebidoLocal}
+            AND i.unidade = $${idxCarteira}`),
+      );
       rejeitadosExtra = ` AND o.unidade = $${idxCarteira}`;
     } else if (idxCarteira && modoPainel === 'todos') {
       recebidosFrom = wrapRecebidoUnico(`
-          SELECT ${selectRecebido}
-          FROM caixa_itens_erp i
-          ${joinCaixaPago}
-          WHERE ${whereCaixaPeriodo}
-            AND i.unidade = $${idxCarteira}
-            AND ${this.sqlCrmPrescritor()} IS NOT NULL
-            AND ${this.sqlUfPrescritor()} IS NOT NULL
+          ${this.sqlUnionPeriodoRecebido(`
+          ${selectRecebidoLocal}
+            AND i.unidade = $${idxCarteira}`)}
           UNION ALL
           ${recebidosCaixaCarteira}
       `);
@@ -1464,18 +1477,13 @@ export class VisitacaoAcompanhamentoService {
             )}
           )`;
     } else {
-      recebidosFrom = wrapRecebidoUnico(`
-          SELECT ${selectRecebido}
-          FROM caixa_itens_erp i
-          ${joinCaixaPago}
-          WHERE ${whereCaixaPeriodo}
-            AND ${this.sqlCrmPrescritor()} IS NOT NULL
-            AND ${this.sqlUfPrescritor()} IS NOT NULL
-      `);
+      recebidosFrom = wrapRecebidoUnico(
+        this.sqlUnionPeriodoRecebido(selectRecebidoLocal),
+      );
     }
 
     const crmsCte = idxCarteira
-      ? `crms_carteira AS MATERIALIZED (
+      ? `crms_carteira AS (
         SELECT DISTINCT ON (
           BTRIM(p."crmMedico"),
           UPPER(BTRIM(p."ufCrmMedico"))
@@ -1495,7 +1503,7 @@ export class VisitacaoAcompanhamentoService {
           BTRIM(p."crmMedico"),
           UPPER(BTRIM(p."ufCrmMedico"))
       ),
-      unidades_comissao AS MATERIALIZED (
+      unidades_comissao AS (
         SELECT f.id AS funcionario_id, f.unidade
         FROM funcionarios f
         WHERE f.unidade = $${idxCarteira}
@@ -1565,7 +1573,7 @@ export class VisitacaoAcompanhamentoService {
         FULL OUTER JOIN rejeitados j
           ON r.unidade = j.unidade AND r.crm = j.crm AND r.uf = j.uf
       ),
-      painel_norm AS MATERIALIZED (
+      painel_norm AS (
         SELECT DISTINCT ON (
           p.unidade,
           BTRIM(p."crmMedico"),
@@ -2377,30 +2385,20 @@ export class VisitacaoAcompanhamentoService {
   private async consultarRecebidoCaixa(
     escopo: ListaFechamentoEscopo,
     periodo: PeriodoCompetencia,
+    manager?: EntityManager,
   ): Promise<{ valor: number; quantidade: number }> {
     const params: unknown[] = [periodo.dataInicial, periodo.dataFinal];
     const join = this.sqlJoinCaixaPago();
     const valor = this.sqlValorRecebidoPrescritor();
-    const where = `
+    const whereBase = `
             i.tipo_item = 'REQUISICAO'
             AND i.numero_requisicao IS NOT NULL
-            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
             ${this.sqlFiltroRecebidoVisitacao()}`;
-
-    let inner: string;
-    if (escopo === 'ALL') {
-      inner = `
-          SELECT
-            i.unidade,
-            i.numero_cupom,
-            i.numero_requisicao,
-            ${valor} AS valor_recebido
-          FROM caixa_itens_erp i
-          ${join}
-          WHERE ${where}`;
-    } else {
+    const filtroUnidade = escopo === 'ALL' ? '' : 'AND i.unidade = $3';
+    if (escopo !== 'ALL') {
       params.push(escopo);
-      inner = `
+    }
+    const inner = this.sqlUnionPeriodoRecebido(`
           SELECT
             i.unidade,
             i.numero_cupom,
@@ -2408,9 +2406,8 @@ export class VisitacaoAcompanhamentoService {
             ${valor} AS valor_recebido
           FROM caixa_itens_erp i
           ${join}
-          WHERE ${where}
-            AND i.unidade = $3`;
-    }
+          WHERE ${whereBase}
+            ${filtroUnidade}`);
 
     const sql = `
       SELECT
@@ -2425,7 +2422,11 @@ export class VisitacaoAcompanhamentoService {
         ORDER BY g.unidade, g.numero_cupom, g.numero_requisicao
       ) t
     `;
-    const rows = (await this.dataSource.query(sql, params)) as Array<{
+    const rows = (await this.executarSql(
+      sql,
+      params,
+      manager,
+    )) as Array<{
       valor: string | number | null;
       qtd: string | number | null;
     }>;
@@ -2438,6 +2439,7 @@ export class VisitacaoAcompanhamentoService {
   private async consultarRejeitadoLoja(
     escopo: ListaFechamentoEscopo,
     periodo: PeriodoCompetencia,
+    manager?: EntityManager,
   ): Promise<{ valor: number; quantidade: number }> {
     const params: unknown[] = [periodo.dataInicial, periodo.dataFinal];
     const filtroUnidade =
@@ -2457,7 +2459,11 @@ export class VisitacaoAcompanhamentoService {
         AND o."dataOrcamento" <= $2
         ${filtroUnidade}
     `;
-    const rows = (await this.dataSource.query(sql, params)) as Array<{
+    const rows = (await this.executarSql(
+      sql,
+      params,
+      manager,
+    )) as Array<{
       valor: string | number | null;
       qtd: string | number | null;
     }>;
@@ -2475,6 +2481,7 @@ export class VisitacaoAcompanhamentoService {
     unidade: Unidade,
     periodo: PeriodoCompetencia,
     extrasJaResolvidas?: Unidade[],
+    manager?: EntityManager,
   ): Promise<{
     recebido: { valor: number; quantidade: number };
     rejeitado: { valor: number; quantidade: number };
@@ -2496,13 +2503,26 @@ export class VisitacaoAcompanhamentoService {
     const valor = this.sqlValorRecebidoPrescritorOuSerie();
     const crm = this.sqlCrmPrescritor();
     const uf = this.sqlUfPrescritor();
-    const where = `
-            i.tipo_item = 'REQUISICAO'
+    const selectPaga = `
+          SELECT
+            i.unidade,
+            i.numero_cupom,
+            i.numero_requisicao,
+            COALESCE(NULLIF(BTRIM(f.serie), ''), '') AS serie,
+            ${valor} AS valor_recebido
+          FROM caixa_itens_erp i
+          ${join}
+          INNER JOIN crms_carteira cc
+            ON cc.crm = ${crm}
+            AND cc.uf = ${uf}
+          WHERE i.tipo_item = 'REQUISICAO'
             AND i.numero_requisicao IS NOT NULL
-            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
-            ${this.sqlFiltroRecebidoVisitacao()}`;
+            ${this.sqlFiltroRecebidoVisitacao()}
+            AND ${crm} IS NOT NULL
+            AND ${uf} IS NOT NULL
+            AND i.unidade = ANY($4)`;
     const sqlRecebido = `
-      WITH crms_carteira AS MATERIALIZED (
+      WITH crms_carteira AS (
         SELECT DISTINCT
           BTRIM(p."crmMedico") AS crm,
           UPPER(BTRIM(p."ufCrmMedico")) AS uf
@@ -2525,21 +2545,7 @@ export class VisitacaoAcompanhamentoService {
           g.unidade,
           g.valor_recebido
         FROM (
-          SELECT
-            i.unidade,
-            i.numero_cupom,
-            i.numero_requisicao,
-            COALESCE(NULLIF(BTRIM(f.serie), ''), '') AS serie,
-            ${valor} AS valor_recebido
-          FROM caixa_itens_erp i
-          ${join}
-          INNER JOIN crms_carteira cc
-            ON cc.crm = ${crm}
-            AND cc.uf = ${uf}
-          WHERE ${where}
-            AND ${crm} IS NOT NULL
-            AND ${uf} IS NOT NULL
-            AND i.unidade = ANY($4)
+          ${this.sqlApenasPagaNoPeriodo(selectPaga)}
         ) g
         ORDER BY
           g.unidade,
@@ -2550,7 +2556,7 @@ export class VisitacaoAcompanhamentoService {
       GROUP BY t.unidade
     `;
     const sqlRejeitado = `
-      WITH crms_carteira AS MATERIALIZED (
+      WITH crms_carteira AS (
         SELECT DISTINCT
           BTRIM(p."crmMedico") AS crm,
           UPPER(BTRIM(p."ufCrmMedico")) AS uf
@@ -2576,14 +2582,22 @@ export class VisitacaoAcompanhamentoService {
       GROUP BY o.unidade
     `;
     const [recRows, rejRows] = await Promise.all([
-      this.dataSource.query(sqlRecebido, params) as Promise<
+      this.executarSql(
+        sqlRecebido,
+        params,
+        manager,
+      ) as Promise<
         Array<{
           unidade: string;
           valor: string | number | null;
           qtd: string | number | null;
         }>
       >,
-      this.dataSource.query(sqlRejeitado, params) as Promise<
+      this.executarSql(
+        sqlRejeitado,
+        params,
+        manager,
+      ) as Promise<
         Array<{
           unidade: string;
           valor: string | number | null;
@@ -2670,6 +2684,7 @@ export class VisitacaoAcompanhamentoService {
     periodo: PeriodoCompetencia,
     unidadePainel: Unidade | null,
     unidadesExtras: Unidade[] = [],
+    manager?: EntityManager,
   ): Promise<void> {
     const params: unknown[] = [periodo.dataInicial, periodo.dataFinal];
     const filtroUnidade = unidadePainel
@@ -2694,6 +2709,7 @@ export class VisitacaoAcompanhamentoService {
     const sql = `
       WITH mov AS (
         SELECT DISTINCT crm, uf FROM (
+          ${this.sqlUnionPeriodoRecebido(`
           SELECT
             ${this.sqlCrmPrescritor()} AS crm,
             ${this.sqlUfPrescritor()} AS uf
@@ -2702,11 +2718,10 @@ export class VisitacaoAcompanhamentoService {
           ${this.sqlJoinFormulaSerie()}
           WHERE i.tipo_item = 'REQUISICAO'
             AND i.numero_requisicao IS NOT NULL
-            ${this.sqlFiltroPeriodoRecebido('$1', '$2')}
             ${this.sqlFiltroRecebidoVisitacao()}
             AND ${this.sqlCrmPrescritor()} IS NOT NULL
             AND ${this.sqlUfPrescritor()} IS NOT NULL
-            ${filtroMovimento}
+            ${filtroMovimento}`)}
           UNION
           SELECT
             BTRIM(o."crmMedico") AS crm,
@@ -2754,7 +2769,7 @@ export class VisitacaoAcompanhamentoService {
       LEFT JOIN mov m ON m.crm = p.crm AND m.uf = p.uf
     `;
 
-    const rows = (await this.dataSource.query(sql, params)) as Array<{
+    const rows = (await this.executarSql(sql, params, manager)) as Array<{
       funcionario_id: string | null;
       ativos: string | number | null;
       fora: string | number | null;
@@ -2935,6 +2950,49 @@ export class VisitacaoAcompanhamentoService {
       THEN ${formulas}
       ELSE ${base}
     END`;
+  }
+
+  private async prepararSessaoBuscaAberta(manager: EntityManager): Promise<void> {
+    await manager.query(`SET LOCAL work_mem = '${WORK_MEM_ACOMPANHAMENTO}'`);
+    await manager.query('SET LOCAL jit = off');
+  }
+
+  private async executarSql<T = unknown>(
+    sql: string,
+    params: unknown[],
+    manager?: EntityManager,
+  ): Promise<T> {
+    if (manager) {
+      return (await manager.query(sql, params)) as T;
+    }
+    return (await this.dataSource.query(sql, params)) as T;
+  }
+
+  /**
+   * Mesmo eixo RN-VIS-008, sem OR: paga no período UNION órfão por data_operacao.
+   */
+  private sqlUnionPeriodoRecebido(selectFromWhere: string): string {
+    return `
+          ${selectFromWhere}
+            AND c.data_pagamento IS NOT NULL
+            AND c.data_pagamento >= $1
+            AND c.data_pagamento <= $2
+          UNION ALL
+          ${selectFromWhere}
+            AND c.data_pagamento IS NULL
+            AND i.data_operacao >= $1
+            AND i.data_operacao <= $2
+    `;
+  }
+
+  /** Indicação / outra filial exige paga (não entra órfão). */
+  private sqlApenasPagaNoPeriodo(selectFromWhere: string): string {
+    return `
+          ${selectFromWhere}
+            AND c.data_pagamento IS NOT NULL
+            AND c.data_pagamento >= $1
+            AND c.data_pagamento <= $2
+    `;
   }
 
   private sqlFiltroPeriodoRecebido(inicio: string, fim: string): string {
