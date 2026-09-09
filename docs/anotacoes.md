@@ -1,6 +1,6 @@
 # Anotações / Demandas
 
-> Última revisão: 2026-09-02
+> Última revisão: 2026-09-09
 
 ## Decisões operacionais
 
@@ -40,6 +40,46 @@
 5. **[ ] Conferência** — PDFs 9999/99 e 9999/199 como referência de **fórmula/série**, não de total do visitador. Totais oficiais = caixa da unidade com split por série. Hugo **98842**, Márcio **99121**, Ítalo **27266**: se estão no caixa da unidade, entram (fonte = caixa).
 
 Arquivos-base: `docs/regras-negocio.md` (VIS-008/009/010/013, CXA-003), `agent/src/database/database.service.ts` + `requisicoes-pagas.sql`, `fechamento-caixa.service.ts`, `visitacao-acompanhamento.service.ts` / página.
+
+### Visitação — DTEFE atrasado após competência fechada (2026-09-09)
+
+**Status:** pendente de decisão. **Não implementar** até escolher o tratamento e gravar em RN-VIS-008 / RN-VIS-013.
+
+**Problema (efeito colateral do freeze)**
+
+A ideia do fechamento é **pagar a comissão e não alterar mais o mês que passou**. Competência fechada lê só o retrato; sync de painel e reimport de caixa **não** recalculam (RN-VIS-013).
+
+O recebido da visitação entra pelo **DTEFE** (`data_pagamento` / DT PAGTO do PDF), não pelo dia do caixa nem pela data da baixa/sync (RN-VIS-008). Cupom no mês atual com DTEFE no mês anterior **não entra** no mês atual; cupom fora com DTEFE no período **entra**.
+
+Baixar caixas do mês seguinte pode upsertar pagas cujo DTEFE ainda é o mês anterior (parcela, mesmo `NRRQU` em cupom novo, complemento FC17000/FC12100). Com o mês anterior **aberto**, isso muda o total ao vivo. Com o mês anterior **fechado**:
+
+- **mês pago:** retrato congelado — a req nova **não entra**;
+- **mês atual:** DTEFE não é deste mês — **também não entra**;
+- resultado: **não vai para lugar nenhum** (visitador não recebe), até reabrir o mês pago.
+
+O caixa em si **não se move**: o cupom continua no dia/`data_operacao` em que foi baixado. Fechar visitação não transfere requisição de caixa.
+
+**Intenção a preservar:** retrato = verdade do pagamento daquele mês. Reabrir só em incidente (erro de fechamento, série `0`, etc.), não como rotina de atraso de caixa.
+
+**Tratamentos (escolher um; 3 ou 4 casam com a intenção)**
+
+1. **Fechar mais tarde (operação, sem mudar regra)** — esperar alguns dias úteis do mês seguinte (caixa confirmado + sync) e só então fechar. Reduz o volume; **não elimina** parcela/cupom novo com DTEFE antigo. Serve de hábito, não de solução completa.
+2. **Manter como está (resto fica de fora)** — atraso com DTEFE no mês fechado **não paga**. Respeita freeze e PDF. Visitador perde, a menos que reabra. Só se o volume for irrelevante.
+3. **Creditar no mês aberto** — se o DTEFE cai em competência **já fechada**, o crédito vai para o **mês corrente aberto**. Mês pago não muda. Setembro deixa de ser 100% DTEFE nesses leftovers (PDF de agosto ≠ NEST de setembro nessas linhas). Decisão extra: misturar no **recebido oficial** (% meta, faixa, comissão do mês atual) **ou** pagar sem inflar meta/faixa.
+4. **Ajuste explícito no mês atual (preferível se for 3)** — não somar no recebido do mês aberto. Gravar trilha: paga X, DTEFE do mês fechado, creditado no mês atual. Mesmo dinheiro da 3, auditável. Decidir se a comissão extra usa a **faixa já paga no mês fechado** ou a **faixa do mês atual**.
+5. **Reabrir e complementar o mês pago** — único jeito de continuar igual ao PDF. Contradiz o fechamento. Deixar só para erro operacional.
+
+**Não fazer:** trocar o eixo aberto de DTEFE por `data_operacao` do cupom. Isso muda o recorte inteiro da RN-VIS-008, não só o leftover.
+
+**Decisão pendente antes de implementar**
+
+- Tratamento padrão: **1 + 4** (hábito de fechar depois + leftover como ajuste no mês aberto) vs só 3 vs aceitar 2.
+- Leftover entra na **faixa/meta do mês aberto** ou fica **só como ajuste de comissão**.
+- Gravado isso, atualizar `docs/regras-negocio.md` (RN-VIS-008 / RN-VIS-013) e só então código.
+
+**Como conferir um caso:** Detalhe da competência — `dataPagamento` (DTEFE) vs data do cupom (`data_operacao`). Pagamento no mês fechado + cupom no mês atual = este cenário. Modal Detalhe lê caixa **ao vivo** mesmo com retrato fechado; o que trava é card/grade/impressão oficial.
+
+Arquivos-base: `docs/regras-negocio.md` (RN-VIS-008, RN-VIS-013), `visitacao-acompanhamento.service.ts` (`sqlUnionPeriodoRecebido` / eixo `data_pagamento`), `agent/src/database/database.service.ts` (`buildCaixaRequisicoesPagasQuery`: DTEFE no intervalo **ou** `NRRQU` de cupom do período).
 
 ### Acompanhamento Visitação — carteira por período (painel + histórico)
 
@@ -93,6 +133,7 @@ histórico cuja vigência cruza [dataInicial, dataFinal]
 
 ## Pendente
 
+- [ ] **Visitação — DTEFE atrasado após competência fechada** — mês pago congelado; leftover com DTEFE no mês fechado hoje **não vai para lugar nenhum**. Decidir tratamento (fechar mais tarde / ficar de fora / creditar no mês aberto / ajuste explícito / reabrir só incidente) e gravar RN-VIS-008 / RN-VIS-013 **antes** de implementar. Ver seção “DTEFE atrasado após competência fechada” (2026-09-09).
 - [ ] **Visitação — sync por série + crédito + Loja + freeze** — passos 1–5 na seção “comissão oficial e fechamento mensal” (2026-09-02). RNs e modelo já gravados.
 - [ ] **Acompanhamento Visitação — carteira por período (painel + histórico)** — **cancelado / substituído** por RN-VIS-013 (retrato no fechar). Não implementar UNION com `painel_medicos_representantes_historico` para comissão.
 - [ ] **Configurar envio de e-mail** — recuperação de senha e notificações (pendências de fechamento, pendências de vendas, resumo de folha, etc.).
