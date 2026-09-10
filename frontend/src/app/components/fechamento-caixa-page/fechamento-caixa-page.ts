@@ -375,6 +375,20 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
     `;
   }
 
+  private montarMarcaDaguaCaixaAberto(
+    consolidado: FechamentoConsolidado,
+  ): string {
+    if (consolidado.statusExibicao !== 'RASCUNHO') {
+      return '';
+    }
+
+    return `
+      <div class="marca-dagua-caixa-aberto" aria-hidden="true">
+        <span>CAIXA ABERTO!</span>
+      </div>
+    `;
+  }
+
   isCaixaFechado(consolidado: FechamentoConsolidado | null): boolean {
     return consolidado?.statusExibicao === 'FECHADO';
   }
@@ -965,6 +979,13 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
     const usuarioLabel =
       currentUser?.nome || currentUser?.email || 'Usuário não identificado';
     const geradoEm = new Date().toLocaleString('pt-BR');
+    const caixaAberto = consolidado.statusExibicao === 'RASCUNHO';
+    const classeBody = [
+      tipo === 'resumido' ? 'relatorio-resumido' : 'relatorio-detalhado',
+      caixaAberto ? 'caixa-aberto-impressao' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     const corpoResumido = `
       <div class="print-actions">
@@ -1000,7 +1021,8 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
           <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
           <style>${this.getEstilosRelatorio(tipo)}</style>
         </head>
-        <body class="${tipo === 'resumido' ? 'relatorio-resumido' : 'relatorio-detalhado'}">
+        <body class="${classeBody}">
+          ${this.montarMarcaDaguaCaixaAberto(consolidado)}
           ${tipo === 'resumido' ? corpoResumido : corpoDetalhado}
         </body>
       </html>
@@ -1022,7 +1044,40 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       .title-area { flex: 1; text-align: center; }
       .subheader { color: #64748b; font-size: 12px; margin-top: 4px; }
       footer { margin-top: 24px; text-align: right; color: #94a3b8; font-size: 11px; }
-      @media print { .print-actions { display: none; } body { margin: 0 16px 40px; } }
+      .marca-dagua-caixa-aberto {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 40;
+        overflow: visible;
+      }
+      .marca-dagua-caixa-aberto span {
+        font-size: clamp(2.4rem, 6.4vw, 4.6rem);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        line-height: 1;
+        text-transform: uppercase;
+        color: rgba(185, 28, 28, 0.14);
+        border: 0.1em solid rgba(185, 28, 28, 0.16);
+        padding: 0.16em 0.28em;
+        border-radius: 0.08em;
+        transform: rotate(-18deg);
+        white-space: nowrap;
+        user-select: none;
+      }
+      @media print {
+        .print-actions { display: none; }
+        body { margin: 0 16px 40px; }
+        .marca-dagua-caixa-aberto span {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          color: rgba(185, 28, 28, 0.16);
+          border-color: rgba(185, 28, 28, 0.18);
+        }
+      }
     `;
 
     if (tipo === 'detalhado') {

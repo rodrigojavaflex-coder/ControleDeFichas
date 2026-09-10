@@ -785,6 +785,7 @@ Responder formalmente antes de alterar importação ou fechamento oficial:
 - **Bloqueado (`BLOQUEADO`)**: data anterior ao último fechamento da unidade e **não** confirmada pelo sistema. Não permite editar, fechar nem reabrir; **permite** emitir relatórios **Caixa** e **Caixa Detalhado**.
 - **Aberto (`RASCUNHO`)**: período em aberto (`data >=` último fechamento) ainda não confirmado. Exibido na UI como **Aberto**. Permite editar, fechar e emitir relatórios **Caixa** e **Caixa Detalhado**.
 - No relatório **Caixa** (resumido), o status é exibido acima do título com as cores de badge da tela (Fechado/Aberto/Bloqueado); a **observação** (quando houver) aparece em card ao lado dos blocos Dinheiro/Cartão/Depósito.
+- Quando o status for **Aberto**, os relatórios **Caixa** e **Caixa Detalhado** exibem marca d'água diagonal **CAIXA ABERTO!** sobre o conteúdo (tela de impressão e PDF). Caixa fechado ou bloqueado **não** recebe a marca d'água.
 
 ---
 
