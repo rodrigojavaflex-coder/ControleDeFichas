@@ -273,6 +273,10 @@ export class CaixaFechamentoConsolidadoService {
     data: string,
   ): Promise<FechamentoConsolidadoResponseDto> {
     await this.assertPodeEditarFechamento(unidade, data);
+    await this.fechamentoCaixaService.assertComplementoRequisicoesDoDia(
+      unidade,
+      data,
+    );
 
     const consolidado = await this.obterConsolidado({ unidade, data });
     let fechamento = await this.fechamentoRepo.findOne({

@@ -128,6 +128,21 @@ export class CaixaRequisicaoPaga {
   @ApiProperty({
     required: false,
     description:
+      'Saldo em aberto (FC17000.VRSDO). Visitação não credita se > 0 (RN-VIS-008).',
+  })
+  @Column({
+    type: 'numeric',
+    precision: 15,
+    scale: 2,
+    nullable: true,
+    name: 'valor_saldo',
+    transformer: nullableNumericColumnTransformer,
+  })
+  valorSaldo?: number | null;
+
+  @ApiProperty({
+    required: false,
+    description:
       'Preço das fórmulas (FC12100.PRCOBR) rateado pelo % pago no caixa (VRLIQ/VRRQU); teto do prescritor. Ex. 97510: 368,70 × 520/682,30 = 281',
   })
   @Column({

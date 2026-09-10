@@ -410,6 +410,14 @@ export class DatabaseService {
     return date.toISOString().slice(0, 10);
   }
 
+  /** Dia seguinte em YYYY-MM-DD (UTC) para recorte exclusivo de TIMESTAMP/DATE. */
+  private dataIsoDiaSeguinte(iso: string): string {
+    const [ano, mes, dia] = iso.split('-').map((parte) => Number(parte));
+    return new Date(Date.UTC(ano, (mes ?? 1) - 1, (dia ?? 1) + 1))
+      .toISOString()
+      .slice(0, 10);
+  }
+
   async buscarOrcamentos(
     dataMinimaModificacao: string,
     unit: number,
@@ -798,6 +806,38 @@ export class DatabaseService {
     return pagas;
   }
 
+  async contarNrrquCupomComPaga(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<number> {
+    const sql = `
+      SELECT COUNT(*) AS qtd
+      FROM (
+        SELECT DISTINCT req.nrrqu
+        FROM fc31200 req
+        JOIN fc17000 r
+          ON r.cdfil = req.cdfil
+         AND r.nrrqu = req.nrrqu
+         AND COALESCE(r.vrliq, 0) <> 0
+        WHERE req.cdfil = ?
+          AND req.dtope BETWEEN ? AND ?
+          AND COALESCE(req.nrrqu, 0) > 0
+      )
+    `;
+    const rows = await this.executarConsultaCaixa(
+      sql,
+      [unit, start, end],
+      (row) => {
+        const get = (key: string) =>
+          row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+        return Number(get('qtd') ?? 0);
+      },
+      'requisicoes-cupom-com-paga',
+    );
+    return rows[0] ?? 0;
+  }
+
   async buscarCaixaFechamentoDia(
     unit: number,
     start: string,
@@ -1028,7 +1068,7 @@ export class DatabaseService {
         SELECT r0.nrrqu
         FROM fc17000 r0
         WHERE r0.cdfil = ?
-          AND r0.dtefe BETWEEN ? AND ?
+          AND r0.dtefe >= CAST(? AS DATE) AND r0.dtefe < CAST(? AS DATE)
           AND COALESCE(r0.vrliq, 0) <> 0
         UNION
         SELECT req0.nrrqu
@@ -1058,6 +1098,7 @@ export class DatabaseService {
         r.vrrqu AS valor_requisicao_bruto,
         r.vrdsc AS desconto_requisicao,
         r.vrliq AS valor_pago_requisicao,
+        CAST(COALESCE(r.vrsdo, 0) AS NUMERIC(15,2)) AS valor_saldo,
         TRIM(r.tprqu) AS tipo_requisicao,
         CAST(
           fval.soma_prcobr
@@ -1113,7 +1154,7 @@ export class DatabaseService {
         FROM fc17000 r1
         WHERE r1.cdfil = ?
           AND COALESCE(r1.vrliq, 0) <> 0
-          AND r1.dtefe BETWEEN ? AND ?
+          AND r1.dtefe >= CAST(? AS DATE) AND r1.dtefe < CAST(? AS DATE)
         UNION
         SELECT r2.cdfil, r2.nrrqu, r2.dtefe, r2.nrcpm
         FROM fc17000 r2
@@ -1185,29 +1226,20 @@ export class DatabaseService {
       ORDER BY r.dtefe, r.nrcpm, r.nrrqu
     `;
 
+    const endExclusive = this.dataIsoDiaSeguinte(end);
+    const dtefe = [unit, start, endExclusive];
+    const dtope = [unit, start, end];
+    const candNrrquParams = [...dtefe, ...dtope];
+
     return {
       sql,
       params: [
+        ...dtefe,
+        ...dtope,
         unit,
-        start,
-        end,
+        ...candNrrquParams,
         unit,
-        start,
-        end,
-        unit,
-        unit,
-        start,
-        end,
-        unit,
-        start,
-        end,
-        unit,
-        unit,
-        start,
-        end,
-        unit,
-        start,
-        end,
+        ...candNrrquParams,
         unit,
       ],
     };
@@ -1255,7 +1287,7 @@ export class DatabaseService {
         FROM fc17000 r1
         WHERE r1.cdfil = ?
           AND COALESCE(r1.vrliq, 0) <> 0
-          AND r1.dtefe BETWEEN ? AND ?
+          AND r1.dtefe >= CAST(? AS DATE) AND r1.dtefe < CAST(? AS DATE)
         UNION
         SELECT r2.cdfil, r2.nrrqu, r2.dtefe, r2.nrcpm
         FROM fc17000 r2
@@ -1289,9 +1321,10 @@ export class DatabaseService {
       ORDER BY r.dtefe, r.nrrqu, f.serier
     `;
 
+    const endExclusive = this.dataIsoDiaSeguinte(end);
     return {
       sql,
-      params: [unit, start, end, unit, start, end, unit],
+      params: [unit, start, endExclusive, unit, start, end, unit],
     };
   }
 
@@ -1444,6 +1477,10 @@ export class DatabaseService {
       valor_requisicao_bruto: Number(get('valor_requisicao_bruto') ?? 0),
       desconto_requisicao: Number(get('desconto_requisicao') ?? 0),
       valor_pago_requisicao: Number(get('valor_pago_requisicao') ?? 0),
+      valor_saldo:
+        get('valor_saldo') != null
+          ? Math.round(Number(get('valor_saldo')) * 100) / 100
+          : 0,
       tipo_requisicao: get('tipo_requisicao')
         ? String(get('tipo_requisicao')).trim() || null
         : null,

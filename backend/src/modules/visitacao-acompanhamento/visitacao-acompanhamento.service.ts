@@ -442,34 +442,32 @@ export class VisitacaoAcompanhamentoService {
         t.nome_medico
       FROM (
         SELECT DISTINCT ON (
-          i.numero_cupom,
-          i.numero_requisicao,
+          c.numero_cupom,
+          c.numero_requisicao,
           COALESCE(NULLIF(BTRIM(f.serie), ''), ''),
           ${this.sqlCrmPrescritor()}
         )
-          COALESCE(c.data_pagamento, i.data_operacao) AS data_pagamento,
-          i.numero_cupom,
-          i.numero_requisicao,
+          c.data_pagamento,
+          c.numero_cupom,
+          c.numero_requisicao,
           COALESCE(f.numero_orcamento, c.numero_orcamento) AS numero_orcamento,
           NULLIF(BTRIM(f.serie), '') AS serie,
           ${this.sqlValorRecebidoPrescritorOuSerie()} AS valor_pago,
           ${this.sqlNomePrescritor()} AS nome_medico
-        FROM caixa_itens_erp i
-        ${this.sqlJoinCaixaPago()}
+        FROM caixa_requisicoes_pagas c
         ${this.sqlJoinFormulaSerie()}
-        WHERE i.tipo_item = 'REQUISICAO'
-          AND i.numero_requisicao IS NOT NULL
-          AND i.unidade = $1
+        WHERE c.numero_requisicao IS NOT NULL
+          AND c.unidade = $1
           ${this.sqlFiltroPeriodoRecebido('$4', '$5')}
           ${this.sqlFiltroRecebidoVisitacao()}
           AND ${this.sqlCrmPrescritor()} = $2
           AND ${this.sqlUfPrescritor()} = $3
         ORDER BY
-          i.numero_cupom,
-          i.numero_requisicao,
+          c.numero_cupom,
+          c.numero_requisicao,
           COALESCE(NULLIF(BTRIM(f.serie), ''), ''),
           ${this.sqlCrmPrescritor()},
-          i.id
+          c.id
       ) t
       ORDER BY t.data_pagamento ASC, t.numero_cupom ASC, t.numero_requisicao ASC, t.serie ASC NULLS LAST
     `;
@@ -576,6 +574,9 @@ export class VisitacaoAcompanhamentoService {
           `Não é possível fechar a visitação: o caixa de ${unidade} ainda não está confirmado.`,
       );
     }
+
+    const periodo = periodoCompetencia(dto.ano, dto.mes);
+    await this.assertFormulasNoPeriodo(unidade, periodo);
 
     const [live, painel, funcionarios] = await Promise.all([
       this.findAll(
@@ -1369,42 +1370,41 @@ export class VisitacaoAcompanhamentoService {
         )`
       : `COALESCE(pe.funcionario_id, pc.funcionario_id)`;
 
-    const joinCaixaPago = `${this.sqlJoinCaixaPago()}${this.sqlJoinFormulaSerie()}`;
+    const joinFormula = this.sqlJoinFormulaSerie();
     const selectRecebido = `
-            i.unidade,
-            i.numero_cupom,
-            i.numero_requisicao,
+            c.unidade,
+            c.numero_cupom,
+            c.numero_requisicao,
             COALESCE(NULLIF(BTRIM(f.serie), ''), '') AS serie,
             ${this.sqlCrmPrescritor()} AS crm,
             ${this.sqlUfPrescritor()} AS uf,
             ${this.sqlNomePrescritor()} AS nome_medico,
             ${this.sqlValorRecebidoPrescritorOuSerie()} AS valor_recebido`;
     const whereCaixaBase = `
-            i.tipo_item = 'REQUISICAO'
-            AND i.numero_requisicao IS NOT NULL
+            c.numero_requisicao IS NOT NULL
             ${this.sqlFiltroRecebidoVisitacao()}`;
     const selectRecebidoLocal = `
           SELECT ${selectRecebido}
-          FROM caixa_itens_erp i
-          ${joinCaixaPago}
+          FROM caixa_requisicoes_pagas c
+          ${joinFormula}
           WHERE ${whereCaixaBase}
             AND ${this.sqlCrmPrescritor()} IS NOT NULL
             AND ${this.sqlUfPrescritor()} IS NOT NULL`;
     const recebidosCaixaCarteira = idxCarteira
       ? this.sqlApenasPagaNoPeriodo(`
           SELECT ${selectRecebido}
-          FROM caixa_itens_erp i
-          ${joinCaixaPago}
+          FROM caixa_requisicoes_pagas c
+          ${joinFormula}
           INNER JOIN crms_carteira cc
             ON cc.crm = ${this.sqlCrmPrescritor()}
             AND cc.uf = ${this.sqlUfPrescritor()}
           WHERE ${whereCaixaBase}
             AND ${this.sqlCrmPrescritor()} IS NOT NULL
             AND ${this.sqlUfPrescritor()} IS NOT NULL
-            ${modoPainel === 'todos' ? `AND i.unidade IS DISTINCT FROM $${idxCarteira}` : ''}
+            ${modoPainel === 'todos' ? `AND c.unidade IS DISTINCT FROM $${idxCarteira}` : ''}
             AND ${this.sqlIndicacaoOuUnidadeComissao(
               idxCarteira,
-              'i.unidade',
+              'c.unidade',
               this.sqlCrmPrescritor(),
               this.sqlUfPrescritor(),
               'cc.funcionario_id',
@@ -1455,14 +1455,14 @@ export class VisitacaoAcompanhamentoService {
       recebidosFrom = wrapRecebidoUnico(
         this.sqlUnionPeriodoRecebido(`
           ${selectRecebidoLocal}
-            AND i.unidade = $${idxCarteira}`),
+            AND c.unidade = $${idxCarteira}`),
       );
       rejeitadosExtra = ` AND o.unidade = $${idxCarteira}`;
     } else if (idxCarteira && modoPainel === 'todos') {
       recebidosFrom = wrapRecebidoUnico(`
           ${this.sqlUnionPeriodoRecebido(`
           ${selectRecebidoLocal}
-            AND i.unidade = $${idxCarteira}`)}
+            AND c.unidade = $${idxCarteira}`)}
           UNION ALL
           ${recebidosCaixaCarteira}
       `);
@@ -2388,24 +2388,21 @@ export class VisitacaoAcompanhamentoService {
     manager?: EntityManager,
   ): Promise<{ valor: number; quantidade: number }> {
     const params: unknown[] = [periodo.dataInicial, periodo.dataFinal];
-    const join = this.sqlJoinCaixaPago();
     const valor = this.sqlValorRecebidoPrescritor();
     const whereBase = `
-            i.tipo_item = 'REQUISICAO'
-            AND i.numero_requisicao IS NOT NULL
+            c.numero_requisicao IS NOT NULL
             ${this.sqlFiltroRecebidoVisitacao()}`;
-    const filtroUnidade = escopo === 'ALL' ? '' : 'AND i.unidade = $3';
+    const filtroUnidade = escopo === 'ALL' ? '' : 'AND c.unidade = $3';
     if (escopo !== 'ALL') {
       params.push(escopo);
     }
-    const inner = this.sqlUnionPeriodoRecebido(`
+    const inner = this.sqlApenasPagaNoPeriodo(`
           SELECT
-            i.unidade,
-            i.numero_cupom,
-            i.numero_requisicao,
+            c.unidade,
+            c.numero_cupom,
+            c.numero_requisicao,
             ${valor} AS valor_recebido
-          FROM caixa_itens_erp i
-          ${join}
+          FROM caixa_requisicoes_pagas c
           WHERE ${whereBase}
             ${filtroUnidade}`);
 
@@ -2499,28 +2496,27 @@ export class VisitacaoAcompanhamentoService {
       unidade,
       extras,
     ];
-    const join = `${this.sqlJoinCaixaPago()}${this.sqlJoinFormulaSerie()}`;
+    const join = this.sqlJoinFormulaSerie();
     const valor = this.sqlValorRecebidoPrescritorOuSerie();
     const crm = this.sqlCrmPrescritor();
     const uf = this.sqlUfPrescritor();
     const selectPaga = `
           SELECT
-            i.unidade,
-            i.numero_cupom,
-            i.numero_requisicao,
+            c.unidade,
+            c.numero_cupom,
+            c.numero_requisicao,
             COALESCE(NULLIF(BTRIM(f.serie), ''), '') AS serie,
             ${valor} AS valor_recebido
-          FROM caixa_itens_erp i
+          FROM caixa_requisicoes_pagas c
           ${join}
           INNER JOIN crms_carteira cc
             ON cc.crm = ${crm}
             AND cc.uf = ${uf}
-          WHERE i.tipo_item = 'REQUISICAO'
-            AND i.numero_requisicao IS NOT NULL
+          WHERE c.numero_requisicao IS NOT NULL
             ${this.sqlFiltroRecebidoVisitacao()}
             AND ${crm} IS NOT NULL
             AND ${uf} IS NOT NULL
-            AND i.unidade = ANY($4)`;
+            AND c.unidade = ANY($4)`;
     const sqlRecebido = `
       WITH crms_carteira AS (
         SELECT DISTINCT
@@ -2697,7 +2693,7 @@ export class VisitacaoAcompanhamentoService {
       ? [...new Set([unidadePainel, ...unidadesExtras])]
       : [];
     const filtroMovimento = unidadesMovimento.length
-      ? `AND i.unidade = ANY($${params.length + 1})`
+      ? `AND c.unidade = ANY($${params.length + 1})`
       : '';
     const filtroOrcamento = unidadesMovimento.length
       ? `AND o.unidade = ANY($${params.length + 1})`
@@ -2709,15 +2705,13 @@ export class VisitacaoAcompanhamentoService {
     const sql = `
       WITH mov AS (
         SELECT DISTINCT crm, uf FROM (
-          ${this.sqlUnionPeriodoRecebido(`
+          ${this.sqlApenasPagaNoPeriodo(`
           SELECT
             ${this.sqlCrmPrescritor()} AS crm,
             ${this.sqlUfPrescritor()} AS uf
-          FROM caixa_itens_erp i
-          ${this.sqlJoinCaixaPago()}
+          FROM caixa_requisicoes_pagas c
           ${this.sqlJoinFormulaSerie()}
-          WHERE i.tipo_item = 'REQUISICAO'
-            AND i.numero_requisicao IS NOT NULL
+          WHERE c.numero_requisicao IS NOT NULL
             ${this.sqlFiltroRecebidoVisitacao()}
             AND ${this.sqlCrmPrescritor()} IS NOT NULL
             AND ${this.sqlUfPrescritor()} IS NOT NULL
@@ -2841,6 +2835,55 @@ export class VisitacaoAcompanhamentoService {
     };
   }
 
+  /**
+   * RN-VIS-013: sem fórmulas no período o retrato congela crédito legado (série 0).
+   * Mesmo critério de metade da trava do complemento de caixa.
+   */
+  private async assertFormulasNoPeriodo(
+    unidade: Unidade,
+    periodo: PeriodoCompetencia,
+  ): Promise<void> {
+    const rows = (await this.dataSource.query(
+      `
+        SELECT
+          COUNT(*) FILTER (
+            WHERE COALESCE(c.tipo_requisicao, '') <> 'C'
+              AND COALESCE(c.valor_saldo, 0) = 0
+              AND NOT (
+                COALESCE(c.tipo_requisicao, '') = 'N'
+                AND COALESCE(c.valor_formulas, 0) = 0
+              )
+          )::int AS pagas,
+          COUNT(*) FILTER (
+            WHERE COALESCE(c.tipo_requisicao, '') <> 'C'
+              AND COALESCE(c.valor_saldo, 0) = 0
+              AND NOT (
+                COALESCE(c.tipo_requisicao, '') = 'N'
+                AND COALESCE(c.valor_formulas, 0) = 0
+              )
+              AND EXISTS (
+                SELECT 1
+                FROM caixa_requisicao_formula f
+                WHERE f.requisicao_paga_id = c.id
+              )
+          )::int AS com_formula
+        FROM caixa_requisicoes_pagas c
+        WHERE c.unidade = $1
+          AND c.data_pagamento IS NOT NULL
+          AND c.data_pagamento >= $2
+          AND c.data_pagamento <= $3
+      `,
+      [unidade, periodo.dataInicial, periodo.dataFinal],
+    )) as Array<{ pagas: string | number | null; com_formula: string | number | null }>;
+    const pagas = this.toInt(rows[0]?.pagas);
+    const comFormula = this.toInt(rows[0]?.com_formula);
+    if (pagas > 0 && comFormula * 2 < pagas) {
+      throw new ConflictException(
+        `Não é possível fechar a visitação: o complemento de fórmulas está incompleto (${comFormula} paga(s) com série para ${pagas} requisição(ões) em ${unidade}). Atualize as vendas do período e só então feche.`,
+      );
+    }
+  }
+
   private assertPeriodo(dataInicial: string, dataFinal: string): void {
     if (dataInicial > dataFinal) {
       throw new BadRequestException(
@@ -2884,45 +2927,13 @@ export class VisitacaoAcompanhamentoService {
   private sqlValorRecebidoPrescritorOuSerie(): string {
     const legado = this.sqlValorRecebidoPrescritor();
     return `CASE
-      WHEN f.id IS NOT NULL THEN
-        CASE
-          WHEN c.valor_pago_requisicao IS NOT NULL
-           AND COALESCE(i.valor_liquido_item, 0) > 0
-           AND i.valor_liquido_item < c.valor_pago_requisicao
-           AND COALESCE(c.valor_pago_requisicao, 0) > 0
-          THEN ROUND(
-            (f.valor_rateado * i.valor_liquido_item
-              / c.valor_pago_requisicao)::numeric,
-            2
-          )
-          ELSE f.valor_rateado
-        END
+      WHEN f.id IS NOT NULL THEN f.valor_rateado
       ELSE ${legado}
     END`;
   }
 
-  private sqlJoinCaixaPago(): string {
-    return `
-          LEFT JOIN LATERAL (
-            SELECT c0.*
-            FROM caixa_requisicoes_pagas c0
-            WHERE c0.unidade = i.unidade
-              AND c0.numero_requisicao = i.numero_requisicao
-            ORDER BY
-              CASE WHEN c0.numero_cupom = i.numero_cupom THEN 0 ELSE 1 END,
-              c0.data_pagamento DESC
-            LIMIT 1
-          ) c ON TRUE`;
-  }
-
-  private sqlValorBaseCupomPrescritor(): string {
-    return `CASE
-      WHEN c.valor_pago_requisicao IS NOT NULL
-       AND COALESCE(i.valor_liquido_item, 0) > 0
-       AND i.valor_liquido_item < c.valor_pago_requisicao
-      THEN i.valor_liquido_item
-      ELSE COALESCE(c.valor_pago_requisicao, i.valor_liquido_item)
-    END`;
+  private sqlValorBasePaga(): string {
+    return `COALESCE(c.valor_pago_requisicao, 0)`;
   }
 
   private sqlValorFormulasPrescritor(): string {
@@ -2941,7 +2952,7 @@ export class VisitacaoAcompanhamentoService {
   }
 
   private sqlValorRecebidoPrescritor(): string {
-    const base = this.sqlValorBaseCupomPrescritor();
+    const base = this.sqlValorBasePaga();
     const formulas = this.sqlValorFormulasPrescritor();
     return `CASE
       WHEN (${formulas}) IS NOT NULL
@@ -2969,23 +2980,12 @@ export class VisitacaoAcompanhamentoService {
   }
 
   /**
-   * Mesmo eixo RN-VIS-008, sem OR: paga no período UNION órfão por data_operacao.
+   * RN-VIS-008: universo = paga no período (DTEFE). Sem órfão por data_operacao.
    */
   private sqlUnionPeriodoRecebido(selectFromWhere: string): string {
-    return `
-          ${selectFromWhere}
-            AND c.data_pagamento IS NOT NULL
-            AND c.data_pagamento >= $1
-            AND c.data_pagamento <= $2
-          UNION ALL
-          ${selectFromWhere}
-            AND c.data_pagamento IS NULL
-            AND i.data_operacao >= $1
-            AND i.data_operacao <= $2
-    `;
+    return this.sqlApenasPagaNoPeriodo(selectFromWhere);
   }
 
-  /** Indicação / outra filial exige paga (não entra órfão). */
   private sqlApenasPagaNoPeriodo(selectFromWhere: string): string {
     return `
           ${selectFromWhere}
@@ -2996,26 +2996,14 @@ export class VisitacaoAcompanhamentoService {
   }
 
   private sqlFiltroPeriodoRecebido(inicio: string, fim: string): string {
-    return `AND (
-              (
-                c.data_pagamento IS NOT NULL
-                AND c.data_pagamento >= ${inicio}
-                AND c.data_pagamento <= ${fim}
-              )
-              OR (
-                c.data_pagamento IS NULL
-                AND i.data_operacao >= ${inicio}
-                AND i.data_operacao <= ${fim}
-              )
-            )`;
+    return `AND c.data_pagamento IS NOT NULL
+            AND c.data_pagamento >= ${inicio}
+            AND c.data_pagamento <= ${fim}`;
   }
 
   private sqlFiltroRecebidoVisitacao(): string {
     return `AND COALESCE(c.tipo_requisicao, '') <> 'C'
-            AND (
-              COALESCE(c.tipo_requisicao, '') <> ''
-              OR COALESCE(i.valor_liquido_linha, 0) <> 0
-            )
+            AND COALESCE(c.valor_saldo, 0) = 0
             AND NOT (
               COALESCE(c.tipo_requisicao, '') = 'N'
               AND COALESCE(c.valor_formulas, 0) = 0

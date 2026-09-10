@@ -34,6 +34,9 @@ try {
 
   npm install
   npm run build
+  if ($LASTEXITCODE -ne 0) {
+    throw "Build do agente falhou (exit $LASTEXITCODE)."
+  }
 
   if (Test-Path $Output) {
     Write-Host "[agente] Limpando saída anterior em $Output" -ForegroundColor Yellow

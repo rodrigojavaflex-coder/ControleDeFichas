@@ -34,6 +34,7 @@ export interface CaixaRequisicoesPagasResponse {
   start: string;
   end: string;
   requisicoes: CaixaRequisicaoPagaRow[];
+  nrrquCupomComPaga: number;
 }
 
 export interface CaixaFechamentoDiaResponse {
@@ -106,13 +107,20 @@ export class CaixaService {
     this.logger.log(
       `Caixa requisicoes-pagas início unit=${periodo.unit} ${periodo.start}..${periodo.end}`,
     );
-    const requisicoes = await this.databaseService.buscarCaixaRequisicoesPagas(
-      periodo.unit,
-      periodo.start,
-      periodo.end,
-    );
+    const [requisicoes, nrrquCupomComPaga] = await Promise.all([
+      this.databaseService.buscarCaixaRequisicoesPagas(
+        periodo.unit,
+        periodo.start,
+        periodo.end,
+      ),
+      this.databaseService.contarNrrquCupomComPaga(
+        periodo.unit,
+        periodo.start,
+        periodo.end,
+      ),
+    ]);
     this.logger.log(
-      `Caixa requisicoes-pagas fim unit=${periodo.unit} ${requisicoes.length} linha(s) ${Date.now() - t0}ms`,
+      `Caixa requisicoes-pagas fim unit=${periodo.unit} ${requisicoes.length} linha(s) cupomComPaga=${nrrquCupomComPaga} ${Date.now() - t0}ms`,
     );
 
     return {
@@ -120,6 +128,7 @@ export class CaixaService {
       start: periodo.start,
       end: periodo.end,
       requisicoes,
+      nrrquCupomComPaga,
     };
   }
 

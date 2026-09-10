@@ -114,6 +114,7 @@ interface AgenteCaixaRequisicaoRow {
   valor_requisicao_bruto: number;
   desconto_requisicao: number;
   valor_pago_requisicao: number;
+  valor_saldo?: number | null;
   tipo_requisicao: string | null;
   valor_formulas: number | null;
   diferenca_calculo: number;
@@ -395,11 +396,13 @@ export class FechamentoCaixaService {
 
     const requisicoesResp = await this.chamarAgente<{
       requisicoes: AgenteCaixaRequisicaoRow[];
+      nrrquCupomComPaga?: number;
     }>(agente, '/api/v1/caixa/requisicoes-pagas', body, 'requisicoes-pagas', unidade);
 
     const pagamentosRows = pagamentosResp.pagamentos ?? [];
     const itensRows = itensResp.itens ?? [];
     const requisicoesRows = requisicoesResp.requisicoes ?? [];
+    const nrrquCupomComPaga = requisicoesResp.nrrquCupomComPaga;
 
     const qtdPagamentos = pagamentosRows.length;
     const qtdItens = itensRows.length;
@@ -417,7 +420,35 @@ export class FechamentoCaixaService {
     );
 
     this.logger.log(
-      `Caixa sync ${unidade}: snapshot agente ${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes} formulas=${qtdFormulas} (vendedor=${reqComVendedor} crm=${reqComCrm})`,
+      `Caixa sync ${unidade}: snapshot agente ${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes} formulas=${qtdFormulas} cupomComPaga=${nrrquCupomComPaga ?? 'n/a'} (vendedor=${reqComVendedor} crm=${reqComCrm})`,
+    );
+
+    if (
+      this.snapshotRequisicoesPagasIncompleto(
+        itensRows,
+        requisicoesRows,
+        nrrquCupomComPaga,
+      )
+    ) {
+      const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
+      const esperadas = nrrquCupomComPaga ?? nrrquItens;
+      this.logger.error(
+        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: complemento incompleto (${qtdRequisicoes} paga(s) vs ${esperadas} requisição(ões) já em FC17000 / ${nrrquItens} nos itens). Importação abortada.`,
+      );
+      throw new ServiceUnavailableException(
+        `O detalhe das requisições pagas não veio completo do ERP (${qtdRequisicoes} paga(s) para ${esperadas} requisição(ões) já baixadas nos cupons de ${this.formatDateDisplay(dataInicio)} a ${this.formatDateDisplay(dataFim)}). Os valores do caixa não foram gravados. Atualize as vendas de novo antes de fechar o dia.`,
+      );
+    }
+
+    const nrrquPagas = new Set(
+      requisicoesRows.filter((r) => r.requisicao > 0).map((r) => r.requisicao),
+    );
+    const itensParaGravar = itensRows.filter(
+      (item) =>
+        item.tipo_item !== 'REQUISICAO' ||
+        (item.requisicao != null &&
+          item.requisicao > 0 &&
+          nrrquPagas.has(item.requisicao)),
     );
 
     this.importacaoProgressService.atualizar({
@@ -436,7 +467,7 @@ export class FechamentoCaixaService {
           dataInicio,
           dataFim,
           pagamentosRows,
-          itensRows,
+          itensParaGravar,
           requisicoesRows,
         ),
     );
@@ -466,17 +497,17 @@ export class FechamentoCaixaService {
 
     this.importacaoProgressService.atualizar({
       fase: 'gravando_postgres',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdItens} itens no PostgreSQL...`,
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${itensParaGravar.length} itens no PostgreSQL...`,
       percentual: pctBase + Math.round(pctSlice * 0.65),
     });
 
     const itensStats = await this.cronometrarCaixa(
       unidade,
       'upsert itens',
-      `${qtdItens} linha(s)`,
+      `${itensParaGravar.length} linha(s)`,
       () =>
         this.upsertItens(
-          itensRows,
+          itensParaGravar,
           unidade,
           dataInicio,
           dataFim,
@@ -914,6 +945,8 @@ export class FechamentoCaixaService {
         valorRequisicaoBruto: row.valor_requisicao_bruto,
         descontoRequisicao: row.desconto_requisicao,
         valorPagoRequisicao: row.valor_pago_requisicao,
+        valorSaldo:
+          row.valor_saldo != null ? Number(row.valor_saldo) : null,
         tipoRequisicao: row.tipo_requisicao
           ? String(row.tipo_requisicao).trim() || null
           : null,
@@ -1595,22 +1628,14 @@ export class FechamentoCaixaService {
       chavesPagamentos,
     );
 
-    let requisicoesRemovidas = 0;
-    if (this.snapshotRequisicoesPagasIncompleto(itensRows, requisicoesRows)) {
-      const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
-      this.logger.error(
-        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: complemento incompleto (${requisicoesRows.length} paga(s) vs ${nrrquItens} requisição(ões) nos itens). Não remove caixa_requisicoes_pagas do período.`,
-      );
-    } else {
-      requisicoesRemovidas = await this.excluirCaixaErpPorPeriodoExcetoChaves(
-        this.requisicaoRepo,
-        'data_pagamento',
-        unidade,
-        dataInicio,
-        dataFim,
-        chavesRequisicoes,
-      );
-    }
+    const requisicoesRemovidas = await this.excluirCaixaErpPorPeriodoExcetoChaves(
+      this.requisicaoRepo,
+      'data_pagamento',
+      unidade,
+      dataInicio,
+      dataFim,
+      chavesRequisicoes,
+    );
 
     const total =
       itensRemovidos + pagamentosRemovidos + requisicoesRemovidas;
@@ -1636,13 +1661,50 @@ export class FechamentoCaixaService {
     ).size;
   }
 
-  /** Complemento FC17000 vazio ou muito menor que as REQUISICAO do cupom — não apagar pagas. */
+  /**
+   * Impede fechar o caixa do dia se houver requisição no cupom sem linha paga
+   * (Atualizar Vendas gravou item e o complemento FC17000 falhou).
+   */
+  async assertComplementoRequisicoesDoDia(
+    unidade: Unidade,
+    data: string,
+  ): Promise<void> {
+    const dataNormalizada = normalizarDataIso(data) ?? data;
+    const row = await this.itemRepo
+      .createQueryBuilder('i')
+      .select('COUNT(DISTINCT i.numero_requisicao)', 'qtd')
+      .leftJoin(
+        CaixaRequisicaoPaga,
+        'c',
+        'c.unidade = i.unidade AND c.numero_requisicao = i.numero_requisicao',
+      )
+      .where('i.unidade = :unidade', { unidade })
+      .andWhere('i.data_operacao = :data', { data: dataNormalizada })
+      .andWhere('i.tipo_item = :tipo', { tipo: CaixaTipoItem.REQUISICAO })
+      .andWhere('i.numero_requisicao IS NOT NULL')
+      .andWhere('c.id IS NULL')
+      .getRawOne<{ qtd: string | number | null }>();
+    const orfas = Number(row?.qtd ?? 0);
+    if (orfas > 0) {
+      throw new ConflictException(
+        `Não é possível fechar o caixa: ${orfas} requisição(ões) do dia ${this.formatDateDisplay(dataNormalizada)} estão sem o detalhe pago do ERP. Atualize as vendas de novo e só então feche o dia.`,
+      );
+    }
+  }
+
+  /**
+   * Complemento FC17000 incompleto frente às requisições do cupom que já existem
+   * na paga. Cupom ainda sem baixa (sem linha FC17000 / FLAGBXA vazio) não trava.
+   */
   private snapshotRequisicoesPagasIncompleto(
     itensRows: AgenteCaixaItemRow[],
     requisicoesRows: AgenteCaixaRequisicaoRow[],
+    nrrquCupomComPaga?: number,
   ): boolean {
     const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
-    if (nrrquItens === 0) {
+    const esperadas =
+      typeof nrrquCupomComPaga === 'number' ? nrrquCupomComPaga : nrrquItens;
+    if (esperadas === 0) {
       return false;
     }
     const nrrquPagas = new Set(
@@ -1650,7 +1712,7 @@ export class FechamentoCaixaService {
         .filter((r) => r.requisicao > 0)
         .map((r) => r.requisicao),
     ).size;
-    return nrrquPagas * 2 < nrrquItens;
+    return nrrquPagas * 2 < esperadas;
   }
 
   private async excluirCaixaErpPorPeriodoExcetoChaves(

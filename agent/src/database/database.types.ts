@@ -63,6 +63,7 @@ export interface CaixaRequisicaoPagaRow {
   valor_requisicao_bruto: number;
   desconto_requisicao: number;
   valor_pago_requisicao: number;
+  valor_saldo: number | null;
   tipo_requisicao: string | null;
   valor_formulas: number | null;
   diferenca_calculo: number;
