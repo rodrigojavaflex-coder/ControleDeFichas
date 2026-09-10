@@ -420,16 +420,6 @@ export class FechamentoCaixaService {
       `Caixa sync ${unidade}: snapshot agente ${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes} formulas=${qtdFormulas} (vendedor=${reqComVendedor} crm=${reqComCrm})`,
     );
 
-    if (this.snapshotRequisicoesPagasIncompleto(itensRows, requisicoesRows)) {
-      const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
-      this.logger.error(
-        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: complemento incompleto (${qtdRequisicoes} paga(s) vs ${nrrquItens} requisição(ões) nos itens). Importação abortada.`,
-      );
-      throw new ServiceUnavailableException(
-        `O detalhe das requisições pagas não veio completo do ERP (${qtdRequisicoes} paga(s) para ${nrrquItens} requisição(ões) nos cupons de ${this.formatDateDisplay(dataInicio)} a ${this.formatDateDisplay(dataFim)}). Os valores do caixa não foram gravados. Atualize as vendas de novo antes de fechar o dia.`,
-      );
-    }
-
     this.importacaoProgressService.atualizar({
       fase: 'gravando_postgres',
       message: `Segmento ${segmentoAtual}/${segmentosTotal}: sincronizando snapshot ERP (${dataInicio}..${dataFim})...`,
@@ -1605,14 +1595,22 @@ export class FechamentoCaixaService {
       chavesPagamentos,
     );
 
-    const requisicoesRemovidas = await this.excluirCaixaErpPorPeriodoExcetoChaves(
-      this.requisicaoRepo,
-      'data_pagamento',
-      unidade,
-      dataInicio,
-      dataFim,
-      chavesRequisicoes,
-    );
+    let requisicoesRemovidas = 0;
+    if (this.snapshotRequisicoesPagasIncompleto(itensRows, requisicoesRows)) {
+      const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
+      this.logger.error(
+        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: complemento incompleto (${requisicoesRows.length} paga(s) vs ${nrrquItens} requisição(ões) nos itens). Não remove caixa_requisicoes_pagas do período.`,
+      );
+    } else {
+      requisicoesRemovidas = await this.excluirCaixaErpPorPeriodoExcetoChaves(
+        this.requisicaoRepo,
+        'data_pagamento',
+        unidade,
+        dataInicio,
+        dataFim,
+        chavesRequisicoes,
+      );
+    }
 
     const total =
       itensRemovidos + pagamentosRemovidos + requisicoesRemovidas;
@@ -1638,38 +1636,7 @@ export class FechamentoCaixaService {
     ).size;
   }
 
-  /**
-   * Impede fechar o caixa do dia se houver requisição no cupom sem linha paga
-   * (Atualizar Vendas gravou item e o complemento FC17000 falhou).
-   */
-  async assertComplementoRequisicoesDoDia(
-    unidade: Unidade,
-    data: string,
-  ): Promise<void> {
-    const dataNormalizada = normalizarDataIso(data) ?? data;
-    const row = await this.itemRepo
-      .createQueryBuilder('i')
-      .select('COUNT(DISTINCT i.numero_requisicao)', 'qtd')
-      .leftJoin(
-        CaixaRequisicaoPaga,
-        'c',
-        'c.unidade = i.unidade AND c.numero_requisicao = i.numero_requisicao',
-      )
-      .where('i.unidade = :unidade', { unidade })
-      .andWhere('i.data_operacao = :data', { data: dataNormalizada })
-      .andWhere('i.tipo_item = :tipo', { tipo: CaixaTipoItem.REQUISICAO })
-      .andWhere('i.numero_requisicao IS NOT NULL')
-      .andWhere('c.id IS NULL')
-      .getRawOne<{ qtd: string | number | null }>();
-    const orfas = Number(row?.qtd ?? 0);
-    if (orfas > 0) {
-      throw new ConflictException(
-        `Não é possível fechar o caixa: ${orfas} requisição(ões) do dia ${this.formatDateDisplay(dataNormalizada)} estão sem o detalhe pago do ERP. Atualize as vendas de novo e só então feche o dia.`,
-      );
-    }
-  }
-
-  /** Complemento FC17000 vazio ou muito menor que as REQUISICAO do cupom. */
+  /** Complemento FC17000 vazio ou muito menor que as REQUISICAO do cupom — não apagar pagas. */
   private snapshotRequisicoesPagasIncompleto(
     itensRows: AgenteCaixaItemRow[],
     requisicoesRows: AgenteCaixaRequisicaoRow[],
