@@ -144,8 +144,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Aplica filtros vindos da URL (ex.: link da mensagem de erro de data anterior à última baixa).
-   * dataInicial, dataFinal e unidade (se o usuário não tiver unidade fixa).
+   * Aplica filtros vindos da URL (dataInicial, dataFinal e unidade, se o usuário não tiver unidade fixa).
    */
   private applyQueryParamsFilters(): void {
     const q = this.route.snapshot.queryParams;

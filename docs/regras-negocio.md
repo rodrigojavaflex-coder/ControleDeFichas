@@ -259,14 +259,12 @@
 - **Baixa em massa** (`processarBaixasEmMassa`): continua **bloqueada** para vendas com fechamento registrado.
 - **Atualizar valor compra em massa**: continua **bloqueada** para vendas com fechamento registrado.
 
-### RN-VND-004 — Data da baixa (fechamento de caixa + última baixa)
+### RN-VND-004 — Data da baixa (fechamento de caixa)
 
-- Criar, editar ou excluir baixa exige **`dataBaixa` válida** conforme **duas regras cumulativas** (implantação gradual do fechamento de caixa por unidade):
-  1. **Fechamento de caixa:** se a unidade possui fechamento confirmado (`status = CONFIRMADO`), a data deve ser **posterior** à data do último fechamento. Se não houver fechamento confirmado, esta regra não bloqueia.
-  2. **Última baixa da unidade:** se já existem baixas na unidade, a data deve ser **>=** à data da última baixa registrada. Se não houver baixas na unidade, esta regra não bloqueia.
+- Criar, editar ou excluir baixa exige **`dataBaixa` posterior** ao último fechamento de caixa confirmado da unidade (`status = CONFIRMADO`). Se não houver fechamento confirmado, esta regra não bloqueia.
 - Validação aplicada em: `POST /baixas`, `PATCH /baixas/:id`, `DELETE /baixas/:id` e `POST /baixas/processar-em-massa`.
-- Em violação da regra 1: **409** com mensagem informando a data do último fechamento da unidade.
-- Em violação da regra 2: **409** com mensagem informando a data da última baixa e link para a listagem de baixas do dia.
+- Em violação: **409** com mensagem informando a data do último fechamento da unidade.
+- A sequência por data da última baixa da unidade **não** é mais aplicada; o controle de período fechado fica somente no caixa.
 
 ---
 

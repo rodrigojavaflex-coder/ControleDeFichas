@@ -45,7 +45,7 @@ export class BaixasService {
       );
     }
 
-    // Validar data da baixa (fechamento de caixa + última baixa da unidade)
+    // Validar data da baixa (somente fechamento de caixa da unidade)
     if (venda.unidade) {
       this.logger.debug(
         `Validando criação de baixa. Venda: ${createBaixaDto.idvenda}, ` +
@@ -140,18 +140,14 @@ export class BaixasService {
     const baixa = await this.findOne(id);
     const venda = await this.vendasService.findOne(baixa.idvenda);
 
-    // Validar data da baixa (fechamento de caixa + última baixa da unidade)
+    // Validar data da baixa (somente fechamento de caixa da unidade)
     if (venda.unidade) {
       const dataAtual =
         typeof baixa.dataBaixa === 'string'
           ? baixa.dataBaixa
           : baixa.dataBaixa.toISOString().split('T')[0];
       const dataEfetiva = updateBaixaDto.dataBaixa || dataAtual;
-      await this.validarDataBaixaPorUnidade(
-        dataEfetiva,
-        venda.unidade,
-        baixa.id,
-      );
+      await this.validarDataBaixaPorUnidade(dataEfetiva, venda.unidade);
     }
 
     // Manter data como string YYYY-MM-DD para evitar conversão de timezone
@@ -182,14 +178,14 @@ export class BaixasService {
 
     const venda = await this.vendasService.findOne(baixa.idvenda);
 
-    // Validar data da baixa (fechamento de caixa + última baixa da unidade)
+    // Validar data da baixa (somente fechamento de caixa da unidade)
     if (venda.unidade) {
       const dataBaixa =
         typeof baixa.dataBaixa === 'string'
           ? baixa.dataBaixa
           : baixa.dataBaixa.toISOString().split('T')[0];
 
-      await this.validarDataBaixaPorUnidade(dataBaixa, venda.unidade, baixa.id);
+      await this.validarDataBaixaPorUnidade(dataBaixa, venda.unidade);
     }
 
     await this.baixaRepository.remove(baixa);
@@ -244,20 +240,17 @@ export class BaixasService {
 
   /**
    * Valida se a data da baixa é permitida para a unidade.
-   * Aplica duas regras cumulativas (implantação gradual do fechamento de caixa):
-   * 1) data posterior ao último fechamento confirmado do caixa (quando existir);
-   * 2) data >= data da última baixa registrada na unidade (quando existir).
+   * Bloqueia apenas se existir fechamento de caixa confirmado e a data for
+   * anterior ou igual à data desse fechamento.
    */
   private async validarDataBaixaPorUnidade(
     dataBaixa: string,
     unidade: string,
-    excludeBaixaId?: string,
   ): Promise<void> {
     const dataBaixaFormatada = dataBaixa.split('T')[0].substring(0, 10);
 
     this.logger.debug(
-      `Validando data de baixa. Unidade: ${unidade}, Data informada: ${dataBaixaFormatada}` +
-        (excludeBaixaId ? `, Excluindo baixa: ${excludeBaixaId}` : ''),
+      `Validando data de baixa. Unidade: ${unidade}, Data informada: ${dataBaixaFormatada}`,
     );
 
     await this.fechamentoCaixaService.assertPodeRegistrarBaixa(
@@ -265,112 +258,7 @@ export class BaixasService {
       dataBaixaFormatada,
     );
 
-    await this.validarDataBaixaContraUltimaBaixaUnidade(
-      dataBaixaFormatada,
-      unidade,
-      excludeBaixaId,
-    );
-
     this.logger.debug(`Validação de data aprovada para unidade ${unidade}`);
-  }
-
-  /**
-   * Valida se a data da baixa não é anterior à última baixa da unidade.
-   * Se não houver baixas na unidade, permite qualquer data.
-   */
-  private async validarDataBaixaContraUltimaBaixaUnidade(
-    dataBaixa: string,
-    unidade: string,
-    excludeBaixaId?: string,
-  ): Promise<void> {
-    const ultimaData = await this.getUltimaDataBaixaPorUnidade(
-      unidade,
-      excludeBaixaId,
-    );
-
-    if (!ultimaData) {
-      this.logger.debug(
-        `Unidade ${unidade} não possui baixas registradas. Validação por última baixa ignorada.`,
-      );
-      return;
-    }
-
-    if (dataBaixa < ultimaData) {
-      const ultimaDataFormatada = this.formatDateDisplay(ultimaData);
-
-      this.logger.warn(
-        `Tentativa de operação com baixa de data anterior à última baixa da unidade. ` +
-          `Unidade: ${unidade}, Última baixa: ${ultimaData}, Data informada: ${dataBaixa}`,
-      );
-
-      const urlBaixas = `/relatorios/baixas?dataInicial=${ultimaData}&dataFinal=${ultimaData}&unidade=${encodeURIComponent(unidade)}`;
-      const textoLink = `Clique aqui e veja as baixas do dia ${ultimaDataFormatada}`;
-
-      const mensagem =
-        '<strong>Não foi possível realizar esta operação!</strong><br><br>' +
-        `Verifique as baixas do dia: <strong>${ultimaDataFormatada}</strong><br><br>` +
-        `Já existem baixas registradas nesta unidade até ${ultimaDataFormatada}. ` +
-        'Não é possível registrar, alterar ou excluir baixas com data anterior.<br><br>' +
-        `<a href="${urlBaixas}">${textoLink}</a>`;
-
-      throw new ConflictException(mensagem);
-    }
-  }
-
-  private async getUltimaDataBaixaPorUnidade(
-    unidade: string,
-    excludeBaixaId?: string,
-  ): Promise<string | null> {
-    try {
-      const queryBuilder = this.baixaRepository
-        .createQueryBuilder('baixa')
-        .innerJoin('baixa.venda', 'venda')
-        .where('venda.unidade = :unidade', { unidade });
-
-      if (excludeBaixaId) {
-        queryBuilder.andWhere('baixa.id != :excludeBaixaId', {
-          excludeBaixaId,
-        });
-      }
-
-      const resultado = await queryBuilder
-        .orderBy('baixa.dataBaixa', 'DESC')
-        .addOrderBy('baixa.criadoEm', 'DESC')
-        .limit(1)
-        .getOne();
-
-      if (!resultado?.dataBaixa) {
-        return null;
-      }
-
-      const dataBaixaValue: Date | string = resultado.dataBaixa as
-        | Date
-        | string;
-
-      if (dataBaixaValue instanceof Date) {
-        return dataBaixaValue.toISOString().split('T')[0];
-      }
-
-      if (typeof dataBaixaValue === 'string') {
-        return dataBaixaValue.split('T')[0].substring(0, 10);
-      }
-
-      return null;
-    } catch (error) {
-      this.logger.error(
-        `Erro ao buscar última data de baixa para unidade ${unidade}:`,
-        error,
-      );
-      return null;
-    }
-  }
-
-  private formatDateDisplay(date: string): string {
-    if (!date || date.length !== 10) {
-      return date;
-    }
-    const [year, month, day] = date.split('-');
-    return `${day}/${month}/${year}`;
   }
 
   /**
@@ -417,7 +305,7 @@ export class BaixasService {
           continue;
         }
 
-        // Validar data da baixa (fechamento de caixa + última baixa da unidade)
+        // Validar data da baixa (somente fechamento de caixa da unidade)
         if (venda.unidade) {
           try {
             await this.validarDataBaixaPorUnidade(
