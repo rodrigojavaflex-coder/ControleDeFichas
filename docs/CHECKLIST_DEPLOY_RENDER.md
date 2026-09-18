@@ -97,9 +97,9 @@ Tokens devem coincidir com `AUTH_TOKEN` de cada agente na filial.
 
 | Pacote | Status | Ação |
 |--------|--------|------|
-| Backend | **0 vulnerabilidades** | `overrides`: `brace-expansion`, `minimatch`, `glob`, `js-yaml` |
-| Frontend | **0 vulnerabilidades** | `overrides`: `ws`, `uuid`, `@hono/node-server`, `brace-expansion`, `minimatch`, `glob` |
-| Agente (`agent/`) | **0 vulnerabilidades** | `overrides` iguais ao backend (`brace-expansion`, `minimatch`, `glob`); `ts-node-dev` só em dev |
+| Backend | **0 vulnerabilidades** | `overrides`: `brace-expansion` 5.0.12, `minimatch`, `glob`, `js-yaml`, `fast-uri`, `qs`, `multer` 2.4.0, `browserslist`, `@humanfs/node`, `baseline-browser-mapping` |
+| Frontend | **0 vulnerabilidades** | Angular **21.2.23** / CLI **21.2.24**; `overrides`: `ws`, `uuid`, `@hono/node-server`, `brace-expansion` 5.0.12, `minimatch`, `glob`, `fast-uri`, `hono`, `ip-address`, `nanoid`, `postcss`, `qs`, `undici`, `baseline-browser-mapping` |
+| Agente (`agent/`) | **0 vulnerabilidades** | `overrides`: `brace-expansion` 5.0.12, `minimatch`, `glob`, `multer` 2.4.0, `qs`; `ts-node-dev` só em dev |
 
 Na raiz: `npm run audit` ou `npm run validate:audit` (também entra em `npm run validate`).
 
