@@ -67,27 +67,6 @@ export interface PaginatedAuditResponse {
   };
 }
 
-export interface UndoableChange {
-  id: string;
-  acao: AuditAction;
-  descricao: string;
-  usuarioId: string | null;
-  usuario?: {
-    id: string;
-    nome: string;  // Campo correto do backend
-    email: string;
-  };
-  criadoEm: Date;
-  canUndo: boolean;
-  undoTimeLimit: Date;
-}
-
-export interface RollbackResult {
-  success: boolean;
-  message: string;
-  details?: any;
-}
-
 export function getEntityDisplayName(entityType: string): string {
   const entityNames: Record<string, string> = {
     'users': 'Usuário',

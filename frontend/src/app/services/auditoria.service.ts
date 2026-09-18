@@ -5,12 +5,6 @@ import { map, catchError } from 'rxjs/operators';
 import { Auditoria, AuditLogFilters, PaginatedAuditResponse } from '../models/auditoria.model';
 import { environment } from '../../environments/environment';
 
-export interface RollbackResult {
-  success: boolean;
-  message: string;
-  details?: any;
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -63,14 +57,6 @@ export class AuditoriaService {
 
   getAuditLog(id: string): Observable<Auditoria> {
     return this.http.get<Auditoria>(`${this.apiUrl}/${id}`);
-  }
-
-  getUndoableChanges(): Observable<Auditoria[]> {
-    return this.http.get<Auditoria[]>(`${this.apiUrl}/undoable`);
-  }
-
-  undoChange(logId: string): Observable<RollbackResult> {
-    return this.http.post<RollbackResult>(`${this.apiUrl}/${logId}/undo`, {});
   }
 
   getHistoryByEntity(entidade: string, entidadeId: string): Promise<Auditoria[]> {

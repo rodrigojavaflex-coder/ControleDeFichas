@@ -1,70 +1,5 @@
 <div class="audit-logs-container">
-  <!-- Cabeçalho -->
-  <div class="header">
-    <h1 class="title">Logs de Auditoria</h1>
-    <div class="header-actions">
-      <button 
-        *ngIf="podeGerenciarAuditoria"
-        class="btn btn-outline" 
-        (click)="toggleUndoablePanel()"
-        [class.active]="showUndoablePanel">
-        <span class="icon">↶</span>
-        Desfazer Alterações
-      </button>
-      <button 
-        class="btn btn-outline" 
-        (click)="toggleFilters()"
-        [class.active]="showFilters">
-        <span class="icon">🔍</span>
-        Filtros
-      </button>
-    </div>
-  </div>
-
-  <!-- Painel de alterações desfaíveis -->
-  <div class="undoable-panel" *ngIf="podeGerenciarAuditoria" [class.show]="showUndoablePanel">
-    <div class="panel-header">
-      <h3>Alterações que podem ser desfeitas</h3>
-      <span class="panel-subtitle">Últimas 24 horas - Máximo 10 alterações</span>
-    </div>
-
-    <div *ngIf="undoableChanges.length === 0" class="empty-undoable">
-      <span class="icon">✅</span>
-      <p>Nenhuma alteração disponível para desfazer</p>
-    </div>
-
-    <div *ngIf="undoableChanges.length > 0" class="undoable-list">
-      <div *ngFor="let change of undoableChanges" class="undoable-item">
-        <div class="undoable-info">
-          <div class="undoable-action">
-            <span class="action-badge">{{actionDescriptions[change.acao]}}</span>
-          </div>
-          <div class="undoable-details">
-            <div class="undoable-description">{{change.descricao}}</div>
-            <div class="undoable-meta">
-              <span class="user">{{getUserName(change)}}</span>
-              <span class="time">{{formatDate(change.criadoEm)}}</span>
-              <span class="time-remaining" [class.expired]="!change.canUndo">
-                {{change.canUndo ? 'Expira em: ' + formatTimeRemaining(change) : 'Expirado'}}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div class="undoable-actions">
-          <button 
-            class="btn btn-undo" 
-            (click)="confirmUndo(change)"
-            [disabled]="!change.canUndo || undoingLogId === change.id"
-            title="Desfazer esta alteração">
-            <span *ngIf="undoingLogId === change.id" class="spinner-small"></span>
-            <span *ngIf="undoingLogId !== change.id">↶ Desfazer</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Barra de busca -->
+  <!-- Barra de busca + filtros na mesma linha -->
   <div class="search-bar">
     <input 
       type="text" 
@@ -74,6 +9,14 @@
       maxlength="120" 
       [(ngModel)]="searchText" 
       (ngModelChange)="onSearchChange()">
+    <button
+      type="button"
+      class="btn btn-outline"
+      (click)="toggleFilters()"
+      [class.active]="showFilters">
+      <i class="fas fa-filter" aria-hidden="true"></i>
+      Filtros
+    </button>
   </div>
 
   <!-- Painel de filtros -->
@@ -178,7 +121,7 @@
           </td>
           
           <td class="action-cell">
-            <span class="action-badge">
+            <span class="action-badge" [ngClass]="getActionBadgeClass(log.acao)">
               {{actionDescriptions[log.acao]}}
             </span>
           </td>
@@ -194,20 +137,11 @@
           </td>
           
           <td class="actions-cell">
-            <button 
-              class="btn-icon btn-view" 
-              (click)="showDetails(log)"
-              title="Ver detalhes">
-              →
-            </button>
-            <button 
-              *ngIf="isUndoable(log)"
-              class="btn-icon btn-undo" 
-              (click)="confirmUndo(log)"
-              [disabled]="undoingLogId === log.id"
-              title="Desfazer alteração">
-              <span *ngIf="undoingLogId === log.id" class="spinner-small"></span>
-              <span *ngIf="undoingLogId !== log.id">↶</span>
+            <button
+              type="button"
+              class="btn-view"
+              (click)="showDetails(log)">
+              Ver detalhes
             </button>
           </td>
         </tr>
@@ -269,67 +203,6 @@
   </div>
 </div>
 
-<!-- Modal de confirmação de undo -->
-<div *ngIf="showUndoConfirm && logToUndo" class="modal-overlay" (click)="cancelUndo()">
-  <div class="modal-content undo-confirm-modal" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>Confirmar Rollback</h3>
-      <button class="btn-close" (click)="cancelUndo()">×</button>
-    </div>
-
-    <div class="modal-body">
-      <div class="undo-confirm-content">
-        <div class="warning-icon">⚠️</div>
-        <p class="confirm-message">
-          Tem certeza que deseja desfazer esta alteração?
-        </p>
-
-        <div class="undo-details">
-          <div class="detail-row">
-            <span class="label">Ação:</span>
-            <span class="value">{{actionDescriptions[logToUndo.acao]}}</span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Descrição:</span>
-            <span class="value">{{logToUndo.descricao}}</span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Usuário:</span>
-            <span class="value">{{getUserName(logToUndo)}}</span>
-          </div>
-          <div class="detail-row">
-            <span class="label">Data/Hora:</span>
-            <span class="value">{{formatDate(logToUndo.criadoEm)}}</span>
-          </div>
-        </div>
-
-        <div class="undo-warning">
-          <strong>Atenção:</strong> Esta ação não pode ser desfeita e pode afetar outros dados relacionados.
-        </div>
-
-        <!-- Resultado do undo -->
-        <div *ngIf="undoResult" class="undo-result" [ngClass]="{'success': undoResult.success, 'error': !undoResult.success}">
-          <div class="result-icon">{{undoResult.success ? '✅' : '❌'}}</div>
-          <div class="result-message">{{undoResult.message}}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn btn-outline" (click)="cancelUndo()" [disabled]="undoingLogId !== null">
-        Cancelar
-      </button>
-      <button 
-        class="btn btn-danger" 
-        (click)="executeUndo()" 
-        [disabled]="undoingLogId !== null">
-        <span *ngIf="undoingLogId !== null" class="spinner-small"></span>
-        <span *ngIf="undoingLogId === null">Confirmar Rollback</span>
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- Modal de detalhes -->
 <div *ngIf="showLogDetails && selectedLog" class="modal-overlay" (click)="closeDetails()">
   <div class="modal-content modal-details" (click)="$event.stopPropagation()">
@@ -343,7 +216,7 @@
     
     <div class="modal-body">
       <div class="audit-meta">
-        <span class="audit-chip">{{ actionDescriptions[selectedLog.acao] }}</span>
+        <span class="audit-chip action-badge" [ngClass]="getActionBadgeClass(selectedLog.acao)">{{ actionDescriptions[selectedLog.acao] }}</span>
         <span class="audit-chip">{{ getUserName(selectedLog) }}</span>
         <span class="audit-chip">{{ formatDate(selectedLog.criadoEm) }}</span>
         <span class="audit-chip" *ngIf="selectedLog.entidade">

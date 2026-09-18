@@ -1,22 +1,19 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, catchError, finalize, of } from 'rxjs';
 
 import { AuditoriaService, UserService } from '../../services';
-import { AuthService } from '../../services/auth.service';
+import { PageContextService } from '../../services/page-context.service';
 import {
   Auditoria, 
   AuditLogFilters, 
   PaginatedAuditResponse,
   AuditAction,
   AUDIT_ACTION_DESCRIPTIONS,
-  RollbackResult,
-  UndoableChange,
   getEntityDisplayName
 } from '../../models/auditoria.model';
-import { Permission, Usuario } from '../../models/usuario.model';
+import { Usuario } from '../../models/usuario.model';
 import { AuditoriaDadosViewComponent } from './auditoria-dados-view';
 
 @Component({
@@ -69,19 +66,10 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   showRawJson = false;
   detailsLoading = false;
 
-  // Funcionalidades de rollback
-  undoableChanges: UndoableChange[] = [];
-  showUndoablePanel = false;
-  undoingLogId: string | null = null;
-  undoResult: RollbackResult | null = null;
-  showUndoConfirm = false;
-  logToUndo: Auditoria | UndoableChange | null = null;
-
   constructor(
     private auditoriaService: AuditoriaService,
     private userService: UserService,
-    private authService: AuthService,
-    private router: Router
+    private pageContextService: PageContextService,
   ) {
     // Configurar busca com debounce
     this.searchSubject.pipe(
@@ -135,15 +123,16 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.pageContextService.setContext({
+      title: 'Logs de Auditoria',
+      description: 'Consulte o histórico de ações do sistema, filtros e detalhes dos registros auditados.'
+    });
     this.loadUsers();
     this.loadAuditLogs();
   }
 
-  get podeGerenciarAuditoria(): boolean {
-    return this.authService.hasPermission(Permission.AUDIT_MANAGE);
-  }
-
   ngOnDestroy(): void {
+    this.pageContextService.resetContext();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -283,9 +272,26 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Classe visual do badge conforme a ação auditada
+   */
+  getActionBadgeClass(acao: AuditAction | string | null | undefined): string {
+    const classes: Record<string, string> = {
+      [AuditAction.LOGIN]: 'action-login',
+      [AuditAction.LOGOUT]: 'action-logout',
+      [AuditAction.LOGIN_FAILED]: 'action-login-failed',
+      [AuditAction.CREATE]: 'action-create',
+      [AuditAction.READ]: 'action-read',
+      [AuditAction.UPDATE]: 'action-update',
+      [AuditAction.DELETE]: 'action-delete',
+      [AuditAction.CHANGE_PASSWORD]: 'action-change-password',
+    };
+    return classes[acao ?? ''] ?? 'action-unknown';
+  }
+
+  /**
    * Obter nome do usuário
    */
-  getUserName(log: Auditoria | UndoableChange): string {
+  getUserName(log: Auditoria): string {
     // Priorizar dados do usuário que vêm com o log (relação do backend)
     if (log.usuario) {
       return log.usuario.nome;  // Backend retorna "nome"
@@ -331,144 +337,6 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
    */
   toggleFilters(): void {
     this.showFilters = !this.showFilters;
-  }
-
-  /**
-   * Carregar alterações que podem ser desfeitas
-   */
-  loadUndoableChanges(): void {
-    this.auditoriaService.getUndoableChanges()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (changes: Auditoria[]) => {
-          this.undoableChanges = changes.map(change => ({
-            id: change.id,
-            acao: change.acao,
-            descricao: change.descricao || '',
-            usuarioId: change.usuarioId,
-            usuario: change.usuario,
-            criadoEm: change.criadoEm,
-            canUndo: this.canUndo(change),
-            undoTimeLimit: new Date(change.criadoEm.getTime() + 24 * 60 * 60 * 1000)
-          }));
-        },
-        error: (error) => {
-          console.error('Erro ao carregar alterações desfaíveis:', error);
-        }
-      });
-  }
-
-  /**
-   * Verificar se uma alteração pode ser desfeita
-   */
-  canUndo(log: Auditoria): boolean {
-    const timeLimit = new Date(log.criadoEm.getTime() + 24 * 60 * 60 * 1000);
-    const now = new Date();
-    return now <= timeLimit;
-  }
-
-  /**
-   * Mostrar painel de alterações desfaíveis
-   */
-  toggleUndoablePanel(): void {
-    if (!this.podeGerenciarAuditoria) {
-      return;
-    }
-    this.showUndoablePanel = !this.showUndoablePanel;
-    if (this.showUndoablePanel) {
-      this.loadUndoableChanges();
-    }
-  }
-
-  /**
-   * Confirmar undo de uma alteração
-   */
-  confirmUndo(log: Auditoria | UndoableChange): void {
-    if (!this.podeGerenciarAuditoria) {
-      return;
-    }
-    this.logToUndo = log;
-    this.showUndoConfirm = true;
-  }
-
-  /**
-   * Cancelar undo
-   */
-  cancelUndo(): void {
-    this.logToUndo = null;
-    this.showUndoConfirm = false;
-  }
-
-  /**
-   * Executar rollback
-   */
-  executeUndo(): void {
-    if (!this.logToUndo) return;
-
-    this.undoingLogId = this.logToUndo.id;
-    this.undoResult = null;
-
-    this.auditoriaService.undoChange(this.logToUndo.id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (result: RollbackResult) => {
-          this.undoResult = result;
-          this.undoingLogId = null;
-
-          if (result.success) {
-            // Recarregar logs e alterações desfaíveis
-            this.loadAuditLogs();
-            this.loadUndoableChanges();
-          }
-
-          // Fechar modal de confirmação após um tempo
-          setTimeout(() => {
-            this.showUndoConfirm = false;
-            this.logToUndo = null;
-            this.undoResult = null;
-          }, 3000);
-        },
-        error: (error) => {
-          this.undoResult = {
-            success: false,
-            message: 'Erro ao executar rollback: ' + (error.error?.message || error.message)
-          };
-          this.undoingLogId = null;
-
-          setTimeout(() => {
-            this.undoResult = null;
-          }, 5000);
-        }
-      });
-  }
-
-  /**
-   * Verificar se um log pode ser desfeito (baseado na lista de alterações desfaíveis)
-   */
-  isUndoable(log: Auditoria): boolean {
-    return (
-      this.podeGerenciarAuditoria &&
-      this.undoableChanges.some((change) => change.id === log.id)
-    );
-  }
-
-  /**
-   * Formatar tempo restante para undo
-   */
-  formatTimeRemaining(log: Auditoria | UndoableChange): string {
-    const timeLimit = new Date(log.criadoEm.getTime() + 24 * 60 * 60 * 1000);
-    const now = new Date();
-    const diff = timeLimit.getTime() - now.getTime();
-
-    if (diff <= 0) return 'Expirado';
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}min`;
-    }
-    return `${minutes}min`;
   }
 
   /**

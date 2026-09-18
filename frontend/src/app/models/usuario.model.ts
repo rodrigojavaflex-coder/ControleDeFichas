@@ -25,7 +25,6 @@ export enum Permission {
 
   // Auditoria
   AUDIT_VIEW = 'audit:view',
-  AUDIT_MANAGE = 'audit:manage',
 
   // Perfis
   PROFILE_CREATE = 'perfil:create',

@@ -17,7 +17,6 @@ export enum Permission {
 
   // Auditoria
   AUDIT_VIEW = 'audit:view',
-  AUDIT_MANAGE = 'audit:manage',
   // Perfis
   PROFILE_CREATE = 'perfil:create',
   PROFILE_READ = 'perfil:read',
@@ -237,7 +236,6 @@ export const PERMISSION_GROUPS = {
   ],
   Auditoria: [
     { key: Permission.AUDIT_VIEW, label: 'Visualizar logs de auditoria' },
-    { key: Permission.AUDIT_MANAGE, label: 'Gerenciar logs de auditoria' },
   ],
   Perfis: [
     { key: Permission.PROFILE_CREATE, label: 'Criar perfis' },

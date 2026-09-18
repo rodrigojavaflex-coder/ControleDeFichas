@@ -5,7 +5,6 @@ import {
   Param,
   UseGuards,
   Req,
-  Post,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,7 +16,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { AuditoriaService } from '../../common/services/auditoria.service';
-import { RollbackService } from '../../common/services/rollback.service';
 import { AuditAction } from '../../common/enums/auditoria.enum';
 import { FindAuditoriaDto } from './dto/find-auditoria.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -36,7 +34,6 @@ import { assertPermissaoHistoricoEntidade } from '../../common/utils/audit-entit
 export class AuditoriaController {
   constructor(
     private readonly auditoriaService: AuditoriaService,
-    private readonly rollbackService: RollbackService,
     @InjectRepository(Configuracao)
     private readonly configuracaoRepository: Repository<Configuracao>,
   ) {}
@@ -99,25 +96,8 @@ export class AuditoriaController {
   }
 
   /**
-   * Rotas literais antes de `:id`; caso contrário `undoable` e `entity` seriam tratados como UUID em `findOne`.
+   * Rotas literais antes de `:id`; caso contrário `entity` seria tratado como UUID em `findOne`.
    */
-  @Get('undoable')
-  @Permissions(Permission.AUDIT_MANAGE)
-  @ApiOperation({
-    summary: 'Listar alterações que podem ser desfeitas',
-    description:
-      'Retorna as últimas alterações do usuário que podem ser desfeitas (últimas 24h)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista de alterações que podem ser desfeitas',
-  })
-  async getUndoableChanges(
-    @Req() req: Request & { user: Usuario },
-  ): Promise<any> {
-    return this.rollbackService.getUndoableChanges(req.user?.id);
-  }
-
   @Get('entity/:entidade/:entidadeId')
   @Permissions(
     Permission.AUDIT_VIEW,
@@ -176,31 +156,5 @@ export class AuditoriaController {
     @Param('id') id: string,
   ): Promise<Auditoria | null> {
     return this.auditoriaService.findLogById(id);
-  }
-
-  @Post(':id/undo')
-  @Permissions(Permission.AUDIT_MANAGE)
-  @ApiOperation({
-    summary: 'Desfazer uma alteração',
-    description:
-      'Executa rollback de uma alteração baseada no log de auditoria',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Rollback executado com sucesso',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Log não encontrado ou rollback não possível',
-  })
-  @ApiResponse({
-    status: 403,
-    description: 'Sem permissão para desfazer esta alteração',
-  })
-  async undoChange(
-    @Param('id') logId: string,
-    @Req() req: Request & { user: Usuario },
-  ): Promise<any> {
-    return this.rollbackService.undoChange(logId, req.user?.id);
   }
 }

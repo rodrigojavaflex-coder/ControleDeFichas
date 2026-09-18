@@ -133,10 +133,9 @@
 
 - **`GET /auditoria`** e **`GET /auditoria/:id`:** exigem **`audit:view`**. A listagem **não** devolve `dadosAnteriores`/`dadosNovos` (carregados só no detalhe).
 - **`GET /auditoria?search=`:** busca parcial e **sem acento** em descrição, IP, nome do usuário e `entidadeId`. Com **3+ caracteres** também varre o JSON de **`dadosAnteriores`** e **`dadosNovos`** (ex.: `19756`, `Goiania`/`Goiânia`).
-- **`GET /auditoria/undoable`** e **`POST /auditoria/:id/undo`:** exigem **`audit:manage`**.
 - **`GET /auditoria/entity/:entidade/:id`:** exige permissão **`*:audit`** da entidade correspondente (ou **`folha-lancamento:read`** / **`audit:view`** para `folha_item`).
 - Leituras de **vendas** (`GET /vendas`, `GET /vendas/:id`, `GET /vendas/acompanhar`): **`valorCompra`** retorna **null** sem **`venda:view-valor-compra`**.
-- Permissões **removidas** do catálogo por não possuírem tela/API: `reports:view`, `reports:export`, `system:config`, `system:logs`, **`admin:full`** (substituído por permissões explícitas por módulo + escopo por unidade conforme RN-007).
+- Permissões **removidas** do catálogo por não possuírem tela/API: `reports:view`, `reports:export`, `system:config`, `system:logs`, **`admin:full`**, **`audit:manage`** (desfazer alterações na auditoria).
 
 ### RN-014 — Atalhos da tela inicial (home)
 
