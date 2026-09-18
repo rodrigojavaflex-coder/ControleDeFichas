@@ -8,6 +8,7 @@ import {
   IsInt,
   Min,
   Max,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AuditAction } from '../../../common/enums/auditoria.enum';
@@ -70,17 +71,21 @@ export class FindAuditoriaDto {
   @ApiPropertyOptional({ description: 'Endereço IP' })
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   enderecoIp?: string;
 
   @ApiPropertyOptional({ description: 'Filtrar por descrição (busca parcial)' })
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   descricao?: string;
 
   @ApiPropertyOptional({
-    description: 'Busca geral por descrição, IP ou nome do usuário',
+    description:
+      'Busca parcial sem acento em descrição, IP, nome do usuário, entidadeId e, com 3+ caracteres, no JSON de dadosAnteriores/dadosNovos',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   search?: string;
 }

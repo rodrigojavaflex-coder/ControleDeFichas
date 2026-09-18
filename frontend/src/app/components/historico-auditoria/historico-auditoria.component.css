@@ -185,11 +185,13 @@ body.theme-dark .historico-auditoria-overlay {
 .field-change {
   display: flex;
   align-items: flex-start;
+  flex-wrap: wrap;
   margin-bottom: 0.75rem;
   padding: 0.75rem;
   border-radius: 6px;
   border-left: 3px solid;
   background: var(--bg-tertiary);
+  gap: 0.5rem;
 }
 
 .change-added {
@@ -219,11 +221,28 @@ body.theme-dark .historico-auditoria-overlay {
 .change-value {
   flex: 1;
   font-size: 0.875rem;
-  max-width: 400px;
+  max-width: 100%;
+  min-width: 0;
   word-wrap: break-word;
   word-break: break-word;
   overflow-wrap: break-word;
   color: var(--text-secondary);
+}
+
+.change-payloads {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.payload-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
 }
 
 .change-value strong {

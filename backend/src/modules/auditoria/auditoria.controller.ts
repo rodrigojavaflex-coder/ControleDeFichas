@@ -88,26 +88,13 @@ export class AuditoriaController {
   @ApiOperation({
     summary: 'Buscar logs de auditoria',
     description:
-      'Consulta os logs de auditoria do sistema (requer permissões administrativas)',
+      'Lista logs sem JSON de snapshot. Use GET /auditoria/:id para dadosAnteriores/dadosNovos.',
   })
   @ApiResponse({
     status: 200,
     description: 'Logs de auditoria retornados com sucesso',
   })
-  async findAll(
-    @Query() findDto: FindAuditoriaDto,
-    @Req() req: Request & { user: Usuario },
-  ): Promise<any> {
-    // Auditar acesso aos logs de auditoria
-    if (await this.shouldAuditAction(AuditAction.READ)) {
-      await this.auditoriaService.createLog({
-        acao: AuditAction.READ,
-        descricao: `Consulta aos logs de auditoria realizada`,
-        usuarioId: req.user?.id,
-        entidade: 'audit_logs',
-      });
-    }
-
+  async findAll(@Query() findDto: FindAuditoriaDto): Promise<any> {
     return this.auditoriaService.findLogs(findDto);
   }
 
@@ -187,18 +174,7 @@ export class AuditoriaController {
   })
   async findOne(
     @Param('id') id: string,
-    @Req() req: Request & { user: Usuario },
   ): Promise<Auditoria | null> {
-    // Auditar acesso aos logs de auditoria
-    if (await this.shouldAuditAction(AuditAction.READ)) {
-      await this.auditoriaService.createLog({
-        acao: AuditAction.READ,
-        descricao: `Consulta ao log de auditoria ${id} realizada`,
-        usuarioId: req.user?.id,
-        entidade: 'audit_logs',
-      });
-    }
-
     return this.auditoriaService.findLogById(id);
   }
 

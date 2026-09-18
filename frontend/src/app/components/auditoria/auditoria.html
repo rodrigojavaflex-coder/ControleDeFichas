@@ -69,7 +69,9 @@
     <input 
       type="text" 
       class="search-input"
-      placeholder="Buscar por descrição, usuário, IP..." 
+      placeholder="Buscar descrição, usuário, IP ou dados auditados (ex.: 19756, Goiânia)"
+      title="Digite ao menos 2 caracteres. Com 3 ou mais também pesquisa nos dados anteriores e novos (sem diferenciar acento)"
+      maxlength="120" 
       [(ngModel)]="searchText" 
       (ngModelChange)="onSearchChange()">
   </div>
@@ -330,65 +332,63 @@
 
 <!-- Modal de detalhes -->
 <div *ngIf="showLogDetails && selectedLog" class="modal-overlay" (click)="closeDetails()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
+  <div class="modal-content modal-details" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>Detalhes do Log</h3>
-      <button class="btn-close" (click)="closeDetails()">×</button>
+      <div class="modal-title-block">
+        <h3>Detalhes da auditoria</h3>
+        <p class="modal-subtitle">{{ selectedLog.descricao }}</p>
+      </div>
+      <button type="button" class="btn-close" (click)="closeDetails()" aria-label="Fechar">×</button>
     </div>
     
     <div class="modal-body">
-      <div class="detail-grid">
-        <div class="detail-item">
-          <label>ID:</label>
-          <span>{{selectedLog.id}}</span>
-        </div>
-        
-        <div class="detail-item">
-          <label>Data/Hora:</label>
-          <span>{{formatDate(selectedLog.criadoEm)}}</span>
-        </div>
-        
-        <div class="detail-item">
-          <label>Usuário:</label>
-          <span>{{getUserName(selectedLog)}}</span>
-        </div>
-        
-        <div class="detail-item">
-          <label>Ação:</label>
-          <span>{{actionDescriptions[selectedLog.acao]}}</span>
-        </div>
-        
-        <div class="detail-item" *ngIf="selectedLog.entidade">
-          <label>Entidade:</label>
-          <span>{{getEntityDisplayName(selectedLog.entidade)}}</span>
-        </div>
-        
-        <div class="detail-item" *ngIf="selectedLog.entidadeId">
-          <label>ID da Entidade:</label>
-          <span>{{selectedLog.entidadeId}}</span>
-        </div>
-        <div class="detail-item" *ngIf="selectedLog.enderecoIp">
-          <label>IP:</label>
-          <span>{{selectedLog.enderecoIp}}</span>
-        </div>
-        
-        <div class="detail-item full-width">
-          <label>Descrição:</label>
-          <span>{{selectedLog.descricao}}</span>
-        </div>
+      <div class="audit-meta">
+        <span class="audit-chip">{{ actionDescriptions[selectedLog.acao] }}</span>
+        <span class="audit-chip">{{ getUserName(selectedLog) }}</span>
+        <span class="audit-chip">{{ formatDate(selectedLog.criadoEm) }}</span>
+        <span class="audit-chip" *ngIf="selectedLog.entidade">
+          {{ getEntityDisplayName(selectedLog.entidade) }}
+        </span>
+        <span class="audit-chip" *ngIf="selectedLog.enderecoIp">
+          IP {{ selectedLog.enderecoIp }}
+        </span>
       </div>
-      
-      <!-- Dados anteriores -->
-      <div *ngIf="selectedLog.dadosAnteriores" class="data-section">
-        <h4>Dados Anteriores:</h4>
-        <pre class="json-data">{{formatJson(selectedLog.dadosAnteriores)}}</pre>
+
+      <div class="audit-payloads">
+        <p *ngIf="detailsLoading" class="audit-no-payload">Carregando dados...</p>
+
+        <section *ngIf="!detailsLoading && selectedLog.dadosAnteriores" class="data-section data-section-old">
+          <div class="data-section-header">
+            <h4>Dados anteriores</h4>
+          </div>
+          <pre *ngIf="showRawJson" class="json-data">{{ formatJson(selectedLog.dadosAnteriores) }}</pre>
+          <app-auditoria-dados-view *ngIf="!showRawJson" [data]="selectedLog.dadosAnteriores" />
+        </section>
+
+        <section *ngIf="!detailsLoading && selectedLog.dadosNovos" class="data-section data-section-new">
+          <div class="data-section-header">
+            <h4>Novos dados</h4>
+          </div>
+          <pre *ngIf="showRawJson" class="json-data">{{ formatJson(selectedLog.dadosNovos) }}</pre>
+          <app-auditoria-dados-view *ngIf="!showRawJson" [data]="selectedLog.dadosNovos" />
+        </section>
+
+        <p
+          *ngIf="!detailsLoading && !selectedLog.dadosAnteriores && !selectedLog.dadosNovos"
+          class="audit-no-payload"
+        >
+          Este log não possui snapshot de dados.
+        </p>
       </div>
-      
-      <!-- Novos dados -->
-      <div *ngIf="selectedLog.dadosNovos" class="data-section">
-        <h4>Novos Dados:</h4>
-        <pre class="json-data">{{formatJson(selectedLog.dadosNovos)}}</pre>
-      </div>
+    </div>
+
+    <div class="modal-footer-details">
+      <button type="button" class="btn-json-toggle" (click)="showRawJson = !showRawJson">
+        {{ showRawJson ? 'Ver layout' : 'Ver JSON' }}
+      </button>
+      <span class="audit-id-hint" *ngIf="selectedLog.entidadeId" [title]="selectedLog.entidadeId">
+        Registro: {{ selectedLog.entidadeId }}
+      </span>
     </div>
   </div>
 </div>

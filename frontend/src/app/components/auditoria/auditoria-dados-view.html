@@ -1,0 +1,79 @@
+@if (tooDeep) {
+  <pre class="audit-json-fallback">{{ rawJson }}</pre>
+} @else if (isEmpty) {
+  <p class="audit-empty">Nenhum registro</p>
+} @else if (isArrayOfObjects) {
+  <div class="audit-table-wrap">
+    <table class="audit-data-table">
+      <thead>
+        <tr>
+          @for (col of tableColumns; track col) {
+            <th>{{ labelFor(col) }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of asArray; track $index) {
+          <tr>
+            @for (col of tableColumns; track col) {
+              <td [title]="titleFor(cellValue(row, col))">
+                @if (isComplex(cellValue(row, col))) {
+                  <app-auditoria-dados-view
+                    [data]="cellValue(row, col)"
+                    [compact]="true"
+                    [depth]="depth + 1"
+                  />
+                } @else {
+                  {{ formatPrimitive(col, cellValue(row, col)) }}
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else if (isArray) {
+  <ul class="audit-list">
+    @for (item of asArray; track $index) {
+      <li>
+        @if (isComplex(item)) {
+          <app-auditoria-dados-view [data]="item" [compact]="true" [depth]="depth + 1" />
+        } @else {
+          {{ formatPrimitive('', item) }}
+        }
+      </li>
+    }
+  </ul>
+} @else if (isPlainObject(data)) {
+  <div class="audit-object" [class.is-compact]="compact">
+    @if (primitiveEntries.length) {
+      <dl class="audit-kv">
+        @for (entry of primitiveEntries; track entry.key) {
+          <div class="audit-kv-row">
+            <dt>{{ labelFor(entry.key) }}</dt>
+            <dd [title]="titleFor(entry.value)">{{ formatPrimitive(entry.key, entry.value) }}</dd>
+          </div>
+        }
+      </dl>
+    }
+
+    @for (entry of complexEntries; track entry.key) {
+      <div class="audit-nested" [ngClass]="nestedKeyClass(entry.key)">
+        <div class="audit-nested-title">
+          <span>{{ labelFor(entry.key) }}</span>
+          @if (isArrayValue(entry.value)) {
+            <span class="audit-count">{{ arrayLength(entry.value) }}</span>
+          }
+        </div>
+        <app-auditoria-dados-view
+          [data]="entry.value"
+          [compact]="true"
+          [depth]="depth + 1"
+        />
+      </div>
+    }
+  </div>
+} @else {
+  <span [title]="titleFor(data)">{{ formatPrimitive('', data) }}</span>
+}

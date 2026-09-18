@@ -61,6 +61,10 @@ export class AuditoriaService {
     );
   }
 
+  getAuditLog(id: string): Observable<Auditoria> {
+    return this.http.get<Auditoria>(`${this.apiUrl}/${id}`);
+  }
+
   getUndoableChanges(): Observable<Auditoria[]> {
     return this.http.get<Auditoria[]>(`${this.apiUrl}/undoable`);
   }

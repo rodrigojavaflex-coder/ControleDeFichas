@@ -2,6 +2,7 @@ import { Component, Input, OnChanges, SimpleChanges, Output, EventEmitter } from
 import { CommonModule } from '@angular/common';
 import { AuditoriaService } from '../../services/auditoria.service';
 import { Auditoria } from '../../models/auditoria.model';
+import { AuditoriaDadosViewComponent } from '../auditoria/auditoria-dados-view';
 
 export interface FieldChange {
   field: string;
@@ -18,7 +19,7 @@ export interface HistoricoAuditoriaItem extends Auditoria {
 @Component({
   selector: 'app-historico-auditoria',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AuditoriaDadosViewComponent],
   template: `
     <div class="historico-auditoria-modal" *ngIf="showModal">
       <div class="historico-auditoria-overlay" (click)="closeModal()"></div>
@@ -66,19 +67,40 @@ export interface HistoricoAuditoriaItem extends Auditoria {
                         @switch (change.type) {
                           @case ('added') {
                             <span class="change-value added">
-                              <strong>{{ formatValue(change.newValue) }}</strong>
+                              @if (isComplexValue(change.newValue)) {
+                                <app-auditoria-dados-view [data]="change.newValue" [compact]="true" />
+                              } @else {
+                                <strong>{{ formatValue(change.newValue) }}</strong>
+                              }
                             </span>
                           }
                           @case ('removed') {
                             <span class="change-value removed">
-                              <strong>{{ formatValue(change.oldValue) }}</strong>
+                              @if (isComplexValue(change.oldValue)) {
+                                <app-auditoria-dados-view [data]="change.oldValue" [compact]="true" />
+                              } @else {
+                                <strong>{{ formatValue(change.oldValue) }}</strong>
+                              }
                             </span>
                           }
                           @case ('modified') {
                             <span class="change-value modified">
-                              <span class="old-value">{{ formatValue(change.oldValue) }}</span>
-                              <span class="arrow">→</span>
-                              <span class="new-value">{{ formatValue(change.newValue) }}</span>
+                              @if (isComplexValue(change.oldValue) || isComplexValue(change.newValue)) {
+                                <div class="change-payloads">
+                                  <div>
+                                    <span class="payload-label">Anterior</span>
+                                    <app-auditoria-dados-view [data]="change.oldValue" [compact]="true" />
+                                  </div>
+                                  <div>
+                                    <span class="payload-label">Novo</span>
+                                    <app-auditoria-dados-view [data]="change.newValue" [compact]="true" />
+                                  </div>
+                                </div>
+                              } @else {
+                                <span class="old-value">{{ formatValue(change.oldValue) }}</span>
+                                <span class="arrow">→</span>
+                                <span class="new-value">{{ formatValue(change.newValue) }}</span>
+                              }
                             </span>
                           }
                         }
@@ -266,6 +288,10 @@ export class HistoricoAuditoriaComponent implements OnChanges {
     if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
     if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
+  }
+
+  isComplexValue(value: unknown): boolean {
+    return value !== null && typeof value === 'object';
   }
 
   closeModal() {

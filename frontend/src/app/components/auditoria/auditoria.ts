@@ -2,11 +2,11 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, NgIf, NgFor } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, catchError, finalize, of } from 'rxjs';
 
 import { AuditoriaService, UserService } from '../../services';
 import { AuthService } from '../../services/auth.service';
-import { 
+import {
   Auditoria, 
   AuditLogFilters, 
   PaginatedAuditResponse,
@@ -17,17 +17,19 @@ import {
   getEntityDisplayName
 } from '../../models/auditoria.model';
 import { Permission, Usuario } from '../../models/usuario.model';
+import { AuditoriaDadosViewComponent } from './auditoria-dados-view';
 
 @Component({
   selector: 'app-auditoria',
   standalone: true,
-  imports: [CommonModule, NgIf, NgFor, FormsModule],
+  imports: [CommonModule, NgIf, NgFor, FormsModule, AuditoriaDadosViewComponent],
   templateUrl: './auditoria.html',
   styleUrls: ['./auditoria.css']
 })
 export class AuditoriaComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private searchSubject = new Subject<string>();
+  private reload$ = new Subject<void>();
 
   // Dados
   auditLogs: Auditoria[] = [];
@@ -64,6 +66,8 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   showFilters = false;
   selectedLog: Auditoria | null = null;
   showLogDetails = false;
+  showRawJson = false;
+  detailsLoading = false;
 
   // Funcionalidades de rollback
   undoableChanges: UndoableChange[] = [];
@@ -81,14 +85,52 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   ) {
     // Configurar busca com debounce
     this.searchSubject.pipe(
-      debounceTime(300),
+      debounceTime(500),
       distinctUntilChanged(),
       takeUntil(this.destroy$)
     ).subscribe(searchText => {
-      this.filters.search = searchText || undefined;
+      const term = (searchText || '').trim();
+      if (term.length === 1) {
+        return;
+      }
+      this.filters.search = term.length >= 2 ? term : undefined;
       this.filters.page = 1;
       this.currentPage = 1;
-      this.loadAuditLogs();
+      this.reload$.next();
+    });
+
+    this.reload$.pipe(
+      switchMap(() => {
+        this.loading = true;
+        this.error = null;
+        return this.auditoriaService.getAuditLogs(this.filters).pipe(
+          catchError((error) => {
+            console.error('Erro:', error);
+            this.error = 'Erro ao carregar logs de auditoria';
+            return of({
+              data: [] as Auditoria[],
+              meta: {
+                total: 0,
+                page: 1,
+                limit: this.itemsPerPage,
+                totalPages: 0,
+                hasPreviousPage: false,
+                hasNextPage: false
+              }
+            } as PaginatedAuditResponse);
+          }),
+          finalize(() => {
+            this.loading = false;
+          })
+        );
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe((response: PaginatedAuditResponse) => {
+      this.auditLogs = response.data;
+      this.totalItems = response.meta.total;
+      this.currentPage = response.meta.page;
+      this.itemsPerPage = response.meta.limit;
+      this.totalPages = response.meta.totalPages;
     });
   }
 
@@ -139,26 +181,7 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
    * Carregar logs de auditoria
    */
   loadAuditLogs(): void {
-    this.loading = true;
-    this.error = null;
-
-    this.auditoriaService.getAuditLogs(this.filters)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response: PaginatedAuditResponse) => {
-          this.auditLogs = response.data;
-          this.totalItems = response.meta.total;
-          this.currentPage = response.meta.page;
-          this.itemsPerPage = response.meta.limit;
-          this.totalPages = response.meta.totalPages;
-          this.loading = false;
-        },
-        error: (error) => {
-          this.error = 'Erro ao carregar logs de auditoria';
-          this.loading = false;
-          console.error('Erro:', error);
-        }
-      });
+    this.reload$.next();
   }
 
   /**
@@ -222,7 +245,23 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
    */
   showDetails(log: Auditoria): void {
     this.selectedLog = log;
+    this.showRawJson = false;
     this.showLogDetails = true;
+    this.detailsLoading = true;
+
+    this.auditoriaService.getAuditLog(log.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (full) => {
+          if (this.selectedLog?.id === full.id) {
+            this.selectedLog = full;
+          }
+          this.detailsLoading = false;
+        },
+        error: () => {
+          this.detailsLoading = false;
+        }
+      });
   }
 
   /**
@@ -231,6 +270,8 @@ export class AuditoriaComponent implements OnInit, OnDestroy {
   closeDetails(): void {
     this.selectedLog = null;
     this.showLogDetails = false;
+    this.showRawJson = false;
+    this.detailsLoading = false;
   }
 
   /**

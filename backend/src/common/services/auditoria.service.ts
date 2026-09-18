@@ -28,6 +28,17 @@ export interface CreateAuditLogDto {
 export class AuditoriaService {
   private readonly logger = new Logger(AuditoriaService.name);
 
+  /** Mínimo para varrer JSONB (alinha ao índice GIN/trgm da migration). */
+  private static readonly SEARCH_JSON_MIN_LENGTH = 3;
+
+  /**
+   * Mesmos caracteres da migration `1750590000000-auditoria-search-trgm`.
+   * Manter as duas listas do mesmo tamanho.
+   */
+  private static readonly PG_ACCENT_FROM =
+    'áàâãäéèêëíìîïóòôõöúùûüçñý';
+  private static readonly PG_ACCENT_TO = 'aaaaaeeeeiiiiooooouuuucny';
+
   constructor(
     @InjectRepository(Auditoria)
     private readonly auditLogRepository: Repository<Auditoria>,
@@ -362,10 +373,23 @@ export class AuditoriaService {
     const limit = Math.min(findDto.limit || 20, 100);
     const skip = (page - 1) * limit;
 
-    // Construir query builder para filtros dinâmicos
+    // Listagem sem JSONB (TOAST). Detalhe carrega GET /auditoria/:id.
     const queryBuilder = this.auditLogRepository
       .createQueryBuilder('audit_log')
-      .leftJoinAndSelect('audit_log.usuario', 'usuario')
+      .leftJoin('audit_log.usuario', 'usuario')
+      .select([
+        'audit_log.id',
+        'audit_log.acao',
+        'audit_log.descricao',
+        'audit_log.entidade',
+        'audit_log.entidadeId',
+        'audit_log.enderecoIp',
+        'audit_log.criadoEm',
+        'audit_log.atualizadoEm',
+        'usuario.id',
+        'usuario.nome',
+        'usuario.email',
+      ])
       .orderBy('audit_log.criadoEm', 'DESC');
 
     // Aplicar filtros
@@ -406,30 +430,41 @@ export class AuditoriaService {
     }
 
     if (findDto.enderecoIp) {
-      queryBuilder.andWhere('audit_log.enderecoIp ILIKE :enderecoIp', {
-        enderecoIp: `%${findDto.enderecoIp}%`,
-      });
+      const enderecoIp = this.normalizeSearchTerm(findDto.enderecoIp);
+      if (enderecoIp) {
+        queryBuilder.andWhere(
+          `${this.unaccentSql(`COALESCE(audit_log.enderecoIp, '')`)} LIKE :enderecoIp`,
+          { enderecoIp: `%${enderecoIp}%` },
+        );
+      }
     }
 
     if (findDto.descricao) {
-      queryBuilder.andWhere('audit_log.descricao ILIKE :descricao', {
-        descricao: `%${findDto.descricao}%`,
-      });
+      const descricao = this.normalizeSearchTerm(findDto.descricao);
+      if (descricao) {
+        queryBuilder.andWhere(
+          `${this.unaccentSql(`COALESCE(audit_log.descricao, '')`)} LIKE :descricao`,
+          { descricao: `%${descricao}%` },
+        );
+      }
     }
 
-    // Para compatibilidade com o parâmetro 'search' do frontend
     if (findDto.search) {
-      queryBuilder.andWhere(
-        '(audit_log.descricao ILIKE :search OR audit_log.enderecoIp ILIKE :search OR usuario.name ILIKE :search)',
-        { search: `%${findDto.search}%` },
-      );
+      const search = this.normalizeSearchTerm(String(findDto.search));
+      if (search) {
+        const includeJson =
+          search.length >= AuditoriaService.SEARCH_JSON_MIN_LENGTH;
+        queryBuilder.andWhere(
+          `audit_log.id IN (${this.buildSearchUnionSql(includeJson)})`,
+          { search: `%${search}%` },
+        );
+      }
     }
 
-    // Aplicar paginação
-    const [items, total] = await queryBuilder
-      .skip(skip)
-      .take(limit)
-      .getManyAndCount();
+    const [items, total] = await Promise.all([
+      queryBuilder.clone().skip(skip).take(limit).getMany(),
+      queryBuilder.clone().getCount(),
+    ]);
 
     const meta: PaginationMetaDto = {
       page,
@@ -444,10 +479,12 @@ export class AuditoriaService {
   }
 
   async findLogById(id: string): Promise<Auditoria | null> {
-    return this.auditLogRepository.findOne({
-      where: { id },
-      relations: ['usuario'],
-    });
+    return this.auditLogRepository
+      .createQueryBuilder('audit_log')
+      .leftJoin('audit_log.usuario', 'usuario')
+      .addSelect(['usuario.id', 'usuario.nome', 'usuario.email'])
+      .where('audit_log.id = :id', { id })
+      .getOne();
   }
 
   extractAuditMetadata(req: any): any {
@@ -477,6 +514,50 @@ export class AuditoriaService {
 
   private getDescription(action: AuditAction): string {
     return AUDIT_ACTION_DESCRIPTIONS[action] || `Action: ${action}`;
+  }
+
+  /**
+   * UNION ALL por coluna para o planner usar GIN/trgm em cada braço
+   * (OR único costuma cair em seq scan).
+   */
+  private buildSearchUnionSql(includeJson: boolean): string {
+    const match = (expr: string): string =>
+      `${this.unaccentSql(expr)} LIKE :search`;
+
+    const arms = [
+      `SELECT a.id FROM auditoria a WHERE ${match(`COALESCE(a.descricao, '')`)}`,
+      `SELECT a.id FROM auditoria a WHERE ${match(`COALESCE(a."enderecoIp", '')`)}`,
+      `SELECT a.id FROM auditoria a WHERE ${match(`COALESCE(a."entidadeId", '')`)}`,
+      `SELECT a.id FROM auditoria a INNER JOIN usuarios u ON u.id = a."usuarioId" WHERE ${match(`COALESCE(u.nome, '')`)}`,
+    ];
+
+    if (includeJson) {
+      arms.push(
+        `SELECT a.id FROM auditoria a WHERE ${match(`COALESCE(CAST(a."dadosAnteriores" AS text), '')`)}`,
+        `SELECT a.id FROM auditoria a WHERE ${match(`COALESCE(CAST(a."dadosNovos" AS text), '')`)}`,
+      );
+    }
+
+    return arms.join(' UNION ALL ');
+  }
+
+  /**
+   * Expressão SQL sem acento, alinhada aos índices GIN da migration.
+   */
+  private unaccentSql(sqlExpr: string): string {
+    return `translate(lower(${sqlExpr}), '${AuditoriaService.PG_ACCENT_FROM}', '${AuditoriaService.PG_ACCENT_TO}')`;
+  }
+
+  /**
+   * Normaliza o termo: trim, sem acento, minúsculas e sem curingas LIKE.
+   */
+  private normalizeSearchTerm(value: string): string {
+    return value
+      .trim()
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+      .toLowerCase()
+      .replace(/[%_]/g, '');
   }
 
   async findByEntity(
