@@ -1,7 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsUUID,
@@ -160,6 +163,20 @@ export class ComercialComissaoPoliticaItemDto {
     description: '% mínimo da meta da loja. Nulo = paga sempre.',
   })
   percentualMinimoLoja: number | null;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description:
+      'Códigos de setor ERP da marca própria. Vazio = todos os produtos.',
+  })
+  codigosSetor: number[];
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description:
+      'Setores de revenda que somam em Manipulados. Vazio = só requisições.',
+  })
+  codigosSetorRevendaManipulados: number[];
 }
 
 export class ComercialComissaoPoliticaResponseDto {
@@ -195,4 +212,95 @@ export class SalvarComercialComissaoPoliticaDto {
   @Min(0)
   @Max(999.99)
   percentualMinimoLoja?: number | null;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    nullable: true,
+    example: [276, 330],
+    description:
+      'Códigos de setor ERP (marca própria). Vazio/omitido = todos os produtos de revenda. Ignorado em Manipulados.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(40)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  codigosSetor?: number[] | null;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    nullable: true,
+    example: [400],
+    description:
+      'Setores de revenda que somam em Manipulados. Vazio/omitido = só requisições. Ignorado em Marca própria.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(40)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  codigosSetorRevendaManipulados?: number[] | null;
+}
+
+export class FindComercialComissaoPoliticaUnidadeDto {
+  @ApiProperty({ enum: Unidade })
+  @IsEnum(Unidade)
+  unidade: Unidade;
+}
+
+export class ComercialComissaoPoliticaUnidadeResponseDto {
+  @ApiProperty({ enum: Unidade })
+  unidade: Unidade;
+
+  @ApiProperty({
+    type: [Number],
+    description:
+      'Códigos de setor ERP da marca própria da loja. Vazio = todos os produtos no card TOTAL.',
+  })
+  codigosSetor: number[];
+
+  @ApiProperty({
+    type: [Number],
+    description:
+      'Setores de revenda que somam em Manipulados no TOTAL. Vazio = só requisições.',
+  })
+  codigosSetorRevendaManipulados: number[];
+}
+
+export class SalvarComercialComissaoPoliticaUnidadeDto {
+  @ApiProperty({ enum: Unidade })
+  @IsEnum(Unidade)
+  unidade: Unidade;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    nullable: true,
+    example: [276, 330],
+    description:
+      'Códigos de setor ERP da marca própria da loja. Vazio/omitido = não recorta o card TOTAL.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(40)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  codigosSetor?: number[] | null;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    nullable: true,
+    example: [400],
+    description:
+      'Setores de revenda que somam em Manipulados no TOTAL. Vazio/omitido = só requisições.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(40)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  codigosSetorRevendaManipulados?: number[] | null;
 }

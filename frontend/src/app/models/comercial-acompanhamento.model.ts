@@ -13,6 +13,14 @@ export interface ComercialAcompanhamentoItem {
   codigoVendedorErp: number | null;
   valorRecebidoRequisicao: number;
   quantidadeRecebidoRequisicao: number;
+  quantidadeFormulasRequisicao: number;
+  valorRequisicaoPura: number;
+  valorRevendaManipulados: number;
+  quantidadeRevendaManipulados: number;
+  codigosSetorRevendaManipulados?: number[];
+  valorTerceirosManipulados: number;
+  quantidadeTerceirosManipulados: number;
+  valorComissaoBaseRequisicao: number;
   valorRecebidoMarcaPropria: number;
   quantidadeRecebidoMarcaPropria: number;
   valorRejeitado: number;
@@ -43,11 +51,22 @@ export interface ComercialAcompanhamentoItem {
 export interface ComercialAcompanhamentoTotais {
   valorRecebidoRequisicao: number;
   quantidadeRecebidoRequisicao: number;
+  quantidadeFormulasRequisicao: number;
+  valorRequisicaoPura: number;
+  valorRevendaManipulados: number;
+  quantidadeRevendaManipulados: number;
+  codigosSetorRevendaManipulados?: number[];
+  valorTerceirosManipulados: number;
+  quantidadeTerceirosManipulados: number;
+  valorComissaoBaseRequisicao: number;
   valorRecebidoMarcaPropria: number;
   quantidadeRecebidoMarcaPropria: number;
   valorRejeitado: number;
   quantidadeRejeitado: number;
   quantidadeVendedores: number;
+  codigosSetorMarcaPropria?: number[];
+  valorRecebidoMarcaPropriaSetores?: number;
+  quantidadeRecebidoMarcaPropriaSetores?: number;
   valorMetaRequisicao?: number | null;
   percentualMetaRequisicao?: number | null;
   valorMetaMarcaPropria?: number | null;

@@ -8,6 +8,7 @@ import { ComercialMetaVendedor } from '../comercial-meta/entities/comercial-meta
 import { ComercialMetaUnidade } from '../comercial-meta/entities/comercial-meta-unidade.entity';
 import { ComercialComissaoFaixa } from '../comercial-meta/entities/comercial-comissao-faixa.entity';
 import { ComercialComissaoPolitica } from '../comercial-meta/entities/comercial-comissao-politica.entity';
+import { ComercialComissaoPoliticaUnidade } from '../comercial-meta/entities/comercial-comissao-politica-unidade.entity';
 import { CalendarioUnidade } from '../producao-config/entities/calendario-unidade.entity';
 import { ProducaoFeriado } from '../producao-config/entities/producao-feriado.entity';
 import { CaixaFechamento } from '../fechamento-caixa/entities/caixa-fechamento.entity';
@@ -24,6 +25,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
       ComercialMetaUnidade,
       ComercialComissaoFaixa,
       ComercialComissaoPolitica,
+      ComercialComissaoPoliticaUnidade,
       CalendarioUnidade,
       ProducaoFeriado,
       CaixaFechamento,

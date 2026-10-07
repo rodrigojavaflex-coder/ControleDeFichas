@@ -48,6 +48,8 @@ export interface ComercialComissaoPoliticaItem {
   tipoBase: ComercialTipoBase;
   incidencia: ComercialIncidenciaComissao;
   percentualMinimoLoja: number | null;
+  codigosSetor: number[];
+  codigosSetorRevendaManipulados: number[];
 }
 
 export interface ComercialComissaoPoliticaResponse {
@@ -60,4 +62,18 @@ export interface SalvarComercialComissaoPoliticaDto {
   tipoBase: ComercialTipoBase;
   incidencia: ComercialIncidenciaComissao;
   percentualMinimoLoja?: number | null;
+  codigosSetor?: number[];
+  codigosSetorRevendaManipulados?: number[];
+}
+
+export interface ComercialComissaoPoliticaUnidadeResponse {
+  unidade: Unidade;
+  codigosSetor: number[];
+  codigosSetorRevendaManipulados: number[];
+}
+
+export interface SalvarComercialComissaoPoliticaUnidadeDto {
+  unidade: Unidade;
+  codigosSetor?: number[];
+  codigosSetorRevendaManipulados?: number[];
 }

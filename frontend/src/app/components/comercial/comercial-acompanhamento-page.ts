@@ -22,6 +22,13 @@ interface CardResumo {
   mesAberto: boolean;
   valorRecebidoRequisicao: number;
   quantidadeRecebidoRequisicao: number;
+  quantidadeFormulasRequisicao: number;
+  valorRequisicaoPura: number;
+  valorRevendaManipulados: number;
+  quantidadeRevendaManipulados: number;
+  codigosSetorRevendaManipulados?: number[];
+  valorTerceirosManipulados: number;
+  quantidadeTerceirosManipulados: number;
   valorRecebidoMarcaPropria: number;
   quantidadeRecebidoMarcaPropria: number;
   valorRejeitado: number;
@@ -38,11 +45,21 @@ interface CardResumo {
   valorBonusRequisicao?: number | null;
   valorComissaoMarcaPropria?: number | null;
   valorBonusMarcaPropria?: number | null;
+  codigosSetorMarcaPropria?: number[];
+  valorRecebidoMarcaPropriaSetores?: number;
+  quantidadeRecebidoMarcaPropriaSetores?: number;
 }
 
 const TOTAIS_VAZIOS: ComercialAcompanhamentoTotais = {
   valorRecebidoRequisicao: 0,
   quantidadeRecebidoRequisicao: 0,
+  quantidadeFormulasRequisicao: 0,
+  valorRequisicaoPura: 0,
+  valorRevendaManipulados: 0,
+  quantidadeRevendaManipulados: 0,
+  valorTerceirosManipulados: 0,
+  quantidadeTerceirosManipulados: 0,
+  valorComissaoBaseRequisicao: 0,
   valorRecebidoMarcaPropria: 0,
   quantidadeRecebidoMarcaPropria: 0,
   valorRejeitado: 0,
@@ -87,6 +104,9 @@ export class ComercialAcompanhamentoPage implements OnInit {
   carregandoDetalhe = false;
   itemDetalhe: ComercialAcompanhamentoItem | null = null;
   detalhe: ComercialAcompanhamentoDetalhe | null = null;
+  infoMarcaPropriaAberto = false;
+  infoManipuladosAberto = false;
+  infoManipuladosCard: CardResumo | null = null;
 
   ngOnInit(): void {
     if (!this.podeLer()) {
@@ -127,6 +147,15 @@ export class ComercialAcompanhamentoPage implements OnInit {
         mesAberto: this.totais.mesAberto === true,
         valorRecebidoRequisicao: this.totais.valorRecebidoRequisicao,
         quantidadeRecebidoRequisicao: this.totais.quantidadeRecebidoRequisicao,
+        quantidadeFormulasRequisicao: this.totais.quantidadeFormulasRequisicao,
+        valorRequisicaoPura: this.totais.valorRequisicaoPura,
+        valorRevendaManipulados: this.totais.valorRevendaManipulados,
+        quantidadeRevendaManipulados: this.totais.quantidadeRevendaManipulados,
+        codigosSetorRevendaManipulados:
+          this.totais.codigosSetorRevendaManipulados ?? [],
+        valorTerceirosManipulados: this.totais.valorTerceirosManipulados ?? 0,
+        quantidadeTerceirosManipulados:
+          this.totais.quantidadeTerceirosManipulados ?? 0,
         valorRecebidoMarcaPropria: this.totais.valorRecebidoMarcaPropria,
         quantidadeRecebidoMarcaPropria: this.totais.quantidadeRecebidoMarcaPropria,
         valorRejeitado: this.totais.valorRejeitado,
@@ -139,6 +168,11 @@ export class ComercialAcompanhamentoPage implements OnInit {
         percentualMetaMarcaPropria: this.totais.percentualMetaMarcaPropria,
         valorProjetadoMarcaPropria: this.totais.valorProjetadoMarcaPropria,
         percentualProjecaoMarcaPropria: this.totais.percentualProjecaoMarcaPropria,
+        codigosSetorMarcaPropria: this.totais.codigosSetorMarcaPropria ?? [],
+        valorRecebidoMarcaPropriaSetores:
+          this.totais.valorRecebidoMarcaPropriaSetores ?? 0,
+        quantidadeRecebidoMarcaPropriaSetores:
+          this.totais.quantidadeRecebidoMarcaPropriaSetores ?? 0,
       },
     ];
     for (const item of this.itens) {
@@ -150,6 +184,15 @@ export class ComercialAcompanhamentoPage implements OnInit {
         mesAberto: item.mesAberto === true,
         valorRecebidoRequisicao: item.valorRecebidoRequisicao,
         quantidadeRecebidoRequisicao: item.quantidadeRecebidoRequisicao,
+        quantidadeFormulasRequisicao: item.quantidadeFormulasRequisicao,
+        valorRequisicaoPura: item.valorRequisicaoPura,
+        valorRevendaManipulados: item.valorRevendaManipulados,
+        quantidadeRevendaManipulados: item.quantidadeRevendaManipulados,
+        codigosSetorRevendaManipulados:
+          item.codigosSetorRevendaManipulados ?? [],
+        valorTerceirosManipulados: item.valorTerceirosManipulados ?? 0,
+        quantidadeTerceirosManipulados:
+          item.quantidadeTerceirosManipulados ?? 0,
         valorRecebidoMarcaPropria: item.valorRecebidoMarcaPropria,
         quantidadeRecebidoMarcaPropria: item.quantidadeRecebidoMarcaPropria,
         valorRejeitado: item.valorRejeitado,
@@ -183,6 +226,13 @@ export class ComercialAcompanhamentoPage implements OnInit {
     return this.unidadeFiltro ? `TOTAL ${this.unidadeFiltro}` : 'TOTAL';
   }
 
+  temSetoresUnidade(card: CardResumo): boolean {
+    return (
+      card.isTotal &&
+      (card.codigosSetorMarcaPropria ?? []).length > 0
+    );
+  }
+
   valorTotalRecebido(card: CardResumo): number {
     return (
       Number(card.valorRecebidoRequisicao || 0) +
@@ -197,6 +247,27 @@ export class ComercialAcompanhamentoPage implements OnInit {
     const codigo =
       item.codigoVendedorErp != null ? String(item.codigoVendedorErp) : '—';
     return `${item.nomeVendedor} (${codigo})`;
+  }
+
+  rotuloQtdManipulados(reqs: number | null | undefined, formulas: number | null | undefined): string {
+    const nReqs = Number(reqs || 0);
+    const nFormulas = Number(formulas || 0);
+    return `${nReqs} Reqs / ${nFormulas} Fórmulas`;
+  }
+
+  rotuloQtdSetorManipulado(qtd: number | null | undefined): string {
+    const n = Number(qtd || 0);
+    return `${n} item(ns)`;
+  }
+
+  rotuloQtdTerceiros(qtd: number | null | undefined): string {
+    const n = Number(qtd || 0);
+    return `${n} venda(s)`;
+  }
+
+  rotuloManipuladoSetor(card: CardResumo): string {
+    const setores = this.rotuloSetores(card.codigosSetorRevendaManipulados);
+    return setores === '—' ? 'setor' : `setor ${setores}`;
   }
 
   get rotuloCompetenciaLegenda(): string {
@@ -282,9 +353,44 @@ export class ComercialAcompanhamentoPage implements OnInit {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.infoMarcaPropriaAberto) {
+      this.fecharInfoMarcaPropria();
+      return;
+    }
+    if (this.infoManipuladosAberto) {
+      this.fecharInfoManipulados();
+      return;
+    }
     if (this.detalheAberto) {
       this.fecharDetalhe();
     }
+  }
+
+  abrirInfoMarcaPropria(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.infoMarcaPropriaAberto = true;
+  }
+
+  fecharInfoMarcaPropria(): void {
+    this.infoMarcaPropriaAberto = false;
+  }
+
+  abrirInfoManipulados(event: Event, card: CardResumo): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.infoManipuladosCard = card;
+    this.infoManipuladosAberto = true;
+  }
+
+  fecharInfoManipulados(): void {
+    this.infoManipuladosAberto = false;
+    this.infoManipuladosCard = null;
+  }
+
+  rotuloSetores(codigos: number[] | null | undefined): string {
+    const lista = (codigos ?? []).filter((n) => Number(n) > 0);
+    return lista.length ? lista.join(', ') : '—';
   }
 
   abrirDetalhe(card: CardResumo): void {
@@ -374,6 +480,8 @@ export class ComercialAcompanhamentoPage implements OnInit {
       const linha: Record<string, string | number> = {
         Vendedor: this.rotuloVendedor(item),
         Manipulados: Number(item.valorRecebidoRequisicao || 0),
+        'Qtd reqs': Number(item.quantidadeRecebidoRequisicao || 0),
+        'Qtd fórmulas': Number(item.quantidadeFormulasRequisicao || 0),
         'Marca própria': Number(item.valorRecebidoMarcaPropria || 0),
         Rejeitado: Number(item.valorRejeitado || 0),
         'Meta Manip.': Number(item.valorMetaRequisicao || 0),
@@ -399,6 +507,8 @@ export class ComercialAcompanhamentoPage implements OnInit {
     const total: Record<string, string | number> = {
       Vendedor: this.rotuloCardTotal(),
       Manipulados: Number(this.totais.valorRecebidoRequisicao || 0),
+      'Qtd reqs': Number(this.totais.quantidadeRecebidoRequisicao || 0),
+      'Qtd fórmulas': Number(this.totais.quantidadeFormulasRequisicao || 0),
       'Marca própria': Number(this.totais.valorRecebidoMarcaPropria || 0),
       Rejeitado: Number(this.totais.valorRejeitado || 0),
       'Meta Manip.': Number(this.totais.valorMetaRequisicao || 0),
@@ -468,7 +578,8 @@ export class ComercialAcompanhamentoPage implements OnInit {
       Unidade: this.unidadeFiltro || '',
       Competência: this.rotuloCompetenciaLegenda,
       Manipulados: Number(item.valorRecebidoRequisicao || 0),
-      'Qtd manip.': Number(item.quantidadeRecebidoRequisicao || 0),
+      'Qtd reqs': Number(item.quantidadeRecebidoRequisicao || 0),
+      'Qtd fórmulas': Number(item.quantidadeFormulasRequisicao || 0),
       'Marca própria': Number(item.valorRecebidoMarcaPropria || 0),
       'Qtd marca': Number(item.quantidadeRecebidoMarcaPropria || 0),
       Rejeitado: Number(item.valorRejeitado || 0),
@@ -727,6 +838,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
     .resumo div { border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; }
     .resumo span { display: block; font-size: 10px; text-transform: uppercase; color: #64748b; }
     .resumo strong { font-size: 13px; }
+    .resumo small { display: block; margin-top: 2px; font-size: 10px; color: #64748b; font-weight: 500; }
     h3 { margin: 16px 0 6px; font-size: 13px; }
     table { width: 100%; border-collapse: collapse; font-size: 11px; }
     th, td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
@@ -743,7 +855,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
   <h1>${this.escapeHtml(titulo)}</h1>
   <div class="subtitle">${this.escapeHtml(subtitulo)}</div>
   <section class="resumo">
-    <div><span>Manipulados</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoRequisicao))}</strong></div>
+    <div><span>Manipulados</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoRequisicao))}</strong><small>${this.escapeHtml(this.rotuloQtdManipulados(item.quantidadeRecebidoRequisicao, item.quantidadeFormulasRequisicao))}</small></div>
     <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropria))}</strong></div>
     <div><span>Rejeitado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRejeitado))}</strong></div>
     <div><span>% Meta manip.</span><strong>${this.escapeHtml(this.temMetaCadastrada(item.valorMetaRequisicao) ? this.formatarPercentualMeta(item.percentualMetaRequisicao) : 'Sem meta')}</strong></div>

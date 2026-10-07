@@ -49,4 +49,30 @@ export class ComercialComissaoPolitica extends BaseEntity {
     transformer: numericToNumberOrNull,
   })
   percentualMinimoLoja: number | null;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    example: [276, 330],
+    description:
+      'Códigos de setor ERP (FC03000.SETOR) da marca própria. Vazio = todos os produtos de revenda. Só vale para MARCA_PROPRIA.',
+  })
+  @Column({
+    type: 'int',
+    array: true,
+    default: '{}',
+  })
+  codigosSetor: number[];
+
+  @ApiPropertyOptional({
+    type: [Number],
+    example: [400],
+    description:
+      'Setores de revenda (PRODUTO) que somam em Manipulados. Vazio = só requisições. Só vale para REQUISICAO.',
+  })
+  @Column({
+    type: 'int',
+    array: true,
+    default: '{}',
+  })
+  codigosSetorRevendaManipulados: number[];
 }

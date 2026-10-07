@@ -37,7 +37,10 @@ export interface CaixaItemRow {
   quant: number;
   valor_item_bruto: number;
   valor_item_liquido: number;
+  valor_taxa: number;
+  codigo_setor: number | null;
   desconto_item: number;
+  valor_desconto_varejo: number;
   pagamento_cupom: number;
   chave_erp: string;
 }
@@ -63,6 +66,7 @@ export interface CaixaRequisicaoPagaRow {
   valor_requisicao_bruto: number;
   desconto_requisicao: number;
   valor_pago_requisicao: number;
+  valor_taxa: number;
   valor_saldo: number | null;
   tipo_requisicao: string | null;
   valor_formulas: number | null;

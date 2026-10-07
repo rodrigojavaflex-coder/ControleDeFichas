@@ -1,3 +1,30 @@
+app-comercial-comissoes-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.vendas-page.producao-config-page.comercial-comissoes-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: calc((100vh - 64px) / var(--app-zoom-factor, 1) - 1.5rem);
+  max-height: calc((100vh - 64px) / var(--app-zoom-factor, 1) - 1.5rem);
+  overflow: hidden;
+}
+
+.vendas-page.producao-config-page.comercial-comissoes-page .results-card {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 1.5rem;
+}
+
+.comercial-comissoes-page .producao-config-panel.comercial-faixas-panel {
+  height: auto;
+  overflow: visible;
+}
+
 .comercial-comissoes-page .filters-panel-top::after {
   content: none;
   display: none;
@@ -36,12 +63,16 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
   flex-shrink: 0;
 }
 
+.comercial-comissoes-page .comercial-comissoes-toolbar-vendedor {
+  margin-bottom: 0.75rem;
+}
+
 .comercial-comissoes-page .comercial-comissoes-unidade-row {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 0.75rem;
-  flex: 0 0 auto;
+  width: 100%;
 }
 
 .comercial-comissoes-page .comercial-comissoes-toolbar .filter-group {
@@ -60,6 +91,8 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
 .comercial-comissoes-page .comercial-comissoes-toolbar-acoes {
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   flex: 0 0 auto;
 }
 
@@ -68,9 +101,9 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
 }
 
 .comercial-comissoes-page .comercial-comissoes-toolbar .filter-group.comercial-comissoes-vendedor {
-  flex: 1 1 280px;
+  flex: 1 1 100%;
   min-width: 200px;
-  max-width: 42rem;
+  max-width: none;
 }
 
 .comercial-comissoes-page .comercial-comissoes-toolbar .form-label {
@@ -90,9 +123,9 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
   grid-template-columns: 1fr 1fr;
   align-items: start;
   gap: 1rem;
-  flex: 1 1 0;
+  flex: 0 0 auto;
   min-height: 0;
-  overflow: auto;
+  overflow: visible;
   width: 100%;
 }
 
@@ -105,7 +138,7 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
   border-radius: var(--border-radius, 8px);
   background: var(--cor-superficie, var(--bg-primary, #fff));
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .comercial-faixas-tipo-row {
@@ -135,10 +168,169 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
 .comercial-politica-panel {
   flex-shrink: 0;
   margin-top: 0;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem 1rem;
   border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
   border-radius: 8px;
   background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+}
+
+.comercial-politica-resumo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 8px;
+  background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+}
+
+.comercial-info-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.comercial-info-cards-unidade {
+  flex: 1 1 22rem;
+  min-width: 0;
+  margin: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.comercial-info-cards-unidade .comercial-info-card {
+  padding: 0.45rem 0.7rem;
+  gap: 0.15rem;
+}
+
+.comercial-info-cards-unidade .comercial-info-card-valor {
+  font-size: 0.82rem;
+}
+
+.comercial-info-cards-unidade .comercial-info-card-explica {
+  font-size: 0.7rem;
+}
+
+.comercial-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border-color, var(--cor-borda, #e2e8f0));
+  border-radius: 8px;
+  background: var(--bg-primary, var(--cor-fundo, #f8f9fa));
+}
+
+.comercial-info-card-faixas {
+  flex: 0 0 auto;
+}
+
+.comercial-info-card-titulo {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-info-card-valor {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary, #1e293b);
+}
+
+.comercial-info-card-explica {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-info-card-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-primary, #1e293b);
+}
+
+.comercial-politica-resumo-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.2rem 0.65rem;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-primary, #1e293b);
+}
+
+.comercial-politica-resumo-label {
+  flex: 0 0 6.5rem;
+  padding-top: 0.05rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-politica-resumo-valor {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.comercial-politica-resumo-explica {
+  font-weight: 400;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-comissoes-page .comercial-politica-unidade {
+  margin: 0 0 1rem;
+  flex-shrink: 0;
+}
+
+.comercial-politica-unidade-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.comercial-politica-unidade-titulo {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+
+.comercial-setores-unidade-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.25rem;
+  align-items: start;
+}
+
+.comercial-politica-grade {
+  display: grid;
+  grid-template-columns: minmax(11rem, 1fr) minmax(11rem, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: end;
+}
+
+.comercial-politica-setores-span {
+  grid-column: 1 / -1;
+  align-self: start;
 }
 
 .comercial-politica-row {
@@ -148,15 +340,34 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
   gap: 0.75rem;
 }
 
-.comercial-politica-row .filter-group {
+.comercial-politica-setores-field {
+  min-width: 0;
+}
+
+.comercial-politica-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-secondary, #64748b);
+}
+
+body.theme-dark .comercial-politica-hint,
+[data-theme='dark'] .comercial-politica-hint {
+  color: var(--text-secondary, #94a3b8);
+}
+
+.comercial-politica-row .filter-group,
+.comercial-politica-grade .filter-group,
+.comercial-setores-unidade-grid .filter-group {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  flex: 1 1 11rem;
-  min-width: 10rem;
+  min-width: 0;
 }
 
-.comercial-politica-row .form-label {
+.comercial-politica-row .form-label,
+.comercial-politica-grade .form-label,
+.comercial-setores-unidade-grid .form-label {
   margin: 0;
   font-size: 0.8rem;
   font-weight: 500;
@@ -166,11 +377,12 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
 .comercial-politica-acoes {
   display: flex;
   align-items: flex-end;
+  justify-content: flex-end;
   padding-bottom: 1px;
 }
 
 .comercial-comissoes-page .comercial-faixas-panel .table-container {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   overflow: visible;
 }
 
@@ -188,9 +400,15 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-resultado,
   flex-wrap: nowrap;
 }
 
-.comercial-faixa-valor {
+.comercial-faixas-panel .comercial-faixa-valor {
   max-width: 9rem;
   text-align: right;
+}
+
+.comercial-politica-grade .comercial-faixa-valor {
+  max-width: none;
+  width: 100%;
+  text-align: left;
 }
 
 .comercial-comissoes-page tr.editing {
@@ -209,13 +427,39 @@ body.theme-dark .comercial-comissoes-page .comercial-comissoes-toolbar,
 body.theme-dark .comercial-faixas-panel,
 [data-theme='dark'] .comercial-faixas-panel,
 body.theme-dark .comercial-politica-panel,
-[data-theme='dark'] .comercial-politica-panel {
+[data-theme='dark'] .comercial-politica-panel,
+body.theme-dark .comercial-politica-resumo,
+[data-theme='dark'] .comercial-politica-resumo,
+body.theme-dark .comercial-info-card,
+[data-theme='dark'] .comercial-info-card {
   background: var(--bg-card, #1e293b);
   border-color: var(--border-color, #334155);
 }
 
 body.theme-dark .comercial-faixas-titulo,
-[data-theme='dark'] .comercial-faixas-titulo {
+[data-theme='dark'] .comercial-faixas-titulo,
+body.theme-dark .comercial-politica-unidade-titulo,
+[data-theme='dark'] .comercial-politica-unidade-titulo,
+body.theme-dark .comercial-politica-resumo-item,
+[data-theme='dark'] .comercial-politica-resumo-item {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .comercial-politica-resumo-label,
+[data-theme='dark'] .comercial-politica-resumo-label,
+body.theme-dark .comercial-politica-resumo-explica,
+[data-theme='dark'] .comercial-politica-resumo-explica,
+body.theme-dark .comercial-info-card-titulo,
+[data-theme='dark'] .comercial-info-card-titulo,
+body.theme-dark .comercial-info-card-explica,
+[data-theme='dark'] .comercial-info-card-explica {
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .comercial-info-card-valor,
+[data-theme='dark'] .comercial-info-card-valor,
+body.theme-dark .comercial-info-card-lista,
+[data-theme='dark'] .comercial-info-card-lista {
   color: var(--text-primary, #e2e8f0);
 }
 
@@ -225,9 +469,17 @@ body.theme-dark .comercial-comissoes-page tr.editing,
 }
 
 @media (max-width: 1100px) {
-  .comercial-comissoes-page .comercial-faixas-split {
+  .comercial-comissoes-page .comercial-faixas-split,
+  .comercial-setores-unidade-grid {
     grid-template-columns: 1fr;
-    overflow: auto;
+  }
+
+  .comercial-politica-grade {
+    grid-template-columns: 1fr;
+  }
+
+  .comercial-politica-acoes {
+    justify-content: flex-start;
   }
 }
 
@@ -243,4 +495,74 @@ body.theme-dark .comercial-comissoes-page tr.editing,
     flex: 1 1 100%;
     max-width: none;
   }
+
+  .comercial-info-cards-unidade {
+    flex: 1 1 100%;
+    grid-template-columns: 1fr;
+  }
+}
+
+.comercial-faixas-resumo {
+  gap: 0.2rem;
+}
+
+.comercial-comissoes-modal-sobrepor {
+  z-index: 1010;
+}
+
+.comercial-comissoes-modal-faixas {
+  max-width: 52rem;
+}
+
+.comercial-comissoes-modal-faixas .modal-corpo {
+  padding-top: 0.75rem;
+}
+
+.comercial-comissoes-modal-faixas .table-container {
+  margin-bottom: 0;
+  overflow: visible;
+}
+
+.comercial-comissoes-modal-faixas .vendas-table {
+  font-size: 0.85rem;
+}
+
+.comercial-comissoes-modal-setores {
+  max-width: 36rem;
+}
+
+.comercial-comissoes-modal-setores .modal-cabecalho {
+  align-items: flex-start;
+}
+
+.comercial-comissoes-modal-setores .modal-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.comercial-comissoes-modal-setores .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.comercial-comissoes-modal-setores .form-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-comissoes-modal-setores .form-control {
+  width: 100%;
+  max-width: none;
+}
+
+body.theme-dark .comercial-comissoes-modal-setores .form-label,
+[data-theme='dark'] .comercial-comissoes-modal-setores .form-label {
+  color: var(--text-secondary, #94a3b8);
 }

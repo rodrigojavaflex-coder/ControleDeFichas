@@ -86,6 +86,49 @@ export class ComercialAcompanhamentoItemDto extends ComercialDesempenhoBaseDto {
   @ApiProperty()
   quantidadeRecebidoRequisicao: number;
 
+  @ApiProperty({
+    description:
+      'Linhas de fórmula no mesmo universo do card (itens REQUISICAO com pagamento + quantidade_formulas da paga sem item).',
+  })
+  quantidadeFormulasRequisicao: number;
+
+  @ApiProperty({
+    description: 'Parcela de Manipulados vinda só das requisições.',
+  })
+  valorRequisicaoPura: number;
+
+  @ApiProperty({
+    description:
+      'Parcela de Manipulados vinda da revenda dos setores configurados.',
+  })
+  valorRevendaManipulados: number;
+
+  @ApiProperty()
+  quantidadeRevendaManipulados: number;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description: 'Setores de revenda que somam em Manipulados neste card.',
+  })
+  codigosSetorRevendaManipulados?: number[];
+
+  @ApiProperty({
+    description:
+      'Baixas de vendas de terceiro no caixa da unidade. Só no card TOTAL; 0 no vendedor.',
+  })
+  valorTerceirosManipulados: number;
+
+  @ApiProperty({
+    description: 'Vendas distintas com baixa no período (card TOTAL).',
+  })
+  quantidadeTerceirosManipulados: number;
+
+  @ApiProperty({
+    description:
+      'Base da comissão de Manipulados (requisições + setor, sem terceiros).',
+  })
+  valorComissaoBaseRequisicao: number;
+
   @ApiProperty()
   valorRecebidoMarcaPropria: number;
 
@@ -160,11 +203,68 @@ export class ComercialAcompanhamentoTotaisDto extends ComercialDesempenhoBaseDto
   @ApiProperty()
   quantidadeRecebidoRequisicao: number;
 
+  @ApiProperty({
+    description:
+      'Soma das fórmulas dos vendedores vinculados (mesmo universo do card).',
+  })
+  quantidadeFormulasRequisicao: number;
+
+  @ApiProperty({
+    description: 'Soma das requisições dos vendedores (sem a revenda extra).',
+  })
+  valorRequisicaoPura: number;
+
+  @ApiProperty({
+    description:
+      'Revenda dos setores da unidade que somam em Manipulados no TOTAL.',
+  })
+  valorRevendaManipulados: number;
+
+  @ApiProperty()
+  quantidadeRevendaManipulados: number;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description: 'Setores de revenda da unidade que somam em Manipulados.',
+  })
+  codigosSetorRevendaManipulados?: number[];
+
+  @ApiProperty({
+    description:
+      'Baixas de vendas de terceiro (`baixas` × `vendas`) da unidade no período até o último caixa confirmado.',
+  })
+  valorTerceirosManipulados: number;
+
+  @ApiProperty()
+  quantidadeTerceirosManipulados: number;
+
+  @ApiProperty({
+    description:
+      'Requisições + setor da loja, sem terceiros — base do valor da comissão.',
+  })
+  valorComissaoBaseRequisicao: number;
+
   @ApiProperty()
   valorRecebidoMarcaPropria: number;
 
   @ApiProperty()
   quantidadeRecebidoMarcaPropria: number;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description:
+      'Setores da marca própria da loja. Vazio = card TOTAL não exibe o recorte.',
+  })
+  codigosSetorMarcaPropria?: number[];
+
+  @ApiPropertyOptional({
+    description:
+      'Volume de marca própria da loja filtrado pelos setores da unidade.',
+  })
+  valorRecebidoMarcaPropriaSetores?: number;
+
+  @ApiPropertyOptional()
+  quantidadeRecebidoMarcaPropriaSetores?: number;
 
   @ApiProperty()
   valorRejeitado: number;

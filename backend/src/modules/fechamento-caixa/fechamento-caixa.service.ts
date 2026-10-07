@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
+import { Between, In, QueryFailedError, Repository } from 'typeorm';
 import { Permission } from '../../common/enums/permission.enum';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
@@ -247,12 +247,25 @@ export class FechamentoCaixaService {
         message: 'Calculando totais consolidados...',
         percentual: 95,
       });
-    } catch (error: any) {
-      const msg = error?.message || 'Erro ao importar caixa ERP';
+    } catch (error: unknown) {
+      const pg =
+        error instanceof QueryFailedError
+          ? (error as QueryFailedError & {
+              driverError?: { code?: string; message?: string };
+            }).driverError
+          : undefined;
+      const msg =
+        (error instanceof Error ? error.message : null) ||
+        'Erro ao importar caixa ERP';
       this.logger.error(
-        `Caixa sync ${dto.unidade}: importação falhou após ${Date.now() - inicioImportacao}ms (${dto.dataInicio}..${dto.dataFim})`,
+        `Caixa sync ${dto.unidade}: importação falhou após ${Date.now() - inicioImportacao}ms (${dto.dataInicio}..${dto.dataFim})${pg?.code ? ` PG ${pg.code}` : ''}: ${pg?.message ?? msg}`,
       );
       this.importacaoProgressService.finalizar('error', msg);
+      if (pg?.code === '42703') {
+        throw new ServiceUnavailableException(
+          'O banco ainda não aplicou as colunas novas do caixa. Aguarde o restart da API e tente de novo.',
+        );
+      }
       throw error;
     }
 

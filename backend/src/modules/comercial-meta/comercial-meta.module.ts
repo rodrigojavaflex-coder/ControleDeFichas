@@ -6,6 +6,7 @@ import { ComercialMetaVendedor } from './entities/comercial-meta-vendedor.entity
 import { ComercialMetaUnidade } from './entities/comercial-meta-unidade.entity';
 import { ComercialComissaoFaixa } from './entities/comercial-comissao-faixa.entity';
 import { ComercialComissaoPolitica } from './entities/comercial-comissao-politica.entity';
+import { ComercialComissaoPoliticaUnidade } from './entities/comercial-comissao-politica-unidade.entity';
 import { Funcionario } from '../folha/entities/funcionario.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { ComercialMetaService } from './comercial-meta.service';
@@ -20,6 +21,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
       ComercialMetaUnidade,
       ComercialComissaoFaixa,
       ComercialComissaoPolitica,
+      ComercialComissaoPoliticaUnidade,
       Funcionario,
       Usuario,
     ]),

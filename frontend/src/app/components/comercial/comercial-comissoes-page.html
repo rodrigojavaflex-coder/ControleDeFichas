@@ -5,7 +5,7 @@
     </div>
   } @else {
     <div class="results-card">
-      <section class="comercial-comissoes-toolbar" aria-label="Unidade e vendedor">
+      <section class="comercial-comissoes-toolbar comercial-comissoes-toolbar-unidade" aria-label="Unidade e setores">
         <div class="comercial-comissoes-unidade-row">
           <div class="filter-group">
             <label class="form-label" for="cc-unidade">Unidade</label>
@@ -23,35 +23,51 @@
               }
             </select>
           </div>
-          @if (podeIncluirFaixa() && unidadeFiltro) {
+          @if (unidadeFiltro) {
             <div class="comercial-comissoes-toolbar-acoes">
+              @if (podeIncluirFaixa()) {
+                <button
+                  type="button"
+                  class="btn btn-imprimir"
+                  title="Carrega faixas padrão apenas nos vendedores da unidade que ainda não têm cadastro em Manipulados e/ou Marca própria. Não altera faixas já cadastradas."
+                  [disabled]="carregandoPendentes || carregandoVendedores || temLinhaEmEdicao()"
+                  (click)="pedirCarregarPendentes()">
+                  <i class="fas fa-download"></i>
+                  {{ carregandoPendentes ? 'Carregando…' : 'Carregar faixas pendentes' }}
+                </button>
+              }
               <button
                 type="button"
-                class="btn btn-imprimir"
-                title="Carrega faixas padrão apenas nos vendedores da unidade que ainda não têm cadastro em Manipulados e/ou Marca própria. Não altera faixas já cadastradas."
-                [disabled]="carregandoPendentes || carregandoVendedores || temLinhaEmEdicao()"
-                (click)="pedirCarregarPendentes()">
-                <i class="fas fa-download"></i>
-                {{ carregandoPendentes ? 'Carregando…' : 'Carregar faixas pendentes' }}
+                class="btn btn-editar"
+                title="Configurar setores da marca própria da unidade"
+                [disabled]="carregandoPoliticaUnidade || temLinhaEmEdicao()"
+                (click)="abrirModalSetoresUnidade()">
+                <i class="fas fa-th-large"></i>
+                Setores da unidade
               </button>
             </div>
+            <div
+              class="comercial-info-cards comercial-info-cards-unidade"
+              aria-label="Resumo dos setores da unidade">
+              @if (carregandoPoliticaUnidade) {
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Setores da unidade</span>
+                  <span class="comercial-info-card-explica">Carregando…</span>
+                </article>
+              } @else {
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Marca própria da unidade</span>
+                  <strong class="comercial-info-card-valor">{{ rotuloSetoresUnidadeMp() }}</strong>
+                  <span class="comercial-info-card-explica">{{ explicaSetoresUnidadeMp() }}</span>
+                </article>
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Somam em Manipulados</span>
+                  <strong class="comercial-info-card-valor">{{ rotuloSetoresUnidadeManip() }}</strong>
+                  <span class="comercial-info-card-explica">{{ explicaSetoresUnidadeManip() }}</span>
+                </article>
+              }
+            </div>
           }
-        </div>
-        <div class="filter-group comercial-comissoes-vendedor">
-          <label class="form-label" for="cc-vendedor">Vendedor</label>
-          <select
-            id="cc-vendedor"
-            class="form-control"
-            [(ngModel)]="funcionarioId"
-            [disabled]="!unidadeFiltro || carregandoVendedores"
-            (ngModelChange)="onVendedorChange()">
-            <option [ngValue]="''">Selecione…</option>
-            @for (v of vendedores; track v.funcionarioId) {
-              <option [ngValue]="v.funcionarioId">
-                {{ rotuloVendedor(v) }}
-              </option>
-            }
-          </select>
         </div>
       </section>
 
@@ -69,211 +85,504 @@
         <div class="loading-message">
           Nenhum vendedor com código ERP nesta unidade.
         </div>
-      } @else if (!funcionarioId) {
-        <div class="loading-message">Selecione um vendedor para configurar as faixas.</div>
       } @else {
+        <section class="comercial-comissoes-toolbar comercial-comissoes-toolbar-vendedor" aria-label="Vendedor">
+          <div class="filter-group comercial-comissoes-vendedor">
+            <label class="form-label" for="cc-vendedor">Vendedor</label>
+            <select
+              id="cc-vendedor"
+              class="form-control"
+              [(ngModel)]="funcionarioId"
+              [disabled]="carregandoVendedores"
+              (ngModelChange)="onVendedorChange()">
+              <option [ngValue]="''">Selecione…</option>
+              @for (v of vendedores; track v.funcionarioId) {
+                <option [ngValue]="v.funcionarioId">
+                  {{ rotuloVendedor(v) }}
+                </option>
+              }
+            </select>
+          </div>
+        </section>
+        @if (!funcionarioId) {
+          <div class="loading-message">Selecione um vendedor para configurar as faixas.</div>
+        } @else {
         <div class="comercial-faixas-split">
           @for (grade of grades; track grade.tipoBase) {
             <section class="producao-config-panel comercial-faixas-panel">
               <div class="comercial-faixas-tipo-row">
                 <h3 class="comercial-faixas-titulo">{{ grade.titulo }}</h3>
-                @if (podeIncluirFaixa()) {
-                  <div class="comercial-faixas-toolbar">
-                    <button
-                      type="button"
-                      class="btn btn-salvar"
-                      [disabled]="temLinhaEmEdicao() || grade.carregando || grade.carregandoPadrao"
-                      (click)="incluirFaixaNaGrade(grade)">
-                      Incluir faixa
-                    </button>
-                    <button
-                      type="button"
-                      class="btn btn-imprimir"
-                      [disabled]="temLinhaEmEdicao() || grade.carregandoPadrao || grade.carregando"
-                      (click)="pedirCarregarPadrao(grade)">
-                      <i class="fas fa-download"></i>
-                      {{ grade.carregandoPadrao ? 'Carregando…' : 'Carregar faixas padrão' }}
-                    </button>
-                  </div>
-                }
+                <div class="comercial-faixas-toolbar">
+                  <button
+                    type="button"
+                    class="btn btn-editar"
+                    title="Configurar incidência, trava da loja e setores desta base"
+                    [disabled]="grade.carregando || temLinhaEmEdicao()"
+                    (click)="abrirModalPolitica(grade)">
+                    <i class="fas fa-sliders-h"></i>
+                    Configurar regra
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-salvar"
+                    title="Incluir, alterar ou excluir faixas desta base"
+                    [disabled]="grade.carregando || temLinhaEmEdicao()"
+                    (click)="abrirModalFaixas(grade)">
+                    <i class="fas fa-percentage"></i>
+                    Configurar faixas
+                  </button>
+                </div>
               </div>
 
               @if (grade.carregando) {
                 <div class="loading-message">Carregando faixas…</div>
               } @else {
-                <div class="table-container">
-                  <table class="vendas-table">
-                    <thead>
-                      <tr>
-                        <th>De (%)</th>
-                        <th>Até (%)</th>
-                        <th>% comissão</th>
-                        <th>Bônus</th>
-                        @if (mostrarAcoesFaixa()) {
-                          <th>Ações</th>
-                        }
-                      </tr>
-                    </thead>
-                    <tbody>
+                <article
+                  class="comercial-info-card comercial-info-card-faixas"
+                  [attr.aria-label]="'Resumo das faixas — ' + grade.titulo">
+                  <span class="comercial-info-card-titulo">Faixas</span>
+                  @if (grade.linhas.length === 0) {
+                    <span class="comercial-info-card-explica">Nenhuma faixa cadastrada.</span>
+                  } @else {
+                    <ul class="comercial-info-card-lista">
                       @for (row of grade.linhas; track row.localId) {
-                        <tr [class.editing]="row.editando">
-                          <td>
-                            @if (row.editando) {
-                              <input
-                                class="form-control comercial-faixa-valor"
-                                type="text"
-                                inputmode="decimal"
-                                autocomplete="off"
-                                [(ngModel)]="row.draftDe"
-                                [disabled]="row.salvando"
-                                placeholder="0,00"
-                                [attr.aria-label]="'Percentual de — ' + grade.titulo" />
-                            } @else {
-                              {{ formatarPercentual(row.percentualMetaDe) }}
-                            }
-                          </td>
-                          <td>
-                            @if (row.editando) {
-                              <input
-                                class="form-control comercial-faixa-valor"
-                                type="text"
-                                inputmode="decimal"
-                                autocomplete="off"
-                                [(ngModel)]="row.draftAte"
-                                [disabled]="row.salvando"
-                                placeholder="vazio = sem teto"
-                                [attr.aria-label]="'Percentual até — ' + grade.titulo" />
-                            } @else {
-                              {{ formatarPercentual(row.percentualMetaAte) }}
-                            }
-                          </td>
-                          <td>
-                            @if (row.editando) {
-                              <input
-                                class="form-control comercial-faixa-valor"
-                                type="text"
-                                inputmode="decimal"
-                                autocomplete="off"
-                                [(ngModel)]="row.draftComissao"
-                                [disabled]="row.salvando"
-                                placeholder="0,00"
-                                [attr.aria-label]="'Percentual de comissão — ' + grade.titulo" />
-                            } @else {
-                              {{ formatarPercentual(row.percentualComissao) }}
-                            }
-                          </td>
-                          <td>
-                            @if (row.editando) {
-                              <input
-                                class="form-control comercial-faixa-valor"
-                                type="text"
-                                inputmode="numeric"
-                                autocomplete="off"
-                                [(ngModel)]="row.draftBonus"
-                                (ngModelChange)="formatarDraftBonus(row)"
-                                [disabled]="row.salvando"
-                                placeholder="R$ 0,00"
-                                [attr.aria-label]="'Bônus em reais — ' + grade.titulo" />
-                            } @else {
-                              {{ formatarBonus(row.valorBonus) }}
-                            }
-                          </td>
-                          @if (mostrarAcoesFaixa()) {
-                            <td class="action-buttons">
-                              @if (row.editando) {
-                                <button
-                                  type="button"
-                                  class="btn btn-sm btn-salvar"
-                                  [disabled]="row.salvando || !podeSalvarLinha(row)"
-                                  (click)="salvarLinha(row, grade)">
-                                  {{ row.salvando ? 'Salvando…' : 'Salvar' }}
-                                </button>
-                                <button
-                                  type="button"
-                                  class="btn btn-sm btn-cancelar"
-                                  [disabled]="row.salvando"
-                                  (click)="cancelarEdicao(row, grade)">
-                                  Cancelar
-                                </button>
-                              } @else {
-                                @if (podeEditarFaixa()) {
-                                  <button
-                                    type="button"
-                                    class="btn btn-sm btn-editar"
-                                    [disabled]="temLinhaEmEdicao()"
-                                    (click)="alterarLinha(row)">
-                                    Alterar
-                                  </button>
-                                }
-                                @if (podeExcluirFaixa() && row.id) {
-                                  <button
-                                    type="button"
-                                    class="btn btn-sm btn-excluir"
-                                    [disabled]="temLinhaEmEdicao()"
-                                    (click)="pedirExcluirFaixa(row, grade)">
-                                    Excluir
-                                  </button>
-                                }
-                              }
-                            </td>
-                          }
-                        </tr>
-                      } @empty {
-                        <tr class="no-data">
-                          <td [attr.colspan]="mostrarAcoesFaixa() ? 5 : 4">
-                            <i class="fas fa-inbox"></i> Nenhuma faixa cadastrada para {{ grade.titulo }}.
-                          </td>
-                        </tr>
+                        <li>{{ rotuloResumoFaixa(row) }}</li>
                       }
-                    </tbody>
-                  </table>
-                </div>
+                    </ul>
+                  }
+                </article>
               }
 
               <section
-                class="comercial-politica-panel"
-                [attr.aria-label]="'Incidência — ' + grade.titulo">
-                <div class="comercial-politica-row">
-                  <div class="filter-group">
-                    <label class="form-label" [attr.for]="'cc-incidencia-' + grade.tipoBase">Incidência</label>
-                    <select
-                      [id]="'cc-incidencia-' + grade.tipoBase"
-                      class="form-control"
-                      [(ngModel)]="grade.draftIncidencia"
-                      [disabled]="!podeEditarPolitica() || grade.politicaSalvando">
-                      <option [ngValue]="ComercialIncidenciaComissao.PROPRIAS">Vendas próprias</option>
-                      <option [ngValue]="ComercialIncidenciaComissao.LOJA">Vendas da loja</option>
-                    </select>
-                  </div>
-                  <div class="filter-group">
-                    <label class="form-label" [attr.for]="'cc-trava-' + grade.tipoBase">Só pagar se a loja atingir (%)</label>
-                    <input
-                      [id]="'cc-trava-' + grade.tipoBase"
-                      class="form-control comercial-faixa-valor"
-                      type="text"
-                      inputmode="decimal"
-                      autocomplete="off"
-                      [(ngModel)]="grade.draftMinimoLoja"
-                      [disabled]="!podeEditarPolitica() || grade.politicaSalvando"
-                      placeholder="vazio = sempre" />
-                  </div>
-                  @if (podeEditarPolitica()) {
-                    <div class="comercial-politica-acoes">
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-salvar"
-                        [disabled]="grade.politicaSalvando || temLinhaEmEdicao()"
-                        (click)="salvarPolitica(grade)">
-                        {{ grade.politicaSalvando ? 'Salvando…' : 'Salvar regra' }}
-                      </button>
-                    </div>
-                  }
-                </div>
+                class="comercial-info-cards"
+                [attr.aria-label]="'Resumo da regra — ' + grade.titulo">
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Incidência</span>
+                  <strong class="comercial-info-card-valor">{{ rotuloIncidencia(grade) }}</strong>
+                  <span class="comercial-info-card-explica">{{ explicaIncidencia(grade) }}</span>
+                </article>
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Trava da loja</span>
+                  <strong class="comercial-info-card-valor">{{ rotuloTrava(grade) }}</strong>
+                  <span class="comercial-info-card-explica">{{ explicaTrava(grade) }}</span>
+                </article>
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Setores</span>
+                  <strong class="comercial-info-card-valor">{{ rotuloSetoresPolitica(grade) }}</strong>
+                  <span class="comercial-info-card-explica">{{ explicaSetoresPolitica(grade) }}</span>
+                </article>
               </section>
             </section>
           }
         </div>
+        }
       }
+    </div>
+  }
+
+  @if (modalFaixasGrade; as faixasGrade) {
+    <div class="modal-overlay" (click)="fecharModalFaixas()">
+      <div
+        class="modal-conteudo comercial-comissoes-modal-faixas"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cc-faixas-lista-titulo">
+        <div class="modal-cabecalho">
+          <div>
+            <h3 class="modal-titulo" id="cc-faixas-lista-titulo">
+              Faixas — {{ faixasGrade.titulo }}
+            </h3>
+            <p class="comercial-politica-hint">{{ rotuloVendedorSelecionado() }}</p>
+          </div>
+          <div class="comercial-faixas-toolbar">
+            @if (podeIncluirFaixa()) {
+              <button
+                type="button"
+                class="btn btn-salvar"
+                [disabled]="temLinhaEmEdicao() || faixasGrade.carregando || faixasGrade.carregandoPadrao"
+                (click)="incluirFaixaNaGrade(faixasGrade)">
+                Incluir faixa
+              </button>
+              <button
+                type="button"
+                class="btn btn-imprimir"
+                [disabled]="temLinhaEmEdicao() || faixasGrade.carregandoPadrao || faixasGrade.carregando"
+                (click)="pedirCarregarPadrao(faixasGrade)">
+                <i class="fas fa-download"></i>
+                {{ faixasGrade.carregandoPadrao ? 'Carregando…' : 'Carregar faixas padrão' }}
+              </button>
+            }
+            <button
+              type="button"
+              class="modal-fechar"
+              (click)="fecharModalFaixas()"
+              [disabled]="modalFaixaRow?.salvando"
+              aria-label="Fechar">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+        <div class="modal-corpo">
+          @if (faixasGrade.carregando) {
+            <div class="loading-message">Carregando faixas…</div>
+          } @else {
+            <div class="table-container">
+              <table class="vendas-table">
+                <thead>
+                  <tr>
+                    <th>De (%)</th>
+                    <th>Até (%)</th>
+                    <th>% comissão</th>
+                    <th>Bônus</th>
+                    @if (mostrarAcoesFaixa()) {
+                      <th>Ações</th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of faixasGrade.linhas; track row.localId) {
+                    <tr>
+                      <td>{{ formatarPercentual(row.percentualMetaDe) }}</td>
+                      <td>{{ formatarPercentual(row.percentualMetaAte) }}</td>
+                      <td>{{ formatarPercentual(row.percentualComissao) }}</td>
+                      <td>{{ formatarBonus(row.valorBonus) }}</td>
+                      @if (mostrarAcoesFaixa()) {
+                        <td class="action-buttons">
+                          @if (podeEditarFaixa()) {
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-editar"
+                              [disabled]="temLinhaEmEdicao()"
+                              (click)="alterarLinha(row, faixasGrade)">
+                              Alterar
+                            </button>
+                          }
+                          @if (podeExcluirFaixa() && row.id) {
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-excluir"
+                              [disabled]="temLinhaEmEdicao()"
+                              (click)="pedirExcluirFaixa(row, faixasGrade)">
+                              Excluir
+                            </button>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  } @empty {
+                    <tr class="no-data">
+                      <td [attr.colspan]="mostrarAcoesFaixa() ? 5 : 4">
+                        <i class="fas fa-inbox"></i> Nenhuma faixa cadastrada para {{ faixasGrade.titulo }}.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (modalFaixaGrade; as faixaGrade) {
+    @if (modalFaixaRow; as faixaRow) {
+    <div class="modal-overlay comercial-comissoes-modal-sobrepor" (click)="fecharModalFaixa()">
+      <div
+        class="modal-conteudo comercial-comissoes-modal-setores"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cc-faixa-titulo">
+        <div class="modal-cabecalho">
+          <div>
+            <h3 class="modal-titulo" id="cc-faixa-titulo">{{ rotuloModalFaixa() }}</h3>
+            <p class="comercial-politica-hint">{{ rotuloVendedorSelecionado() }}</p>
+          </div>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharModalFaixa()"
+            [disabled]="faixaRow.salvando"
+            aria-label="Fechar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-corpo">
+          <div class="filter-group comercial-politica-setores-field">
+            <label class="form-label" for="cc-faixa-de">De (%)</label>
+            <input
+              id="cc-faixa-de"
+              class="form-control"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              [(ngModel)]="faixaRow.draftDe"
+              [disabled]="faixaRow.salvando"
+              placeholder="0,00" />
+            <p class="comercial-politica-hint">
+              Início da faixa de atingimento da meta desta base.
+            </p>
+          </div>
+          <div class="filter-group comercial-politica-setores-field">
+            <label class="form-label" for="cc-faixa-ate">Até (%)</label>
+            <input
+              id="cc-faixa-ate"
+              class="form-control"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              [(ngModel)]="faixaRow.draftAte"
+              [disabled]="faixaRow.salvando"
+              placeholder="vazio = sem teto" />
+            <p class="comercial-politica-hint">
+              Fim da faixa. Vazio = sem teto (vale dali em diante).
+            </p>
+          </div>
+          <div class="filter-group comercial-politica-setores-field">
+            <label class="form-label" for="cc-faixa-comissao">% comissão</label>
+            <input
+              id="cc-faixa-comissao"
+              class="form-control"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              [(ngModel)]="faixaRow.draftComissao"
+              [disabled]="faixaRow.salvando"
+              placeholder="0,00" />
+            <p class="comercial-politica-hint">
+              Percentual aplicado sobre o valor da incidência quando o atingimento cair nesta faixa.
+            </p>
+          </div>
+          <div class="filter-group comercial-politica-setores-field">
+            <label class="form-label" for="cc-faixa-bonus">Bônus (R$)</label>
+            <input
+              id="cc-faixa-bonus"
+              class="form-control"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              [(ngModel)]="faixaRow.draftBonus"
+              (ngModelChange)="formatarDraftBonusModal()"
+              [disabled]="faixaRow.salvando"
+              placeholder="R$ 0,00" />
+            <p class="comercial-politica-hint">
+              Valor extra somado à comissão ao atingir esta faixa. Zero ou vazio = sem bônus.
+            </p>
+          </div>
+        </div>
+        <div class="modal-rodape">
+          <button
+            type="button"
+            class="btn btn-cancelar"
+            [disabled]="faixaRow.salvando"
+            (click)="fecharModalFaixa()">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar"
+            [disabled]="faixaRow.salvando || !podeSalvarLinha(faixaRow)"
+            (click)="salvarLinha(faixaRow, faixaGrade)">
+            {{ faixaRow.salvando ? 'Salvando…' : 'Salvar faixa' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    }
+  }
+
+  @if (modalPoliticaGrade; as grade) {
+    <div class="modal-overlay" (click)="fecharModalPolitica()">
+      <div
+        class="modal-conteudo comercial-comissoes-modal-setores"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cc-politica-titulo">
+        <div class="modal-cabecalho">
+          <div>
+            <h3 class="modal-titulo" id="cc-politica-titulo">
+              Regra — {{ grade.titulo }}
+            </h3>
+            <p class="comercial-politica-hint">
+              {{ rotuloVendedorSelecionado() }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharModalPolitica()"
+            [disabled]="grade.politicaSalvando"
+            aria-label="Fechar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-corpo">
+          <div class="filter-group comercial-politica-setores-field">
+            <label class="form-label" for="cc-incidencia-modal">Incidência</label>
+            <select
+              id="cc-incidencia-modal"
+              class="form-control"
+              [(ngModel)]="grade.draftIncidencia"
+              [disabled]="!podeEditarPolitica() || grade.politicaSalvando">
+              <option [ngValue]="ComercialIncidenciaComissao.PROPRIAS">Vendas próprias</option>
+              <option [ngValue]="ComercialIncidenciaComissao.LOJA">Vendas da loja</option>
+            </select>
+            <p class="comercial-politica-hint">
+              <strong>Vendas próprias:</strong> os cálculos das comissões são sobre as vendas do(a) vendedor(a).
+              <strong>Vendas da loja:</strong> os cálculos são sobre o total da unidade nesta base (card TOTAL).
+            </p>
+          </div>
+          <div class="filter-group comercial-politica-setores-field">
+            <label class="form-label" for="cc-trava-modal">Só pagar se a loja atingir (%)</label>
+            <input
+              id="cc-trava-modal"
+              class="form-control"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              [(ngModel)]="grade.draftMinimoLoja"
+              [disabled]="!podeEditarPolitica() || grade.politicaSalvando"
+              placeholder="vazio = sempre" />
+            <p class="comercial-politica-hint">
+              Vazio = paga sempre (recebe mesmo que a loja não tenha batido a meta).
+              Informe um % (ex.: 100) para só pagar se a loja atingir esse percentual; abaixo disso, zera comissão e bônus desta base.
+            </p>
+          </div>
+          @if (grade.tipoBase === ComercialTipoBase.REQUISICAO) {
+            <div class="filter-group comercial-politica-setores-field">
+              <label class="form-label" for="cc-setores-revenda-modal">
+                Setores de venda de marca própria que somam em Manipulados
+              </label>
+              <input
+                id="cc-setores-revenda-modal"
+                class="form-control"
+                type="text"
+                autocomplete="off"
+                [(ngModel)]="grade.draftCodigosSetorRevendaManipulados"
+                [disabled]="!podeEditarPolitica() || grade.politicaSalvando"
+                placeholder="ex.: 400 — vazio = só requisições" />
+              <p class="comercial-politica-hint">
+                Vazio = só requisições (nenhum setor de marca própria é contabilizado como manipulado).
+                Preenchido = produtos desses setores de marca própria somam no Manipulados deste vendedor.
+              </p>
+            </div>
+          }
+          @if (grade.tipoBase === ComercialTipoBase.MARCA_PROPRIA) {
+            <div class="filter-group comercial-politica-setores-field">
+              <label class="form-label" for="cc-setores-mp-modal">Setores da marca própria</label>
+              <input
+                id="cc-setores-mp-modal"
+                class="form-control"
+                type="text"
+                autocomplete="off"
+                [(ngModel)]="grade.draftCodigosSetor"
+                [disabled]="!podeEditarPolitica() || grade.politicaSalvando"
+                placeholder="ex.: 276, 330 — vazio = todos" />
+              <p class="comercial-politica-hint">
+                Vazio = todos os produtos de revenda entram na marca própria deste vendedor.
+                Preenchido = só esses setores entram no total de marca própria.
+              </p>
+            </div>
+          }
+        </div>
+        <div class="modal-rodape">
+          <button
+            type="button"
+            class="btn btn-cancelar"
+            [disabled]="grade.politicaSalvando"
+            (click)="fecharModalPolitica()">
+            Cancelar
+          </button>
+          @if (podeEditarPolitica()) {
+            <button
+              type="button"
+              class="btn btn-salvar"
+              [disabled]="grade.politicaSalvando || temLinhaEmEdicao()"
+              (click)="salvarPolitica(grade)">
+              {{ grade.politicaSalvando ? 'Salvando…' : 'Salvar regra' }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (modalSetoresUnidadeAberto) {
+    <div class="modal-overlay" (click)="fecharModalSetoresUnidade()">
+      <div
+        class="modal-conteudo comercial-comissoes-modal-setores"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cc-setores-unidade-titulo">
+        <div class="modal-cabecalho">
+          <div>
+            <h3 class="modal-titulo" id="cc-setores-unidade-titulo">Setores da unidade</h3>
+            <p class="comercial-politica-hint">{{ unidadeFiltro }}</p>
+          </div>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharModalSetoresUnidade()"
+            [disabled]="politicaUnidadeSalvando"
+            aria-label="Fechar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-corpo">
+          <div class="filter-group comercial-politica-setores-field">
+            <label class="form-label" for="cc-setores-unidade">Marca própria</label>
+            <input
+              id="cc-setores-unidade"
+              class="form-control"
+              type="text"
+              autocomplete="off"
+              [(ngModel)]="draftCodigosSetorUnidade"
+              [disabled]="!podeEditarPolitica() || politicaUnidadeSalvando || carregandoPoliticaUnidade"
+              placeholder="ex.: 276, 330 — vazio = todos" />
+            <p class="comercial-politica-hint">
+              Defina aqui os setores que vão somar o total de Marca própria da unidade.
+            </p>
+          </div>
+          <div class="filter-group comercial-politica-setores-field">
+            <label class="form-label" for="cc-setores-revenda-unidade">
+              Setores de venda de marca própria que somam em Manipulados
+            </label>
+            <input
+              id="cc-setores-revenda-unidade"
+              class="form-control"
+              type="text"
+              autocomplete="off"
+              [(ngModel)]="draftCodigosSetorRevendaUnidade"
+              [disabled]="!podeEditarPolitica() || politicaUnidadeSalvando || carregandoPoliticaUnidade"
+              placeholder="ex.: 400 — vazio = só requisições" />
+            <p class="comercial-politica-hint">
+              Produtos desses setores entram no Manipulados do TOTAL. Vazio = só requisições.
+            </p>
+          </div>
+        </div>
+        <div class="modal-rodape">
+          <button
+            type="button"
+            class="btn btn-cancelar"
+            [disabled]="politicaUnidadeSalvando"
+            (click)="fecharModalSetoresUnidade()">
+            Cancelar
+          </button>
+          @if (podeEditarPolitica()) {
+            <button
+              type="button"
+              class="btn btn-salvar"
+              [disabled]="politicaUnidadeSalvando || carregandoPoliticaUnidade || temLinhaEmEdicao()"
+              (click)="salvarPoliticaUnidade()">
+              {{ politicaUnidadeSalvando ? 'Salvando…' : 'Salvar setores' }}
+            </button>
+          }
+        </div>
+      </div>
     </div>
   }
 

@@ -4,11 +4,13 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
   // Helper para formatar nomes de entidade (snake_case ou kebab-case para Title Case)
   private formatName(name: string): string {
     return name
@@ -55,7 +57,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
         }
       } else if (code === '23503') {
         status = HttpStatus.BAD_REQUEST;
-        status = HttpStatus.BAD_REQUEST;
         // Extrai todos os nomes entre aspas e pega a última ocorrência como tabela dependente
         const quotedMatches = [...detail.matchAll(/"([^"]+)"/g)];
         const refTable = quotedMatches.at(-1)?.[1] ?? '';
@@ -69,7 +70,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
         } else {
           message = `Não é possível excluir ${entityName} pois está sendo usado no cadastro de ${refName}.`;
         }
+      } else if (code === '42703') {
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        this.logger.error(
+          `Coluna inexistente em ${request.url}: ${err.driverError?.message ?? exception.message}`,
+        );
+        message =
+          'O banco de dados ainda não aplicou as colunas desta versão. Aguarde o restart da API e tente de novo.';
       } else {
+        this.logger.error(
+          `QueryFailedError ${code} em ${request.url}: ${err.driverError?.message ?? exception.message}`,
+        );
         message = `Violação de integridade de dados em ${entityName}.`;
       }
     }

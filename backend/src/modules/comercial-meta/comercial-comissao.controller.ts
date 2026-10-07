@@ -31,6 +31,9 @@ import {
   FindComercialComissaoPoliticaDto,
   ComercialComissaoPoliticaResponseDto,
   SalvarComercialComissaoPoliticaDto,
+  FindComercialComissaoPoliticaUnidadeDto,
+  ComercialComissaoPoliticaUnidadeResponseDto,
+  SalvarComercialComissaoPoliticaUnidadeDto,
 } from './dto/comercial-comissao-faixa.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -99,6 +102,41 @@ export class ComercialComissaoController {
     @Body() dto: SalvarComercialComissaoPoliticaDto,
   ): Promise<ComercialComissaoPoliticaResponseDto> {
     return this.service.salvarPolitica(req.user, dto);
+  }
+
+  @Get('politica-unidade')
+  @Permissions(Permission.COMERCIAL_COMISSAO_READ)
+  @ApiOperation({
+    summary: 'Consulta setores de marca própria parametrizados na unidade',
+  })
+  @ApiResponse({
+    status: 200,
+    type: ComercialComissaoPoliticaUnidadeResponseDto,
+  })
+  listarPoliticaUnidade(
+    @Req() req: { user: Usuario },
+    @Query() query: FindComercialComissaoPoliticaUnidadeDto,
+  ): Promise<ComercialComissaoPoliticaUnidadeResponseDto> {
+    return this.service.listarPoliticaUnidade(req.user, query.unidade);
+  }
+
+  @Put('politica-unidade')
+  @Permissions(
+    Permission.COMERCIAL_COMISSAO_UPDATE,
+    Permission.COMERCIAL_COMISSAO_CREATE,
+  )
+  @ApiOperation({
+    summary: 'Salva setores de marca própria da unidade (card TOTAL)',
+  })
+  @ApiResponse({
+    status: 200,
+    type: ComercialComissaoPoliticaUnidadeResponseDto,
+  })
+  salvarPoliticaUnidade(
+    @Req() req: { user: Usuario },
+    @Body() dto: SalvarComercialComissaoPoliticaUnidadeDto,
+  ): Promise<ComercialComissaoPoliticaUnidadeResponseDto> {
+    return this.service.salvarPoliticaUnidade(req.user, dto);
   }
 
   @Post('carregar-padrao')

@@ -11,6 +11,8 @@ import {
   CarregarComercialComissaoPadraoPendentesResponse,
   ComercialComissaoPoliticaResponse,
   SalvarComercialComissaoPoliticaDto,
+  ComercialComissaoPoliticaUnidadeResponse,
+  SalvarComercialComissaoPoliticaUnidadeDto,
 } from '../models/comercial-comissao.model';
 
 const base = `${environment.apiUrl}/comercial/comissoes`;
@@ -90,6 +92,25 @@ export class ComercialComissaoService {
   ): Observable<ComercialComissaoPoliticaResponse> {
     return this.http.put<ComercialComissaoPoliticaResponse>(
       `${base}/politica`,
+      dto,
+    );
+  }
+
+  listarPoliticaUnidade(
+    unidade: Unidade,
+  ): Observable<ComercialComissaoPoliticaUnidadeResponse> {
+    const params = new HttpParams().set('unidade', unidade);
+    return this.http.get<ComercialComissaoPoliticaUnidadeResponse>(
+      `${base}/politica-unidade`,
+      { params },
+    );
+  }
+
+  salvarPoliticaUnidade(
+    dto: SalvarComercialComissaoPoliticaUnidadeDto,
+  ): Observable<ComercialComissaoPoliticaUnidadeResponse> {
+    return this.http.put<ComercialComissaoPoliticaUnidadeResponse>(
+      `${base}/politica-unidade`,
       dto,
     );
   }

@@ -139,14 +139,75 @@
                       </span>
                     }
                   </header>
-                  <div class="comercial-acomp-card-metrics has-rejeitado">
+                  <div
+                    class="comercial-acomp-manip-grid"
+                    [class.has-terceiros]="card.isTotal">
                     <div class="comercial-acomp-metric is-success">
-                      <span class="label">Manipulados</span>
-                      <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
-                      <span class="sub">{{ card.quantidadeRecebidoRequisicao }} requisição(ões)</span>
+                      <span class="label">
+                        Manipulado
+                        <small>(requisições)</small>
+                      </span>
+                      <span class="sub">{{ rotuloQtdManipulados(card.quantidadeRecebidoRequisicao, card.quantidadeFormulasRequisicao) }}</span>
+                      <span class="value">{{ formatarMoeda(card.valorRequisicaoPura) }}</span>
                     </div>
+                    <div class="comercial-acomp-metric is-success">
+                      <span class="label">
+                        Manipulado
+                        <small>({{ rotuloManipuladoSetor(card) }})</small>
+                      </span>
+                      <span class="sub">{{ rotuloQtdSetorManipulado(card.quantidadeRevendaManipulados) }}</span>
+                      <span class="value">{{ formatarMoeda(card.valorRevendaManipulados) }}</span>
+                    </div>
+                    @if (card.isTotal) {
+                      <div class="comercial-acomp-metric is-success is-terceiros">
+                        <span class="label">
+                          Manipulado
+                          <small>(terceiros)</small>
+                          <button
+                            type="button"
+                            class="comercial-acomp-info-btn"
+                            title="Baixas de vendas de terceiro no caixa da unidade. Entram na meta e na faixa; não entram no valor da comissão."
+                            aria-label="Informação sobre manipulados de terceiros"
+                            (click)="abrirInfoManipulados($event, card)">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                          </button>
+                        </span>
+                        <span class="sub">{{ rotuloQtdTerceiros(card.quantidadeTerceirosManipulados) }}</span>
+                        <span class="value">{{ formatarMoeda(card.valorTerceirosManipulados) }}</span>
+                      </div>
+                    }
+                    <div class="comercial-acomp-metric is-success is-total-manip">
+                      <span class="label">
+                        Manipulado
+                        <small>(total)</small>
+                        <button
+                          type="button"
+                          class="comercial-acomp-info-btn"
+                          title="O que compõe o total de manipulados"
+                          aria-label="Informação sobre o total de manipulados"
+                          (click)="abrirInfoManipulados($event, card)">
+                          <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </button>
+                      </span>
+                      <span class="sub">{{ rotuloQtdManipulados(card.quantidadeRecebidoRequisicao, card.quantidadeFormulasRequisicao) }}</span>
+                      <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
+                    </div>
+                  </div>
+                  <div class="comercial-acomp-card-metrics">
                     <div class="comercial-acomp-metric is-primary">
-                      <span class="label">Marca própria</span>
+                      <span class="label">
+                        Marca própria
+                        @if (card.isTotal && temSetoresUnidade(card)) {
+                          <button
+                            type="button"
+                            class="comercial-acomp-info-btn"
+                            title="Como a marca própria da loja é calculada"
+                            aria-label="Informação sobre marca própria da loja"
+                            (click)="abrirInfoMarcaPropria($event)">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                          </button>
+                        }
+                      </span>
                       <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
                       <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
                     </div>
@@ -382,7 +443,7 @@
             <div class="comercial-acomp-metric is-success">
               <span class="label">Manipulados</span>
               <span class="value">{{ formatarMoeda(itemDetalhe.valorRecebidoRequisicao) }}</span>
-              <span class="sub">{{ itemDetalhe.quantidadeRecebidoRequisicao }} requisição(ões)</span>
+              <span class="sub">{{ rotuloQtdManipulados(itemDetalhe.quantidadeRecebidoRequisicao, itemDetalhe.quantidadeFormulasRequisicao) }}</span>
             </div>
             <div class="comercial-acomp-metric is-primary">
               <span class="label">Marca própria</span>
@@ -539,6 +600,109 @@
               }
             </table>
           </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+@if (infoManipuladosAberto && infoManipuladosCard) {
+  <div class="modal-overlay" (click)="fecharInfoManipulados()">
+    <div
+      class="modal-conteudo comercial-acomp-modal-info"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ca-manip-info-titulo">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo" id="ca-manip-info-titulo">
+          Manipulados — {{ infoManipuladosCard.titulo }}
+        </h3>
+        <button
+          type="button"
+          class="modal-fechar"
+          (click)="fecharInfoManipulados()"
+          aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>
+          O total de Manipulados soma requisições e a revenda dos setores configurados.
+          @if (infoManipuladosCard.isTotal) {
+            No card da loja entram também as baixas de vendas de terceiro do caixa.
+            Terceiros contam para a meta e para a faixa da comissão, mas não entram no valor pago de comissão.
+          }
+        </p>
+        <ul class="comercial-acomp-info-setores">
+          <li>
+            Requisições:
+            {{ formatarMoeda(infoManipuladosCard.valorRequisicaoPura) }}
+            —
+            {{ rotuloQtdManipulados(
+              infoManipuladosCard.quantidadeRecebidoRequisicao,
+              infoManipuladosCard.quantidadeFormulasRequisicao
+            ) }}
+          </li>
+          <li>
+            Revenda
+            @if (infoManipuladosCard.codigosSetorRevendaManipulados?.length) {
+              (setores {{ rotuloSetores(infoManipuladosCard.codigosSetorRevendaManipulados) }}):
+            } @else {
+              (nenhum setor):
+            }
+            {{ formatarMoeda(infoManipuladosCard.valorRevendaManipulados) }}
+            —
+            {{ rotuloQtdSetorManipulado(infoManipuladosCard.quantidadeRevendaManipulados) }}
+          </li>
+          @if (infoManipuladosCard.isTotal) {
+            <li>
+              Terceiros (baixas no caixa da unidade):
+              {{ formatarMoeda(infoManipuladosCard.valorTerceirosManipulados) }}
+              —
+              {{ rotuloQtdTerceiros(infoManipuladosCard.quantidadeTerceirosManipulados) }}
+            </li>
+          }
+          <li>
+            <strong>
+              Total: {{ formatarMoeda(infoManipuladosCard.valorRecebidoRequisicao) }}
+            </strong>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+}
+@if (infoMarcaPropriaAberto) {
+  <div class="modal-overlay" (click)="fecharInfoMarcaPropria()">
+    <div
+      class="modal-conteudo comercial-acomp-modal-info"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ca-mp-info-titulo">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo" id="ca-mp-info-titulo">Marca própria da loja</h3>
+        <button
+          type="button"
+          class="modal-fechar"
+          (click)="fecharInfoMarcaPropria()"
+          aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>
+          Somente os produtos dos setores configurados na unidade entram na soma
+          de marca própria do card TOTAL, no % da meta e na projeção.
+        </p>
+        @if ((totais.codigosSetorMarcaPropria ?? []).length) {
+          <p class="comercial-acomp-info-setores-label">Setores considerados:</p>
+          <ul class="comercial-acomp-info-setores">
+            @for (codigo of totais.codigosSetorMarcaPropria; track codigo) {
+              <li>{{ codigo }}</li>
+            }
+          </ul>
         }
       </div>
     </div>

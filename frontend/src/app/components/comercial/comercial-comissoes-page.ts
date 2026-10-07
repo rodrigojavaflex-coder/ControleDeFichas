@@ -40,8 +40,12 @@ interface FaixaGrade {
   carregandoPadrao: boolean;
   incidencia: ComercialIncidenciaComissao;
   percentualMinimoLoja: number | null;
+  codigosSetor: number[];
+  codigosSetorRevendaManipulados: number[];
   draftIncidencia: ComercialIncidenciaComissao;
   draftMinimoLoja: string;
+  draftCodigosSetor: string;
+  draftCodigosSetorRevendaManipulados: string;
   politicaSalvando: boolean;
 }
 
@@ -64,6 +68,7 @@ export class ComercialComissoesPage implements OnInit {
   private service = inject(ComercialComissaoService);
 
   readonly ComercialIncidenciaComissao = ComercialIncidenciaComissao;
+  readonly ComercialTipoBase = ComercialTipoBase;
   readonly grades: FaixaGrade[] = [
     {
       tipoBase: ComercialTipoBase.REQUISICAO,
@@ -73,8 +78,12 @@ export class ComercialComissoesPage implements OnInit {
       carregandoPadrao: false,
       incidencia: ComercialIncidenciaComissao.PROPRIAS,
       percentualMinimoLoja: null,
+      codigosSetor: [],
+      codigosSetorRevendaManipulados: [],
       draftIncidencia: ComercialIncidenciaComissao.PROPRIAS,
       draftMinimoLoja: '',
+      draftCodigosSetor: '',
+      draftCodigosSetorRevendaManipulados: '',
       politicaSalvando: false,
     },
     {
@@ -85,8 +94,12 @@ export class ComercialComissoesPage implements OnInit {
       carregandoPadrao: false,
       incidencia: ComercialIncidenciaComissao.PROPRIAS,
       percentualMinimoLoja: null,
+      codigosSetor: [],
+      codigosSetorRevendaManipulados: [],
       draftIncidencia: ComercialIncidenciaComissao.PROPRIAS,
       draftMinimoLoja: '',
+      draftCodigosSetor: '',
+      draftCodigosSetorRevendaManipulados: '',
       politicaSalvando: false,
     },
   ];
@@ -98,6 +111,17 @@ export class ComercialComissoesPage implements OnInit {
   carregandoVendedores = false;
   carregandoPendentes = false;
   mensagemResultado = '';
+  draftCodigosSetorUnidade = '';
+  draftCodigosSetorRevendaUnidade = '';
+  codigosSetorUnidade: number[] = [];
+  codigosSetorRevendaUnidade: number[] = [];
+  carregandoPoliticaUnidade = false;
+  politicaUnidadeSalvando = false;
+  modalSetoresUnidadeAberto = false;
+  modalPoliticaGrade: FaixaGrade | null = null;
+  modalFaixaGrade: FaixaGrade | null = null;
+  modalFaixaRow: FaixaRow | null = null;
+  modalFaixasGrade: FaixaGrade | null = null;
 
   confirmVisivel = false;
   confirmTitulo = '';
@@ -115,6 +139,7 @@ export class ComercialComissoesPage implements OnInit {
     this.initializeUnidadeFilter();
     if (this.unidadeFiltro) {
       this.carregarVendedores();
+      this.carregarPoliticaUnidade();
     }
   }
 
@@ -154,7 +179,7 @@ export class ComercialComissoesPage implements OnInit {
   }
 
   temLinhaEmEdicao(): boolean {
-    return this.grades.some((g) => g.linhas.some((r) => r.editando));
+    return this.modalFaixaRow != null || this.grades.some((g) => g.linhas.some((r) => r.editando || r.salvando));
   }
 
   podeSalvarLinha(row: FaixaRow): boolean {
@@ -165,13 +190,24 @@ export class ComercialComissoesPage implements OnInit {
     return `${v.nome} (${v.codigoVendedorErp})`;
   }
 
+  rotuloVendedorSelecionado(): string {
+    const atual = this.vendedores.find((v) => v.funcionarioId === this.funcionarioId);
+    return atual ? this.rotuloVendedor(atual) : '';
+  }
+
   onUnidadeChange(): void {
     this.funcionarioId = '';
     this.vendedores = [];
     this.limparGrades();
     this.mensagemResultado = '';
+    this.codigosSetorUnidade = [];
+    this.draftCodigosSetorUnidade = '';
+    this.codigosSetorRevendaUnidade = [];
+    this.draftCodigosSetorRevendaUnidade = '';
+    this.modalSetoresUnidadeAberto = false;
     if (!this.unidadeFiltro) return;
     this.carregarVendedores();
+    this.carregarPoliticaUnidade();
   }
 
   onVendedorChange(): void {
@@ -181,48 +217,75 @@ export class ComercialComissoesPage implements OnInit {
     this.carregarPolitica();
   }
 
+  abrirModalFaixas(grade: FaixaGrade): void {
+    this.fecharModalPolitica();
+    if (this.modalSetoresUnidadeAberto) {
+      this.fecharModalSetoresUnidade();
+    }
+    this.modalFaixasGrade = grade;
+  }
+
+  fecharModalFaixas(): void {
+    if (this.modalFaixaRow?.salvando) return;
+    this.modalFaixasGrade = null;
+  }
+
+  rotuloResumoFaixa(row: FaixaRow): string {
+    const bonus =
+      row.valorBonus && row.valorBonus > 0
+        ? ` · bônus ${this.formatarBonus(row.valorBonus)}`
+        : '';
+    return `${this.formatarPercentual(row.percentualMetaDe)} a ${this.formatarPercentual(row.percentualMetaAte)} → ${this.formatarPercentual(row.percentualComissao)}${bonus}`;
+  }
+
   incluirFaixaNaGrade(grade: FaixaGrade): void {
     if (!this.podeIncluirFaixa() || this.temLinhaEmEdicao()) return;
-    grade.linhas = [
-      ...grade.linhas,
-      {
-        localId: this.novoLocalId(),
-        id: null,
-        tipoBase: grade.tipoBase,
-        percentualMetaDe: null,
-        percentualMetaAte: null,
-        percentualComissao: null,
-        valorBonus: null,
-        draftDe: '',
-        draftAte: '',
-        draftComissao: '',
-        draftBonus: '',
-        editando: true,
-        salvando: false,
-      },
-    ];
-  }
-
-  alterarLinha(row: FaixaRow): void {
-    if (!this.podeEditarFaixa() || this.temLinhaEmEdicao()) return;
-    row.editando = true;
-    row.draftDe = this.formatNumero(row.percentualMetaDe);
-    row.draftAte = this.formatNumero(row.percentualMetaAte);
-    row.draftComissao = this.formatNumero(row.percentualComissao);
-    row.draftBonus = this.formatarMoedaInput(row.valorBonus);
-  }
-
-  cancelarEdicao(row: FaixaRow, grade: FaixaGrade): void {
-    if (!row.id) {
-      grade.linhas = grade.linhas.filter((r) => r.localId !== row.localId);
-      return;
+    this.fecharModalPolitica();
+    if (this.modalSetoresUnidadeAberto) {
+      this.fecharModalSetoresUnidade();
     }
-    row.editando = false;
-    row.salvando = false;
+    this.modalFaixaGrade = grade;
+    this.modalFaixaRow = {
+      localId: this.novoLocalId(),
+      id: null,
+      tipoBase: grade.tipoBase,
+      percentualMetaDe: null,
+      percentualMetaAte: null,
+      percentualComissao: null,
+      valorBonus: null,
+      draftDe: '',
+      draftAte: '',
+      draftComissao: '',
+      draftBonus: '',
+      editando: true,
+      salvando: false,
+    };
+  }
+
+  alterarLinha(row: FaixaRow, grade: FaixaGrade): void {
+    if (!this.podeEditarFaixa() || this.temLinhaEmEdicao()) return;
+    this.fecharModalPolitica();
+    if (this.modalSetoresUnidadeAberto) {
+      this.fecharModalSetoresUnidade();
+    }
     row.draftDe = this.formatNumero(row.percentualMetaDe);
     row.draftAte = this.formatNumero(row.percentualMetaAte);
     row.draftComissao = this.formatNumero(row.percentualComissao);
     row.draftBonus = this.formatarMoedaInput(row.valorBonus);
+    row.salvando = false;
+    this.modalFaixaGrade = grade;
+    this.modalFaixaRow = row;
+  }
+
+  fecharModalFaixa(): void {
+    if (this.modalFaixaRow?.salvando) return;
+    this.modalFaixaGrade = null;
+    this.modalFaixaRow = null;
+  }
+
+  rotuloModalFaixa(): string {
+    const titulo = this.modalFaixaGrade?.titulo ?? 'faixa';
+    return this.modalFaixaRow?.id ? `Alterar faixa — ${titulo}` : `Incluir faixa — ${titulo}`;
   }
 
   salvarLinha(row: FaixaRow, grade: FaixaGrade): void {
@@ -261,7 +324,13 @@ export class ComercialComissoesPage implements OnInit {
       : this.service.criarFaixa(dto);
     req.subscribe({
       next: (lista) => {
+        const incluida = !row.id;
         this.aplicarLista(grade, lista);
+        this.modalFaixaGrade = null;
+        this.modalFaixaRow = null;
+        this.mensagemResultado = incluida
+          ? `Faixa incluída em ${grade.titulo}.`
+          : `Faixa de ${grade.titulo} atualizada.`;
       },
       error: (e) => {
         row.salvando = false;
@@ -333,6 +402,11 @@ export class ComercialComissoesPage implements OnInit {
 
   formatarDraftBonus(row: FaixaRow): void {
     row.draftBonus = this.formatarMoedaDigitacao(row.draftBonus);
+  }
+
+  formatarDraftBonusModal(): void {
+    if (!this.modalFaixaRow) return;
+    this.formatarDraftBonus(this.modalFaixaRow);
   }
 
   private formatarFaixaRow(row: FaixaRow): string {
@@ -512,10 +586,18 @@ export class ComercialComissoesPage implements OnInit {
       grade.carregandoPadrao = false;
       grade.incidencia = ComercialIncidenciaComissao.PROPRIAS;
       grade.percentualMinimoLoja = null;
+      grade.codigosSetor = [];
+      grade.codigosSetorRevendaManipulados = [];
       grade.draftIncidencia = ComercialIncidenciaComissao.PROPRIAS;
       grade.draftMinimoLoja = '';
+      grade.draftCodigosSetor = '';
+      grade.draftCodigosSetorRevendaManipulados = '';
       grade.politicaSalvando = false;
     }
+    this.modalPoliticaGrade = null;
+    this.modalFaixaGrade = null;
+    this.modalFaixaRow = null;
+    this.modalFaixasGrade = null;
   }
 
   private carregarPolitica(): void {
@@ -536,6 +618,222 @@ export class ComercialComissoesPage implements OnInit {
     });
   }
 
+  abrirModalSetoresUnidade(): void {
+    if (!this.unidadeFiltro) return;
+    this.fecharModalPolitica();
+    this.draftCodigosSetorUnidade = this.formatarCodigosSetor(
+      this.codigosSetorUnidade,
+    );
+    this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
+      this.codigosSetorRevendaUnidade,
+    );
+    this.modalSetoresUnidadeAberto = true;
+  }
+
+  abrirModalPolitica(grade: FaixaGrade): void {
+    if (this.modalSetoresUnidadeAberto) {
+      this.fecharModalSetoresUnidade();
+    }
+    if (this.modalFaixasGrade && !this.modalFaixaRow?.salvando) {
+      this.modalFaixasGrade = null;
+    }
+    this.restaurarDraftPolitica(grade);
+    this.modalPoliticaGrade = grade;
+  }
+
+  fecharModalPolitica(): void {
+    if (this.modalPoliticaGrade?.politicaSalvando) return;
+    if (this.modalPoliticaGrade) {
+      this.restaurarDraftPolitica(this.modalPoliticaGrade);
+    }
+    this.modalPoliticaGrade = null;
+  }
+
+  rotuloIncidencia(grade: FaixaGrade): string {
+    return grade.incidencia === ComercialIncidenciaComissao.LOJA
+      ? 'Vendas da loja'
+      : 'Vendas próprias';
+  }
+
+  explicaIncidencia(grade: FaixaGrade): string {
+    return grade.incidencia === ComercialIncidenciaComissao.LOJA
+      ? 'Os cálculos das comissões são sobre o total da unidade.'
+      : 'Os cálculos das comissões são sobre as vendas do(a) vendedor(a).';
+  }
+
+  rotuloTrava(grade: FaixaGrade): string {
+    if (grade.percentualMinimoLoja == null) {
+      return 'Paga sempre';
+    }
+    return `Só se a loja atingir ${this.formatarPercentual(grade.percentualMinimoLoja)}`;
+  }
+
+  explicaTrava(grade: FaixaGrade): string {
+    if (grade.percentualMinimoLoja == null) {
+      return 'Recebe mesmo que a loja não tenha batido a meta.';
+    }
+    return 'Se a loja não atingir esse % da meta, zera comissão e bônus.';
+  }
+
+  rotuloSetoresPolitica(grade: FaixaGrade): string {
+    if (grade.tipoBase === ComercialTipoBase.REQUISICAO) {
+      const codigos = grade.codigosSetorRevendaManipulados;
+      if (!codigos.length) {
+        return 'Só requisições';
+      }
+      return `Vendas do(s) setor(es) ${this.formatarCodigosSetor(codigos)} somam em Manipulados`;
+    }
+    const codigos = grade.codigosSetor;
+    if (!codigos.length) {
+      return 'Todos os produtos de revenda';
+    }
+    return `Vendas do(s) setor(es) ${this.formatarCodigosSetor(codigos)}`;
+  }
+
+  explicaSetoresPolitica(grade: FaixaGrade): string {
+    if (grade.tipoBase === ComercialTipoBase.REQUISICAO) {
+      if (!grade.codigosSetorRevendaManipulados.length) {
+        return 'Nenhum setor de marca própria é contabilizado como manipulado.';
+      }
+      return 'Produtos desses setores de marca própria entram no Manipulados deste vendedor.';
+    }
+    if (!grade.codigosSetor.length) {
+      return 'Não há recorte: qualquer setor de revenda entra na marca própria deste vendedor.';
+    }
+    return 'Só esses setores entram no total de marca própria deste vendedor.';
+  }
+
+  rotuloSetoresUnidadeMp(): string {
+    if (!this.codigosSetorUnidade.length) {
+      return 'Todos os produtos de revenda';
+    }
+    return `Vendas do(s) setor(es) ${this.formatarCodigosSetor(this.codigosSetorUnidade)}`;
+  }
+
+  explicaSetoresUnidadeMp(): string {
+    if (!this.codigosSetorUnidade.length) {
+      return 'O TOTAL de marca própria da unidade soma qualquer setor de revenda.';
+    }
+    return 'O TOTAL de marca própria da unidade soma só esses setores.';
+  }
+
+  rotuloSetoresUnidadeManip(): string {
+    if (!this.codigosSetorRevendaUnidade.length) {
+      return 'Só requisições';
+    }
+    return `Vendas do(s) setor(es) ${this.formatarCodigosSetor(this.codigosSetorRevendaUnidade)} somam em Manipulados`;
+  }
+
+  explicaSetoresUnidadeManip(): string {
+    if (!this.codigosSetorRevendaUnidade.length) {
+      return 'Nenhum setor de marca própria é contabilizado como manipulado no TOTAL.';
+    }
+    return 'Produtos desses setores de marca própria entram no Manipulados do TOTAL.';
+  }
+
+  private restaurarDraftPolitica(grade: FaixaGrade): void {
+    grade.draftIncidencia = grade.incidencia;
+    grade.draftMinimoLoja =
+      grade.percentualMinimoLoja == null
+        ? ''
+        : this.formatNumero(grade.percentualMinimoLoja);
+    grade.draftCodigosSetor = this.formatarCodigosSetor(grade.codigosSetor);
+    grade.draftCodigosSetorRevendaManipulados = this.formatarCodigosSetor(
+      grade.codigosSetorRevendaManipulados,
+    );
+  }
+
+  fecharModalSetoresUnidade(): void {
+    if (this.politicaUnidadeSalvando) return;
+    this.draftCodigosSetorUnidade = this.formatarCodigosSetor(
+      this.codigosSetorUnidade,
+    );
+    this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
+      this.codigosSetorRevendaUnidade,
+    );
+    this.modalSetoresUnidadeAberto = false;
+  }
+
+  private carregarPoliticaUnidade(): void {
+    const unidade = this.unidadeFiltro;
+    if (!unidade || !this.podeLer()) return;
+    this.carregandoPoliticaUnidade = true;
+    this.service.listarPoliticaUnidade(unidade).subscribe({
+      next: (res) => {
+        if (this.unidadeFiltro !== unidade) return;
+        this.carregandoPoliticaUnidade = false;
+        this.codigosSetorUnidade = res.codigosSetor ?? [];
+        this.draftCodigosSetorUnidade = this.formatarCodigosSetor(
+          this.codigosSetorUnidade,
+        );
+        this.codigosSetorRevendaUnidade =
+          res.codigosSetorRevendaManipulados ?? [];
+        this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
+          this.codigosSetorRevendaUnidade,
+        );
+      },
+      error: (e) => {
+        if (this.unidadeFiltro !== unidade) return;
+        this.carregandoPoliticaUnidade = false;
+        this.errors.show(
+          e?.error?.message ?? 'Erro ao carregar setores da unidade.',
+          'Comissões Comercial',
+        );
+      },
+    });
+  }
+
+  salvarPoliticaUnidade(): void {
+    if (
+      !this.podeEditarPolitica() ||
+      !this.unidadeFiltro ||
+      this.politicaUnidadeSalvando
+    ) {
+      return;
+    }
+    const parsed = this.parseCodigosSetor(this.draftCodigosSetorUnidade);
+    const parsedRevenda = this.parseCodigosSetor(
+      this.draftCodigosSetorRevendaUnidade,
+    );
+    if (parsed == null || parsedRevenda == null) {
+      this.errors.show(
+        'Informe códigos de setor numéricos separados por vírgula (ex.: 276, 330), ou deixe vazio.',
+        'Comissões Comercial',
+      );
+      return;
+    }
+    this.politicaUnidadeSalvando = true;
+    this.service
+      .salvarPoliticaUnidade({
+        unidade: this.unidadeFiltro,
+        codigosSetor: parsed,
+        codigosSetorRevendaManipulados: parsedRevenda,
+      })
+      .subscribe({
+        next: (res) => {
+          this.politicaUnidadeSalvando = false;
+          this.codigosSetorUnidade = res.codigosSetor ?? [];
+          this.draftCodigosSetorUnidade = this.formatarCodigosSetor(
+            this.codigosSetorUnidade,
+          );
+          this.codigosSetorRevendaUnidade =
+            res.codigosSetorRevendaManipulados ?? [];
+          this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
+            this.codigosSetorRevendaUnidade,
+          );
+          this.mensagemResultado = 'Setores da unidade salvos.';
+          this.modalSetoresUnidadeAberto = false;
+        },
+        error: (e) => {
+          this.politicaUnidadeSalvando = false;
+          this.errors.show(
+            e?.error?.message ?? 'Erro ao salvar setores da unidade.',
+            'Comissões Comercial',
+          );
+        },
+      });
+  }
+
   salvarPolitica(grade: FaixaGrade): void {
     if (!this.podeEditarPolitica() || !this.funcionarioId || grade.politicaSalvando) {
       return;
@@ -550,6 +848,32 @@ export class ComercialComissoesPage implements OnInit {
       );
       return;
     }
+    let codigosSetor: number[] = [];
+    let codigosSetorRevendaManipulados: number[] = [];
+    if (grade.tipoBase === ComercialTipoBase.MARCA_PROPRIA) {
+      const parsed = this.parseCodigosSetor(grade.draftCodigosSetor);
+      if (parsed == null) {
+        this.errors.show(
+          'Informe códigos de setor numéricos separados por vírgula (ex.: 276, 330), ou deixe vazio para todos os produtos.',
+          'Comissões Comercial',
+        );
+        return;
+      }
+      codigosSetor = parsed;
+    }
+    if (grade.tipoBase === ComercialTipoBase.REQUISICAO) {
+      const parsedRev = this.parseCodigosSetor(
+        grade.draftCodigosSetorRevendaManipulados,
+      );
+      if (parsedRev == null) {
+        this.errors.show(
+          'Informe códigos de setor numéricos separados por vírgula (ex.: 400), ou deixe vazio para não somar revenda em Manipulados.',
+          'Comissões Comercial',
+        );
+        return;
+      }
+      codigosSetorRevendaManipulados = parsedRev;
+    }
     grade.politicaSalvando = true;
     this.service
       .salvarPolitica({
@@ -557,10 +881,15 @@ export class ComercialComissoesPage implements OnInit {
         tipoBase: grade.tipoBase,
         incidencia: grade.draftIncidencia,
         percentualMinimoLoja: minimo,
+        ...(grade.tipoBase === ComercialTipoBase.MARCA_PROPRIA
+          ? { codigosSetor }
+          : { codigosSetorRevendaManipulados }),
       })
       .subscribe({
         next: (res) => {
           this.aplicarPolitica(res.itens);
+          this.modalPoliticaGrade = null;
+          this.mensagemResultado = `Regra de ${grade.titulo} salva.`;
         },
         error: (e) => {
           grade.politicaSalvando = false;
@@ -577,6 +906,8 @@ export class ComercialComissoesPage implements OnInit {
       tipoBase: ComercialTipoBase;
       incidencia: ComercialIncidenciaComissao;
       percentualMinimoLoja: number | null;
+      codigosSetor?: number[];
+      codigosSetorRevendaManipulados?: number[];
     }>,
   ): void {
     for (const grade of this.grades) {
@@ -584,13 +915,44 @@ export class ComercialComissoesPage implements OnInit {
       grade.incidencia =
         item?.incidencia ?? ComercialIncidenciaComissao.PROPRIAS;
       grade.percentualMinimoLoja = item?.percentualMinimoLoja ?? null;
+      grade.codigosSetor = item?.codigosSetor ?? [];
+      grade.codigosSetorRevendaManipulados =
+        item?.codigosSetorRevendaManipulados ?? [];
       grade.draftIncidencia = grade.incidencia;
       grade.draftMinimoLoja =
         grade.percentualMinimoLoja == null
           ? ''
           : this.formatNumero(grade.percentualMinimoLoja);
+      grade.draftCodigosSetor = this.formatarCodigosSetor(grade.codigosSetor);
+      grade.draftCodigosSetorRevendaManipulados = this.formatarCodigosSetor(
+        grade.codigosSetorRevendaManipulados,
+      );
       grade.politicaSalvando = false;
     }
+  }
+
+  private parseCodigosSetor(texto: string): number[] | null {
+    const bruto = texto.trim();
+    if (!bruto) {
+      return [];
+    }
+    const partes = bruto.split(/[,;/\s]+/).filter((p) => p.length > 0);
+    const unicos = new Set<number>();
+    for (const parte of partes) {
+      if (!/^\d+$/.test(parte)) {
+        return null;
+      }
+      const n = Number(parte);
+      if (!Number.isInteger(n) || n <= 0) {
+        return null;
+      }
+      unicos.add(n);
+    }
+    return [...unicos].sort((a, b) => a - b);
+  }
+
+  private formatarCodigosSetor(codigos: number[]): string {
+    return (codigos ?? []).join(', ');
   }
 
   private initializeUnidadeFilter(): void {

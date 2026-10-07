@@ -34,7 +34,10 @@ import {
   CarregarComercialComissaoPadraoPendentesResponseDto,
   ComercialComissaoPoliticaResponseDto,
   SalvarComercialComissaoPoliticaDto,
+  ComercialComissaoPoliticaUnidadeResponseDto,
+  SalvarComercialComissaoPoliticaUnidadeDto,
 } from './dto/comercial-comissao-faixa.dto';
+import { ComercialComissaoPoliticaUnidade } from './entities/comercial-comissao-politica-unidade.entity';
 
 interface FaixaIntervalo {
   id?: string;
@@ -71,6 +74,25 @@ function faixasPadraoPorTipo(tipoBase: ComercialTipoBase): ReadonlyArray<FaixaPa
     : FAIXAS_PADRAO_REQUISICAO;
 }
 
+function normalizarCodigosSetor(
+  valores: number[] | null | undefined,
+): number[] {
+  if (!valores?.length) {
+    return [];
+  }
+  const unicos = new Set<number>();
+  for (const bruto of valores) {
+    const n = Number(bruto);
+    if (!Number.isInteger(n) || n <= 0) {
+      throw new BadRequestException(
+        'Códigos de setor devem ser inteiros positivos (ex.: 276, 330).',
+      );
+    }
+    unicos.add(n);
+  }
+  return [...unicos].sort((a, b) => a - b);
+}
+
 @Injectable()
 export class ComercialMetaService {
   private readonly logger = new Logger(ComercialMetaService.name);
@@ -84,6 +106,8 @@ export class ComercialMetaService {
     private readonly faixaRepo: Repository<ComercialComissaoFaixa>,
     @InjectRepository(ComercialComissaoPolitica)
     private readonly politicaRepo: Repository<ComercialComissaoPolitica>,
+    @InjectRepository(ComercialComissaoPoliticaUnidade)
+    private readonly politicaUnidadeRepo: Repository<ComercialComissaoPoliticaUnidade>,
     @InjectRepository(Funcionario)
     private readonly funcionarioRepo: Repository<Funcionario>,
     private readonly dataSource: DataSource,
@@ -332,6 +356,16 @@ export class ComercialMetaService {
             row?.percentualMinimoLoja == null
               ? null
               : Number(row.percentualMinimoLoja),
+          codigosSetor:
+            tipoBase === ComercialTipoBase.MARCA_PROPRIA
+              ? (row?.codigosSetor ?? []).map(Number).filter((n) => n > 0)
+              : [],
+          codigosSetorRevendaManipulados:
+            tipoBase === ComercialTipoBase.REQUISICAO
+              ? (row?.codigosSetorRevendaManipulados ?? [])
+                  .map(Number)
+                  .filter((n) => n > 0)
+              : [],
         };
       }),
     };
@@ -347,6 +381,14 @@ export class ComercialMetaService {
       dto.percentualMinimoLoja == null || dto.percentualMinimoLoja === 0
         ? null
         : dto.percentualMinimoLoja;
+    const codigosSetor =
+      dto.tipoBase === ComercialTipoBase.MARCA_PROPRIA
+        ? normalizarCodigosSetor(dto.codigosSetor)
+        : [];
+    const codigosSetorRevendaManipulados =
+      dto.tipoBase === ComercialTipoBase.REQUISICAO
+        ? normalizarCodigosSetor(dto.codigosSetorRevendaManipulados)
+        : [];
     let row = await this.politicaRepo.findOne({
       where: {
         funcionario: { id: funcionario.id },
@@ -360,13 +402,64 @@ export class ComercialMetaService {
         tipoBase: dto.tipoBase,
         incidencia: dto.incidencia,
         percentualMinimoLoja: minimo,
+        codigosSetor,
+        codigosSetorRevendaManipulados,
       });
     } else {
       row.incidencia = dto.incidencia;
       row.percentualMinimoLoja = minimo;
+      if (dto.tipoBase === ComercialTipoBase.MARCA_PROPRIA) {
+        row.codigosSetor = codigosSetor;
+      }
+      if (dto.tipoBase === ComercialTipoBase.REQUISICAO) {
+        row.codigosSetorRevendaManipulados = codigosSetorRevendaManipulados;
+      }
     }
     await this.politicaRepo.save(row);
     return this.listarPolitica(usuario, funcionario.id);
+  }
+
+  async listarPoliticaUnidade(
+    usuario: Usuario,
+    unidade: Unidade,
+  ): Promise<ComercialComissaoPoliticaUnidadeResponseDto> {
+    assertUnidadeFolha(usuario, unidade);
+    const row = await this.politicaUnidadeRepo.findOne({ where: { unidade } });
+    return {
+      unidade,
+      codigosSetor: (row?.codigosSetor ?? [])
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n > 0),
+      codigosSetorRevendaManipulados: (row?.codigosSetorRevendaManipulados ?? [])
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n > 0),
+    };
+  }
+
+  async salvarPoliticaUnidade(
+    usuario: Usuario,
+    dto: SalvarComercialComissaoPoliticaUnidadeDto,
+  ): Promise<ComercialComissaoPoliticaUnidadeResponseDto> {
+    assertUnidadeFolha(usuario, dto.unidade);
+    const codigosSetor = normalizarCodigosSetor(dto.codigosSetor);
+    const codigosSetorRevendaManipulados = normalizarCodigosSetor(
+      dto.codigosSetorRevendaManipulados,
+    );
+    let row = await this.politicaUnidadeRepo.findOne({
+      where: { unidade: dto.unidade },
+    });
+    if (!row) {
+      row = this.politicaUnidadeRepo.create({
+        unidade: dto.unidade,
+        codigosSetor,
+        codigosSetorRevendaManipulados,
+      });
+    } else {
+      row.codigosSetor = codigosSetor;
+      row.codigosSetorRevendaManipulados = codigosSetorRevendaManipulados;
+    }
+    await this.politicaUnidadeRepo.save(row);
+    return this.listarPoliticaUnidade(usuario, dto.unidade);
   }
 
   async carregarFaixasPadraoPendentes(

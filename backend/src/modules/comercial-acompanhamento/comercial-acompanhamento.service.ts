@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { Funcionario } from '../folha/entities/funcionario.entity';
@@ -11,6 +11,7 @@ import { ComercialMetaVendedor } from '../comercial-meta/entities/comercial-meta
 import { ComercialMetaUnidade } from '../comercial-meta/entities/comercial-meta-unidade.entity';
 import { ComercialComissaoFaixa } from '../comercial-meta/entities/comercial-comissao-faixa.entity';
 import { ComercialComissaoPolitica } from '../comercial-meta/entities/comercial-comissao-politica.entity';
+import { ComercialComissaoPoliticaUnidade } from '../comercial-meta/entities/comercial-comissao-politica-unidade.entity';
 import { CalendarioUnidade } from '../producao-config/entities/calendario-unidade.entity';
 import { ProducaoFeriado } from '../producao-config/entities/producao-feriado.entity';
 import { CaixaFechamento } from '../fechamento-caixa/entities/caixa-fechamento.entity';
@@ -43,11 +44,12 @@ type MovimentoRow = {
   nome_vendedor: string | null;
   valor: string | number;
   qtd: string | number;
+  qtd_formulas?: string | number | null;
 };
 
 type MapaMovimento = Map<
   number,
-  { nome: string; valor: number; qtd: number }
+  { nome: string; valor: number; qtd: number; qtdFormulas: number }
 >;
 
 @Injectable()
@@ -64,6 +66,8 @@ export class ComercialAcompanhamentoService {
     private readonly faixaRepo: Repository<ComercialComissaoFaixa>,
     @InjectRepository(ComercialComissaoPolitica)
     private readonly politicaRepo: Repository<ComercialComissaoPolitica>,
+    @InjectRepository(ComercialComissaoPoliticaUnidade)
+    private readonly politicaUnidadeRepo: Repository<ComercialComissaoPoliticaUnidade>,
     @InjectRepository(CalendarioUnidade)
     private readonly calendarioRepo: Repository<CalendarioUnidade>,
     @InjectRepository(ProducaoFeriado)
@@ -110,28 +114,110 @@ export class ComercialAcompanhamentoService {
       ultimaConfirmada,
     );
 
-    const [reqMap, mpMap, rejMap, vinculados, volumeLoja] = await Promise.all([
-      this.buscarRecebidoRequisicao(dto.unidade, periodo.dataInicial, periodo.dataFinal),
-      this.buscarRecebidoMarcaPropria(dto.unidade, periodo.dataInicial, periodo.dataFinal),
-      this.buscarRejeitado(dto.unidade, periodo.dataInicial, periodo.dataFinal),
-      this.funcionarioRepo
-        .createQueryBuilder('f')
-        .where('f.unidade = :unidade', { unidade: dto.unidade })
-        .andWhere('f.codigoVendedorErp IS NOT NULL')
-        .andWhere('f.codigoVendedorErp > 0')
-        .orderBy('f.nome', 'ASC')
-        .getMany(),
-      tetoLoja
-        ? this.buscarVolumeLoja(dto.unidade, periodo.dataInicial, tetoLoja)
-        : Promise.resolve({
-            requisicao: { valor: 0, qtd: 0 },
-            marcaPropria: { valor: 0, qtd: 0 },
-          }),
-    ]);
+    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
+      where: { unidade: dto.unidade },
+    });
+    const setoresUnidade = this.normalizarCodigosSetor(
+      politicaUnidade?.codigosSetor,
+    );
+    const setoresUnidadeRevenda = this.normalizarCodigosSetor(
+      politicaUnidade?.codigosSetorRevendaManipulados,
+    );
+
+    const [
+      reqMap,
+      mpMap,
+      rejMap,
+      vinculados,
+      volumeLoja,
+      revendaMap,
+      politicasReq,
+      terceirosLoja,
+    ] =
+      await Promise.all([
+        tetoLoja
+          ? this.buscarRecebidoRequisicao(
+              dto.unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve(new Map() as MapaMovimento),
+        this.buscarRecebidoMarcaPropria(
+          dto.unidade,
+          periodo.dataInicial,
+          periodo.dataFinal,
+        ),
+        this.buscarRejeitado(dto.unidade, periodo.dataInicial, periodo.dataFinal),
+        this.funcionarioRepo
+          .createQueryBuilder('f')
+          .where('f.unidade = :unidade', { unidade: dto.unidade })
+          .andWhere('f.codigoVendedorErp IS NOT NULL')
+          .andWhere('f.codigoVendedorErp > 0')
+          .orderBy('f.nome', 'ASC')
+          .getMany(),
+        tetoLoja
+          ? this.buscarVolumeLoja(
+              dto.unidade,
+              periodo.dataInicial,
+              tetoLoja,
+              setoresUnidade,
+              setoresUnidadeRevenda,
+            )
+          : Promise.resolve({
+              marcaPropria: {
+                valor: 0,
+                qtd: 0,
+                valorSetores: 0,
+                qtdSetores: 0,
+              },
+              revendaManipulados: { valor: 0, qtd: 0 },
+            }),
+        tetoLoja
+          ? this.buscarRecebidoRevendaManipulados(
+              dto.unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve(new Map() as MapaMovimento),
+        this.politicaRepo
+          .createQueryBuilder('p')
+          .innerJoinAndSelect('p.funcionario', 'f')
+          .where('f.unidade = :unidade', { unidade: dto.unidade })
+          .andWhere('p.tipoBase = :tipo', {
+            tipo: ComercialTipoBase.REQUISICAO,
+          })
+          .getMany(),
+        tetoLoja
+          ? this.buscarRecebidoTerceiros(
+              dto.unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve({ valor: 0, qtd: 0 }),
+      ]);
+
+    const setoresRevendaPorCodigo = new Map<number, number[]>();
+    for (const p of politicasReq) {
+      const codigo = p.funcionario?.codigoVendedorErp;
+      if (codigo == null || codigo <= 0) continue;
+      setoresRevendaPorCodigo.set(
+        codigo,
+        this.normalizarCodigosSetor(p.codigosSetorRevendaManipulados),
+      );
+    }
 
     const todosItens: ComercialAcompanhamentoItemDto[] = vinculados
       .map((f) =>
-        this.montarItem(f.id, f.nome, f.codigoVendedorErp!, reqMap, mpMap, rejMap),
+        this.montarItem(
+          f.id,
+          f.nome,
+          f.codigoVendedorErp!,
+          reqMap,
+          mpMap,
+          rejMap,
+          revendaMap,
+          setoresRevendaPorCodigo.get(f.codigoVendedorErp!) ?? [],
+        ),
       )
       .sort(
         (a, b) =>
@@ -141,13 +227,32 @@ export class ComercialAcompanhamentoService {
       );
 
     const totais = this.somarTotais(todosItens);
-    const lojaRecebidoReq = volumeLoja.requisicao;
     const lojaRecebidoMp = volumeLoja.marcaPropria;
     const lojaRejeitado = this.somarMapa(rejMap);
-    totais.valorRecebidoRequisicao = lojaRecebidoReq.valor;
-    totais.quantidadeRecebidoRequisicao = lojaRecebidoReq.qtd;
-    totais.valorRecebidoMarcaPropria = lojaRecebidoMp.valor;
-    totais.quantidadeRecebidoMarcaPropria = lojaRecebidoMp.qtd;
+    const usaSetores = setoresUnidade.length > 0;
+    const lojaMpMeta = usaSetores
+      ? lojaRecebidoMp.valorSetores
+      : lojaRecebidoMp.valor;
+    const lojaMpQtd = usaSetores
+      ? lojaRecebidoMp.qtdSetores
+      : lojaRecebidoMp.qtd;
+    const puraLoja = this.round2(totais.valorRequisicaoPura);
+    const extraLoja = volumeLoja.revendaManipulados;
+    const terceirosValor = this.round2(terceirosLoja.valor);
+    const lojaComissaoReq = this.round2(puraLoja + extraLoja.valor);
+    totais.valorRequisicaoPura = puraLoja;
+    totais.valorRevendaManipulados = extraLoja.valor;
+    totais.quantidadeRevendaManipulados = extraLoja.qtd;
+    totais.codigosSetorRevendaManipulados = setoresUnidadeRevenda;
+    totais.valorTerceirosManipulados = terceirosValor;
+    totais.quantidadeTerceirosManipulados = terceirosLoja.qtd;
+    totais.valorComissaoBaseRequisicao = lojaComissaoReq;
+    totais.valorRecebidoRequisicao = this.round2(lojaComissaoReq + terceirosValor);
+    totais.valorRecebidoMarcaPropria = lojaMpMeta;
+    totais.quantidadeRecebidoMarcaPropria = lojaMpQtd;
+    totais.codigosSetorMarcaPropria = setoresUnidade;
+    totais.valorRecebidoMarcaPropriaSetores = lojaRecebidoMp.valorSetores;
+    totais.quantidadeRecebidoMarcaPropriaSetores = lojaRecebidoMp.qtdSetores;
     totais.valorRejeitado = lojaRejeitado.valor;
     totais.quantidadeRejeitado = lojaRejeitado.qtd;
 
@@ -157,8 +262,9 @@ export class ComercialAcompanhamentoService {
       periodo,
       dto.unidade,
       exporComissao,
-      lojaRecebidoReq.valor,
-      lojaRecebidoMp.valor,
+      totais.valorRecebidoRequisicao,
+      lojaComissaoReq,
+      lojaMpMeta,
       ultimaConfirmada,
     );
 
@@ -193,48 +299,99 @@ export class ComercialAcompanhamentoService {
 
     const periodo = periodoCompetencia(dto.ano, dto.mes);
     const codigo = funcionario.codigoVendedorErp;
-    const params = [
+    const ultimaConfirmada = await this.buscarUltimaDataCaixaConfirmada(
+      dto.unidade,
+    );
+    const tetoManip = this.dataTetoCaixaConfirmado(
+      periodo.dataInicial,
+      periodo.dataFinal,
+      ultimaConfirmada,
+    );
+    const paramsMpRej = [
       dto.unidade,
       periodo.dataInicial,
       periodo.dataFinal,
       codigo,
     ];
+    const politicaMp = await this.politicaRepo.findOne({
+      where: {
+        funcionario: { id: funcionario.id },
+        tipoBase: ComercialTipoBase.MARCA_PROPRIA,
+      },
+    });
+    const setoresMp = (politicaMp?.codigosSetor ?? [])
+      .map((n) => Number(n))
+      .filter((n) => Number.isInteger(n) && n > 0);
+    const filtroSetorSql =
+      setoresMp.length > 0 ? ' AND i.codigo_setor = ANY($5::int[])' : '';
+    const paramsMp = setoresMp.length > 0 ? [...paramsMpRej, setoresMp] : paramsMpRej;
 
     const [reqRows, mpRows, rejRows] = await Promise.all([
-      this.dataSource.query(
-        `
+      tetoManip
+        ? (this.dataSource.query(
+            `
           SELECT
             t.data,
             t.numero_cupom,
             t.numero_requisicao,
             t.valor
           FROM (
-            SELECT DISTINCT ON (i.unidade, i.numero_cupom, COALESCE(i.numero_requisicao, 0))
-              COALESCE(c.data_pagamento, i.data_operacao) AS data,
+            SELECT
+              MIN(i.data_operacao) AS data,
               i.numero_cupom,
               i.numero_requisicao,
-              ${this.sqlValorRecebidoPrescritor()} AS valor
+              GREATEST(
+                0,
+                LEAST(
+                  SUM(i.valor_liquido_item - COALESCE(i.valor_taxa, 0)),
+                  MAX(
+                    COALESCE(
+                      c.valor_pago_requisicao - COALESCE(c.valor_taxa, 0),
+                      i.valor_liquido_item - COALESCE(i.valor_taxa, 0)
+                    )
+                  )
+                )
+              ) AS valor
             FROM caixa_itens_erp i
+            INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
             ${this.sqlJoinCaixaPago()}
             WHERE i.tipo_item = 'REQUISICAO'
               AND i.unidade = $1
               AND i.numero_requisicao IS NOT NULL
-              ${this.sqlFiltroPeriodoRecebido('$2', '$3')}
-              ${this.sqlFiltroRecebidoVisitacao()}
+              AND i.data_operacao >= $2
+              AND i.data_operacao <= $3
+              AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND c.codigo_vendedor = $4
-            ORDER BY i.unidade, i.numero_cupom, COALESCE(i.numero_requisicao, 0)
+            GROUP BY i.numero_cupom, i.numero_requisicao
+            UNION ALL
+            SELECT
+              c.data_pagamento AS data,
+              c.numero_cupom,
+              c.numero_requisicao,
+              GREATEST(
+                0,
+                COALESCE(c.valor_pago_requisicao, 0) - COALESCE(c.valor_taxa, 0)
+              ) AS valor
+            FROM caixa_requisicoes_pagas c
+            WHERE c.unidade = $1
+              AND c.data_pagamento >= $2
+              AND c.data_pagamento <= $3
+              AND COALESCE(c.tipo_requisicao, '') <> 'C'
+              AND c.codigo_vendedor = $4
+              AND ${this.sqlPagaSemItemComPagamento('c')}
           ) t
           ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
         `,
-        params,
-      ) as Promise<
-        Array<{
-          data: string | Date;
-          numero_cupom: string | number;
-          numero_requisicao: string | number;
-          valor: string | number;
-        }>
-      >,
+            [dto.unidade, periodo.dataInicial, tetoManip, codigo],
+          ) as Promise<
+            Array<{
+              data: string | Date;
+              numero_cupom: string | number;
+              numero_requisicao: string | number;
+              valor: string | number;
+            }>
+          >)
+        : Promise.resolve([]),
       this.dataSource.query(
         `
           SELECT
@@ -242,7 +399,10 @@ export class ComercialAcompanhamentoService {
             i.numero_cupom,
             i.descricao_item,
             i.quantidade,
-            i.valor_liquido_item AS valor
+            GREATEST(
+              0,
+              i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+            ) AS valor
           FROM caixa_itens_erp i
           INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
           WHERE i.tipo_item = 'PRODUTO'
@@ -250,9 +410,10 @@ export class ComercialAcompanhamentoService {
             AND i.data_operacao >= $2
             AND i.data_operacao <= $3
             AND p.codigo_operador_caixa = $4
+            ${filtroSetorSql}
           ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
         `,
-        params,
+        paramsMp,
       ) as Promise<
         Array<{
           data: string | Date;
@@ -279,7 +440,7 @@ export class ComercialAcompanhamentoService {
             AND o."codigoVendedor" = $4
           ORDER BY o."dataOrcamento" ASC, o."nrOrcamento" ASC
         `,
-        params,
+        paramsMpRej,
       ) as Promise<
         Array<{
           data_orcamento: string | Date;
@@ -325,16 +486,29 @@ export class ComercialAcompanhamentoService {
     reqMap: MapaMovimento,
     mpMap: MapaMovimento,
     rejMap: MapaMovimento,
+    revendaMap: MapaMovimento,
+    setoresRevenda: number[],
   ): ComercialAcompanhamentoItemDto {
     const req = reqMap.get(codigo);
     const mp = mpMap.get(codigo);
     const rej = rejMap.get(codigo);
+    const revenda = setoresRevenda.length ? revendaMap.get(codigo) : undefined;
+    const valorPura = this.round2(req?.valor ?? 0);
+    const valorRevenda = this.round2(revenda?.valor ?? 0);
     return {
       funcionarioId,
       nomeVendedor: nome,
       codigoVendedorErp: codigo,
-      valorRecebidoRequisicao: req?.valor ?? 0,
+      valorRequisicaoPura: valorPura,
+      valorRevendaManipulados: valorRevenda,
+      quantidadeRevendaManipulados: revenda?.qtd ?? 0,
+      codigosSetorRevendaManipulados: setoresRevenda,
+      valorTerceirosManipulados: 0,
+      quantidadeTerceirosManipulados: 0,
+      valorComissaoBaseRequisicao: this.round2(valorPura + valorRevenda),
+      valorRecebidoRequisicao: this.round2(valorPura + valorRevenda),
       quantidadeRecebidoRequisicao: req?.qtd ?? 0,
+      quantidadeFormulasRequisicao: req?.qtdFormulas ?? 0,
       valorRecebidoMarcaPropria: mp?.valor ?? 0,
       quantidadeRecebidoMarcaPropria: mp?.qtd ?? 0,
       valorRejeitado: rej?.valor ?? 0,
@@ -348,9 +522,17 @@ export class ComercialAcompanhamentoService {
     return itens.reduce(
       (acc, i) => ({
         valorRecebidoRequisicao:
-          acc.valorRecebidoRequisicao + i.valorRecebidoRequisicao,
+          acc.valorRecebidoRequisicao + i.valorRequisicaoPura,
+        valorRequisicaoPura: acc.valorRequisicaoPura + i.valorRequisicaoPura,
+        valorRevendaManipulados: acc.valorRevendaManipulados,
+        quantidadeRevendaManipulados: acc.quantidadeRevendaManipulados,
+        valorTerceirosManipulados: acc.valorTerceirosManipulados,
+        quantidadeTerceirosManipulados: acc.quantidadeTerceirosManipulados,
+        valorComissaoBaseRequisicao: acc.valorComissaoBaseRequisicao,
         quantidadeRecebidoRequisicao:
           acc.quantidadeRecebidoRequisicao + i.quantidadeRecebidoRequisicao,
+        quantidadeFormulasRequisicao:
+          acc.quantidadeFormulasRequisicao + i.quantidadeFormulasRequisicao,
         valorRecebidoMarcaPropria:
           acc.valorRecebidoMarcaPropria + i.valorRecebidoMarcaPropria,
         quantidadeRecebidoMarcaPropria:
@@ -358,43 +540,109 @@ export class ComercialAcompanhamentoService {
         valorRejeitado: acc.valorRejeitado + i.valorRejeitado,
         quantidadeRejeitado: acc.quantidadeRejeitado + i.quantidadeRejeitado,
         quantidadeVendedores: acc.quantidadeVendedores + (i.funcionarioId ? 1 : 0),
+        codigosSetorMarcaPropria: acc.codigosSetorMarcaPropria,
+        valorRecebidoMarcaPropriaSetores:
+          acc.valorRecebidoMarcaPropriaSetores,
+        quantidadeRecebidoMarcaPropriaSetores:
+          acc.quantidadeRecebidoMarcaPropriaSetores,
       }),
       {
         valorRecebidoRequisicao: 0,
+        valorRequisicaoPura: 0,
+        valorRevendaManipulados: 0,
+        quantidadeRevendaManipulados: 0,
+        valorTerceirosManipulados: 0,
+        quantidadeTerceirosManipulados: 0,
+        valorComissaoBaseRequisicao: 0,
         quantidadeRecebidoRequisicao: 0,
+        quantidadeFormulasRequisicao: 0,
         valorRecebidoMarcaPropria: 0,
         quantidadeRecebidoMarcaPropria: 0,
         valorRejeitado: 0,
         quantidadeRejeitado: 0,
         quantidadeVendedores: 0,
+        codigosSetorMarcaPropria: [],
+        valorRecebidoMarcaPropriaSetores: 0,
+        quantidadeRecebidoMarcaPropriaSetores: 0,
       },
     );
   }
 
+  /**
+   * Manipulados do vendedor (RN-COM-003): Terminal de Caixa —
+   * data_operacao + item com pagamento; Taxa=Não →
+   * LEAST(SUM(item−taxa), paga−taxa) por cupom+req.
+   * União: paga sem item no terminal (data_pagamento, pago−taxa).
+   * qtd = cupom+req; qtd_formulas = linhas de item / quantidade_formulas.
+   */
   private async buscarRecebidoRequisicao(
     unidade: Unidade,
     dataInicial: string,
     dataFinal: string,
   ): Promise<MapaMovimento> {
     const sql = `
-      WITH linhas AS (
-        SELECT DISTINCT ON (i.unidade, i.numero_cupom, COALESCE(i.numero_requisicao, 0))
+      WITH por_req AS (
+        SELECT
           c.codigo_vendedor,
-          c.nome_vendedor,
-          ${this.sqlValorRecebidoPrescritor()} AS valor_recebido
+          MAX(c.nome_vendedor) AS nome_vendedor,
+          i.numero_cupom,
+          i.numero_requisicao,
+          GREATEST(
+            0,
+            LEAST(
+              SUM(i.valor_liquido_item - COALESCE(i.valor_taxa, 0)),
+              MAX(
+                COALESCE(
+                  c.valor_pago_requisicao - COALESCE(c.valor_taxa, 0),
+                  i.valor_liquido_item - COALESCE(i.valor_taxa, 0)
+                )
+              )
+            )
+          ) AS valor_recebido,
+          GREATEST(
+            COALESCE(MAX(c.quantidade_formulas), 0),
+            COUNT(*)
+          )::int AS qtd_formulas
         FROM caixa_itens_erp i
+        INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
         ${this.sqlJoinCaixaPago()}
         WHERE i.tipo_item = 'REQUISICAO'
           AND i.unidade = $1
           AND i.numero_requisicao IS NOT NULL
-          ${this.sqlFiltroPeriodoRecebido('$2', '$3')}
-          ${this.sqlFiltroRecebidoVisitacao()}
+          AND i.data_operacao >= $2
+          AND i.data_operacao <= $3
+          AND COALESCE(c.tipo_requisicao, '') <> 'C'
+          AND c.codigo_vendedor IS NOT NULL
+          AND c.codigo_vendedor > 0
+        GROUP BY c.codigo_vendedor, i.numero_cupom, i.numero_requisicao
+        UNION ALL
+        SELECT
+          c.codigo_vendedor,
+          MAX(c.nome_vendedor) AS nome_vendedor,
+          c.numero_cupom,
+          c.numero_requisicao,
+          GREATEST(
+            0,
+            COALESCE(MAX(c.valor_pago_requisicao), 0)
+              - COALESCE(MAX(c.valor_taxa), 0)
+          ) AS valor_recebido,
+          GREATEST(COALESCE(MAX(c.quantidade_formulas), 0), 1)::int AS qtd_formulas
+        FROM caixa_requisicoes_pagas c
+        WHERE c.unidade = $1
+          AND c.data_pagamento >= $2
+          AND c.data_pagamento <= $3
+          AND COALESCE(c.tipo_requisicao, '') <> 'C'
+          AND c.codigo_vendedor IS NOT NULL
+          AND c.codigo_vendedor > 0
+          AND ${this.sqlPagaSemItemComPagamento('c')}
+        GROUP BY c.codigo_vendedor, c.numero_cupom, c.numero_requisicao
       )
       SELECT codigo_vendedor,
              MAX(nome_vendedor) AS nome_vendedor,
              SUM(valor_recebido) AS valor,
-             COUNT(*) AS qtd
-      FROM linhas
+             COUNT(*) AS qtd,
+             SUM(qtd_formulas) AS qtd_formulas
+      FROM por_req
       GROUP BY codigo_vendedor
     `;
     const rows = (await this.dataSource.query(sql, [
@@ -406,45 +654,76 @@ export class ComercialAcompanhamentoService {
   }
 
   /**
-   * Volume da loja (card Total / meta da loja): pagamentos líquidos do caixa
-   * até o último dia CONFIRMADO, eixo data_operacao (RN-COM-003 / RN-CXA-009).
-   * Manipulados = pagamentos − marca própria (itens PRODUTO nos mesmos dias).
+   * Revenda (PRODUTO) dos setores da política de Manipulados do vendedor.
+   * Lista vazia na política = não entra (RN-COM-003).
+   */
+  private async buscarRecebidoRevendaManipulados(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinal: string,
+  ): Promise<MapaMovimento> {
+    const sql = `
+      SELECT p.codigo_operador_caixa AS codigo_vendedor,
+             MAX(p.nome_operador_caixa) AS nome_vendedor,
+             SUM(
+               GREATEST(
+                 0,
+                 i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+               )
+             ) AS valor,
+             SUM(i.quantidade) AS qtd
+      FROM caixa_itens_erp i
+      INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+      INNER JOIN LATERAL (
+        SELECT f.id
+        FROM funcionarios f
+        WHERE f.unidade = i.unidade
+          AND f."codigoVendedorErp" = p.codigo_operador_caixa
+        ORDER BY f.id
+        LIMIT 1
+      ) f ON TRUE
+      INNER JOIN comercial_comissao_politica pol
+        ON pol."funcionarioId" = f.id
+       AND pol."tipoBase" = 'REQUISICAO'
+       AND COALESCE(cardinality(pol."codigosSetorRevendaManipulados"), 0) > 0
+      WHERE i.tipo_item = 'PRODUTO'
+        AND i.unidade = $1
+        AND i.data_operacao >= $2
+        AND i.data_operacao <= $3
+        AND i.codigo_setor = ANY(pol."codigosSetorRevendaManipulados")
+      GROUP BY p.codigo_operador_caixa
+    `;
+    const rows = (await this.dataSource.query(sql, [
+      unidade,
+      dataInicial,
+      dataFinal,
+    ])) as MovimentoRow[];
+    return this.mapMovimentoRows(rows);
+  }
+
+  /**
+   * Marca própria do card Total: recorte de setores da unidade (RN-COM-003 /
+   * RN-COM-006) com a mesma fórmula dos vendedores; sem setores, todos os
+   * PRODUTO do caixa. Manipulados do Total = soma das requisições dos
+   * vendedores + revenda dos setores da unidade (se houver).
    */
   private async buscarVolumeLoja(
     unidade: Unidade,
     dataInicial: string,
     dataTeto: string,
+    setoresUnidade: number[] = [],
+    setoresRevendaManipulados: number[] = [],
   ): Promise<{
-    requisicao: { valor: number; qtd: number };
-    marcaPropria: { valor: number; qtd: number };
+    marcaPropria: {
+      valor: number;
+      qtd: number;
+      valorSetores: number;
+      qtdSetores: number;
+    };
+    revendaManipulados: { valor: number; qtd: number };
   }> {
-    const params = [unidade, dataInicial, dataTeto];
-    const [pagRows, reqRows, mpRows] = await Promise.all([
-      this.dataSource.query(
-        `
-          SELECT COALESCE(SUM(p.valor_liquido), 0) AS valor
-          FROM caixa_pagamentos_erp p
-          WHERE p.unidade = $1
-            AND p.data_operacao >= $2
-            AND p.data_operacao <= $3
-        `,
-        params,
-      ) as Promise<Array<{ valor: string | number | null }>>,
-      this.dataSource.query(
-        `
-          SELECT COUNT(*)::int AS qtd
-          FROM (
-            SELECT DISTINCT i.numero_cupom, i.numero_requisicao
-            FROM caixa_itens_erp i
-            WHERE i.tipo_item = 'REQUISICAO'
-              AND i.unidade = $1
-              AND i.numero_requisicao IS NOT NULL
-              AND i.data_operacao >= $2
-              AND i.data_operacao <= $3
-          ) t
-        `,
-        params,
-      ) as Promise<Array<{ qtd: string | number | null }>>,
+    const paramsPeriodo = [unidade, dataInicial, dataTeto];
+    const [mpRows, mpSetoresRows, revendaRows] = await Promise.all([
       this.dataSource.query(
         `
           SELECT
@@ -456,24 +735,83 @@ export class ComercialAcompanhamentoService {
             AND i.data_operacao >= $2
             AND i.data_operacao <= $3
         `,
-        params,
+        paramsPeriodo,
       ) as Promise<
         Array<{ valor: string | number | null; qtd: string | number | null }>
       >,
+      setoresUnidade.length
+        ? (this.dataSource.query(
+            `
+              SELECT
+                COALESCE(
+                  SUM(
+                    GREATEST(
+                      0,
+                      i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+                    )
+                  ),
+                  0
+                ) AS valor,
+                COALESCE(SUM(i.quantidade), 0) AS qtd
+              FROM caixa_itens_erp i
+              INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+              WHERE i.tipo_item = 'PRODUTO'
+                AND i.unidade = $1
+                AND i.data_operacao >= $2
+                AND i.data_operacao <= $3
+                AND i.codigo_setor = ANY($4::int[])
+            `,
+            [...paramsPeriodo, setoresUnidade],
+          ) as Promise<
+            Array<{
+              valor: string | number | null;
+              qtd: string | number | null;
+            }>
+          >)
+        : Promise.resolve([{ valor: 0, qtd: 0 }]),
+      setoresRevendaManipulados.length
+        ? (this.dataSource.query(
+            `
+              SELECT
+                COALESCE(
+                  SUM(
+                    GREATEST(
+                      0,
+                      i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+                    )
+                  ),
+                  0
+                ) AS valor,
+                COALESCE(SUM(i.quantidade), 0) AS qtd
+              FROM caixa_itens_erp i
+              INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+              WHERE i.tipo_item = 'PRODUTO'
+                AND i.unidade = $1
+                AND i.data_operacao >= $2
+                AND i.data_operacao <= $3
+                AND i.codigo_setor = ANY($4::int[])
+            `,
+            [...paramsPeriodo, setoresRevendaManipulados],
+          ) as Promise<
+            Array<{
+              valor: string | number | null;
+              qtd: string | number | null;
+            }>
+          >)
+        : Promise.resolve([{ valor: 0, qtd: 0 }]),
     ]);
 
-    const pagamentos = this.round2(this.toNumber(pagRows[0]?.valor));
-    const marcaPropria = {
-      valor: this.round2(this.toNumber(mpRows[0]?.valor)),
-      qtd: this.toInt(mpRows[0]?.qtd),
-    };
-    const manipulados = this.round2(pagamentos - marcaPropria.valor);
     return {
-      requisicao: {
-        valor: manipulados < 0 ? 0 : manipulados,
-        qtd: this.toInt(reqRows[0]?.qtd),
+      marcaPropria: {
+        valor: this.round2(this.toNumber(mpRows[0]?.valor)),
+        qtd: this.toInt(mpRows[0]?.qtd),
+        valorSetores: this.round2(this.toNumber(mpSetoresRows[0]?.valor)),
+        qtdSetores: this.toInt(mpSetoresRows[0]?.qtd),
       },
-      marcaPropria,
+      revendaManipulados: {
+        valor: this.round2(this.toNumber(revendaRows[0]?.valor)),
+        qtd: this.toInt(revendaRows[0]?.qtd),
+      },
     };
   }
 
@@ -511,14 +849,35 @@ export class ComercialAcompanhamentoService {
     const sql = `
       SELECT p.codigo_operador_caixa AS codigo_vendedor,
              MAX(p.nome_operador_caixa) AS nome_vendedor,
-             SUM(i.valor_liquido_item) AS valor,
-             COUNT(*) AS qtd
+             SUM(
+               GREATEST(
+                 0,
+                 i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+               )
+             ) AS valor,
+             SUM(i.quantidade) AS qtd
       FROM caixa_itens_erp i
       INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+      LEFT JOIN LATERAL (
+        SELECT f.id
+        FROM funcionarios f
+        WHERE f.unidade = i.unidade
+          AND f."codigoVendedorErp" = p.codigo_operador_caixa
+        ORDER BY f.id
+        LIMIT 1
+      ) f ON TRUE
+      LEFT JOIN comercial_comissao_politica pol
+        ON pol."funcionarioId" = f.id
+       AND pol."tipoBase" = 'MARCA_PROPRIA'
       WHERE i.tipo_item = 'PRODUTO'
         AND i.unidade = $1
         AND i.data_operacao >= $2
         AND i.data_operacao <= $3
+        AND (
+          pol."codigosSetor" IS NULL
+          OR COALESCE(cardinality(pol."codigosSetor"), 0) = 0
+          OR i.codigo_setor = ANY(pol."codigosSetor")
+        )
       GROUP BY p.codigo_operador_caixa
     `;
     const rows = (await this.dataSource.query(sql, [
@@ -556,6 +915,35 @@ export class ComercialAcompanhamentoService {
     return this.mapMovimentoRows(rows);
   }
 
+  /**
+   * Vendas de terceiro baixadas no caixa da unidade (RN-COM-003).
+   * Eixo dataBaixa, até o último caixa CONFIRMADO. Valor = SUM(valorBaixa);
+   * qtd = vendas distintas.
+   */
+  private async buscarRecebidoTerceiros(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinal: string,
+  ): Promise<{ valor: number; qtd: number }> {
+    const rows = (await this.dataSource.query(
+      `
+        SELECT
+          COALESCE(SUM(CAST(b."valorBaixa" AS NUMERIC)), 0) AS valor,
+          COUNT(DISTINCT b.idvenda)::int AS qtd
+        FROM baixas b
+        INNER JOIN vendas v ON v.id = b.idvenda
+        WHERE v.unidade = $1
+          AND b."dataBaixa" >= $2
+          AND b."dataBaixa" <= $3
+      `,
+      [unidade, dataInicial, dataFinal],
+    )) as Array<{ valor: string | number | null; qtd: string | number | null }>;
+    return {
+      valor: this.round2(this.toNumber(rows[0]?.valor)),
+      qtd: this.toInt(rows[0]?.qtd),
+    };
+  }
+
   private mapMovimentoRows(rows: MovimentoRow[]): MapaMovimento {
     const map: MapaMovimento = new Map();
     for (const row of rows) {
@@ -565,15 +953,18 @@ export class ComercialAcompanhamentoService {
       const atual = map.get(codigo);
       const valor = this.toNumber(row.valor);
       const qtd = this.toInt(row.qtd);
+      const qtdFormulas = this.toInt(row.qtd_formulas);
       if (atual) {
         atual.valor += valor;
         atual.qtd += qtd;
+        atual.qtdFormulas += qtdFormulas;
         continue;
       }
       map.set(codigo, {
         nome: row.nome_vendedor?.trim() || NOME_SEM_VINCULO,
         valor,
         qtd,
+        qtdFormulas,
       });
     }
     return map;
@@ -586,6 +977,7 @@ export class ComercialAcompanhamentoService {
     unidade: Unidade,
     exporComissao: boolean,
     lojaRecebidoReq: number,
+    lojaComissaoReq: number,
     lojaRecebidoMp: number,
     ultimaConfirmada: string | null,
   ): Promise<void> {
@@ -755,6 +1147,10 @@ export class ComercialAcompanhamentoService {
       mesAberto && realizados > 0
         ? this.round2((lojaRecebidoReq / realizados) * duMes)
         : null;
+    const lojaProjetadoComissaoReq =
+      mesAberto && realizados > 0
+        ? this.round2((lojaComissaoReq / realizados) * duMes)
+        : null;
     const lojaProjetadoMp =
       mesAberto && realizados > 0
         ? this.round2((lojaRecebidoMp / realizados) * duMes)
@@ -788,12 +1184,12 @@ export class ComercialAcompanhamentoService {
         politicaPorFuncTipo.get(`${fid}|${ComercialTipoBase.REQUISICAO}`),
         item.percentualMetaRequisicao,
         item.percentualProjecaoRequisicao,
-        item.valorRecebidoRequisicao,
+        item.valorComissaoBaseRequisicao,
         item.valorProjetadoRequisicao,
         totais.percentualMetaRequisicao,
         pctLojaProjReq,
-        lojaRecebidoReq,
-        lojaProjetadoReq,
+        lojaComissaoReq,
+        lojaProjetadoComissaoReq,
         'Requisicao',
       );
       this.anexarComissaoTipo(
@@ -954,68 +1350,29 @@ export class ComercialAcompanhamentoService {
           ) c ON TRUE`;
   }
 
-  private sqlValorBaseCupomPrescritor(): string {
-    return `CASE
-      WHEN c.valor_pago_requisicao IS NOT NULL
-       AND COALESCE(i.valor_liquido_item, 0) > 0
-       AND i.valor_liquido_item < c.valor_pago_requisicao
-      THEN i.valor_liquido_item
-      ELSE COALESCE(c.valor_pago_requisicao, i.valor_liquido_item)
-    END`;
-  }
-
-  private sqlValorFormulasPrescritor(): string {
-    return `CASE
-      WHEN c.valor_formulas IS NOT NULL
-       AND c.valor_formulas > 0
-       AND COALESCE(c.valor_pago_requisicao, 0) > COALESCE(c.valor_requisicao_bruto, 0)
-       AND COALESCE(c.valor_requisicao_bruto, 0) > 0
-      THEN ROUND(
-        (c.valor_formulas * c.valor_requisicao_bruto
-          / c.valor_pago_requisicao)::numeric,
-        2
-      )
-      ELSE c.valor_formulas
-    END`;
-  }
-
-  private sqlValorRecebidoPrescritor(): string {
-    const base = this.sqlValorBaseCupomPrescritor();
-    const formulas = this.sqlValorFormulasPrescritor();
-    return `CASE
-      WHEN (${formulas}) IS NOT NULL
-       AND (${formulas}) > 0
-       AND (${base}) > (${formulas})
-      THEN ${formulas}
-      ELSE ${base}
-    END`;
-  }
-
-  private sqlFiltroPeriodoRecebido(inicio: string, fim: string): string {
-    return `AND (
-              (
-                c.data_pagamento IS NOT NULL
-                AND c.data_pagamento >= ${inicio}
-                AND c.data_pagamento <= ${fim}
-              )
-              OR (
-                c.data_pagamento IS NULL
-                AND i.data_operacao >= ${inicio}
-                AND i.data_operacao <= ${fim}
-              )
+  /**
+   * Paga sem item no terminal (ex. req 99774): o ERP credita o vendedor
+   * pela FC17000 mesmo sem FC31200. Se já existe item REQUISICAO (mesmo sem
+   * pagamento_id, ex. 100054), não entra por aqui — o card só conta item com
+   * pagamento, como o relatório de comissão.
+   */
+  private sqlPagaSemItemComPagamento(alias: string): string {
+    return `
+            NOT EXISTS (
+              SELECT 1
+              FROM caixa_itens_erp i_ex
+              WHERE i_ex.unidade = ${alias}.unidade
+                AND i_ex.tipo_item = 'REQUISICAO'
+                AND i_ex.numero_requisicao = ${alias}.numero_requisicao
             )`;
   }
 
-  private sqlFiltroRecebidoVisitacao(): string {
-    return `AND COALESCE(c.tipo_requisicao, '') <> 'C'
-            AND (
-              COALESCE(c.tipo_requisicao, '') <> ''
-              OR COALESCE(i.valor_liquido_linha, 0) <> 0
-            )
-            AND NOT (
-              COALESCE(c.tipo_requisicao, '') = 'N'
-              AND COALESCE(c.valor_formulas, 0) = 0
-            )`;
+  private normalizarCodigosSetor(
+    lista: number[] | null | undefined,
+  ): number[] {
+    return (lista ?? [])
+      .map((n) => Number(n))
+      .filter((n) => Number.isInteger(n) && n > 0);
   }
 
   private toYmd(value: string | Date | null | undefined): string {

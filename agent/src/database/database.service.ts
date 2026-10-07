@@ -1015,7 +1015,24 @@ export class DatabaseService {
         item.quant AS quant,
         item.vrtot AS valor_item_bruto,
         item.vrliq AS valor_item_liquido,
+        CAST(
+          CASE
+            WHEN req.nrrqu IS NOT NULL THEN COALESCE(req.vrtxa, 0)
+            ELSE COALESCE(item.vrtxa, 0)
+          END AS NUMERIC(15,2)
+        ) AS valor_taxa,
+        CASE
+          WHEN req.nrrqu IS NOT NULL THEN NULL
+          WHEN prod.setor IS NULL OR TRIM(prod.setor) = '' THEN NULL
+          ELSE CAST(TRIM(prod.setor) AS INTEGER)
+        END AS codigo_setor,
         item.vrdsc AS desconto_item,
+        CAST(
+          CASE
+            WHEN req.nrrqu IS NOT NULL THEN 0
+            ELSE COALESCE(item.vrdscv, item.vrdscg, 0)
+          END AS NUMERIC(15,2)
+        ) AS valor_desconto_varejo,
         COALESCE(pag_cupom.pagamento_cupom, 0) AS pagamento_cupom
       FROM fc31100 capa
       JOIN fc31110 item
@@ -1098,6 +1115,7 @@ export class DatabaseService {
         r.vrrqu AS valor_requisicao_bruto,
         r.vrdsc AS desconto_requisicao,
         r.vrliq AS valor_pago_requisicao,
+        CAST(COALESCE(r.vrtxa, 0) AS NUMERIC(15,2)) AS valor_taxa,
         CAST(COALESCE(r.vrsdo, 0) AS NUMERIC(15,2)) AS valor_saldo,
         TRIM(r.tprqu) AS tipo_requisicao,
         CAST(
@@ -1441,7 +1459,15 @@ export class DatabaseService {
       quant: Number(get('quant') ?? 0),
       valor_item_bruto: Number(get('valor_item_bruto') ?? 0),
       valor_item_liquido: Number(get('valor_item_liquido') ?? 0),
+      valor_taxa: Number(get('valor_taxa') ?? 0),
+      codigo_setor: (() => {
+        const raw = get('codigo_setor');
+        if (raw == null || raw === '') return null;
+        const n = Number(raw);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      })(),
       desconto_item: Number(get('desconto_item') ?? 0),
+      valor_desconto_varejo: Number(get('valor_desconto_varejo') ?? 0),
       pagamento_cupom: Number(get('pagamento_cupom') ?? 0),
       chave_erp: `${filial}-${cdtml}-${data}-${operid}-${cupom}-${itemCupom}`,
     };
@@ -1477,6 +1503,7 @@ export class DatabaseService {
       valor_requisicao_bruto: Number(get('valor_requisicao_bruto') ?? 0),
       desconto_requisicao: Number(get('desconto_requisicao') ?? 0),
       valor_pago_requisicao: Number(get('valor_pago_requisicao') ?? 0),
+      valor_taxa: Number(get('valor_taxa') ?? 0),
       valor_saldo:
         get('valor_saldo') != null
           ? Math.round(Number(get('valor_saldo')) * 100) / 100
