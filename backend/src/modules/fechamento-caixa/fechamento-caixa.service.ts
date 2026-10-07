@@ -90,7 +90,10 @@ interface AgenteCaixaItemRow {
   quant: number;
   valor_item_bruto: number;
   valor_item_liquido: number;
+  valor_taxa?: number;
+  codigo_setor?: number | null;
   desconto_item: number;
+  valor_desconto_varejo?: number;
   pagamento_cupom: number;
 }
 
@@ -114,6 +117,7 @@ interface AgenteCaixaRequisicaoRow {
   valor_requisicao_bruto: number;
   desconto_requisicao: number;
   valor_pago_requisicao: number;
+  valor_taxa?: number;
   valor_saldo?: number | null;
   tipo_requisicao: string | null;
   valor_formulas: number | null;
@@ -222,6 +226,7 @@ export class FechamentoCaixaService {
           segmento.fim,
           i + 1,
           segmentos.length,
+          !dto.reimportacaoHistorica,
         );
         pagamentosStats = this.somarUpsertStats(
           pagamentosStats,
@@ -345,6 +350,7 @@ export class FechamentoCaixaService {
     dataFim: string,
     segmentoAtual: number,
     segmentosTotal: number,
+    substituirDia: boolean,
   ): Promise<{
     pagamentosStats: UpsertStats;
     itensStats: UpsertStats;
@@ -440,37 +446,26 @@ export class FechamentoCaixaService {
       );
     }
 
-    const nrrquPagas = new Set(
-      requisicoesRows.filter((r) => r.requisicao > 0).map((r) => r.requisicao),
-    );
-    const itensParaGravar = itensRows.filter(
-      (item) =>
-        item.tipo_item !== 'REQUISICAO' ||
-        (item.requisicao != null &&
-          item.requisicao > 0 &&
-          nrrquPagas.has(item.requisicao)),
-    );
-
     this.importacaoProgressService.atualizar({
       fase: 'gravando_postgres',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: sincronizando snapshot ERP (${dataInicio}..${dataFim})...`,
+      message: substituirDia
+        ? `Segmento ${segmentoAtual}/${segmentosTotal}: substituindo dados do dia (${dataInicio}..${dataFim})...`
+        : `Segmento ${segmentoAtual}/${segmentosTotal}: atualizando registros ERP (${dataInicio}..${dataFim})...`,
       percentual: pctBase + Math.round(pctSlice * 0.4),
     });
 
-    await this.cronometrarCaixa(
-      unidade,
-      'snapshot (apagar ausentes)',
-      `${dataInicio}..${dataFim}`,
-      () =>
-        this.removerCaixaErpAusentesNoAgente(
-          unidade,
-          dataInicio,
-          dataFim,
-          pagamentosRows,
-          itensParaGravar,
-          requisicoesRows,
-        ),
-    );
+    if (substituirDia) {
+      await this.cronometrarCaixa(
+        unidade,
+        'limpar dia (substituir)',
+        `${dataInicio}..${dataFim}`,
+        () => this.limparCaixaErpDoPeriodo(unidade, dataInicio, dataFim),
+      );
+    } else {
+      this.logger.log(
+        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: importação histórica — só atualiza/insere, não apaga o período`,
+      );
+    }
 
     this.importacaoProgressService.atualizar({
       fase: 'gravando_postgres',
@@ -497,17 +492,17 @@ export class FechamentoCaixaService {
 
     this.importacaoProgressService.atualizar({
       fase: 'gravando_postgres',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${itensParaGravar.length} itens no PostgreSQL...`,
+      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdItens} itens no PostgreSQL...`,
       percentual: pctBase + Math.round(pctSlice * 0.65),
     });
 
     const itensStats = await this.cronometrarCaixa(
       unidade,
       'upsert itens',
-      `${itensParaGravar.length} linha(s)`,
+      `${qtdItens} linha(s)`,
       () =>
         this.upsertItens(
-          itensParaGravar,
+          itensRows,
           unidade,
           dataInicio,
           dataFim,
@@ -832,7 +827,13 @@ export class FechamentoCaixaService {
         quantidade: row.quant,
         valorBrutoItem: row.valor_item_bruto,
         valorLiquidoItem: row.valor_item_liquido,
+        valorTaxa: Number(row.valor_taxa ?? 0),
+        codigoSetor:
+          row.codigo_setor != null && Number(row.codigo_setor) > 0
+            ? Number(row.codigo_setor)
+            : null,
         descontoItem: row.desconto_item,
+        valorDescontoVarejo: Number(row.valor_desconto_varejo ?? 0),
         valorLiquidoLinha: row.pagamento_cupom,
         atualizadoEm: new Date(),
       });
@@ -945,6 +946,7 @@ export class FechamentoCaixaService {
         valorRequisicaoBruto: row.valor_requisicao_bruto,
         descontoRequisicao: row.desconto_requisicao,
         valorPagoRequisicao: row.valor_pago_requisicao,
+        valorTaxa: Number(row.valor_taxa ?? 0),
         valorSaldo:
           row.valor_saldo != null ? Number(row.valor_saldo) : null,
         tipoRequisicao: row.tipo_requisicao
@@ -1331,6 +1333,24 @@ export class FechamentoCaixaService {
     );
   }
 
+  private nrrquDoItemCupom(item: {
+    tipoItem: CaixaTipoItem;
+    numeroRequisicao?: number | null;
+    codigoRequisicaoProduto?: number | null;
+  }): number | null {
+    if (item.numeroRequisicao != null && item.numeroRequisicao > 0) {
+      return item.numeroRequisicao;
+    }
+    if (
+      item.tipoItem === CaixaTipoItem.REQUISICAO &&
+      item.codigoRequisicaoProduto != null &&
+      item.codigoRequisicaoProduto > 0
+    ) {
+      return item.codigoRequisicaoProduto;
+    }
+    return null;
+  }
+
   private async resolverReferenciasRequisicaoPorCupomOperacao(
     unidade: Unidade,
     data: string,
@@ -1349,7 +1369,6 @@ export class FechamentoCaixaService {
       where: {
         unidade,
         dataOperacao: data,
-        tipoItem: CaixaTipoItem.REQUISICAO,
         numeroCupom: In(cuponsUnicos),
       },
       select: [
@@ -1357,6 +1376,8 @@ export class FechamentoCaixaService {
         'codigoTerminal',
         'idOperacao',
         'numeroRequisicao',
+        'codigoRequisicaoProduto',
+        'tipoItem',
         'sequenciaItem',
       ],
       order: {
@@ -1366,7 +1387,8 @@ export class FechamentoCaixaService {
     });
 
     for (const item of itens) {
-      if (item.numeroRequisicao == null) {
+      const nrrqu = this.nrrquDoItemCupom(item);
+      if (nrrqu == null) {
         continue;
       }
 
@@ -1376,13 +1398,13 @@ export class FechamentoCaixaService {
         item.idOperacao,
       );
       const existentes = mapa.get(chave) ?? [];
-      if (!existentes.includes(item.numeroRequisicao)) {
-        existentes.push(item.numeroRequisicao);
+      if (!existentes.includes(nrrqu)) {
+        existentes.push(nrrqu);
         mapa.set(chave, existentes);
       }
     }
 
-    const pagamentosSemRequisicao = pagamentos.filter((pagamento) => {
+    const aindaSemRequisicao = pagamentos.filter((pagamento) => {
       const chave = this.buildChaveCupomOperacao(
         pagamento.numeroCupom,
         pagamento.codigoTerminal,
@@ -1390,10 +1412,9 @@ export class FechamentoCaixaService {
       );
       return !mapa.has(chave);
     });
-
     const cuponsFallback = [
       ...new Set(
-        pagamentosSemRequisicao.map((pagamento) => pagamento.numeroCupom),
+        aindaSemRequisicao.map((pagamento) => pagamento.numeroCupom),
       ),
     ];
 
@@ -1420,7 +1441,7 @@ export class FechamentoCaixaService {
         }
       }
 
-      for (const pagamento of pagamentosSemRequisicao) {
+      for (const pagamento of aindaSemRequisicao) {
         const reqs = requisicoesPorCupom.get(pagamento.numeroCupom);
         if (!reqs?.length) {
           continue;
@@ -1586,64 +1607,46 @@ export class FechamentoCaixaService {
   }
 
   /**
-   * Remove do PostgreSQL registros ERP do período que não constam no snapshot
-   * retornado pelo agente (ex.: requisição excluída e baixada de novo no ERP).
+   * Atualizar Vendas (fechamento): apaga pagamentos, itens e pagas do período
+   * e grava de novo o snapshot. Dia sem movimento no ERP fica vazio no NEST.
+   * Fórmulas saem por CASCADE das pagas. Importação histórica não usa isto.
    */
-  private async removerCaixaErpAusentesNoAgente(
+  private async limparCaixaErpDoPeriodo(
     unidade: Unidade,
     dataInicio: string,
     dataFim: string,
-    pagamentosRows: AgenteCaixaPagamentoRow[],
-    itensRows: AgenteCaixaItemRow[],
-    requisicoesRows: AgenteCaixaRequisicaoRow[],
   ): Promise<void> {
-    const chavesPagamentos = [
-      ...new Set(
-        pagamentosRows.map((r) => this.buildChavePagamento(unidade, r)),
-      ),
-    ];
-    const chavesItens = [
-      ...new Set(itensRows.map((r) => this.buildChaveItem(unidade, r))),
-    ];
-    const chavesRequisicoes = [
-      ...new Set(
-        requisicoesRows.map((r) => this.buildChaveRequisicao(unidade, r)),
-      ),
-    ];
+    const itens = await this.itemRepo
+      .createQueryBuilder()
+      .delete()
+      .where('unidade = :unidade', { unidade })
+      .andWhere('data_operacao BETWEEN :dataInicio AND :dataFim', {
+        dataInicio,
+        dataFim,
+      })
+      .execute();
+    const pagamentos = await this.pagamentoRepo
+      .createQueryBuilder()
+      .delete()
+      .where('unidade = :unidade', { unidade })
+      .andWhere('data_operacao BETWEEN :dataInicio AND :dataFim', {
+        dataInicio,
+        dataFim,
+      })
+      .execute();
+    const requisicoes = await this.requisicaoRepo
+      .createQueryBuilder()
+      .delete()
+      .where('unidade = :unidade', { unidade })
+      .andWhere('data_pagamento BETWEEN :dataInicio AND :dataFim', {
+        dataInicio,
+        dataFim,
+      })
+      .execute();
 
-    const itensRemovidos = await this.excluirCaixaErpPorPeriodoExcetoChaves(
-      this.itemRepo,
-      'data_operacao',
-      unidade,
-      dataInicio,
-      dataFim,
-      chavesItens,
+    this.logger.log(
+      `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: dia substituído (apagados ${pagamentos.affected ?? 0} pagamento(s), ${itens.affected ?? 0} item(ns), ${requisicoes.affected ?? 0} requisição(ões))`,
     );
-    const pagamentosRemovidos = await this.excluirCaixaErpPorPeriodoExcetoChaves(
-      this.pagamentoRepo,
-      'data_operacao',
-      unidade,
-      dataInicio,
-      dataFim,
-      chavesPagamentos,
-    );
-
-    const requisicoesRemovidas = await this.excluirCaixaErpPorPeriodoExcetoChaves(
-      this.requisicaoRepo,
-      'data_pagamento',
-      unidade,
-      dataInicio,
-      dataFim,
-      chavesRequisicoes,
-    );
-
-    const total =
-      itensRemovidos + pagamentosRemovidos + requisicoesRemovidas;
-    if (total > 0) {
-      this.logger.log(
-        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: removidos ${pagamentosRemovidos} pagamento(s), ${itensRemovidos} item(ns), ${requisicoesRemovidas} requisição(ões) ausentes no agente`,
-      );
-    }
   }
 
   private contarRequisicoesDistintasItens(
@@ -1662,8 +1665,9 @@ export class FechamentoCaixaService {
   }
 
   /**
-   * Impede fechar o caixa do dia se houver requisição no cupom sem linha paga
-   * (Atualizar Vendas gravou item e o complemento FC17000 falhou).
+   * Item REQUISICAO sem paga (cupom ainda sem baixa no ERP) não impede o Fechar:
+   * a conferência financeira da baixa já existente é a sync (RN-CXA-003).
+   * Comercial e visitação ignoram órfã; o Detalhado usa o nrrqu do cupom.
    */
   async assertComplementoRequisicoesDoDia(
     unidade: Unidade,
@@ -1686,25 +1690,22 @@ export class FechamentoCaixaService {
       .getRawOne<{ qtd: string | number | null }>();
     const orfas = Number(row?.qtd ?? 0);
     if (orfas > 0) {
-      throw new ConflictException(
-        `Não é possível fechar o caixa: ${orfas} requisição(ões) do dia ${this.formatDateDisplay(dataNormalizada)} estão sem o detalhe pago do ERP. Atualize as vendas de novo e só então feche o dia.`,
+      this.logger.log(
+        `Caixa ${unidade} ${this.formatDateDisplay(dataNormalizada)}: ${orfas} requisição(ões) no cupom ainda sem paga (baixa não existente no ERP). Fechar permitido.`,
       );
     }
   }
 
   /**
-   * Complemento FC17000 incompleto frente às requisições do cupom que já existem
-   * na paga. Cupom ainda sem baixa (sem linha FC17000 / FLAGBXA vazio) não trava.
+   * Complemento FC17000 incompleto frente às requisições do cupom **já baixadas**.
+   * Cupom ainda sem baixa (sem linha FC17000 / FLAGBXA vazio) não trava.
    */
   private snapshotRequisicoesPagasIncompleto(
-    itensRows: AgenteCaixaItemRow[],
+    _itensRows: AgenteCaixaItemRow[],
     requisicoesRows: AgenteCaixaRequisicaoRow[],
     nrrquCupomComPaga?: number,
   ): boolean {
-    const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
-    const esperadas =
-      typeof nrrquCupomComPaga === 'number' ? nrrquCupomComPaga : nrrquItens;
-    if (esperadas === 0) {
+    if (typeof nrrquCupomComPaga !== 'number' || nrrquCupomComPaga <= 0) {
       return false;
     }
     const nrrquPagas = new Set(
@@ -1712,32 +1713,7 @@ export class FechamentoCaixaService {
         .filter((r) => r.requisicao > 0)
         .map((r) => r.requisicao),
     ).size;
-    return nrrquPagas * 2 < esperadas;
-  }
-
-  private async excluirCaixaErpPorPeriodoExcetoChaves(
-    repo: Repository<CaixaItemErp | CaixaPagamentoErp | CaixaRequisicaoPaga>,
-    colunaData: 'data_operacao' | 'data_pagamento',
-    unidade: Unidade,
-    dataInicio: string,
-    dataFim: string,
-    chavesManter: string[],
-  ): Promise<number> {
-    const qb = repo
-      .createQueryBuilder()
-      .delete()
-      .where('unidade = :unidade', { unidade })
-      .andWhere(`${colunaData} BETWEEN :dataInicio AND :dataFim`, {
-        dataInicio,
-        dataFim,
-      });
-
-    if (chavesManter.length > 0) {
-      qb.andWhere('chave_erp NOT IN (:...chavesManter)', { chavesManter });
-    }
-
-    const result = await qb.execute();
-    return result.affected ?? 0;
+    return nrrquPagas < nrrquCupomComPaga;
   }
 
   private contarLinhasRespostaAgente(resultado: unknown): number {

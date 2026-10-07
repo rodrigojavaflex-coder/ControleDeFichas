@@ -126,6 +126,20 @@ export class CaixaRequisicaoPaga {
   valorPagoRequisicao: number;
 
   @ApiProperty({
+    description:
+      'Taxa da requisição paga (FC17000.VRTXA). Comissão comercial com Taxa=Não usa pago − taxa.',
+  })
+  @Column({
+    type: 'numeric',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    name: 'valor_taxa',
+    transformer: numericColumnTransformer,
+  })
+  valorTaxa: number;
+
+  @ApiProperty({
     required: false,
     description:
       'Saldo em aberto (FC17000.VRSDO). Visitação não credita se > 0 (RN-VIS-008).',

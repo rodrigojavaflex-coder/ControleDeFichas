@@ -134,6 +134,30 @@ export class CaixaItemErp {
   })
   valorLiquidoItem: number;
 
+  @ApiProperty({
+    description: 'Taxa do item/requisição no cupom (FC31200.VRTXA). Comissão com Taxa=Não abate este valor.',
+  })
+  @Column({
+    type: 'numeric',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    name: 'valor_taxa',
+    transformer: numericColumnTransformer,
+  })
+  valorTaxa: number;
+
+  @ApiProperty({
+    required: false,
+    description: 'Setor do produto no ERP (FC03000.SETOR). Nulo em requisição.',
+  })
+  @Column({
+    type: 'integer',
+    nullable: true,
+    name: 'codigo_setor',
+  })
+  codigoSetor?: number | null;
+
   @ApiProperty()
   @Column({
     type: 'numeric',
@@ -144,6 +168,20 @@ export class CaixaItemErp {
     transformer: numericColumnTransformer,
   })
   descontoItem: number;
+
+  @ApiProperty({
+    description:
+      'Desconto de varejo do ERP (FC31110.VRDSCV, fallback VRDSCG). Comissão com Desc. Varejo=Sim abate este valor.',
+  })
+  @Column({
+    type: 'numeric',
+    precision: 15,
+    scale: 2,
+    default: 0,
+    name: 'valor_desconto_varejo',
+    transformer: numericColumnTransformer,
+  })
+  valorDescontoVarejo: number;
 
   @ApiProperty()
   @Column({
