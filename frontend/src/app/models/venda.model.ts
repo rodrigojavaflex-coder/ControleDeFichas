@@ -94,6 +94,8 @@ export interface FindVendasDto {
   dataEnvio?: string;
   dataInicialEnvio?: string;
   dataFinalEnvio?: string;
+  dataInicialBaixa?: string;
+  dataFinalBaixa?: string;
   /** Filtrar vendas com % Lucro menor que o valor informado (ex.: 10 para 10%) */
   pctLucroMenorQue?: number;
   /** Filtrar vendas com % Lucro maior que o valor informado (ex.: 50 para 50%) */

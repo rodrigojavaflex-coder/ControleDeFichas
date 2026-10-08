@@ -114,12 +114,12 @@ export class ComercialAcompanhamentoItemDto extends ComercialDesempenhoBaseDto {
 
   @ApiProperty({
     description:
-      'Baixas de vendas de terceiro no caixa da unidade. Só no card TOTAL; 0 no vendedor.',
+      'Baixas de vendas de terceiro. No vendedor: cruzamento cdVendedor × codigoVendedorErp. No TOTAL: todas as vendas da unidade.',
   })
   valorTerceirosManipulados: number;
 
   @ApiProperty({
-    description: 'Vendas distintas com baixa no período (card TOTAL).',
+    description: 'Vendas distintas com baixa no período.',
   })
   quantidadeTerceirosManipulados: number;
 
@@ -169,6 +169,9 @@ export class ComercialAcompanhamentoItemDto extends ComercialDesempenhoBaseDto {
   valorBonusProjetadoRequisicao?: number | null;
 
   @ApiPropertyOptional({ nullable: true })
+  percentualComissaoFaixaProjetadoRequisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
   valorMetaMarcaPropria?: number | null;
 
   @ApiPropertyOptional({ nullable: true })
@@ -194,6 +197,9 @@ export class ComercialAcompanhamentoItemDto extends ComercialDesempenhoBaseDto {
 
   @ApiPropertyOptional({ nullable: true })
   valorBonusProjetadoMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  percentualComissaoFaixaProjetadoMarcaPropria?: number | null;
 }
 
 export class ComercialAcompanhamentoTotaisDto extends ComercialDesempenhoBaseDto {
@@ -347,9 +353,12 @@ export class FindComercialAcompanhamentoDetalheDto {
   @Max(12)
   mes: number;
 
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description: 'Omite para o detalhe do card TOTAL da unidade.',
+  })
+  @IsOptional()
   @IsUUID()
-  funcionarioId: string;
+  funcionarioId?: string;
 }
 
 export class ComercialAcompanhamentoMovimentoRequisicaoDto {
@@ -383,6 +392,26 @@ export class ComercialAcompanhamentoMovimentoProdutoDto {
   valor: number;
 }
 
+export class ComercialAcompanhamentoMovimentoSetorDto {
+  @ApiProperty()
+  data: string;
+
+  @ApiProperty()
+  numeroCupom: number;
+
+  @ApiPropertyOptional({ nullable: true })
+  descricaoItem?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  codigoSetor?: number | null;
+
+  @ApiProperty()
+  quantidade: number;
+
+  @ApiProperty()
+  valor: number;
+}
+
 export class ComercialAcompanhamentoMovimentoRejeitadoDto {
   @ApiProperty()
   dataOrcamento: string;
@@ -400,22 +429,58 @@ export class ComercialAcompanhamentoMovimentoRejeitadoDto {
   motivoRejeicao?: string | null;
 }
 
-export class ComercialAcompanhamentoDetalheDto {
+export class ComercialAcompanhamentoMovimentoTerceiroDto {
+  @ApiProperty({ description: 'Data da baixa (YYYY-MM-DD).' })
+  dataBaixa: string;
+
   @ApiProperty()
-  funcionarioId: string;
+  protocolo: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  dataVenda?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  nomeCliente?: string | null;
+
+  @ApiProperty({
+    description: 'Valor da baixa no período (não é o valorPago da venda).',
+  })
+  valor: number;
+}
+
+export class ComercialAcompanhamentoDetalheDto {
+  @ApiPropertyOptional({ nullable: true })
+  funcionarioId: string | null;
 
   @ApiProperty()
   nomeVendedor: string;
 
-  @ApiProperty()
-  codigoVendedorErp: number;
+  @ApiPropertyOptional({ nullable: true })
+  codigoVendedorErp: number | null;
+
+  @ApiProperty({ description: 'True no detalhe do card TOTAL da unidade.' })
+  isTotal: boolean;
 
   @ApiProperty({ type: [ComercialAcompanhamentoMovimentoRequisicaoDto] })
   manipulados: ComercialAcompanhamentoMovimentoRequisicaoDto[];
+
+  @ApiProperty({
+    type: [ComercialAcompanhamentoMovimentoSetorDto],
+    description:
+      'Revenda dos setores que somam em Manipulados (política REQUISICAO), até o último caixa CONFIRMADO.',
+  })
+  setor: ComercialAcompanhamentoMovimentoSetorDto[];
 
   @ApiProperty({ type: [ComercialAcompanhamentoMovimentoProdutoDto] })
   marcaPropria: ComercialAcompanhamentoMovimentoProdutoDto[];
 
   @ApiProperty({ type: [ComercialAcompanhamentoMovimentoRejeitadoDto] })
   rejeitados: ComercialAcompanhamentoMovimentoRejeitadoDto[];
+
+  @ApiProperty({
+    type: [ComercialAcompanhamentoMovimentoTerceiroDto],
+    description:
+      'Baixas de terceiros do vendedor no período até o último caixa CONFIRMADO.',
+  })
+  terceiros: ComercialAcompanhamentoMovimentoTerceiroDto[];
 }

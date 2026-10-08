@@ -1,8 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNumber,
@@ -303,4 +304,70 @@ export class SalvarComercialComissaoPoliticaUnidadeDto {
   @IsInt({ each: true })
   @Min(1, { each: true })
   codigosSetorRevendaManipulados?: number[] | null;
+}
+
+export class AplicarComercialComissaoPoliticaUnidadeVendedoresDto {
+  @ApiProperty({ enum: Unidade })
+  @IsEnum(Unidade)
+  unidade: Unidade;
+
+  @ApiProperty({
+    description:
+      'true = só vendedores sem lista naquela base; false = todos (substitui as listas já cadastradas).',
+  })
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  somenteSemConfiguracao: boolean;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    nullable: true,
+    example: [276, 330],
+    description:
+      'Marca própria a gravar na unidade e copiar. Omitido = usa a lista já salva da unidade.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(40)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  codigosSetor?: number[] | null;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    nullable: true,
+    example: [400],
+    description:
+      'Setores de Manipulados a gravar na unidade e copiar. Omitido = usa a lista já salva da unidade.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(40)
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  codigosSetorRevendaManipulados?: number[] | null;
+}
+
+export class AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto {
+  @ApiProperty({ enum: Unidade })
+  unidade: Unidade;
+
+  @ApiProperty({
+    description:
+      'Vendedores vinculados que tiveram ao menos uma base atualizada.',
+  })
+  vendedoresAfetados: number;
+
+  @ApiProperty({
+    description:
+      'Quantas políticas (Manipulados e/ou Marca própria) foram gravadas.',
+  })
+  politicasAtualizadas: number;
+
+  @ApiProperty({
+    description: 'true se só preencheu quem estava sem lista.',
+  })
+  somenteSemConfiguracao: boolean;
 }

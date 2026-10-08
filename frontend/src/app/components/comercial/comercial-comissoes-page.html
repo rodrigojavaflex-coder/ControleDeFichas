@@ -575,12 +575,81 @@
           @if (podeEditarPolitica()) {
             <button
               type="button"
+              class="btn btn-editar"
+              [disabled]="politicaUnidadeSalvando || carregandoPoliticaUnidade || temLinhaEmEdicao()"
+              (click)="pedirAplicarSetoresAosVendedores()">
+              Aplicar aos vendedores
+            </button>
+            <button
+              type="button"
               class="btn btn-salvar"
               [disabled]="politicaUnidadeSalvando || carregandoPoliticaUnidade || temLinhaEmEdicao()"
               (click)="salvarPoliticaUnidade()">
               {{ politicaUnidadeSalvando ? 'Salvando…' : 'Salvar setores' }}
             </button>
           }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (modalAplicarSetoresAberto) {
+    <div class="modal-overlay comercial-comissoes-aplicar-overlay" (click)="fecharAplicarSetores()">
+      <div
+        class="modal-conteudo comercial-comissoes-modal-setores"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cc-aplicar-setores-titulo">
+        <div class="modal-cabecalho">
+          <div>
+            <h3 class="modal-titulo" id="cc-aplicar-setores-titulo">
+              Aplicar setores aos vendedores
+            </h3>
+            <p class="comercial-politica-hint">{{ unidadeFiltro }}</p>
+          </div>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharAplicarSetores()"
+            [disabled]="politicaUnidadeSalvando"
+            aria-label="Fechar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-corpo">
+          <p class="comercial-politica-hint">
+            Os valores atuais do formulário serão gravados na unidade e copiados
+            para Marca própria e Manipulados de cada vendedor vinculado.
+          </p>
+          <p class="comercial-politica-hint">
+            <strong>Somente quem não tem</strong> preenche listas vazias e não altera
+            vendedor que já tem setores. <strong>Aplicar a todos</strong> substitui
+            as listas já cadastradas.
+          </p>
+        </div>
+        <div class="modal-rodape">
+          <button
+            type="button"
+            class="btn btn-cancelar"
+            [disabled]="politicaUnidadeSalvando"
+            (click)="fecharAplicarSetores()">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn btn-editar"
+            [disabled]="politicaUnidadeSalvando"
+            (click)="confirmarAplicarSetores(true)">
+            {{ politicaUnidadeSalvando ? 'Aplicando…' : 'Somente quem não tem' }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar"
+            [disabled]="politicaUnidadeSalvando"
+            (click)="confirmarAplicarSetores(false)">
+            {{ politicaUnidadeSalvando ? 'Aplicando…' : 'Aplicar a todos' }}
+          </button>
         </div>
       </div>
     </div>

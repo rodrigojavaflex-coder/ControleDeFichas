@@ -56,6 +56,8 @@ interface VendasFilterSnapshot {
   dataFinal: string;
   dataInicialFechamento: string;
   dataFinalFechamento: string;
+  dataInicialBaixa: string;
+  dataFinalBaixa: string;
   unidade: string | string[];
 }
 
@@ -93,6 +95,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   dataFinalFilter = '';
   dataInicialFechamentoFilter = '';
   dataFinalFechamentoFilter = '';
+  dataInicialBaixaFilter = '';
+  dataFinalBaixaFilter = '';
   unidadeFilter: Unidade[] = [];
   ativoFilter = '';
   unidadeDisabled = false;
@@ -222,6 +226,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         this.dataFinalFilter = filters.dataFinalFilter || '';
         this.dataInicialFechamentoFilter = filters.dataInicialFechamentoFilter || '';
         this.dataFinalFechamentoFilter = filters.dataFinalFechamentoFilter || '';
+        this.dataInicialBaixaFilter = filters.dataInicialBaixaFilter || '';
+        this.dataFinalBaixaFilter = filters.dataFinalBaixaFilter || '';
         this.unidadeFilter = Array.isArray(filters.unidadeFilter) ? filters.unidadeFilter : (filters.unidadeFilter ? [filters.unidadeFilter] : []);
         this.ativoFilter = filters.ativoFilter || '';
         this.currentPage = filters.currentPage || 1;
@@ -244,6 +250,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
         dataFinalFilter: this.dataFinalFilter,
         dataInicialFechamentoFilter: this.dataInicialFechamentoFilter,
         dataFinalFechamentoFilter: this.dataFinalFechamentoFilter,
+        dataInicialBaixaFilter: this.dataInicialBaixaFilter,
+        dataFinalBaixaFilter: this.dataFinalBaixaFilter,
         unidadeFilter: this.unidadeFilter,
         ativoFilter: this.ativoFilter,
         currentPage: this.currentPage
@@ -293,60 +301,59 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     return `${environment.apiUrl}/configuracao/logo`;
   }
 
-  protected override loadItems(): void {
-    this.loading = true;
-    this.error = '';
-
+  private montarFiltrosConsulta(): FindVendasDto {
     const filters: FindVendasDto = { page: this.currentPage, limit: this.pageSize };
 
     if (this.protocoloFilter.trim()) {
       filters.protocolo = this.protocoloFilter.trim();
     }
-
     if (this.clienteFilter.trim()) {
       filters.cliente = this.clienteFilter.trim();
     }
-
     if (this.vendedorFilter.trim()) {
       filters.vendedor = this.vendedorFilter.trim();
     }
     if (this.prescritorFilter.trim()) {
       filters.prescritor = this.prescritorFilter.trim();
     }
-
     if (this.origemFilter && this.origemFilter.length > 0) {
       filters.origem = this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter;
     }
-
     if (this.statusFilter && this.statusFilter.length > 0) {
       filters.status = this.statusFilter.length === 1 ? this.statusFilter[0] : this.statusFilter;
     }
-
     if (this.dataInicialFilter) {
       filters.dataInicial = this.dataInicialFilter;
     }
-
     if (this.dataFinalFilter) {
       filters.dataFinal = this.dataFinalFilter;
     }
-
     if (this.dataInicialFechamentoFilter) {
       filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
     }
-
     if (this.dataFinalFechamentoFilter) {
       filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
     }
-
+    if (this.dataInicialBaixaFilter) {
+      filters.dataInicialBaixa = this.dataInicialBaixaFilter;
+    }
+    if (this.dataFinalBaixaFilter) {
+      filters.dataFinalBaixa = this.dataFinalBaixaFilter;
+    }
     if (this.unidadeFilter && this.unidadeFilter.length > 0) {
       filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
     }
-
     if (this.ativoFilter.trim()) {
       filters.ativo = this.ativoFilter.trim();
     }
+    return filters;
+  }
 
-    this.vendaService.getVendas(filters).subscribe({
+  protected override loadItems(): void {
+    this.loading = true;
+    this.error = '';
+
+    this.vendaService.getVendas(this.montarFiltrosConsulta()).subscribe({
       next: (response: VendaPaginatedResponse) => {
         this.items = response.data;
         this.totalItems = response.meta.total;
@@ -400,6 +407,11 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.dataInicialFechamentoFilter = range.start || '';
     this.dataFinalFechamentoFilter = range.end || '';
     // Não chama onFilterChange() - apenas atualiza os valores
+  }
+
+  onBaixaRangeChangeModal(range: DateRangeValue): void {
+    this.dataInicialBaixaFilter = range.start || '';
+    this.dataFinalBaixaFilter = range.end || '';
   }
 
   toggleFiltersVisibility(): void {
@@ -613,6 +625,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       dataFinal: this.dataFinalFilter || '',
       dataInicialFechamento: this.dataInicialFechamentoFilter || '',
       dataFinalFechamento: this.dataFinalFechamentoFilter || '',
+      dataInicialBaixa: this.dataInicialBaixaFilter || '',
+      dataFinalBaixa: this.dataFinalBaixaFilter || '',
       unidade: this.unidadeFilter.length > 0 ? (this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter) : ''
     };
   }
@@ -642,6 +656,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.dataFinalFilter = '';
     this.dataInicialFechamentoFilter = '';
     this.dataFinalFechamentoFilter = '';
+    this.dataInicialBaixaFilter = '';
+    this.dataFinalBaixaFilter = '';
     this.initializeDateFilters();
     
     // Reinicializa filtro de unidade apenas se não estiver bloqueado
@@ -711,6 +727,19 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       }
       filters.push({ key: 'dataFechamento', label: 'Data de Fechamento', value });
     }
+    if (snapshot.dataInicialBaixa || snapshot.dataFinalBaixa) {
+      const from = snapshot.dataInicialBaixa ? this.formatDate(snapshot.dataInicialBaixa) : '';
+      const to = snapshot.dataFinalBaixa ? this.formatDate(snapshot.dataFinalBaixa) : '';
+      let value = '';
+      if (from && to) {
+        value = `${from} a ${to}`;
+      } else if (from) {
+        value = `A partir de ${from}`;
+      } else if (to) {
+        value = `Até ${to}`;
+      }
+      filters.push({ key: 'dataBaixa', label: 'Data da Baixa', value });
+    }
     if (snapshot.unidade) {
       const unidades = Array.isArray(snapshot.unidade) ? snapshot.unidade : [snapshot.unidade];
       filters.push({ key: 'unidade', label: 'Unidade', value: unidades.join(', ') });
@@ -733,7 +762,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       status: 'fa-info-circle',
       unidade: 'fa-building',
       dataVenda: 'fa-calendar-alt',
-      dataFechamento: 'fa-calendar-check'
+      dataFechamento: 'fa-calendar-check',
+      dataBaixa: 'fa-calendar-day'
     };
     return icons[key] || 'fa-filter';
   }
@@ -778,6 +808,10 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
       case 'dataFechamento':
         this.dataInicialFechamentoFilter = '';
         this.dataFinalFechamentoFilter = '';
+        break;
+      case 'dataBaixa':
+        this.dataInicialBaixaFilter = '';
+        this.dataFinalBaixaFilter = '';
         break;
       case 'unidade':
         if (!this.unidadeDisabled) {
@@ -1458,46 +1492,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     
     // Recarregar a lista completa para refletir mudanças no status da venda
     this.loading = true;
-    const filters: FindVendasDto = { page: this.currentPage, limit: this.pageSize };
 
-    if (this.protocoloFilter.trim()) {
-      filters.protocolo = this.protocoloFilter.trim();
-    }
-    if (this.clienteFilter.trim()) {
-      filters.cliente = this.clienteFilter.trim();
-    }
-    if (this.vendedorFilter.trim()) {
-      filters.vendedor = this.vendedorFilter.trim();
-    }
-    if (this.prescritorFilter.trim()) {
-      filters.prescritor = this.prescritorFilter.trim();
-    }
-    if (this.origemFilter && this.origemFilter.length > 0) {
-      filters.origem = this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter;
-    }
-    if (this.statusFilter && this.statusFilter.length > 0) {
-      filters.status = this.statusFilter.length === 1 ? this.statusFilter[0] : this.statusFilter;
-    }
-    if (this.dataInicialFilter) {
-      filters.dataInicial = this.dataInicialFilter;
-    }
-    if (this.dataFinalFilter) {
-      filters.dataFinal = this.dataFinalFilter;
-    }
-    if (this.dataInicialFechamentoFilter) {
-      filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
-    }
-    if (this.dataFinalFechamentoFilter) {
-      filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
-    }
-    if (this.unidadeFilter && this.unidadeFilter.length > 0) {
-      filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
-    }
-    if (this.ativoFilter.trim()) {
-      filters.ativo = this.ativoFilter.trim();
-    }
-
-    this.vendaService.getVendas(filters).subscribe({
+    this.vendaService.getVendas(this.montarFiltrosConsulta()).subscribe({
       next: (response: VendaPaginatedResponse) => {
         this.items = response.data;
         this.totalItems = response.meta.total;
@@ -1525,43 +1521,8 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     
     // Recarregar a lista e as baixas de todas as vendas
     this.loading = true;
-    const filters: FindVendasDto = { page: this.currentPage, limit: this.pageSize };
 
-    if (this.protocoloFilter.trim()) {
-      filters.protocolo = this.protocoloFilter.trim();
-    }
-    if (this.clienteFilter.trim()) {
-      filters.cliente = this.clienteFilter.trim();
-    }
-    if (this.vendedorFilter.trim()) {
-      filters.vendedor = this.vendedorFilter.trim();
-    }
-    if (this.origemFilter && this.origemFilter.length > 0) {
-      filters.origem = this.origemFilter.length === 1 ? this.origemFilter[0] : this.origemFilter;
-    }
-    if (this.statusFilter && this.statusFilter.length > 0) {
-      filters.status = this.statusFilter.length === 1 ? this.statusFilter[0] : this.statusFilter;
-    }
-    if (this.dataInicialFilter) {
-      filters.dataInicial = this.dataInicialFilter;
-    }
-    if (this.dataFinalFilter) {
-      filters.dataFinal = this.dataFinalFilter;
-    }
-    if (this.dataInicialFechamentoFilter) {
-      filters.dataInicialFechamento = this.dataInicialFechamentoFilter;
-    }
-    if (this.dataFinalFechamentoFilter) {
-      filters.dataFinalFechamento = this.dataFinalFechamentoFilter;
-    }
-    if (this.unidadeFilter && this.unidadeFilter.length > 0) {
-      filters.unidade = this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter;
-    }
-    if (this.ativoFilter.trim()) {
-      filters.ativo = this.ativoFilter.trim();
-    }
-
-    this.vendaService.getVendas(filters).subscribe({
+    this.vendaService.getVendas(this.montarFiltrosConsulta()).subscribe({
       next: (response: VendaPaginatedResponse) => {
         this.items = response.data;
         this.totalItems = response.meta.total;

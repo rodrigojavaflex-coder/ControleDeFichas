@@ -118,6 +118,7 @@ export class ComercialComissoesPage implements OnInit {
   carregandoPoliticaUnidade = false;
   politicaUnidadeSalvando = false;
   modalSetoresUnidadeAberto = false;
+  modalAplicarSetoresAberto = false;
   modalPoliticaGrade: FaixaGrade | null = null;
   modalFaixaGrade: FaixaGrade | null = null;
   modalFaixaRow: FaixaRow | null = null;
@@ -745,6 +746,7 @@ export class ComercialComissoesPage implements OnInit {
 
   fecharModalSetoresUnidade(): void {
     if (this.politicaUnidadeSalvando) return;
+    this.modalAplicarSetoresAberto = false;
     this.draftCodigosSetorUnidade = this.formatarCodigosSetor(
       this.codigosSetorUnidade,
     );
@@ -752,6 +754,33 @@ export class ComercialComissoesPage implements OnInit {
       this.codigosSetorRevendaUnidade,
     );
     this.modalSetoresUnidadeAberto = false;
+  }
+
+  pedirAplicarSetoresAosVendedores(): void {
+    if (
+      !this.podeEditarPolitica() ||
+      !this.unidadeFiltro ||
+      this.politicaUnidadeSalvando
+    ) {
+      return;
+    }
+    if (this.obterDraftSetoresUnidade() == null) {
+      this.errors.show(
+        'Informe códigos de setor numéricos separados por vírgula (ex.: 276, 330), ou deixe vazio.',
+        'Comissões Comercial',
+      );
+      return;
+    }
+    this.modalAplicarSetoresAberto = true;
+  }
+
+  fecharAplicarSetores(): void {
+    if (this.politicaUnidadeSalvando) return;
+    this.modalAplicarSetoresAberto = false;
+  }
+
+  confirmarAplicarSetores(somenteSemConfiguracao: boolean): void {
+    this.aplicarSetoresAosVendedores(somenteSemConfiguracao);
   }
 
   private carregarPoliticaUnidade(): void {
@@ -791,11 +820,8 @@ export class ComercialComissoesPage implements OnInit {
     ) {
       return;
     }
-    const parsed = this.parseCodigosSetor(this.draftCodigosSetorUnidade);
-    const parsedRevenda = this.parseCodigosSetor(
-      this.draftCodigosSetorRevendaUnidade,
-    );
-    if (parsed == null || parsedRevenda == null) {
+    const draft = this.obterDraftSetoresUnidade();
+    if (!draft) {
       this.errors.show(
         'Informe códigos de setor numéricos separados por vírgula (ex.: 276, 330), ou deixe vazio.',
         'Comissões Comercial',
@@ -806,8 +832,8 @@ export class ComercialComissoesPage implements OnInit {
     this.service
       .salvarPoliticaUnidade({
         unidade: this.unidadeFiltro,
-        codigosSetor: parsed,
-        codigosSetorRevendaManipulados: parsedRevenda,
+        codigosSetor: draft.codigosSetor,
+        codigosSetorRevendaManipulados: draft.codigosSetorRevendaManipulados,
       })
       .subscribe({
         next: (res) => {
@@ -828,6 +854,72 @@ export class ComercialComissoesPage implements OnInit {
           this.politicaUnidadeSalvando = false;
           this.errors.show(
             e?.error?.message ?? 'Erro ao salvar setores da unidade.',
+            'Comissões Comercial',
+          );
+        },
+      });
+  }
+
+  private obterDraftSetoresUnidade(): {
+    codigosSetor: number[];
+    codigosSetorRevendaManipulados: number[];
+  } | null {
+    const parsed = this.parseCodigosSetor(this.draftCodigosSetorUnidade);
+    const parsedRevenda = this.parseCodigosSetor(
+      this.draftCodigosSetorRevendaUnidade,
+    );
+    if (parsed == null || parsedRevenda == null) {
+      return null;
+    }
+    return {
+      codigosSetor: parsed,
+      codigosSetorRevendaManipulados: parsedRevenda,
+    };
+  }
+
+  private aplicarSetoresAosVendedores(somenteSemConfiguracao: boolean): void {
+    const unidade = this.unidadeFiltro;
+    const draft = this.obterDraftSetoresUnidade();
+    if (!this.podeEditarPolitica() || !unidade || !draft) {
+      return;
+    }
+    this.politicaUnidadeSalvando = true;
+    this.service
+      .aplicarPoliticaUnidadeAosVendedores({
+        unidade,
+        somenteSemConfiguracao,
+        codigosSetor: draft.codigosSetor,
+        codigosSetorRevendaManipulados: draft.codigosSetorRevendaManipulados,
+      })
+      .subscribe({
+        next: (res) => {
+          this.politicaUnidadeSalvando = false;
+          this.codigosSetorUnidade = draft.codigosSetor;
+          this.draftCodigosSetorUnidade = this.formatarCodigosSetor(
+            this.codigosSetorUnidade,
+          );
+          this.codigosSetorRevendaUnidade = draft.codigosSetorRevendaManipulados;
+          this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
+            this.codigosSetorRevendaUnidade,
+          );
+          const alcance = res.somenteSemConfiguracao
+            ? 'somente vendedores sem lista'
+            : 'todos os vendedores';
+          this.mensagemResultado =
+            res.vendedoresAfetados > 0
+              ? `Setores da unidade gravados e aplicados a ${res.vendedoresAfetados} vendedor(es) (${alcance}).`
+              : `Setores da unidade gravados. Nenhum vendedor precisava de atualização (${alcance}).`;
+          this.modalAplicarSetoresAberto = false;
+          this.modalSetoresUnidadeAberto = false;
+          if (this.funcionarioId) {
+            this.carregarPolitica();
+          }
+        },
+        error: (e) => {
+          this.politicaUnidadeSalvando = false;
+          this.errors.show(
+            e?.error?.message ??
+              'Erro ao aplicar os setores da unidade aos vendedores.',
             'Comissões Comercial',
           );
         },

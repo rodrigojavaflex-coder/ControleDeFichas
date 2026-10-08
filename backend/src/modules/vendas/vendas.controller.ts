@@ -147,6 +147,8 @@ export class VendasController {
   @ApiQuery({ name: 'dataFinalFechamento', required: false, type: String })
   @ApiQuery({ name: 'dataInicialEnvio', required: false, type: String })
   @ApiQuery({ name: 'dataFinalEnvio', required: false, type: String })
+  @ApiQuery({ name: 'dataInicialBaixa', required: false, type: String })
+  @ApiQuery({ name: 'dataFinalBaixa', required: false, type: String })
   @ApiQuery({ name: 'unidade', required: false, type: String })
   @ApiQuery({ name: 'ativo', required: false, type: String })
   findAll(
@@ -181,6 +183,8 @@ export class VendasController {
   @ApiQuery({ name: 'dataFinalFechamento', required: false, type: String })
   @ApiQuery({ name: 'dataInicialEnvio', required: false, type: String })
   @ApiQuery({ name: 'dataFinalEnvio', required: false, type: String })
+  @ApiQuery({ name: 'dataInicialBaixa', required: false, type: String })
+  @ApiQuery({ name: 'dataFinalBaixa', required: false, type: String })
   @ApiQuery({ name: 'unidade', required: false, type: String })
   @ApiQuery({ name: 'ativo', required: false, type: String })
   findAcompanhar(

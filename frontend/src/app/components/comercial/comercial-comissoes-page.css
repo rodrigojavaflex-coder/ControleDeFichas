@@ -531,6 +531,15 @@ body.theme-dark .comercial-comissoes-page tr.editing,
   max-width: 36rem;
 }
 
+.comercial-comissoes-aplicar-overlay {
+  z-index: 12600;
+}
+
+.comercial-comissoes-modal-setores .modal-rodape {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .comercial-comissoes-modal-setores .modal-cabecalho {
   align-items: flex-start;
 }

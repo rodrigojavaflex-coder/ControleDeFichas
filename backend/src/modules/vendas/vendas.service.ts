@@ -631,6 +631,23 @@ export class VendasService {
       }
     }
 
+    if (filters.dataInicialBaixa || filters.dataFinalBaixa) {
+      const condicoes: string[] = ['b.idvenda = venda.id'];
+      const params: Record<string, string> = {};
+      if (filters.dataInicialBaixa) {
+        condicoes.push('b."dataBaixa" >= :dataInicialBaixa');
+        params.dataInicialBaixa = filters.dataInicialBaixa;
+      }
+      if (filters.dataFinalBaixa) {
+        condicoes.push('b."dataBaixa" <= :dataFinalBaixa');
+        params.dataFinalBaixa = filters.dataFinalBaixa;
+      }
+      queryBuilder.andWhere(
+        `EXISTS (SELECT 1 FROM baixas b WHERE ${condicoes.join(' AND ')})`,
+        params,
+      );
+    }
+
     if (filters.unidade) {
       if (Array.isArray(filters.unidade) && filters.unidade.length > 0) {
         queryBuilder.andWhere('venda.unidade IN (:...unidades)', {

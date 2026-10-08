@@ -59,7 +59,10 @@ export class ComercialAcompanhamentoController {
 
   @Get('detalhe')
   @Permissions(Permission.COMERCIAL_ACOMPANHAMENTO_READ)
-  @ApiOperation({ summary: 'Movimentos do vendedor na competência' })
+  @ApiOperation({
+    summary:
+      'Movimentos do vendedor ou do TOTAL da unidade na competência (omita funcionarioId para a unidade)',
+  })
   @ApiResponse({ status: 200, type: ComercialAcompanhamentoDetalheDto })
   detalhe(
     @Req() req: { user: Usuario },

@@ -204,7 +204,7 @@
 /* Estilos para o modal de filtros */
 .modal-filtros {
   width: 90%;
-  max-width: 1000px;
+  max-width: 1200px;
   max-height: 90vh;
 }
 
@@ -262,6 +262,25 @@
 .modal-filtros .filters-grid.vendas-filtros-grid .filter-group.date-range-field app-date-range-filter,
 .modal-filtros .filters-grid.vendas-filtros-grid .filter-group.date-range-field .date-range-filter {
   width: fit-content;
+  max-width: 100%;
+}
+
+.modal-filtros .filters-grid.vendas-filtros-grid .vendas-filtros-datas {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: inherit;
+  min-width: 0;
+}
+
+.modal-filtros .filters-grid.vendas-filtros-grid .vendas-filtros-datas .date-range-field {
+  grid-column: span 1;
+  min-width: 0;
+}
+
+.modal-filtros .filters-grid.vendas-filtros-grid .vendas-filtros-datas app-date-range-filter,
+.modal-filtros .filters-grid.vendas-filtros-grid .vendas-filtros-datas .date-range-filter {
+  width: 100%;
   max-width: 100%;
 }
 
@@ -532,6 +551,12 @@
   font-size: 0.75rem;
 }
 
+@media (max-width: 1100px) {
+  .modal-filtros .filters-grid.vendas-filtros-grid .vendas-filtros-datas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
   .applied-filters-container {
@@ -551,6 +576,10 @@
 
   .modal-filtros .filters-grid.vendas-filtros-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .modal-filtros .filters-grid.vendas-filtros-grid .vendas-filtros-datas {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -34,6 +34,7 @@ export interface ComercialAcompanhamentoItem {
   valorBonusRequisicao?: number | null;
   valorComissaoProjetadoRequisicao?: number | null;
   valorBonusProjetadoRequisicao?: number | null;
+  percentualComissaoFaixaProjetadoRequisicao?: number | null;
   valorMetaMarcaPropria?: number | null;
   percentualMetaMarcaPropria?: number | null;
   valorProjetadoMarcaPropria?: number | null;
@@ -43,6 +44,7 @@ export interface ComercialAcompanhamentoItem {
   valorBonusMarcaPropria?: number | null;
   valorComissaoProjetadoMarcaPropria?: number | null;
   valorBonusProjetadoMarcaPropria?: number | null;
+  percentualComissaoFaixaProjetadoMarcaPropria?: number | null;
   diasUteisMes?: number | null;
   diasRealizados?: number | null;
   mesAberto?: boolean;
@@ -109,6 +111,15 @@ export interface ComercialAcompanhamentoMovimentoProduto {
   valor: number;
 }
 
+export interface ComercialAcompanhamentoMovimentoSetor {
+  data: string;
+  numeroCupom: number;
+  descricaoItem?: string | null;
+  codigoSetor?: number | null;
+  quantidade: number;
+  valor: number;
+}
+
 export interface ComercialAcompanhamentoMovimentoRejeitado {
   dataOrcamento: string;
   nrOrcamento: string;
@@ -117,11 +128,22 @@ export interface ComercialAcompanhamentoMovimentoRejeitado {
   motivoRejeicao?: string | null;
 }
 
+export interface ComercialAcompanhamentoMovimentoTerceiro {
+  dataBaixa: string;
+  protocolo: string;
+  dataVenda?: string | null;
+  nomeCliente?: string | null;
+  valor: number;
+}
+
 export interface ComercialAcompanhamentoDetalhe {
-  funcionarioId: string;
+  funcionarioId: string | null;
   nomeVendedor: string;
-  codigoVendedorErp: number;
+  codigoVendedorErp: number | null;
+  isTotal?: boolean;
   manipulados: ComercialAcompanhamentoMovimentoRequisicao[];
+  setor: ComercialAcompanhamentoMovimentoSetor[];
   marcaPropria: ComercialAcompanhamentoMovimentoProduto[];
   rejeitados: ComercialAcompanhamentoMovimentoRejeitado[];
+  terceiros: ComercialAcompanhamentoMovimentoTerceiro[];
 }

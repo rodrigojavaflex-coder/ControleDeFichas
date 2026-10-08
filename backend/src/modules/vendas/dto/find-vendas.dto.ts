@@ -235,6 +235,30 @@ export class FindVendasDto extends PaginationDto {
 
   @ApiPropertyOptional({
     description:
+      'Data inicial da baixa: vendas com ao menos uma baixa a partir desta data',
+    example: '2025-01-01',
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'Data inicial da baixa deve ter formato válido (YYYY-MM-DD)' },
+  )
+  dataInicialBaixa?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Data final da baixa: vendas com ao menos uma baixa até esta data',
+    example: '2025-12-31',
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'Data final da baixa deve ter formato válido (YYYY-MM-DD)' },
+  )
+  dataFinalBaixa?: string;
+
+  @ApiPropertyOptional({
+    description:
       'Filtrar vendas com % Lucro menor que o valor informado (ex.: 10 para 10%)',
     example: 25,
   })

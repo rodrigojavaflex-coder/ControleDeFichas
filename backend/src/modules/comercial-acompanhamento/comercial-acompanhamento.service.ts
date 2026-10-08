@@ -133,6 +133,7 @@ export class ComercialAcompanhamentoService {
       revendaMap,
       politicasReq,
       terceirosLoja,
+      terceirosPorCodigo,
     ] =
       await Promise.all([
         tetoLoja
@@ -194,6 +195,13 @@ export class ComercialAcompanhamentoService {
               tetoLoja,
             )
           : Promise.resolve({ valor: 0, qtd: 0 }),
+        tetoLoja
+          ? this.buscarRecebidoTerceirosPorVendedor(
+              dto.unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve(new Map() as Map<number, { valor: number; qtd: number }>),
       ]);
 
     const setoresRevendaPorCodigo = new Map<number, number[]>();
@@ -217,6 +225,7 @@ export class ComercialAcompanhamentoService {
           rejMap,
           revendaMap,
           setoresRevendaPorCodigo.get(f.codigoVendedorErp!) ?? [],
+          terceirosPorCodigo,
         ),
       )
       .sort(
@@ -286,6 +295,9 @@ export class ComercialAcompanhamentoService {
     dto: FindComercialAcompanhamentoDetalheDto,
   ): Promise<ComercialAcompanhamentoDetalheDto> {
     assertUnidadeFolha(usuario, dto.unidade);
+    if (!dto.funcionarioId) {
+      return this.detalheUnidade(dto);
+    }
     const funcionario = await this.funcionarioRepo.findOne({
       where: { id: dto.funcionarioId, unidade: dto.unidade },
     });
@@ -313,20 +325,31 @@ export class ComercialAcompanhamentoService {
       periodo.dataFinal,
       codigo,
     ];
-    const politicaMp = await this.politicaRepo.findOne({
-      where: {
-        funcionario: { id: funcionario.id },
-        tipoBase: ComercialTipoBase.MARCA_PROPRIA,
-      },
-    });
+    const [politicaMp, politicaReq] = await Promise.all([
+      this.politicaRepo.findOne({
+        where: {
+          funcionario: { id: funcionario.id },
+          tipoBase: ComercialTipoBase.MARCA_PROPRIA,
+        },
+      }),
+      this.politicaRepo.findOne({
+        where: {
+          funcionario: { id: funcionario.id },
+          tipoBase: ComercialTipoBase.REQUISICAO,
+        },
+      }),
+    ]);
     const setoresMp = (politicaMp?.codigosSetor ?? [])
+      .map((n) => Number(n))
+      .filter((n) => Number.isInteger(n) && n > 0);
+    const setoresRevenda = (politicaReq?.codigosSetorRevendaManipulados ?? [])
       .map((n) => Number(n))
       .filter((n) => Number.isInteger(n) && n > 0);
     const filtroSetorSql =
       setoresMp.length > 0 ? ' AND i.codigo_setor = ANY($5::int[])' : '';
     const paramsMp = setoresMp.length > 0 ? [...paramsMpRej, setoresMp] : paramsMpRej;
 
-    const [reqRows, mpRows, rejRows] = await Promise.all([
+    const [reqRows, mpRows, rejRows, tercRows, setorRows] = await Promise.all([
       tetoManip
         ? (this.dataSource.query(
             `
@@ -450,16 +473,102 @@ export class ComercialAcompanhamentoService {
           motivo_rejeicao: string | null;
         }>
       >,
+      tetoManip
+        ? (this.dataSource.query(
+            `
+          SELECT
+            b."dataBaixa" AS data_baixa,
+            v.protocolo,
+            v."dataVenda" AS data_venda,
+            c.nome AS nome_cliente,
+            CAST(b."valorBaixa" AS NUMERIC) AS valor
+          FROM baixas b
+          INNER JOIN vendas v ON v.id = b.idvenda
+          INNER JOIN vendedores ven ON ven.id = v."vendedorId"
+          INNER JOIN funcionarios f
+            ON f."codigoVendedorErp" = ven."cdVendedor"
+           AND f.unidade = v.unidade::text
+          LEFT JOIN clientes c ON c.id = v."clienteId"
+          WHERE v.unidade = $1
+            AND b."dataBaixa" >= $2
+            AND b."dataBaixa" <= $3
+            AND f."codigoVendedorErp" = $4
+            AND f."codigoVendedorErp" IS NOT NULL
+            AND f."codigoVendedorErp" > 0
+          ORDER BY b."dataBaixa" ASC, v.protocolo ASC
+        `,
+            [dto.unidade, periodo.dataInicial, tetoManip, codigo],
+          ) as Promise<
+            Array<{
+              data_baixa: string | Date;
+              protocolo: string;
+              data_venda: string | Date | null;
+              nome_cliente: string | null;
+              valor: string | number;
+            }>
+          >)
+        : Promise.resolve([]),
+      tetoManip && setoresRevenda.length
+        ? (this.dataSource.query(
+            `
+          SELECT
+            i.data_operacao AS data,
+            i.numero_cupom,
+            i.descricao_item,
+            i.codigo_setor,
+            i.quantidade,
+            GREATEST(
+              0,
+              i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+            ) AS valor
+          FROM caixa_itens_erp i
+          INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+          WHERE i.tipo_item = 'PRODUTO'
+            AND i.unidade = $1
+            AND i.data_operacao >= $2
+            AND i.data_operacao <= $3
+            AND p.codigo_operador_caixa = $4
+            AND i.codigo_setor = ANY($5::int[])
+          ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
+        `,
+            [
+              dto.unidade,
+              periodo.dataInicial,
+              tetoManip,
+              codigo,
+              setoresRevenda,
+            ],
+          ) as Promise<
+            Array<{
+              data: string | Date;
+              numero_cupom: string | number;
+              descricao_item: string | null;
+              codigo_setor: string | number | null;
+              quantidade: string | number;
+              valor: string | number;
+            }>
+          >)
+        : Promise.resolve([]),
     ]);
 
     return {
       funcionarioId: funcionario.id,
       nomeVendedor: funcionario.nome,
       codigoVendedorErp: codigo,
+      isTotal: false,
       manipulados: reqRows.map((row) => ({
         data: this.toYmd(row.data),
         numeroCupom: this.toInt(row.numero_cupom),
         numeroRequisicao: this.toInt(row.numero_requisicao),
+        valor: this.round2(this.toNumber(row.valor)),
+      })),
+      setor: setorRows.map((row) => ({
+        data: this.toYmd(row.data),
+        numeroCupom: this.toInt(row.numero_cupom),
+        descricaoItem: row.descricao_item,
+        codigoSetor:
+          row.codigo_setor == null ? null : this.toInt(row.codigo_setor),
+        quantidade: this.toNumber(row.quantidade),
         valor: this.round2(this.toNumber(row.valor)),
       })),
       marcaPropria: mpRows.map((row) => ({
@@ -476,6 +585,295 @@ export class ComercialAcompanhamentoService {
         precoVenda: this.round2(this.toNumber(row.preco_venda)),
         motivoRejeicao: row.motivo_rejeicao,
       })),
+      terceiros: tercRows.map((row) => ({
+        dataBaixa: this.toYmd(row.data_baixa),
+        protocolo: row.protocolo || '—',
+        dataVenda: row.data_venda ? this.toYmd(row.data_venda) : null,
+        nomeCliente: row.nome_cliente,
+        valor: this.round2(this.toNumber(row.valor)),
+      })),
+    };
+  }
+
+  private async detalheUnidade(
+    dto: FindComercialAcompanhamentoDetalheDto,
+  ): Promise<ComercialAcompanhamentoDetalheDto> {
+    const periodo = periodoCompetencia(dto.ano, dto.mes);
+    const ultimaConfirmada = await this.buscarUltimaDataCaixaConfirmada(
+      dto.unidade,
+    );
+    const tetoManip = this.dataTetoCaixaConfirmado(
+      periodo.dataInicial,
+      periodo.dataFinal,
+      ultimaConfirmada,
+    );
+    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
+      where: { unidade: dto.unidade },
+    });
+    const setoresMp = this.normalizarCodigosSetor(
+      politicaUnidade?.codigosSetor,
+    );
+    const setoresRevenda = this.normalizarCodigosSetor(
+      politicaUnidade?.codigosSetorRevendaManipulados,
+    );
+    const vinculoSql = `
+      c.codigo_vendedor IN (
+        SELECT f."codigoVendedorErp"
+        FROM funcionarios f
+        WHERE f.unidade = $1
+          AND f."codigoVendedorErp" IS NOT NULL
+          AND f."codigoVendedorErp" > 0
+      )
+    `;
+    const filtroMpSql =
+      setoresMp.length > 0 ? ' AND i.codigo_setor = ANY($4::int[])' : '';
+    const paramsMp = setoresMp.length
+      ? [dto.unidade, periodo.dataInicial, tetoManip ?? periodo.dataFinal, setoresMp]
+      : [dto.unidade, periodo.dataInicial, tetoManip ?? periodo.dataFinal];
+
+    const [reqRows, mpRows, rejRows, tercRows, setorRows] = await Promise.all([
+      tetoManip
+        ? (this.dataSource.query(
+            `
+          SELECT
+            t.data,
+            t.numero_cupom,
+            t.numero_requisicao,
+            t.valor
+          FROM (
+            SELECT
+              MIN(i.data_operacao) AS data,
+              i.numero_cupom,
+              i.numero_requisicao,
+              GREATEST(
+                0,
+                LEAST(
+                  SUM(i.valor_liquido_item - COALESCE(i.valor_taxa, 0)),
+                  MAX(
+                    COALESCE(
+                      c.valor_pago_requisicao - COALESCE(c.valor_taxa, 0),
+                      i.valor_liquido_item - COALESCE(i.valor_taxa, 0)
+                    )
+                  )
+                )
+              ) AS valor
+            FROM caixa_itens_erp i
+            INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+            ${this.sqlJoinCaixaPago()}
+            WHERE i.tipo_item = 'REQUISICAO'
+              AND i.unidade = $1
+              AND i.numero_requisicao IS NOT NULL
+              AND i.data_operacao >= $2
+              AND i.data_operacao <= $3
+              AND COALESCE(c.tipo_requisicao, '') <> 'C'
+              AND ${vinculoSql}
+            GROUP BY i.numero_cupom, i.numero_requisicao
+            UNION ALL
+            SELECT
+              c.data_pagamento AS data,
+              c.numero_cupom,
+              c.numero_requisicao,
+              GREATEST(
+                0,
+                COALESCE(c.valor_pago_requisicao, 0) - COALESCE(c.valor_taxa, 0)
+              ) AS valor
+            FROM caixa_requisicoes_pagas c
+            WHERE c.unidade = $1
+              AND c.data_pagamento >= $2
+              AND c.data_pagamento <= $3
+              AND COALESCE(c.tipo_requisicao, '') <> 'C'
+              AND ${vinculoSql}
+              AND ${this.sqlPagaSemItemComPagamento('c')}
+          ) t
+          ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
+        `,
+            [dto.unidade, periodo.dataInicial, tetoManip],
+          ) as Promise<
+            Array<{
+              data: string | Date;
+              numero_cupom: string | number;
+              numero_requisicao: string | number;
+              valor: string | number;
+            }>
+          >)
+        : Promise.resolve([]),
+      this.dataSource.query(
+        setoresMp.length
+          ? `
+          SELECT
+            i.data_operacao AS data,
+            i.numero_cupom,
+            i.descricao_item,
+            i.quantidade,
+            GREATEST(
+              0,
+              i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+            ) AS valor
+          FROM caixa_itens_erp i
+          INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+          WHERE i.tipo_item = 'PRODUTO'
+            AND i.unidade = $1
+            AND i.data_operacao >= $2
+            AND i.data_operacao <= $3
+            ${filtroMpSql}
+          ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
+        `
+          : `
+          SELECT
+            i.data_operacao AS data,
+            i.numero_cupom,
+            i.descricao_item,
+            i.quantidade,
+            i.valor_liquido_item AS valor
+          FROM caixa_itens_erp i
+          WHERE i.tipo_item = 'PRODUTO'
+            AND i.unidade = $1
+            AND i.data_operacao >= $2
+            AND i.data_operacao <= $3
+          ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
+        `,
+        paramsMp,
+      ) as Promise<
+        Array<{
+          data: string | Date;
+          numero_cupom: string | number;
+          descricao_item: string | null;
+          quantidade: string | number;
+          valor: string | number;
+        }>
+      >,
+      this.dataSource.query(
+        `
+          SELECT
+            o."dataOrcamento" AS data_orcamento,
+            o."nrOrcamento" AS nr_orcamento,
+            o."nomeCliente" AS nome_cliente,
+            o."precoVenda" AS preco_venda,
+            m.descricao AS motivo_rejeicao
+          FROM orcamentos o
+          LEFT JOIN orcamento_motivo_rejeicao m ON m.id = o."motivoRejeicaoId"
+          WHERE o.unidade = $1
+            AND o.status = 'REJEITADO'
+            AND o."dataOrcamento" >= $2
+            AND o."dataOrcamento" <= $3
+            AND o."codigoVendedor" IS NOT NULL
+          ORDER BY o."dataOrcamento" ASC, o."nrOrcamento" ASC
+        `,
+        [dto.unidade, periodo.dataInicial, periodo.dataFinal],
+      ) as Promise<
+        Array<{
+          data_orcamento: string | Date;
+          nr_orcamento: string;
+          nome_cliente: string | null;
+          preco_venda: string | number;
+          motivo_rejeicao: string | null;
+        }>
+      >,
+      tetoManip
+        ? (this.dataSource.query(
+            `
+          SELECT
+            b."dataBaixa" AS data_baixa,
+            v.protocolo,
+            v."dataVenda" AS data_venda,
+            c.nome AS nome_cliente,
+            CAST(b."valorBaixa" AS NUMERIC) AS valor
+          FROM baixas b
+          INNER JOIN vendas v ON v.id = b.idvenda
+          LEFT JOIN clientes c ON c.id = v."clienteId"
+          WHERE v.unidade = $1
+            AND b."dataBaixa" >= $2
+            AND b."dataBaixa" <= $3
+          ORDER BY b."dataBaixa" ASC, v.protocolo ASC
+        `,
+            [dto.unidade, periodo.dataInicial, tetoManip],
+          ) as Promise<
+            Array<{
+              data_baixa: string | Date;
+              protocolo: string;
+              data_venda: string | Date | null;
+              nome_cliente: string | null;
+              valor: string | number;
+            }>
+          >)
+        : Promise.resolve([]),
+      tetoManip && setoresRevenda.length
+        ? (this.dataSource.query(
+            `
+          SELECT
+            i.data_operacao AS data,
+            i.numero_cupom,
+            i.descricao_item,
+            i.codigo_setor,
+            i.quantidade,
+            GREATEST(
+              0,
+              i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+            ) AS valor
+          FROM caixa_itens_erp i
+          INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+          WHERE i.tipo_item = 'PRODUTO'
+            AND i.unidade = $1
+            AND i.data_operacao >= $2
+            AND i.data_operacao <= $3
+            AND i.codigo_setor = ANY($4::int[])
+          ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
+        `,
+            [dto.unidade, periodo.dataInicial, tetoManip, setoresRevenda],
+          ) as Promise<
+            Array<{
+              data: string | Date;
+              numero_cupom: string | number;
+              descricao_item: string | null;
+              codigo_setor: string | number | null;
+              quantidade: string | number;
+              valor: string | number;
+            }>
+          >)
+        : Promise.resolve([]),
+    ]);
+
+    return {
+      funcionarioId: null,
+      nomeVendedor: `TOTAL ${dto.unidade}`,
+      codigoVendedorErp: null,
+      isTotal: true,
+      manipulados: reqRows.map((row) => ({
+        data: this.toYmd(row.data),
+        numeroCupom: this.toInt(row.numero_cupom),
+        numeroRequisicao: this.toInt(row.numero_requisicao),
+        valor: this.round2(this.toNumber(row.valor)),
+      })),
+      setor: setorRows.map((row) => ({
+        data: this.toYmd(row.data),
+        numeroCupom: this.toInt(row.numero_cupom),
+        descricaoItem: row.descricao_item,
+        codigoSetor:
+          row.codigo_setor == null ? null : this.toInt(row.codigo_setor),
+        quantidade: this.toNumber(row.quantidade),
+        valor: this.round2(this.toNumber(row.valor)),
+      })),
+      marcaPropria: mpRows.map((row) => ({
+        data: this.toYmd(row.data),
+        numeroCupom: this.toInt(row.numero_cupom),
+        descricaoItem: row.descricao_item,
+        quantidade: this.toNumber(row.quantidade),
+        valor: this.round2(this.toNumber(row.valor)),
+      })),
+      rejeitados: rejRows.map((row) => ({
+        dataOrcamento: this.toYmd(row.data_orcamento),
+        nrOrcamento: row.nr_orcamento || '—',
+        nomeCliente: row.nome_cliente,
+        precoVenda: this.round2(this.toNumber(row.preco_venda)),
+        motivoRejeicao: row.motivo_rejeicao,
+      })),
+      terceiros: tercRows.map((row) => ({
+        dataBaixa: this.toYmd(row.data_baixa),
+        protocolo: row.protocolo || '—',
+        dataVenda: row.data_venda ? this.toYmd(row.data_venda) : null,
+        nomeCliente: row.nome_cliente,
+        valor: this.round2(this.toNumber(row.valor)),
+      })),
     };
   }
 
@@ -488,13 +886,17 @@ export class ComercialAcompanhamentoService {
     rejMap: MapaMovimento,
     revendaMap: MapaMovimento,
     setoresRevenda: number[],
+    terceirosPorCodigo: Map<number, { valor: number; qtd: number }>,
   ): ComercialAcompanhamentoItemDto {
     const req = reqMap.get(codigo);
     const mp = mpMap.get(codigo);
     const rej = rejMap.get(codigo);
     const revenda = setoresRevenda.length ? revendaMap.get(codigo) : undefined;
+    const terceiros = terceirosPorCodigo.get(codigo);
     const valorPura = this.round2(req?.valor ?? 0);
     const valorRevenda = this.round2(revenda?.valor ?? 0);
+    const valorTerceiros = this.round2(terceiros?.valor ?? 0);
+    const comissaoBase = this.round2(valorPura + valorRevenda);
     return {
       funcionarioId,
       nomeVendedor: nome,
@@ -503,10 +905,10 @@ export class ComercialAcompanhamentoService {
       valorRevendaManipulados: valorRevenda,
       quantidadeRevendaManipulados: revenda?.qtd ?? 0,
       codigosSetorRevendaManipulados: setoresRevenda,
-      valorTerceirosManipulados: 0,
-      quantidadeTerceirosManipulados: 0,
-      valorComissaoBaseRequisicao: this.round2(valorPura + valorRevenda),
-      valorRecebidoRequisicao: this.round2(valorPura + valorRevenda),
+      valorTerceirosManipulados: valorTerceiros,
+      quantidadeTerceirosManipulados: terceiros?.qtd ?? 0,
+      valorComissaoBaseRequisicao: comissaoBase,
+      valorRecebidoRequisicao: this.round2(comissaoBase + valorTerceiros),
       quantidadeRecebidoRequisicao: req?.qtd ?? 0,
       quantidadeFormulasRequisicao: req?.qtdFormulas ?? 0,
       valorRecebidoMarcaPropria: mp?.valor ?? 0,
@@ -944,6 +1346,55 @@ export class ComercialAcompanhamentoService {
     };
   }
 
+  /**
+   * Terceiros do card do vendedor: venda.vendedor.cdVendedor =
+   * funcionario.codigoVendedorErp na mesma unidade. O nome do card é o
+   * do funcionário (RN-COM-003).
+   */
+  private async buscarRecebidoTerceirosPorVendedor(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinal: string,
+  ): Promise<Map<number, { valor: number; qtd: number }>> {
+    const rows = (await this.dataSource.query(
+      `
+        SELECT
+          f."codigoVendedorErp" AS codigo_vendedor,
+          COALESCE(SUM(CAST(b."valorBaixa" AS NUMERIC)), 0) AS valor,
+          COUNT(DISTINCT b.idvenda)::int AS qtd
+        FROM baixas b
+        INNER JOIN vendas v ON v.id = b.idvenda
+        INNER JOIN vendedores ven ON ven.id = v."vendedorId"
+        INNER JOIN funcionarios f
+          ON f."codigoVendedorErp" = ven."cdVendedor"
+         AND f.unidade = v.unidade::text
+        WHERE v.unidade = $1
+          AND b."dataBaixa" >= $2
+          AND b."dataBaixa" <= $3
+          AND ven."cdVendedor" IS NOT NULL
+          AND ven."cdVendedor" > 0
+          AND f."codigoVendedorErp" IS NOT NULL
+          AND f."codigoVendedorErp" > 0
+        GROUP BY f."codigoVendedorErp"
+      `,
+      [unidade, dataInicial, dataFinal],
+    )) as Array<{
+      codigo_vendedor: string | number | null;
+      valor: string | number | null;
+      qtd: string | number | null;
+    }>;
+    const map = new Map<number, { valor: number; qtd: number }>();
+    for (const row of rows) {
+      const codigo = this.toInt(row.codigo_vendedor);
+      if (codigo <= 0) continue;
+      map.set(codigo, {
+        valor: this.round2(this.toNumber(row.valor)),
+        qtd: this.toInt(row.qtd),
+      });
+    }
+    return map;
+  }
+
   private mapMovimentoRows(rows: MovimentoRow[]): MapaMovimento {
     const map: MapaMovimento = new Map();
     for (const row of rows) {
@@ -1178,6 +1629,12 @@ export class ComercialAcompanhamentoService {
     for (const item of itens) {
       const fid = item.funcionarioId;
       if (!fid) continue;
+      const itemProjComissaoReq =
+        mesAberto && realizados > 0
+          ? this.round2(
+              (item.valorComissaoBaseRequisicao / realizados) * duMes,
+            )
+          : null;
       this.anexarComissaoTipo(
         item,
         faixasPorFuncTipo.get(`${fid}|${ComercialTipoBase.REQUISICAO}`) ?? [],
@@ -1185,7 +1642,7 @@ export class ComercialAcompanhamentoService {
         item.percentualMetaRequisicao,
         item.percentualProjecaoRequisicao,
         item.valorComissaoBaseRequisicao,
-        item.valorProjetadoRequisicao,
+        itemProjComissaoReq,
         totais.percentualMetaRequisicao,
         pctLojaProjReq,
         lojaComissaoReq,
@@ -1284,9 +1741,11 @@ export class ComercialAcompanhamentoService {
         const valorProj = this.round2((valorProjetado * pctProj) / 100);
         if (sufixo === 'Requisicao') {
           item.percentualComissaoFaixa = pctProj;
+          item.percentualComissaoFaixaProjetadoRequisicao = pctProj;
           item.valorBonusProjetadoRequisicao = bonusProj;
           item.valorComissaoProjetadoRequisicao = valorProj;
         } else {
+          item.percentualComissaoFaixaProjetadoMarcaPropria = pctProj;
           item.valorBonusProjetadoMarcaPropria = bonusProj;
           item.valorComissaoProjetadoMarcaPropria = valorProj;
         }
@@ -1297,9 +1756,11 @@ export class ComercialAcompanhamentoService {
       !travaProjOk
     ) {
       if (sufixo === 'Requisicao') {
+        item.percentualComissaoFaixaProjetadoRequisicao = 0;
         item.valorBonusProjetadoRequisicao = 0;
         item.valorComissaoProjetadoRequisicao = 0;
       } else {
+        item.percentualComissaoFaixaProjetadoMarcaPropria = 0;
         item.valorBonusProjetadoMarcaPropria = 0;
         item.valorComissaoProjetadoMarcaPropria = 0;
       }

@@ -34,6 +34,8 @@ import {
   FindComercialComissaoPoliticaUnidadeDto,
   ComercialComissaoPoliticaUnidadeResponseDto,
   SalvarComercialComissaoPoliticaUnidadeDto,
+  AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
+  AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto,
 } from './dto/comercial-comissao-faixa.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -137,6 +139,26 @@ export class ComercialComissaoController {
     @Body() dto: SalvarComercialComissaoPoliticaUnidadeDto,
   ): Promise<ComercialComissaoPoliticaUnidadeResponseDto> {
     return this.service.salvarPoliticaUnidade(req.user, dto);
+  }
+
+  @Post('politica-unidade/aplicar-vendedores')
+  @Permissions(
+    Permission.COMERCIAL_COMISSAO_UPDATE,
+    Permission.COMERCIAL_COMISSAO_CREATE,
+  )
+  @ApiOperation({
+    summary:
+      'Copia os setores da unidade para os vendedores (todos ou só quem ainda não tem lista)',
+  })
+  @ApiResponse({
+    status: 200,
+    type: AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto,
+  })
+  aplicarPoliticaUnidadeAosVendedores(
+    @Req() req: { user: Usuario },
+    @Body() dto: AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
+  ): Promise<AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto> {
+    return this.service.aplicarPoliticaUnidadeAosVendedores(req.user, dto);
   }
 
   @Post('carregar-padrao')

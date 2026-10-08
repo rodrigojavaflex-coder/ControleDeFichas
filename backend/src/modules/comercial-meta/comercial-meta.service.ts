@@ -36,6 +36,8 @@ import {
   SalvarComercialComissaoPoliticaDto,
   ComercialComissaoPoliticaUnidadeResponseDto,
   SalvarComercialComissaoPoliticaUnidadeDto,
+  AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
+  AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto,
 } from './dto/comercial-comissao-faixa.dto';
 import { ComercialComissaoPoliticaUnidade } from './entities/comercial-comissao-politica-unidade.entity';
 
@@ -462,6 +464,129 @@ export class ComercialMetaService {
     return this.listarPoliticaUnidade(usuario, dto.unidade);
   }
 
+  async aplicarPoliticaUnidadeAosVendedores(
+    usuario: Usuario,
+    dto: AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
+  ): Promise<AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto> {
+    assertUnidadeFolha(usuario, dto.unidade);
+    const somenteSem = dto.somenteSemConfiguracao === true;
+    const salva = await this.listarPoliticaUnidade(usuario, dto.unidade);
+    const codigosSetor =
+      dto.codigosSetor !== undefined
+        ? normalizarCodigosSetor(dto.codigosSetor)
+        : salva.codigosSetor;
+    const codigosSetorRevendaManipulados =
+      dto.codigosSetorRevendaManipulados !== undefined
+        ? normalizarCodigosSetor(dto.codigosSetorRevendaManipulados)
+        : salva.codigosSetorRevendaManipulados;
+
+    const vinculados = await this.listarVinculados(dto.unidade);
+    let vendedoresAfetados = 0;
+    let politicasAtualizadas = 0;
+
+    await this.dataSource.transaction(async (manager) => {
+      const unidadeRepo = manager.getRepository(
+        ComercialComissaoPoliticaUnidade,
+      );
+      let unidadeRow = await unidadeRepo.findOne({
+        where: { unidade: dto.unidade },
+      });
+      if (!unidadeRow) {
+        unidadeRow = unidadeRepo.create({
+          unidade: dto.unidade,
+          codigosSetor,
+          codigosSetorRevendaManipulados,
+        });
+      } else {
+        unidadeRow.codigosSetor = codigosSetor;
+        unidadeRow.codigosSetorRevendaManipulados =
+          codigosSetorRevendaManipulados;
+      }
+      await unidadeRepo.save(unidadeRow);
+
+      if (!vinculados.length) {
+        return;
+      }
+
+      const politicaRepo = manager.getRepository(ComercialComissaoPolitica);
+      const existentes = await politicaRepo.find({
+        where: { funcionario: { id: In(vinculados.map((f) => f.id)) } },
+        relations: ['funcionario'],
+      });
+      const porChave = new Map(
+        existentes.map((p) => [`${p.funcionario.id}|${p.tipoBase}`, p]),
+      );
+      const paraSalvar: ComercialComissaoPolitica[] = [];
+      const funcionariosAfetados = new Set<string>();
+
+      for (const funcionario of vinculados) {
+        const chaveMp = `${funcionario.id}|${ComercialTipoBase.MARCA_PROPRIA}`;
+        const chaveReq = `${funcionario.id}|${ComercialTipoBase.REQUISICAO}`;
+        const mp = porChave.get(chaveMp);
+        const req = porChave.get(chaveReq);
+        const mpVazia = this.listaSetorVazia(mp?.codigosSetor);
+        const reqVazia = this.listaSetorVazia(
+          req?.codigosSetorRevendaManipulados,
+        );
+
+        if (!somenteSem || mpVazia) {
+          if (!mp) {
+            paraSalvar.push(
+              politicaRepo.create({
+                funcionario,
+                tipoBase: ComercialTipoBase.MARCA_PROPRIA,
+                incidencia: ComercialIncidenciaComissao.PROPRIAS,
+                percentualMinimoLoja: null,
+                codigosSetor,
+                codigosSetorRevendaManipulados: [],
+              }),
+            );
+          } else {
+            mp.codigosSetor = codigosSetor;
+            paraSalvar.push(mp);
+          }
+          funcionariosAfetados.add(funcionario.id);
+        }
+
+        if (!somenteSem || reqVazia) {
+          if (!req) {
+            paraSalvar.push(
+              politicaRepo.create({
+                funcionario,
+                tipoBase: ComercialTipoBase.REQUISICAO,
+                incidencia: ComercialIncidenciaComissao.PROPRIAS,
+                percentualMinimoLoja: null,
+                codigosSetor: [],
+                codigosSetorRevendaManipulados,
+              }),
+            );
+          } else {
+            req.codigosSetorRevendaManipulados = codigosSetorRevendaManipulados;
+            paraSalvar.push(req);
+          }
+          funcionariosAfetados.add(funcionario.id);
+        }
+      }
+
+      if (paraSalvar.length) {
+        await politicaRepo.save(paraSalvar);
+      }
+      vendedoresAfetados = funcionariosAfetados.size;
+      politicasAtualizadas = paraSalvar.length;
+    });
+
+    this.logger.log(
+      `Setores da unidade ${dto.unidade} aplicados aos vendedores (${somenteSem ? 'somente sem lista' : 'todos'}): ${vendedoresAfetados} vendedor(es), ${politicasAtualizadas} política(s) de ${vinculados.length} vinculado(s).`,
+    );
+
+    return {
+      unidade: dto.unidade,
+      vendedoresAfetados,
+      politicasAtualizadas,
+      somenteSemConfiguracao: somenteSem,
+    };
+  }
+
   async carregarFaixasPadraoPendentes(
     usuario: Usuario,
     unidadeQuery?: Unidade,
@@ -650,6 +775,12 @@ export class ComercialMetaService {
       metaUnidadeMarcaPropria,
       itens,
     };
+  }
+
+  private listaSetorVazia(
+    valores: number[] | null | undefined,
+  ): boolean {
+    return normalizarCodigosSetor(valores).length === 0;
   }
 
   private async listarVinculados(unidade: Unidade): Promise<Funcionario[]> {

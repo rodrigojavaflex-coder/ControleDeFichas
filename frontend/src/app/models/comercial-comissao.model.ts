@@ -77,3 +77,17 @@ export interface SalvarComercialComissaoPoliticaUnidadeDto {
   codigosSetor?: number[];
   codigosSetorRevendaManipulados?: number[];
 }
+
+export interface AplicarComercialComissaoPoliticaUnidadeVendedoresDto {
+  unidade: Unidade;
+  somenteSemConfiguracao: boolean;
+  codigosSetor?: number[];
+  codigosSetorRevendaManipulados?: number[];
+}
+
+export interface AplicarComercialComissaoPoliticaUnidadeVendedoresResponse {
+  unidade: Unidade;
+  vendedoresAfetados: number;
+  politicasAtualizadas: number;
+  somenteSemConfiguracao: boolean;
+}

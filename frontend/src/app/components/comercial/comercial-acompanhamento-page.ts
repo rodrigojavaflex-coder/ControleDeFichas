@@ -43,8 +43,16 @@ interface CardResumo {
   percentualProjecaoMarcaPropria?: number | null;
   valorComissaoRequisicao?: number | null;
   valorBonusRequisicao?: number | null;
+  valorComissaoProjetadoRequisicao?: number | null;
+  valorBonusProjetadoRequisicao?: number | null;
+  percentualComissaoFaixaRequisicao?: number | null;
+  percentualComissaoFaixaProjetadoRequisicao?: number | null;
   valorComissaoMarcaPropria?: number | null;
   valorBonusMarcaPropria?: number | null;
+  valorComissaoProjetadoMarcaPropria?: number | null;
+  valorBonusProjetadoMarcaPropria?: number | null;
+  percentualComissaoFaixaMarcaPropria?: number | null;
+  percentualComissaoFaixaProjetadoMarcaPropria?: number | null;
   codigosSetorMarcaPropria?: number[];
   valorRecebidoMarcaPropriaSetores?: number;
   quantidadeRecebidoMarcaPropriaSetores?: number;
@@ -69,6 +77,22 @@ const TOTAIS_VAZIOS: ComercialAcompanhamentoTotais = {
 
 const ANO_COMPETENCIA_MIN = 2026;
 const ANO_COMPETENCIA_MAX = 2033;
+
+type ComercialDetalheSecao =
+  | 'requisicoes'
+  | 'setor'
+  | 'terceiros'
+  | 'marcaPropria'
+  | 'orcamentos';
+type ComercialPrintForma = 'resumido' | 'detalhado';
+
+const DETALHE_SECOES_FECHADAS: Record<ComercialDetalheSecao, boolean> = {
+  requisicoes: false,
+  setor: false,
+  terceiros: false,
+  marcaPropria: false,
+  orcamentos: false,
+};
 
 @Component({
   selector: 'app-comercial-acompanhamento-page',
@@ -104,6 +128,11 @@ export class ComercialAcompanhamentoPage implements OnInit {
   carregandoDetalhe = false;
   itemDetalhe: ComercialAcompanhamentoItem | null = null;
   detalhe: ComercialAcompanhamentoDetalhe | null = null;
+  detalheSecoesAbertas: Record<ComercialDetalheSecao, boolean> = {
+    ...DETALHE_SECOES_FECHADAS,
+  };
+  printDetalheAberto = false;
+  printFormaDetalhe: ComercialPrintForma = 'resumido';
   infoMarcaPropriaAberto = false;
   infoManipuladosAberto = false;
   infoManipuladosCard: CardResumo | null = null;
@@ -207,8 +236,18 @@ export class ComercialAcompanhamentoPage implements OnInit {
         percentualProjecaoMarcaPropria: item.percentualProjecaoMarcaPropria,
         valorComissaoRequisicao: item.valorComissaoRequisicao,
         valorBonusRequisicao: item.valorBonusRequisicao,
+        valorComissaoProjetadoRequisicao: item.valorComissaoProjetadoRequisicao,
+        valorBonusProjetadoRequisicao: item.valorBonusProjetadoRequisicao,
+        percentualComissaoFaixaRequisicao: item.percentualComissaoFaixaRequisicao,
+        percentualComissaoFaixaProjetadoRequisicao:
+          item.percentualComissaoFaixaProjetadoRequisicao,
         valorComissaoMarcaPropria: item.valorComissaoMarcaPropria,
         valorBonusMarcaPropria: item.valorBonusMarcaPropria,
+        valorComissaoProjetadoMarcaPropria: item.valorComissaoProjetadoMarcaPropria,
+        valorBonusProjetadoMarcaPropria: item.valorBonusProjetadoMarcaPropria,
+        percentualComissaoFaixaMarcaPropria: item.percentualComissaoFaixaMarcaPropria,
+        percentualComissaoFaixaProjetadoMarcaPropria:
+          item.percentualComissaoFaixaProjetadoMarcaPropria,
       });
     }
     return cards;
@@ -233,7 +272,10 @@ export class ComercialAcompanhamentoPage implements OnInit {
     );
   }
 
-  valorTotalRecebido(card: CardResumo): number {
+  valorTotalRecebido(card: {
+    valorRecebidoRequisicao: number;
+    valorRecebidoMarcaPropria: number;
+  }): number {
     return (
       Number(card.valorRecebidoRequisicao || 0) +
       Number(card.valorRecebidoMarcaPropria || 0)
@@ -244,9 +286,10 @@ export class ComercialAcompanhamentoPage implements OnInit {
     nomeVendedor: string;
     codigoVendedorErp: number | null;
   }): string {
-    const codigo =
-      item.codigoVendedorErp != null ? String(item.codigoVendedorErp) : '—';
-    return `${item.nomeVendedor} (${codigo})`;
+    if (item.codigoVendedorErp == null) {
+      return item.nomeVendedor;
+    }
+    return `${item.nomeVendedor} (${item.codigoVendedorErp})`;
   }
 
   rotuloQtdManipulados(reqs: number | null | undefined, formulas: number | null | undefined): string {
@@ -265,9 +308,30 @@ export class ComercialAcompanhamentoPage implements OnInit {
     return `${n} venda(s)`;
   }
 
-  rotuloManipuladoSetor(card: CardResumo): string {
-    const setores = this.rotuloSetores(card.codigosSetorRevendaManipulados);
+  rotuloManipuladoSetor(origem: {
+    codigosSetorRevendaManipulados?: number[];
+  }): string {
+    const setores = this.rotuloSetores(origem.codigosSetorRevendaManipulados);
     return setores === '—' ? 'setor' : `setor ${setores}`;
+  }
+
+  rotuloTituloSetor(origem: {
+    codigosSetorRevendaManipulados?: number[];
+  }): string {
+    const setores = this.rotuloSetores(origem.codigosSetorRevendaManipulados);
+    return setores === '—' ? 'Setor' : `Setor ${setores}`;
+  }
+
+  get cardItemDetalhe(): CardResumo | null {
+    const item = this.itemDetalhe;
+    if (!item) return null;
+    if (!item.funcionarioId) {
+      return this.cardsResumo.find((c) => c.isTotal) ?? null;
+    }
+    return (
+      this.cardsResumo.find((c) => c.funcionarioId === item.funcionarioId) ??
+      null
+    );
   }
 
   get rotuloCompetenciaLegenda(): string {
@@ -353,16 +417,16 @@ export class ComercialAcompanhamentoPage implements OnInit {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.printDetalheAberto) {
+      this.fecharImpressaoDetalhe();
+      return;
+    }
     if (this.infoMarcaPropriaAberto) {
       this.fecharInfoMarcaPropria();
       return;
     }
     if (this.infoManipuladosAberto) {
       this.fecharInfoManipulados();
-      return;
-    }
-    if (this.detalheAberto) {
-      this.fecharDetalhe();
     }
   }
 
@@ -394,7 +458,10 @@ export class ComercialAcompanhamentoPage implements OnInit {
   }
 
   abrirDetalhe(card: CardResumo): void {
-    if (card.isTotal) return;
+    if (card.isTotal) {
+      this.abrirDetalheUnidade();
+      return;
+    }
     this.abrirDetalhePorId(card.funcionarioId);
   }
 
@@ -402,14 +469,59 @@ export class ComercialAcompanhamentoPage implements OnInit {
     this.abrirDetalhePorId(item.funcionarioId);
   }
 
+  private abrirDetalheUnidade(): void {
+    if (!this.unidadeFiltro) return;
+    this.itemDetalhe = this.itemFromTotais();
+    this.carregarDetalhe(undefined);
+  }
+
+  private itemFromTotais(): ComercialAcompanhamentoItem {
+    const t = this.totais;
+    return {
+      funcionarioId: null,
+      nomeVendedor: this.rotuloCardTotal(),
+      codigoVendedorErp: null,
+      valorRecebidoRequisicao: t.valorRecebidoRequisicao,
+      quantidadeRecebidoRequisicao: t.quantidadeRecebidoRequisicao,
+      quantidadeFormulasRequisicao: t.quantidadeFormulasRequisicao,
+      valorRequisicaoPura: t.valorRequisicaoPura,
+      valorRevendaManipulados: t.valorRevendaManipulados,
+      quantidadeRevendaManipulados: t.quantidadeRevendaManipulados,
+      codigosSetorRevendaManipulados: t.codigosSetorRevendaManipulados ?? [],
+      valorTerceirosManipulados: t.valorTerceirosManipulados ?? 0,
+      quantidadeTerceirosManipulados: t.quantidadeTerceirosManipulados ?? 0,
+      valorComissaoBaseRequisicao: t.valorComissaoBaseRequisicao,
+      valorRecebidoMarcaPropria: t.valorRecebidoMarcaPropria,
+      quantidadeRecebidoMarcaPropria: t.quantidadeRecebidoMarcaPropria,
+      valorRejeitado: t.valorRejeitado,
+      quantidadeRejeitado: t.quantidadeRejeitado,
+      valorMetaRequisicao: t.valorMetaRequisicao,
+      percentualMetaRequisicao: t.percentualMetaRequisicao,
+      valorProjetadoRequisicao: t.valorProjetadoRequisicao,
+      percentualProjecaoRequisicao: t.percentualProjecaoRequisicao,
+      valorMetaMarcaPropria: t.valorMetaMarcaPropria,
+      percentualMetaMarcaPropria: t.percentualMetaMarcaPropria,
+      valorProjetadoMarcaPropria: t.valorProjetadoMarcaPropria,
+      percentualProjecaoMarcaPropria: t.percentualProjecaoMarcaPropria,
+      mesAberto: t.mesAberto === true,
+    };
+  }
+
   private abrirDetalhePorId(funcionarioId: string | null | undefined): void {
     if (!funcionarioId || !this.unidadeFiltro) return;
     const item = this.itens.find((i) => i.funcionarioId === funcionarioId);
     if (!item) return;
     this.itemDetalhe = item;
+    this.carregarDetalhe(funcionarioId);
+  }
+
+  private carregarDetalhe(funcionarioId: string | undefined): void {
+    if (!this.unidadeFiltro) return;
     this.detalheAberto = true;
     this.carregandoDetalhe = true;
     this.detalhe = null;
+    this.detalheSecoesAbertas = { ...DETALHE_SECOES_FECHADAS };
+    this.printDetalheAberto = false;
     this.service
       .detalhe({
         unidade: this.unidadeFiltro,
@@ -425,7 +537,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
         error: (e) => {
           this.carregandoDetalhe = false;
           this.errors.show(
-            e?.error?.message ?? 'Erro ao carregar o detalhe do vendedor.',
+            e?.error?.message ?? 'Erro ao carregar o detalhe.',
             'Acompanhamento Comercial',
           );
         },
@@ -433,10 +545,36 @@ export class ComercialAcompanhamentoPage implements OnInit {
   }
 
   fecharDetalhe(): void {
+    this.printDetalheAberto = false;
     this.detalheAberto = false;
     this.carregandoDetalhe = false;
     this.itemDetalhe = null;
     this.detalhe = null;
+    this.detalheSecoesAbertas = { ...DETALHE_SECOES_FECHADAS };
+  }
+
+  toggleDetalheSecao(secao: ComercialDetalheSecao): void {
+    this.detalheSecoesAbertas = {
+      ...this.detalheSecoesAbertas,
+      [secao]: !this.detalheSecoesAbertas[secao],
+    };
+  }
+
+  abrirImpressaoDetalhe(): void {
+    if (!this.podeLer() || !this.detalhe || !this.itemDetalhe) return;
+    this.printFormaDetalhe = 'resumido';
+    this.printDetalheAberto = true;
+  }
+
+  fecharImpressaoDetalhe(): void {
+    this.printDetalheAberto = false;
+  }
+
+  confirmarImpressaoDetalhe(): void {
+    if (!this.printDetalheAberto) return;
+    const forma = this.printFormaDetalhe;
+    this.printDetalheAberto = false;
+    this.imprimirDetalhe(forma);
   }
 
   get totalDetalheManipulados(): number {
@@ -456,6 +594,20 @@ export class ComercialAcompanhamentoPage implements OnInit {
   get totalDetalheRejeitado(): number {
     return (this.detalhe?.rejeitados ?? []).reduce(
       (acc, row) => acc + Number(row.precoVenda || 0),
+      0,
+    );
+  }
+
+  get totalDetalheTerceiros(): number {
+    return (this.detalhe?.terceiros ?? []).reduce(
+      (acc, row) => acc + Number(row.valor || 0),
+      0,
+    );
+  }
+
+  get totalDetalheSetor(): number {
+    return (this.detalhe?.setor ?? []).reduce(
+      (acc, row) => acc + Number(row.valor || 0),
       0,
     );
   }
@@ -547,9 +699,9 @@ export class ComercialAcompanhamentoPage implements OnInit {
     }
   }
 
-  imprimirDetalhe(): void {
+  imprimirDetalhe(forma: ComercialPrintForma = 'detalhado'): void {
     if (!this.podeLer() || !this.detalhe || !this.itemDetalhe) return;
-    const html = this.montarHtmlImpressaoDetalhe();
+    const html = this.montarHtmlImpressaoDetalhe(forma);
     const win = globalThis.window.open('', '_blank');
     if (!win) {
       this.errors.show('Permita pop-ups para imprimir o detalhe.', 'Impressão');
@@ -577,9 +729,14 @@ export class ComercialAcompanhamentoPage implements OnInit {
       Vendedor: this.rotuloVendedor(item),
       Unidade: this.unidadeFiltro || '',
       Competência: this.rotuloCompetenciaLegenda,
-      Manipulados: Number(item.valorRecebidoRequisicao || 0),
+      Requisições: Number(item.valorRequisicaoPura || 0),
       'Qtd reqs': Number(item.quantidadeRecebidoRequisicao || 0),
       'Qtd fórmulas': Number(item.quantidadeFormulasRequisicao || 0),
+      [this.rotuloTituloSetor(item)]: Number(item.valorRevendaManipulados || 0),
+      'Qtd setor': Number(item.quantidadeRevendaManipulados || 0),
+      Terceiros: Number(item.valorTerceirosManipulados || 0),
+      'Qtd terceiros': Number(item.quantidadeTerceirosManipulados || 0),
+      'Total manip.': Number(item.valorRecebidoRequisicao || 0),
       'Marca própria': Number(item.valorRecebidoMarcaPropria || 0),
       'Qtd marca': Number(item.quantidadeRecebidoMarcaPropria || 0),
       Rejeitado: Number(item.valorRejeitado || 0),
@@ -607,7 +764,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
     resumo.addRow(resumoLinha);
     resumo.getRow(1).font = { bold: true };
 
-    const manip = workbook.addWorksheet('Manipulados');
+    const manip = workbook.addWorksheet('Requisições');
     manip.columns = [
       { header: 'Data', key: 'data', width: 12 },
       { header: 'Cupom', key: 'cupom', width: 12 },
@@ -632,6 +789,69 @@ export class ComercialAcompanhamentoPage implements OnInit {
       manip.getRow(detalhe.manipulados.length + 2).font = { bold: true };
     }
     manip.getRow(1).font = { bold: true };
+
+    const setorSheet = workbook.addWorksheet(this.rotuloTituloSetor(item));
+    setorSheet.columns = [
+      { header: 'Data', key: 'data', width: 12 },
+      { header: 'Cupom', key: 'cupom', width: 12 },
+      { header: 'Setor', key: 'setor', width: 10 },
+      { header: 'Item', key: 'item', width: 36 },
+      { header: 'Qtd', key: 'qtd', width: 10 },
+      { header: 'Valor', key: 'valor', width: 14 },
+    ];
+    const setorLinhas = detalhe.setor ?? [];
+    setorLinhas.forEach((row) =>
+      setorSheet.addRow({
+        data: this.formatarData(row.data),
+        cupom: row.numeroCupom,
+        setor: row.codigoSetor ?? '',
+        item: row.descricaoItem || '',
+        qtd: Number(row.quantidade || 0),
+        valor: Number(row.valor || 0),
+      }),
+    );
+    if (setorLinhas.length) {
+      setorSheet.addRow({
+        data: 'Total',
+        cupom: '',
+        setor: '',
+        item: '',
+        qtd: '',
+        valor: this.totalDetalheSetor,
+      });
+      setorSheet.getRow(setorLinhas.length + 2).font = { bold: true };
+    }
+    setorSheet.getRow(1).font = { bold: true };
+
+    const terc = workbook.addWorksheet('Terceiros');
+    terc.columns = [
+      { header: 'Data da baixa', key: 'dataBaixa', width: 14 },
+      { header: 'Protocolo', key: 'protocolo', width: 14 },
+      { header: 'Data da venda', key: 'dataVenda', width: 14 },
+      { header: 'Cliente', key: 'cliente', width: 32 },
+      { header: 'Valor da baixa', key: 'valor', width: 16 },
+    ];
+    const terceiros = detalhe.terceiros;
+    terceiros.forEach((row) =>
+      terc.addRow({
+        dataBaixa: this.formatarData(row.dataBaixa),
+        protocolo: row.protocolo,
+        dataVenda: row.dataVenda ? this.formatarData(row.dataVenda) : '',
+        cliente: row.nomeCliente || '',
+        valor: Number(row.valor || 0),
+      }),
+    );
+    if (terceiros.length) {
+      terc.addRow({
+        dataBaixa: 'Total',
+        protocolo: '',
+        dataVenda: '',
+        cliente: '',
+        valor: this.totalDetalheTerceiros,
+      });
+      terc.getRow(terceiros.length + 2).font = { bold: true };
+    }
+    terc.getRow(1).font = { bold: true };
 
     const marca = workbook.addWorksheet('Marca própria');
     marca.columns = [
@@ -717,6 +937,14 @@ export class ComercialAcompanhamentoPage implements OnInit {
     })}%`;
   }
 
+  formatarPercentualFaixa(valor: number | null | undefined): string {
+    if (valor == null) return '—';
+    return `${Number(valor).toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}%`;
+  }
+
   formatarData(data: string | null | undefined): string {
     if (!data) return '—';
     const s = data.includes('T') ? data.split('T')[0] : data.slice(0, 10);
@@ -767,11 +995,12 @@ export class ComercialAcompanhamentoPage implements OnInit {
       .replace(/'/g, '&#039;');
   }
 
-  private montarHtmlImpressaoDetalhe(): string {
+  private montarHtmlImpressaoDetalhe(forma: ComercialPrintForma): string {
     const item = this.itemDetalhe!;
     const detalhe = this.detalhe!;
     const titulo = this.rotuloVendedor(item);
-    const subtitulo = `${this.unidadeFiltro ?? ''} · ${this.rotuloCompetenciaLegenda}`;
+    const rotuloForma = forma === 'resumido' ? 'Resumido' : 'Detalhado';
+    const subtitulo = `${this.unidadeFiltro ?? ''} · ${this.rotuloCompetenciaLegenda} · ${rotuloForma}`;
     const usuario =
       this.auth.getCurrentUser()?.nome ||
       this.auth.getCurrentUser()?.email ||
@@ -790,6 +1019,22 @@ export class ComercialAcompanhamentoPage implements OnInit {
           )
           .join('\n')
       : '<tr><td colspan="4">Nenhuma requisição no período</td></tr>';
+
+    const setorLinhas = detalhe.setor ?? [];
+    const linhasSetor = setorLinhas.length
+      ? setorLinhas
+          .map(
+            (r) => `<tr>
+          <td>${this.escapeHtml(this.formatarData(r.data))}</td>
+          <td>${r.numeroCupom}</td>
+          <td>${r.codigoSetor ?? '—'}</td>
+          <td>${this.escapeHtml(r.descricaoItem || '—')}</td>
+          <td class="num">${r.quantidade}</td>
+          <td class="num">${this.escapeHtml(this.formatarMoeda(r.valor))}</td>
+        </tr>`,
+          )
+          .join('\n')
+      : '<tr><td colspan="6">Nenhum item de setor no período</td></tr>';
 
     const linhasMarca = detalhe.marcaPropria.length
       ? detalhe.marcaPropria
@@ -818,6 +1063,21 @@ export class ComercialAcompanhamentoPage implements OnInit {
           )
           .join('\n')
       : '<tr><td colspan="5">Nenhum orçamento rejeitado no período</td></tr>';
+
+    const terceiros = detalhe.terceiros;
+    const linhasTerc = terceiros.length
+      ? terceiros
+          .map(
+            (r) => `<tr>
+          <td>${this.escapeHtml(this.formatarData(r.dataBaixa))}</td>
+          <td>${this.escapeHtml(r.protocolo)}</td>
+          <td>${this.escapeHtml(r.dataVenda ? this.formatarData(r.dataVenda) : '—')}</td>
+          <td>${this.escapeHtml(r.nomeCliente || '—')}</td>
+          <td class="num">${this.escapeHtml(this.formatarMoeda(r.valor))}</td>
+        </tr>`,
+          )
+          .join('\n')
+      : '<tr><td colspan="5">Nenhuma baixa de terceiro no período</td></tr>';
 
     const comissaoHtml = this.podeVerComissao()
       ? `<div><span>Comissão + bônus</span><strong>${this.escapeHtml(this.formatarMoeda(this.totalComissaoItem(item)))}</strong></div>`
@@ -855,18 +1115,36 @@ export class ComercialAcompanhamentoPage implements OnInit {
   <h1>${this.escapeHtml(titulo)}</h1>
   <div class="subtitle">${this.escapeHtml(subtitulo)}</div>
   <section class="resumo">
-    <div><span>Manipulados</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoRequisicao))}</strong><small>${this.escapeHtml(this.rotuloQtdManipulados(item.quantidadeRecebidoRequisicao, item.quantidadeFormulasRequisicao))}</small></div>
+    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRequisicaoPura))}</strong><small>(requisições) · ${this.escapeHtml(this.rotuloQtdManipulados(item.quantidadeRecebidoRequisicao, item.quantidadeFormulasRequisicao))}</small></div>
+    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRevendaManipulados))}</strong><small>(${this.escapeHtml(this.rotuloManipuladoSetor(item))}) · ${this.escapeHtml(this.rotuloQtdSetorManipulado(item.quantidadeRevendaManipulados))}</small></div>
+    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorTerceirosManipulados))}</strong><small>(terceiros) · ${this.escapeHtml(this.rotuloQtdTerceiros(item.quantidadeTerceirosManipulados))}</small></div>
+    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoRequisicao))}</strong><small>(total)</small></div>
     <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropria))}</strong></div>
     <div><span>Rejeitado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRejeitado))}</strong></div>
     <div><span>% Meta manip.</span><strong>${this.escapeHtml(this.temMetaCadastrada(item.valorMetaRequisicao) ? this.formatarPercentualMeta(item.percentualMetaRequisicao) : 'Sem meta')}</strong></div>
     <div><span>% Meta marca</span><strong>${this.escapeHtml(this.temMetaCadastrada(item.valorMetaMarcaPropria) ? this.formatarPercentualMeta(item.percentualMetaMarcaPropria) : 'Sem meta')}</strong></div>
     ${comissaoHtml}
   </section>
-  <h3>Manipulados</h3>
+  ${
+    forma === 'detalhado'
+      ? `
+  <h3>Requisições</h3>
   <table>
     <thead><tr><th>Data</th><th>Cupom</th><th>Requisição</th><th class="num">Valor</th></tr></thead>
     <tbody>${linhasManip}</tbody>
-    ${detalhe.manipulados.length ? `<tfoot><tr><td colspan="3">Total manipulados</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheManipulados))}</td></tr></tfoot>` : ''}
+    ${detalhe.manipulados.length ? `<tfoot><tr><td colspan="3">Total requisições</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheManipulados))}</td></tr></tfoot>` : ''}
+  </table>
+  <h3>${this.escapeHtml(this.rotuloTituloSetor(item))}</h3>
+  <table>
+    <thead><tr><th>Data</th><th>Cupom</th><th>Setor</th><th>Item</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead>
+    <tbody>${linhasSetor}</tbody>
+    ${setorLinhas.length ? `<tfoot><tr><td colspan="5">Total ${this.escapeHtml(this.rotuloTituloSetor(item).toLowerCase())}</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheSetor))}</td></tr></tfoot>` : ''}
+  </table>
+  <h3>Terceiros</h3>
+  <table>
+    <thead><tr><th>Data da baixa</th><th>Protocolo</th><th>Data da venda</th><th>Cliente</th><th class="num">Valor da baixa</th></tr></thead>
+    <tbody>${linhasTerc}</tbody>
+    ${terceiros.length ? `<tfoot><tr><td colspan="4">Total terceiros</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheTerceiros))}</td></tr></tfoot>` : ''}
   </table>
   <h3>Marca própria</h3>
   <table>
@@ -879,7 +1157,9 @@ export class ComercialAcompanhamentoPage implements OnInit {
     <thead><tr><th>Data</th><th>Orçamento</th><th>Cliente</th><th>Motivo</th><th class="num">Valor</th></tr></thead>
     <tbody>${linhasRej}</tbody>
     ${detalhe.rejeitados.length ? `<tfoot><tr><td colspan="4">Total rejeitado</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheRejeitado))}</td></tr></tfoot>` : ''}
-  </table>
+  </table>`
+      : ''
+  }
   <footer>${this.escapeHtml(geradoEm)}</footer>
 </body>
 </html>`;

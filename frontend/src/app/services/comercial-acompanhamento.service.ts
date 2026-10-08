@@ -40,13 +40,15 @@ export class ComercialAcompanhamentoService {
   }
 
   detalhe(
-    dto: FindComercialAcompanhamentoDto & { funcionarioId: string },
+    dto: FindComercialAcompanhamentoDto,
   ): Observable<ComercialAcompanhamentoDetalhe> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('unidade', dto.unidade)
       .set('ano', String(dto.ano))
-      .set('mes', String(dto.mes))
-      .set('funcionarioId', dto.funcionarioId);
+      .set('mes', String(dto.mes));
+    if (dto.funcionarioId) {
+      params = params.set('funcionarioId', dto.funcionarioId);
+    }
     return this.http.get<ComercialAcompanhamentoDetalhe>(`${base}/detalhe`, {
       params,
     });

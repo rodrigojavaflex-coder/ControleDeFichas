@@ -13,6 +13,8 @@ import {
   SalvarComercialComissaoPoliticaDto,
   ComercialComissaoPoliticaUnidadeResponse,
   SalvarComercialComissaoPoliticaUnidadeDto,
+  AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
+  AplicarComercialComissaoPoliticaUnidadeVendedoresResponse,
 } from '../models/comercial-comissao.model';
 
 const base = `${environment.apiUrl}/comercial/comissoes`;
@@ -111,6 +113,15 @@ export class ComercialComissaoService {
   ): Observable<ComercialComissaoPoliticaUnidadeResponse> {
     return this.http.put<ComercialComissaoPoliticaUnidadeResponse>(
       `${base}/politica-unidade`,
+      dto,
+    );
+  }
+
+  aplicarPoliticaUnidadeAosVendedores(
+    dto: AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
+  ): Observable<AplicarComercialComissaoPoliticaUnidadeVendedoresResponse> {
+    return this.http.post<AplicarComercialComissaoPoliticaUnidadeVendedoresResponse>(
+      `${base}/politica-unidade/aplicar-vendedores`,
       dto,
     );
   }
