@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { OrcamentosService } from './orcamentos.service';
-import { OrcamentoRow } from '../database/database.types';
+import { OrcamentoExclusaoRow, OrcamentoRow } from '../database/database.types';
 import { OrcamentosPeriodoDto } from './dto/orcamentos-periodo.dto';
+import { OrcamentosExclusoesDto } from './dto/orcamentos-exclusoes.dto';
 
 @Controller('v1/orcamentos')
 export class OrcamentosController {
@@ -36,5 +37,17 @@ export class OrcamentosController {
       body.end,
     );
     return { orcamentos };
+  }
+
+  @Post('exclusoes')
+  async exclusoes(
+    @Body() body: OrcamentosExclusoesDto,
+  ): Promise<{ exclusoes: OrcamentoExclusaoRow[] }> {
+    const exclusoes = await this.orcamentosService.buscarExclusoesOrcamentos(
+      body.unit,
+      body.start,
+      body.end,
+    );
+    return { exclusoes };
   }
 }

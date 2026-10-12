@@ -21,6 +21,10 @@ import {
   deduplicarExclusoesPorFormula,
   parseExclusaoReceitaEvento,
 } from '../common/producao-exclusoes.util';
+import {
+  deduplicarExclusoesPorOrcamento,
+  parseExclusaoOrcamentoEvento,
+} from '../common/orcamento-exclusoes.util';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const Firebird = require('node-firebird');
@@ -1969,6 +1973,7 @@ export class DatabaseService {
       const { data, hora } = this.parseDataHoraMinima(
         options.dataMinimaMovimento,
       );
+      // >= no limite: overlap de watermark no backend + mesma segunda não fica para trás
       filtroFormulaTouch = `
         AND EXISTS (
           SELECT 1
@@ -1978,7 +1983,7 @@ export class DatabaseService {
             AND p_evt.serier = t.serier
             AND (
               p_evt.data > CAST(? AS DATE)
-              OR (p_evt.data = CAST(? AS DATE) AND p_evt.hora > CAST(? AS TIME))
+              OR (p_evt.data = CAST(? AS DATE) AND p_evt.hora >= CAST(? AS TIME))
             )
         )
       `;
@@ -2466,6 +2471,102 @@ export class DatabaseService {
     return timeStr.slice(0, 8);
   }
 
+  /** RN-ORC-008: exclusões de orçamento (módulo ORCAMENTO) na janela de datas. */
+  async buscarExclusoesOrcamentos(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<import('./database.types').OrcamentoExclusaoRow[]> {
+    const sql = `
+      SELECT
+        m.data AS data_exclusao,
+        m.hora AS hora_exclusao,
+        TRIM(m.cdusu) AS cdusu,
+        m.evento AS evento
+      FROM fc01m20 m
+      WHERE m.data BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
+        AND m.classificacao = 'EXCLUSAO'
+        AND m.modulo = 'ORCAMENTO'
+        AND m.evento CONTAINING 'ORCAMENTO:'
+      ORDER BY m.data, m.hora
+    `;
+    const params = [start, end];
+    const connectOptions = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    return new Promise((resolve, reject) => {
+      Firebird.attach(connectOptions, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        const t0 = Date.now();
+        db.query(sql, params, async (queryErr: Error, result: any[]) => {
+          if (queryErr) {
+            db.detach();
+            return reject(
+              new InternalServerErrorException(
+                `Erro ao consultar exclusões ORCAMENTO: ${queryErr.message}`,
+              ),
+            );
+          }
+
+          const parsed: import('./database.types').OrcamentoExclusaoRow[] = [];
+          for (const row of result ?? []) {
+            const converted = converterObjetoFirebird(row, charset);
+            const item = parseExclusaoOrcamentoEvento(
+              converted as Record<string, unknown>,
+            );
+            if (!item || item.filial !== unit) {
+              continue;
+            }
+            parsed.push({
+              filial: item.filial,
+              nrorc: item.nrorc,
+              serieo: item.serieo,
+              data_exclusao: item.data_exclusao,
+              hora_exclusao: item.hora_exclusao,
+              cdusu: item.cdusu,
+              motivo: item.motivo,
+              evento: item.evento,
+            });
+          }
+
+          const dedup = deduplicarExclusoesPorOrcamento(
+            parsed.map((p) => ({
+              ...p,
+              hora_exclusao: p.hora_exclusao ?? null,
+              cdusu: p.cdusu ?? null,
+              motivo: p.motivo ?? null,
+            })),
+          );
+
+          const confirmadas: import('./database.types').OrcamentoExclusaoRow[] =
+            [];
+          for (const item of dedup) {
+            const existe = await this.existeOrcamentoFc15100(
+              db,
+              item.filial,
+              item.nrorc,
+              item.serieo,
+            );
+            if (!existe) {
+              confirmadas.push(item);
+            }
+          }
+
+          db.detach();
+          this.logger.log(
+            `Exclusões ORCAMENTO: ${confirmadas.length} orçamento(s) confirmado(s) sem FC15100 (bruto parse=${parsed.length}, dedup=${dedup.length}, ${Date.now() - t0}ms, unit=${unit}, ${start}..${end})`,
+          );
+          resolve(confirmadas);
+        });
+      });
+    });
+  }
+
   /** RN-PCP-008: exclusões de fórmula (módulo RECEITAS) na janela de datas. */
   async buscarExclusoesReceitas(
     unit: number,
@@ -2743,6 +2844,35 @@ export class DatabaseService {
       db.query(
         sql,
         [cdfil, nrrqu, formulaInt],
+        (err: Error, rows: { OK?: number; ok?: number }[]) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve((rows?.length ?? 0) > 0);
+        },
+      );
+    });
+  }
+
+  private existeOrcamentoFc15100(
+    db: any,
+    cdfil: number,
+    nrorc: number,
+    serieo: string,
+  ): Promise<boolean> {
+    const sql = `
+      SELECT FIRST 1 1 AS ok
+      FROM fc15100 o
+      WHERE o.cdfil = ?
+        AND o.nrorc = ?
+        AND CAST(TRIM(o.serieo) AS INTEGER) = ?
+    `;
+    const serieoInt = Number(serieo);
+    return new Promise((resolve, reject) => {
+      db.query(
+        sql,
+        [cdfil, nrorc, serieoInt],
         (err: Error, rows: { OK?: number; ok?: number }[]) => {
           if (err) {
             reject(err);

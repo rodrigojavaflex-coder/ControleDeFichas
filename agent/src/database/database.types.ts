@@ -180,3 +180,15 @@ export interface OrcamentoRow {
   ufcrm_medico?: string | null;
   nome_medico?: string | null;
 }
+
+/** Orçamento excluído no ERP (FC01M20 ORCAMENTO) — RN-ORC-008 */
+export interface OrcamentoExclusaoRow {
+  filial: number;
+  nrorc: number;
+  serieo: string;
+  data_exclusao: string;
+  hora_exclusao?: string | null;
+  cdusu?: number | null;
+  motivo?: string | null;
+  evento: string;
+}

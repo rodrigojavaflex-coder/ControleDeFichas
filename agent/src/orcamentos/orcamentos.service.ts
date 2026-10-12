@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { OrcamentoRow } from '../database/database.types';
+import { OrcamentoExclusaoRow, OrcamentoRow } from '../database/database.types';
 
 @Injectable()
 export class OrcamentosService {
@@ -33,6 +33,20 @@ export class OrcamentosService {
     start: string,
     end: string,
   ): Promise<OrcamentoRow[]> {
+    this.validarPeriodo(unit, start, end);
+    return this.databaseService.buscarOrcamentosPorPeriodo(unit, start, end);
+  }
+
+  async buscarExclusoesOrcamentos(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<OrcamentoExclusaoRow[]> {
+    this.validarPeriodo(unit, start, end);
+    return this.databaseService.buscarExclusoesOrcamentos(unit, start, end);
+  }
+
+  private validarPeriodo(unit: number, start: string, end: string): void {
     if (!start || !/^\d{4}-\d{2}-\d{2}$/.test(start)) {
       throw new BadRequestException(
         'start deve estar no formato YYYY-MM-DD',
@@ -54,7 +68,5 @@ export class OrcamentosService {
         'unit deve ser um número válido maior que zero',
       );
     }
-
-    return this.databaseService.buscarOrcamentosPorPeriodo(unit, start, end);
   }
 }
