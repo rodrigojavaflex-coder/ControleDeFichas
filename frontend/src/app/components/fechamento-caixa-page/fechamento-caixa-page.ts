@@ -141,13 +141,18 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Somente caixa aberto (rascunho). Caixa FECHADO exige Reabrir antes. */
+  podeAtualizarVendasErp(): boolean {
+    return !!this.consolidado?.podeEditar;
+  }
+
   atualizarVendasErp(): void {
     if (!this.unidade || !this.data) {
       this.error = 'Informe unidade e data antes de buscar o ERP.';
       return;
     }
 
-    if (!this.consolidado?.podeEditar) {
+    if (!this.podeAtualizarVendasErp()) {
       return;
     }
 

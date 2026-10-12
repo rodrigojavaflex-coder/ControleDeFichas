@@ -920,6 +920,16 @@ body.theme-dark .btn-limpeza-etapas:hover:not(:disabled),
 
 .actions-cell {
   white-space: nowrap;
+  width: 1%;
+  vertical-align: middle;
+}
+
+.actions-cell-row {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .btn-icon {
@@ -928,22 +938,29 @@ body.theme-dark .btn-limpeza-etapas:hover:not(:disabled),
   justify-content: center;
   width: 32px;
   height: 32px;
+  flex-shrink: 0;
   padding: 0;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
-  transition: all 0.2s;
-  margin-right: 0.5rem;
-}
-
-.btn-icon:last-child {
+  transition: background-color 0.2s, box-shadow 0.2s;
   margin-right: 0;
 }
 
-.btn-icon:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.btn-icon:hover:not(:disabled) {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+}
+
+.btn-logs {
+  background: var(--warning-bg, #fef3c7);
+  color: var(--warning-text, #b45309);
+  border: 1px solid var(--warning-border, #fcd34d);
+}
+
+.btn-logs:hover:not(:disabled) {
+  background: var(--warning-bg-hover, #fde68a);
+  color: var(--warning-text, #92400e);
 }
 
 .btn-edit {
@@ -953,6 +970,19 @@ body.theme-dark .btn-limpeza-etapas:hover:not(:disabled),
 
 .btn-edit:hover {
   background: #2563eb;
+}
+
+body.theme-dark .btn-logs,
+[data-theme='dark'] .btn-logs {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+body.theme-dark .btn-logs:hover:not(:disabled),
+[data-theme='dark'] .btn-logs:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
 }
 
 .btn-save {

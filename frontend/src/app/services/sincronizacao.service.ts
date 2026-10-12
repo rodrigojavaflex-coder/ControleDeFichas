@@ -16,6 +16,7 @@ import {
   LimparProducaoEtapasAntigasDto,
   LimparProducaoEtapasAntigasResponse,
   ListarFormulasSemFimLimpezaResponse,
+  SincronizacaoLogErro,
 } from '../models/sincronizacao.model';
 import { environment } from '../../environments/environment';
 
@@ -126,5 +127,31 @@ export class SincronizacaoService {
       `${this.syncApiUrl}/orcamentos/importar`,
       data,
     );
+  }
+
+  listarLogsErro(opcoes?: {
+    agente?: string;
+    limit?: number;
+  }): Observable<SincronizacaoLogErro[]> {
+    let params = new HttpParams();
+    if (opcoes?.agente) {
+      params = params.set('agente', opcoes.agente);
+    }
+    if (opcoes?.limit != null) {
+      params = params.set('limit', String(opcoes.limit));
+    }
+    return this.http.get<SincronizacaoLogErro[]>(`${this.syncApiUrl}/logs`, {
+      params,
+    });
+  }
+
+  limparLogsErro(agente?: string): Observable<{ removidos: number }> {
+    let params = new HttpParams();
+    if (agente) {
+      params = params.set('agente', agente);
+    }
+    return this.http.delete<{ removidos: number }>(`${this.syncApiUrl}/logs`, {
+      params,
+    });
   }
 }

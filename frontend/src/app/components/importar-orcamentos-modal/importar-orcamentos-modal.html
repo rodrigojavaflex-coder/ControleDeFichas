@@ -14,7 +14,9 @@
 
     <div class="modal-corpo">
       <p class="importacao-periodo-preview-hint">
-        Filtra orçamentos pela data do orçamento (<code>dataOrcamento</code>). Não altera o watermark da sincronização automática.
+        Filtra orçamentos pela data do orçamento (<code>dataOrcamento</code>).
+        No mesmo período, remove orçamentos com exclusão física confirmada no ERP.
+        Não altera o watermark da sincronização automática.
       </p>
 
       <div class="importacao-periodo-form-grid importacao-periodo-form-periodo">
@@ -75,6 +77,7 @@
             <li>Processados: {{ result.processados }}</li>
             <li>Criados: {{ result.criados }}</li>
             <li>Atualizados: {{ result.atualizados }}</li>
+            <li *ngIf="result.removidos != null">Removidos (exclusão ERP): {{ result.removidos }}</li>
           </ul>
           @if (result.erros.length) {
             <div class="importacao-periodo-erros-lista">

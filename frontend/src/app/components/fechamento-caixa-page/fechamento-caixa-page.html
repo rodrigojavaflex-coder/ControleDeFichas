@@ -77,7 +77,7 @@
           Caixa Detalhado
         </button>
         <button
-          *ngIf="canBuscarErp() && unidade && data && consolidado?.podeEditar && !loading && !saving"
+          *ngIf="canBuscarErp() && unidade && data && podeAtualizarVendasErp() && !loading && !saving"
           class="btn btn-filtrar"
           type="button"
           (click)="atualizarVendasErp()"

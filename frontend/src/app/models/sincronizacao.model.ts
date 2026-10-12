@@ -1,3 +1,10 @@
+/** Política de persistência em sincronizacao_log_erro por agente. */
+export type SincronizacaoNivelLog =
+  | 'todos'
+  | 'alertas'
+  | 'erros'
+  | 'nao_gravar';
+
 export interface SincronizacaoConfig {
   id: string;
   agente: 'inhumas' | 'uberaba' | 'neropolis';
@@ -7,6 +14,10 @@ export interface SincronizacaoConfig {
   painelContratoRepresentantes?: string;
   ultimaModificacaoProducaoEtapas?: string;
   intervaloMinutos: number;
+  /** Lookback/overlap dias (PCP + exclusões + agendamento). Padrão 5. */
+  overlapDiasProducaoEtapas?: number;
+  /** todos | alertas | erros | nao_gravar. Padrão todos. */
+  nivelLogSync?: SincronizacaoNivelLog;
   ativo: boolean;
   criadoEm: string;
   atualizadoEm: string;
@@ -20,6 +31,8 @@ export interface CreateSincronizacaoConfigDto {
   painelContratoRepresentantes?: string;
   ultimaModificacaoProducaoEtapas?: string;
   intervaloMinutos?: number;
+  overlapDiasProducaoEtapas?: number;
+  nivelLogSync?: SincronizacaoNivelLog;
   ativo?: boolean;
 }
 
@@ -36,6 +49,7 @@ export interface SincronizacaoResult {
   orcamentosProcessados: number;
   orcamentosCriados: number;
   orcamentosAtualizados: number;
+  orcamentosRemovidos?: number;
   painelProcessados: number;
   painelCriados: number;
   painelAtualizados: number;
@@ -46,6 +60,10 @@ export interface SincronizacaoResult {
   producaoEtapasAtualizados: number;
   producaoEtapasFormulasExcluidas: number;
   producaoEtapasRemovidas: number;
+  caixaErpDiasProcessados?: number;
+  caixaErpDiasDetalhes?: number;
+  caixaErpDiasUpsert?: number;
+  caixaErpDiasComErro?: number;
   erros: string[];
 }
 
@@ -57,6 +75,7 @@ export type SincronizacaoProgressEtapa =
   | 'orcamentos'
   | 'painel'
   | 'producao_etapas'
+  | 'caixa_erp'
   | 'finalizando'
   | 'concluido';
 
@@ -161,5 +180,17 @@ export interface ImportarOrcamentosResponse {
   processados: number;
   criados: number;
   atualizados: number;
+  removidos?: number;
   erros: string[];
+}
+
+export interface SincronizacaoLogErro {
+  id: string;
+  agente: string;
+  etapa: string;
+  nivel: 'warn' | 'error';
+  mensagem: string;
+  detalhe?: string | null;
+  criadoEm: string;
+  atualizadoEm?: string;
 }

@@ -324,6 +324,14 @@
           </p>
         </div>
         <div class="header-actions">
+          <button
+            type="button"
+            class="btn-migracao"
+            (click)="abrirLogsSincronizacao()"
+            [disabled]="sincronizacaoExecutando"
+            title="Ver warn/error persistidos da sincronização">
+            <i class="fas fa-exclamation-triangle"></i> Logs de erro
+          </button>
           <button 
             type="button" 
             class="btn-migracao" 
@@ -439,9 +447,15 @@
               <ul>
                 <li>Clientes processados: {{ resultado.clientesProcessados }} ({{ resultado.clientesCriados }} criados, {{ resultado.clientesAtualizados }} atualizados)</li>
                 <li>Prescritores processados: {{ resultado.prescritoresProcessados }} ({{ resultado.prescritoresCriados }} criados, {{ resultado.prescritoresAtualizados }} atualizados)</li>
-                <li>Orçamentos processados: {{ resultado.orcamentosProcessados }} ({{ resultado.orcamentosCriados }} criados, {{ resultado.orcamentosAtualizados }} atualizados)</li>
+                <li>Orçamentos processados: {{ resultado.orcamentosProcessados }} ({{ resultado.orcamentosCriados }} criados, {{ resultado.orcamentosAtualizados }} atualizados<span *ngIf="resultado.orcamentosRemovidos">, {{ resultado.orcamentosRemovidos }} removidos</span>)</li>
                 <li>Painel processados: {{ resultado.painelProcessados }} ({{ resultado.painelCriados }} criados, {{ resultado.painelAtualizados }} atualizados, {{ resultado.painelRemovidos }} removidos, {{ resultado.painelHistoricoGravados }} histórico)</li>
                 <li>Etapas produção: {{ resultado.producaoEtapasProcessados }} ({{ resultado.producaoEtapasCriados }} criados, {{ resultado.producaoEtapasAtualizados }} atualizados)</li>
+                <li>
+                  Caixa ERP:
+                  {{ resultado.caixaErpDiasProcessados ?? 0 }} dia(s)
+                  ({{ resultado.caixaErpDiasUpsert ?? 0 }} aberto(s),
+                  {{ resultado.caixaErpDiasDetalhes ?? 0 }} detalhe(s)@if ((resultado.caixaErpDiasComErro ?? 0) > 0) {, {{ resultado.caixaErpDiasComErro }} com erro})
+                </li>
                 @if (resultado.erros.length > 0) {
                   <li class="error">Erros: {{ resultado.erros.length }}</li>
                   <details>
@@ -475,7 +489,9 @@
                 <th>Filial do Painel</th>
                 <th>Representantes do Painel (ex 1,2)</th>
                 <th>Última Mod. Etapas</th>
+                <th>Overlap etapas (dias)</th>
                 <th>Intervalo (min)</th>
+                <th>Log</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -567,6 +583,20 @@
                   </td>
                   <td>
                     @if (editando) {
+                      <input
+                        type="number"
+                        [(ngModel)]="formSincronizacao[agente.value].overlapDiasProducaoEtapas"
+                        class="form-input-inline"
+                        min="0"
+                        max="90"
+                        style="width: 80px;"
+                        title="Lookback PCP, exclusões e agendamento de retirada" />
+                    } @else {
+                      {{ config?.overlapDiasProducaoEtapas ?? 5 }}
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
                       <input 
                         type="number" 
                         [(ngModel)]="formSincronizacao[agente.value].intervaloMinutos"
@@ -577,30 +607,55 @@
                       {{ config?.intervaloMinutos || 60 }}
                     }
                   </td>
+                  <td>
+                    @if (editando) {
+                      <select
+                        [(ngModel)]="formSincronizacao[agente.value].nivelLogSync"
+                        class="form-input-inline"
+                        title="O que gravar em Logs de erro deste agente">
+                        @for (nivel of niveisLogSync; track nivel.value) {
+                          <option [value]="nivel.value">{{ nivel.label }}</option>
+                        }
+                      </select>
+                    } @else {
+                      {{ labelNivelLogSync(config?.nivelLogSync) }}
+                    }
+                  </td>
                   <td class="actions-cell">
                     @if (editando) {
-                      <button 
-                        type="button" 
-                        class="btn-icon btn-save"
-                        (click)="salvarSincronizacao(agente.value, config)"
-                        title="Salvar">
-                        <i class="fas fa-check"></i>
-                      </button>
-                      <button 
-                        type="button" 
-                        class="btn-icon btn-cancel"
-                        (click)="cancelarEdicao(agente.value)"
-                        title="Cancelar">
-                        <i class="fas fa-times"></i>
-                      </button>
+                      <div class="actions-cell-row">
+                        <button
+                          type="button"
+                          class="btn-icon btn-save"
+                          (click)="salvarSincronizacao(agente.value, config)"
+                          title="Salvar">
+                          <i class="fas fa-check"></i>
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-icon btn-cancel"
+                          (click)="cancelarEdicao(agente.value)"
+                          title="Cancelar">
+                          <i class="fas fa-times"></i>
+                        </button>
+                      </div>
                     } @else {
-                      <button 
-                        type="button" 
-                        class="btn-icon btn-edit"
-                        (click)="iniciarEdicao(agente.value, config)"
-                        title="Editar">
-                        <i class="fas fa-edit"></i>
-                      </button>
+                      <div class="actions-cell-row">
+                        <button
+                          type="button"
+                          class="btn-icon btn-logs"
+                          (click)="abrirLogsSincronizacao(agente.value)"
+                          title="Logs de erro deste agente">
+                          <i class="fas fa-exclamation-triangle"></i>
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-icon btn-edit"
+                          (click)="iniciarEdicao(agente.value, config)"
+                          title="Editar">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                      </div>
                     }
                   </td>
                 </tr>
@@ -609,6 +664,8 @@
           </table>
         </div>
       }
+
+      <app-sincronizacao-logs-modal #sincronizacaoLogsModal></app-sincronizacao-logs-modal>
     </div>
   }
 

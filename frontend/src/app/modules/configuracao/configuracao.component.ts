@@ -7,7 +7,12 @@ import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
 import { MigracaoService, MigracaoResult, MigracaoProgress, MigracaoCadastrosProgress } from '../../services/migracao.service';
 import { SincronizacaoService } from '../../services/sincronizacao.service';
-import { SincronizacaoConfig, SincronizacaoResult, SincronizacaoProgress } from '../../models/sincronizacao.model';
+import {
+  SincronizacaoConfig,
+  SincronizacaoResult,
+  SincronizacaoProgress,
+  SincronizacaoNivelLog,
+} from '../../models/sincronizacao.model';
 import { interval, Subscription } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
@@ -17,6 +22,7 @@ import { ImportarCaixaErpModalComponent } from '../../components/importar-caixa-
 import { ImportarProducaoEtapasModalComponent } from '../../components/importar-producao-etapas-modal/importar-producao-etapas-modal';
 import { LimparProducaoEtapasModalComponent } from '../../components/limpar-producao-etapas-modal/limpar-producao-etapas-modal';
 import { ImportarOrcamentosModalComponent } from '../../components/importar-orcamentos-modal/importar-orcamentos-modal';
+import { SincronizacaoLogsModalComponent } from '../../components/sincronizacao-logs-modal/sincronizacao-logs-modal';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
 import { Permission, Unidade } from '../../models/usuario.model';
 import {
@@ -40,6 +46,7 @@ type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
     ImportarProducaoEtapasModalComponent,
     LimparProducaoEtapasModalComponent,
     ImportarOrcamentosModalComponent,
+    SincronizacaoLogsModalComponent,
   ],
   templateUrl: './configuracao.component.html',
   styleUrls: ['./configuracao.component.css']
@@ -57,6 +64,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   @ViewChild('etapasModal') etapasModal?: ImportarProducaoEtapasModalComponent;
   @ViewChild('limparEtapasModal') limparEtapasModal?: LimparProducaoEtapasModalComponent;
   @ViewChild('orcamentosModal') orcamentosModal?: ImportarOrcamentosModalComponent;
+  @ViewChild('sincronizacaoLogsModal')
+  sincronizacaoLogsModal?: SincronizacaoLogsModalComponent;
   private progressSubscription?: Subscription;
   private cadastrosProgressSubscription?: Subscription;
   private sincronizacaoProgressSubscription?: Subscription;
@@ -105,6 +114,12 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     { value: 'neropolis', label: 'Nerópolis' },
   ];
   editandoAgente: string | null = null;
+  niveisLogSync: { value: SincronizacaoNivelLog; label: string }[] = [
+    { value: 'todos', label: 'Todos' },
+    { value: 'alertas', label: 'Alertas' },
+    { value: 'erros', label: 'Erros' },
+    { value: 'nao_gravar', label: 'Não gravar' },
+  ];
   formSincronizacao: Record<string, {
     ativo: boolean;
     ultimaDataCliente: string;
@@ -114,6 +129,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     painelRepresentantes: string;
     ultimaModificacaoProducaoEtapas: string;
     intervaloMinutos: number;
+    overlapDiasProducaoEtapas: number;
+    nivelLogSync: SincronizacaoNivelLog;
   }> = {};
 
   constructor() {
@@ -349,6 +366,10 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   }
 
 
+  abrirLogsSincronizacao(agente?: string): void {
+    this.sincronizacaoLogsModal?.abrir(agente);
+  }
+
   executarSincronizacao() {
     this.sincronizacaoExecutando = true;
     this.sincronizacaoResultado = null;
@@ -499,6 +520,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       orcamentos: 'Sincronizando orçamentos',
       painel: 'Sincronizando painel',
       producao_etapas: 'Sincronizando etapas de produção',
+      caixa_erp: 'Sincronizando caixa ERP',
       finalizando: 'Finalizando',
       concluido: 'Concluído',
     };
@@ -646,7 +668,14 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       painelRepresentantes: painel.representantes,
       ultimaModificacaoProducaoEtapas: this.normalizarDateTime(config?.ultimaModificacaoProducaoEtapas) || '',
       intervaloMinutos: config?.intervaloMinutos || 60,
+      overlapDiasProducaoEtapas: config?.overlapDiasProducaoEtapas ?? 5,
+      nivelLogSync: config?.nivelLogSync ?? 'todos',
     };
+  }
+
+  labelNivelLogSync(nivel?: SincronizacaoNivelLog | null): string {
+    const found = this.niveisLogSync.find((n) => n.value === (nivel ?? 'todos'));
+    return found?.label ?? 'Todos';
   }
 
   cancelarEdicao(agente: string) {
@@ -683,6 +712,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
         ? this.dateTimeParaBackend(formData.ultimaModificacaoProducaoEtapas)
         : null,
       intervaloMinutos: formData.intervaloMinutos,
+      overlapDiasProducaoEtapas: formData.overlapDiasProducaoEtapas ?? 5,
+      nivelLogSync: formData.nivelLogSync ?? 'todos',
     };
 
     this.criarOuAtualizarSincronizacao(config, dto);
