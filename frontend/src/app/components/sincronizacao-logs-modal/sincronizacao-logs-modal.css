@@ -180,6 +180,11 @@
   color: var(--warning-text, #b45309);
 }
 
+.nivel-info {
+  background: var(--success-bg, #ecfdf5);
+  color: var(--success-text, #047857);
+}
+
 body.theme-dark .sincronizacao-logs-hint,
 [data-theme='dark'] .sincronizacao-logs-hint,
 :host-context(body.theme-dark) .sincronizacao-logs-hint,

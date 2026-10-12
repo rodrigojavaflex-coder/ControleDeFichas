@@ -8,7 +8,7 @@
       aria-labelledby="sincronizacao-logs-titulo">
       <div class="modal-cabecalho">
         <h3 id="sincronizacao-logs-titulo" class="modal-titulo">
-          Logs de erro da sincronização
+          Logs da sincronização
         </h3>
         <button
           type="button"
@@ -22,8 +22,10 @@
 
       <div class="modal-corpo">
         <p class="sincronizacao-logs-hint">
-          Apenas <strong>warn</strong> e <strong>error</strong> da sync
-          (agente, exclusões, agendamento, caixa ERP, watermark). Sucessos não entram aqui.
+          Com nível <strong>Todos</strong>: grava <strong>info</strong> (sucesso),
+          <strong>warn</strong> e <strong>error</strong>. Com
+          <strong>Alertas</strong>/<strong>Erros</strong>: só o respectivo nível.
+          Detalhes rotineiros por fórmula continuam só no stdout (debug).
         </p>
 
         <div class="sincronizacao-logs-toolbar">
@@ -36,6 +38,19 @@
               (ngModelChange)="onFiltroChange()"
               [disabled]="loading || limpando">
               @for (op of agentesFiltro; track op.value) {
+                <option [value]="op.value">{{ op.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="sincronizacao-logs-filtro">
+            <label for="syncLogNivel" class="label-campo">Tipo</label>
+            <select
+              id="syncLogNivel"
+              class="form-control sincronizacao-logs-select"
+              [(ngModel)]="filtroNivel"
+              (ngModelChange)="onFiltroChange()"
+              [disabled]="loading || limpando">
+              @for (op of niveisFiltro; track op.value) {
                 <option [value]="op.value">{{ op.label }}</option>
               }
             </select>
@@ -76,7 +91,7 @@
           } @else if (logs.length === 0) {
             <div class="sincronizacao-logs-estado">
               <i class="fas fa-inbox"></i>
-              <span>Nenhum log de erro encontrado.</span>
+              <span>Nenhum log encontrado.</span>
             </div>
           } @else {
             <div class="sincronizacao-logs-table-wrap">
@@ -100,8 +115,9 @@
                         <span
                           class="nivel-badge"
                           [class.nivel-error]="log.nivel === 'error'"
-                          [class.nivel-warn]="log.nivel === 'warn'">
-                          {{ log.nivel }}
+                          [class.nivel-warn]="log.nivel === 'warn'"
+                          [class.nivel-info]="log.nivel === 'info'">
+                          {{ log.nivel === 'info' ? 'sucesso' : log.nivel }}
                         </span>
                       </td>
                       <td class="col-msg">

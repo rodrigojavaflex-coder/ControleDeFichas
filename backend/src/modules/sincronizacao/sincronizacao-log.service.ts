@@ -32,10 +32,16 @@ export class SincronizacaoLogService {
       if (!mensagem) {
         return;
       }
+      const nivel: SincronizacaoLogNivel =
+        entrada.nivel === 'info'
+          ? 'info'
+          : entrada.nivel === 'warn'
+            ? 'warn'
+            : 'error';
       const row = this.logRepo.create({
         agente: String(entrada.agente ?? '').trim().slice(0, 50) || 'desconhecido',
         etapa: String(entrada.etapa ?? '').trim().slice(0, 80) || 'geral',
-        nivel: entrada.nivel === 'warn' ? 'warn' : 'error',
+        nivel,
         mensagem,
         detalhe: entrada.detalhe
           ? String(entrada.detalhe).trim().slice(0, 16000)
@@ -50,6 +56,7 @@ export class SincronizacaoLogService {
 
   async listar(opcoes?: {
     agente?: string;
+    nivel?: SincronizacaoLogNivel;
     limit?: number;
   }): Promise<SincronizacaoLogErro[]> {
     const limit = Math.min(Math.max(opcoes?.limit ?? 200, 1), 500);
@@ -60,6 +67,10 @@ export class SincronizacaoLogService {
     const agente = opcoes?.agente?.trim();
     if (agente) {
       qb.andWhere('l.agente = :agente', { agente });
+    }
+    const nivel = opcoes?.nivel;
+    if (nivel === 'info' || nivel === 'warn' || nivel === 'error') {
+      qb.andWhere('l.nivel = :nivel', { nivel });
     }
     return qb.getMany();
   }

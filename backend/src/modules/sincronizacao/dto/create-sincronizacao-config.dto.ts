@@ -101,7 +101,7 @@ export class CreateSincronizacaoConfigDto {
 
   @ApiProperty({
     description:
-      'Persistência de logs da sync: todos (warn+error), alertas (só warn), erros (só error), nao_gravar',
+      'Persistência de logs da sync: todos (sucesso/info+warn+error), alertas (só warn), erros (só error), nao_gravar',
     example: 'todos',
     default: 'todos',
     enum: SINCRONIZACAO_NIVEL_LOG_VALUES,

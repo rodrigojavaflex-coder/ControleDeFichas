@@ -155,7 +155,7 @@ export class SincronizacaoConfig extends BaseEntity {
 
   @ApiProperty({
     description:
-      'O que gravar em sincronizacao_log_erro: todos | alertas | erros | nao_gravar',
+      'O que gravar em sincronizacao_log_erro: todos (info+warn+error) | alertas | erros | nao_gravar',
     example: 'todos',
     default: 'todos',
     enum: ['todos', 'alertas', 'erros', 'nao_gravar'],

@@ -22,6 +22,7 @@ export class SincronizacaoLogsModalComponent {
   limpando = false;
   error = '';
   filtroAgente = '';
+  filtroNivel: '' | 'info' | 'warn' | 'error' = '';
   logs: SincronizacaoLogErro[] = [];
 
   readonly agentesFiltro = [
@@ -31,9 +32,18 @@ export class SincronizacaoLogsModalComponent {
     { value: 'neropolis', label: 'Nerópolis' },
   ];
 
+  readonly niveisFiltro: { value: '' | 'info' | 'warn' | 'error'; label: string }[] =
+    [
+      { value: '', label: 'Todos' },
+      { value: 'info', label: 'Sucesso' },
+      { value: 'warn', label: 'Alertas' },
+      { value: 'error', label: 'Erros' },
+    ];
+
   abrir(agente?: string): void {
     this.error = '';
     this.filtroAgente = agente ?? '';
+    this.filtroNivel = '';
     this.visible = true;
     this.carregar();
   }
@@ -55,6 +65,7 @@ export class SincronizacaoLogsModalComponent {
     this.sincronizacaoService
       .listarLogsErro({
         agente: this.filtroAgente || undefined,
+        nivel: this.filtroNivel || undefined,
         limit: 200,
       })
       .subscribe({
@@ -81,7 +92,7 @@ export class SincronizacaoLogsModalComponent {
       : 'de todos os agentes';
     if (
       !confirm(
-        `Limpar logs de erro ${escopo}? Esta ação não pode ser desfeita.`,
+        `Limpar logs ${escopo}? Esta ação não pode ser desfeita.`,
       )
     ) {
       return;

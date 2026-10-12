@@ -330,7 +330,7 @@
             (click)="abrirLogsSincronizacao()"
             [disabled]="sincronizacaoExecutando"
             title="Ver warn/error persistidos da sincronização">
-            <i class="fas fa-exclamation-triangle"></i> Logs de erro
+            <i class="fas fa-list-alt"></i> Logs
           </button>
           <button 
             type="button" 
@@ -612,7 +612,7 @@
                       <select
                         [(ngModel)]="formSincronizacao[agente.value].nivelLogSync"
                         class="form-input-inline"
-                        title="O que gravar em Logs de erro deste agente">
+                        title="O que gravar nos Logs deste agente (Todos inclui sucesso)">
                         @for (nivel of niveisLogSync; track nivel.value) {
                           <option [value]="nivel.value">{{ nivel.label }}</option>
                         }
@@ -645,7 +645,7 @@
                           type="button"
                           class="btn-icon btn-logs"
                           (click)="abrirLogsSincronizacao(agente.value)"
-                          title="Logs de erro deste agente">
+                          title="Logs deste agente">
                           <i class="fas fa-exclamation-triangle"></i>
                         </button>
                         <button

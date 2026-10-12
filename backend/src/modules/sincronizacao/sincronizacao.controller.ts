@@ -215,6 +215,7 @@ export class SincronizacaoController {
   ): Promise<SincronizacaoLogErro[]> {
     return this.sincronizacaoLogService.listar({
       agente: query.agente,
+      nivel: query.nivel,
       limit: query.limit,
     });
   }

@@ -2,7 +2,7 @@ import { Entity, Column, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
-export type SincronizacaoLogNivel = 'warn' | 'error';
+export type SincronizacaoLogNivel = 'info' | 'warn' | 'error';
 
 @Entity('sincronizacao_log_erro')
 @Index('idx_sincronizacao_log_erro_agente_criado', ['agente', 'criadoEm'])
@@ -19,7 +19,7 @@ export class SincronizacaoLogErro extends BaseEntity {
   @Column({ type: 'varchar', length: 80 })
   etapa: string;
 
-  @ApiProperty({ enum: ['warn', 'error'] })
+  @ApiProperty({ enum: ['info', 'warn', 'error'] })
   @Column({ type: 'varchar', length: 10 })
   nivel: SincronizacaoLogNivel;
 

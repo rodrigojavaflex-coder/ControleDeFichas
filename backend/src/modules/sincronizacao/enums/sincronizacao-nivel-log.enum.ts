@@ -1,4 +1,4 @@
-/** Política de gravação em sincronizacao_log_erro (por agente). */
+/** Política de gravação em sincronizacao_log_erro (por agente). todos = info+warn+error. */
 export enum SincronizacaoNivelLog {
   TODOS = 'todos',
   ALERTAS = 'alertas',

@@ -131,11 +131,15 @@ export class SincronizacaoService {
 
   listarLogsErro(opcoes?: {
     agente?: string;
+    nivel?: 'info' | 'warn' | 'error';
     limit?: number;
   }): Observable<SincronizacaoLogErro[]> {
     let params = new HttpParams();
     if (opcoes?.agente) {
       params = params.set('agente', opcoes.agente);
+    }
+    if (opcoes?.nivel) {
+      params = params.set('nivel', opcoes.nivel);
     }
     if (opcoes?.limit != null) {
       params = params.set('limit', String(opcoes.limit));

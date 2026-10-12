@@ -188,7 +188,7 @@ export interface SincronizacaoLogErro {
   id: string;
   agente: string;
   etapa: string;
-  nivel: 'warn' | 'error';
+  nivel: 'info' | 'warn' | 'error';
   mensagem: string;
   detalhe?: string | null;
   criadoEm: string;

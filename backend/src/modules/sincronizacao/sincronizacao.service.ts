@@ -272,7 +272,7 @@ export class SincronizacaoService {
 
   private devePersistirLogSync(
     politica: string | null | undefined,
-    nivel: 'warn' | 'error',
+    nivel: 'info' | 'warn' | 'error',
   ): boolean {
     const p = String(politica ?? SincronizacaoNivelLog.TODOS)
       .trim()
@@ -286,13 +286,14 @@ export class SincronizacaoService {
     if (p === SincronizacaoNivelLog.ALERTAS) {
       return nivel === 'warn';
     }
+    // todos: info (sucesso) + warn + error
     return true;
   }
 
   private persistirLogSync(
     agente: string,
     contextoOuEtapa: string,
-    nivel: 'warn' | 'error',
+    nivel: 'info' | 'warn' | 'error',
     mensagem: string,
     detalhe?: string | null,
     politicaNivel?: string | null,
@@ -837,6 +838,26 @@ export class SincronizacaoService {
     );
 
     await this.persistirWatermarkOrcamentos(config);
+
+    const resumoOrc =
+      `Atualização de orçamentos concluída: ` +
+      `${resultado.orcamentosCriados} criados / ${resultado.orcamentosAtualizados} atualizados` +
+      (resultado.orcamentosRemovidos
+        ? ` / ${resultado.orcamentosRemovidos} removidos`
+        : '') +
+      (resultado.erros.length > 0
+        ? ` — com ${resultado.erros.length} erro(s)`
+        : '');
+    this.logger.log(`[${config.agente}] ${resumoOrc}`);
+    this.persistirLogSync(
+      config.agente,
+      'orcamentos',
+      'info',
+      resumoOrc,
+      null,
+      this.nivelLogDaConfig(config),
+    );
+
     return resultado;
   }
 
@@ -954,8 +975,15 @@ export class SincronizacaoService {
               `Erro ao processar cliente ${clienteAgente.nomecli} do agente ${config.agente}:`,
               error,
             );
-            resultado.erros.push(
-              `Cliente ${clienteAgente.nomecli}: ${error.message}`,
+            const texto = `Cliente ${clienteAgente.nomecli}: ${error.message}`;
+            resultado.erros.push(texto);
+            this.persistirLogSync(
+              config.agente,
+              'clientes',
+              'error',
+              texto,
+              null,
+              this.nivelLogDaConfig(config),
             );
           }
 
@@ -1041,8 +1069,15 @@ export class SincronizacaoService {
               `Erro ao processar prescritor ${prescritorAgente.nomemed} do agente ${config.agente}:`,
               error,
             );
-            resultado.erros.push(
-              `Prescritor ${prescritorAgente.nomemed}: ${error.message}`,
+            const texto = `Prescritor ${prescritorAgente.nomemed}: ${error.message}`;
+            resultado.erros.push(texto);
+            this.persistirLogSync(
+              config.agente,
+              'prescritores',
+              'error',
+              texto,
+              null,
+              this.nivelLogDaConfig(config),
             );
           }
 
@@ -1245,8 +1280,32 @@ export class SincronizacaoService {
 
     await this.configRepository.update(config.id, updateData);
 
-    this.logger.log(
-      `Sincronização concluída para agente ${config.agente}: ${resultado.clientesCriados} clientes, ${resultado.prescritoresCriados} prescritores, ${resultado.orcamentosCriados} orçamentos, ${resultado.painelCriados} painel, ${resultado.producaoEtapasCriados} etapas criados, ${resultado.producaoEtapasRemovidas} linha(s) etapas removidas (exclusão ERP)`,
+    const resumoSucesso =
+      `Sincronização concluída: ` +
+      `${resultado.clientesCriados} clientes criados / ${resultado.clientesAtualizados} atualizados; ` +
+      `${resultado.prescritoresCriados} prescritores criados / ${resultado.prescritoresAtualizados} atualizados; ` +
+      `${resultado.orcamentosCriados} orçamentos criados / ${resultado.orcamentosAtualizados} atualizados` +
+      (resultado.orcamentosRemovidos
+        ? ` / ${resultado.orcamentosRemovidos} removidos`
+        : '') +
+      `; painel ${resultado.painelCriados} criados / ${resultado.painelAtualizados} atualizados; ` +
+      `etapas ${resultado.producaoEtapasCriados} criadas / ${resultado.producaoEtapasAtualizados} atualizadas` +
+      (resultado.producaoEtapasRemovidas
+        ? ` / ${resultado.producaoEtapasRemovidas} removidas (exclusão ERP)`
+        : '') +
+      `; caixa ERP ${resultado.caixaErpDiasUpsert ?? 0} aberto(s)` +
+      (resultado.erros.length > 0
+        ? ` — com ${resultado.erros.length} erro(s) no ciclo`
+        : '');
+
+    this.logger.log(`[${config.agente}] ${resumoSucesso}`);
+    this.persistirLogSync(
+      config.agente,
+      'sincronizacao',
+      'info',
+      resumoSucesso,
+      null,
+      this.nivelLogDaConfig(config),
     );
 
     return resultado;
@@ -1371,8 +1430,15 @@ export class SincronizacaoService {
           `Erro ao processar orçamento ${orcamentoAgente.nr_orcamento} do agente ${config.agente}:`,
           error,
         );
-        resultado.erros.push(
-          `Orçamento ${orcamentoAgente.nr_orcamento}: ${error.message}`,
+        const texto = `Orçamento ${orcamentoAgente.nr_orcamento}: ${error.message}`;
+        resultado.erros.push(texto);
+        this.persistirLogSync(
+          config.agente,
+          'orcamentos',
+          'error',
+          texto,
+          null,
+          this.nivelLogDaConfig(config),
         );
       }
 
