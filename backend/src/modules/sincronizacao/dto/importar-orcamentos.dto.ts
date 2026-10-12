@@ -29,6 +29,12 @@ export class ImportarOrcamentosResponseDto {
   @ApiProperty()
   atualizados: number;
 
+  @ApiProperty({
+    description:
+      'Orçamentos removidos do PostgreSQL após exclusão confirmada no ERP (FC01M20 / FC15100 ausente)',
+  })
+  removidos: number;
+
   @ApiProperty({ type: [String] })
   erros: string[];
 }

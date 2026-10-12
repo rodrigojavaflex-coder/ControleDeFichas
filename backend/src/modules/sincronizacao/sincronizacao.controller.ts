@@ -2,10 +2,13 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   UseGuards,
   Req,
   Body,
   Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -20,6 +23,8 @@ import {
   SincronizacaoProgress,
 } from './sincronizacao.service';
 import { ProducaoEtapasLimpezaService } from './producao-etapas-limpeza.service';
+import { SincronizacaoLogService } from './sincronizacao-log.service';
+import { SincronizacaoLogErro } from './entities/sincronizacao-log-erro.entity';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
@@ -39,6 +44,7 @@ import {
   ProducaoEtapaDisponivelDto,
 } from './dto/limpar-producao-etapas-antigas.dto';
 import { ProducaoConfigUnidadeQueryDto } from '../producao-config/dto/producao-config-unidade-query.dto';
+import { ListarSincronizacaoLogsDto } from './dto/listar-sincronizacao-logs.dto';
 
 @ApiTags('sincronizacao')
 @Controller('sincronizacao')
@@ -46,6 +52,7 @@ export class SincronizacaoController {
   constructor(
     private readonly sincronizacaoService: SincronizacaoService,
     private readonly producaoEtapasLimpezaService: ProducaoEtapasLimpezaService,
+    private readonly sincronizacaoLogService: SincronizacaoLogService,
   ) {}
 
   @Post('executar')
@@ -193,5 +200,38 @@ export class SincronizacaoController {
     @Body() dto: ImportarOrcamentosDto,
   ): Promise<ImportarOrcamentosResponseDto> {
     return this.sincronizacaoService.importarOrcamentosManual(dto);
+  }
+
+  @Get('logs')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary: 'Lista warn/error persistidos da sincronização (mais recentes primeiro)',
+  })
+  @ApiResponse({ status: 200, type: [SincronizacaoLogErro] })
+  listarLogs(
+    @Query() query: ListarSincronizacaoLogsDto,
+  ): Promise<SincronizacaoLogErro[]> {
+    return this.sincronizacaoLogService.listar({
+      agente: query.agente,
+      limit: query.limit,
+    });
+  }
+
+  @Delete('logs')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Limpa logs de erro da sincronização (opcional: filtrar por agente)',
+  })
+  @ApiResponse({ status: 200, description: 'Quantidade removida' })
+  limparLogs(
+    @Query('agente') agente?: string,
+  ): Promise<{ removidos: number }> {
+    return this.sincronizacaoLogService.limpar(agente);
   }
 }

@@ -68,7 +68,7 @@ describe('visitacao-dias-uteis', () => {
     ).toBe(0);
   });
 
-  it('dias realizados usam o último caixa confirmado (Fechado ou Bloqueado)', () => {
+  it('dias realizados usam prévia até hoje (não corta no caixa confirmado)', () => {
     const nenhum = new Set<string>();
     expect(
       somarDiasRealizadosVisitacao(
@@ -102,6 +102,15 @@ describe('visitacao-dias-uteis', () => {
         '2026-07-01',
         '2026-07-31',
         null,
+        true,
+        nenhum,
+      ),
+    ).toBe(0);
+    expect(
+      somarDiasRealizadosVisitacao(
+        '2026-08-01',
+        '2026-08-31',
+        '2026-07-15',
         true,
         nenhum,
       ),

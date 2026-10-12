@@ -11,7 +11,6 @@ import { ComercialComissaoPolitica } from '../comercial-meta/entities/comercial-
 import { ComercialComissaoPoliticaUnidade } from '../comercial-meta/entities/comercial-comissao-politica-unidade.entity';
 import { CalendarioUnidade } from '../producao-config/entities/calendario-unidade.entity';
 import { ProducaoFeriado } from '../producao-config/entities/producao-feriado.entity';
-import { CaixaFechamento } from '../fechamento-caixa/entities/caixa-fechamento.entity';
 import { ComercialAcompanhamentoController } from './comercial-acompanhamento.controller';
 import { ComercialAcompanhamentoService } from './comercial-acompanhamento.service';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -28,7 +27,6 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
       ComercialComissaoPoliticaUnidade,
       CalendarioUnidade,
       ProducaoFeriado,
-      CaixaFechamento,
     ]),
     JwtModule,
     ConfigModule,

@@ -40,6 +40,59 @@ export function proximoDiaIso(data: string): string | null {
   return proximo.toISOString().slice(0, 10);
 }
 
+/** Subtrai N dias de uma data ISO YYYY-MM-DD (UTC civil). */
+export function subtrairDiasIso(data: string, dias: number): string | null {
+  if (!ISO_DATE_REGEX.test(data) || !Number.isFinite(dias)) {
+    return null;
+  }
+  const [year, month, day] = data.split('-').map(Number);
+  const anterior = new Date(Date.UTC(year, month - 1, day - Math.trunc(dias)));
+  return anterior.toISOString().slice(0, 10);
+}
+
+/** Lista cada dia YYYY-MM-DD no intervalo inclusivo [inicio, fim]. */
+export function listarDiasIsoInclusive(
+  inicio: string,
+  fim: string,
+): string[] {
+  if (
+    !ISO_DATE_REGEX.test(inicio) ||
+    !ISO_DATE_REGEX.test(fim) ||
+    inicio > fim
+  ) {
+    return [];
+  }
+  const dias: string[] = [];
+  let cursor: string | null = inicio;
+  while (cursor && cursor <= fim) {
+    dias.push(cursor);
+    cursor = proximoDiaIso(cursor);
+  }
+  return dias;
+}
+
+/**
+ * Teto de prévia do acompanhamento (COM/VIS): min(hoje, fim da competência).
+ * Competência futura → null.
+ */
+export function dataTetoPreviaAcompanhamento(
+  dataInicial: string,
+  dataFinal: string,
+  hoje: string,
+): string | null {
+  if (
+    !ISO_DATE_REGEX.test(dataInicial) ||
+    !ISO_DATE_REGEX.test(dataFinal) ||
+    !ISO_DATE_REGEX.test(hoje)
+  ) {
+    return null;
+  }
+  if (hoje < dataInicial) {
+    return null;
+  }
+  return hoje < dataFinal ? hoje : dataFinal;
+}
+
 /** Divide um intervalo YYYY-MM-DD em segmentos mensais (fechamento no último dia de cada mês). */
 export function dividirPeriodoEmSegmentosMensais(
   inicio: string,

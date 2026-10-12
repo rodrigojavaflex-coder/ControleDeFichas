@@ -14,10 +14,9 @@ import { ComercialComissaoPolitica } from '../comercial-meta/entities/comercial-
 import { ComercialComissaoPoliticaUnidade } from '../comercial-meta/entities/comercial-comissao-politica-unidade.entity';
 import { CalendarioUnidade } from '../producao-config/entities/calendario-unidade.entity';
 import { ProducaoFeriado } from '../producao-config/entities/producao-feriado.entity';
-import { CaixaFechamento } from '../fechamento-caixa/entities/caixa-fechamento.entity';
-import { CaixaFechamentoStatus } from '../fechamento-caixa/enums/caixa-fechamento-status.enum';
 import { Permission } from '../../common/enums/permission.enum';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
+import { dataTetoPreviaAcompanhamento } from '../../common/utils/data-date.util';
 import {
   competenciaAberta,
   periodoCompetencia,
@@ -72,8 +71,6 @@ export class ComercialAcompanhamentoService {
     private readonly calendarioRepo: Repository<CalendarioUnidade>,
     @InjectRepository(ProducaoFeriado)
     private readonly feriadoRepo: Repository<ProducaoFeriado>,
-    @InjectRepository(CaixaFechamento)
-    private readonly caixaFechamentoRepo: Repository<CaixaFechamento>,
   ) {}
 
   async listarVendedoresOpcoes(
@@ -105,13 +102,11 @@ export class ComercialAcompanhamentoService {
       Permission.COMERCIAL_ACOMPANHAMENTO_COMISSAO,
     );
 
-    const ultimaConfirmada = await this.buscarUltimaDataCaixaConfirmada(
-      dto.unidade,
-    );
-    const tetoLoja = this.dataTetoCaixaConfirmado(
+    const hoje = ymdHojeSp();
+    const tetoLoja = dataTetoPreviaAcompanhamento(
       periodo.dataInicial,
       periodo.dataFinal,
-      ultimaConfirmada,
+      hoje,
     );
 
     const politicaUnidade = await this.politicaUnidadeRepo.findOne({
@@ -143,11 +138,13 @@ export class ComercialAcompanhamentoService {
               tetoLoja,
             )
           : Promise.resolve(new Map() as MapaMovimento),
-        this.buscarRecebidoMarcaPropria(
-          dto.unidade,
-          periodo.dataInicial,
-          periodo.dataFinal,
-        ),
+        tetoLoja
+          ? this.buscarRecebidoMarcaPropria(
+              dto.unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve(new Map() as MapaMovimento),
         this.buscarRejeitado(dto.unidade, periodo.dataInicial, periodo.dataFinal),
         this.funcionarioRepo
           .createQueryBuilder('f')
@@ -274,7 +271,7 @@ export class ComercialAcompanhamentoService {
       totais.valorRecebidoRequisicao,
       lojaComissaoReq,
       lojaMpMeta,
-      ultimaConfirmada,
+      hoje,
     );
 
     const itens = dto.funcionarioId
@@ -311,13 +308,10 @@ export class ComercialAcompanhamentoService {
 
     const periodo = periodoCompetencia(dto.ano, dto.mes);
     const codigo = funcionario.codigoVendedorErp;
-    const ultimaConfirmada = await this.buscarUltimaDataCaixaConfirmada(
-      dto.unidade,
-    );
-    const tetoManip = this.dataTetoCaixaConfirmado(
+    const tetoManip = dataTetoPreviaAcompanhamento(
       periodo.dataInicial,
       periodo.dataFinal,
-      ultimaConfirmada,
+      ymdHojeSp(),
     );
     const paramsMpRej = [
       dto.unidade,
@@ -599,13 +593,10 @@ export class ComercialAcompanhamentoService {
     dto: FindComercialAcompanhamentoDetalheDto,
   ): Promise<ComercialAcompanhamentoDetalheDto> {
     const periodo = periodoCompetencia(dto.ano, dto.mes);
-    const ultimaConfirmada = await this.buscarUltimaDataCaixaConfirmada(
-      dto.unidade,
-    );
-    const tetoManip = this.dataTetoCaixaConfirmado(
+    const tetoManip = dataTetoPreviaAcompanhamento(
       periodo.dataInicial,
       periodo.dataFinal,
-      ultimaConfirmada,
+      ymdHojeSp(),
     );
     const politicaUnidade = await this.politicaUnidadeRepo.findOne({
       where: { unidade: dto.unidade },
@@ -1217,32 +1208,6 @@ export class ComercialAcompanhamentoService {
     };
   }
 
-  private async buscarUltimaDataCaixaConfirmada(
-    unidade: Unidade,
-  ): Promise<string | null> {
-    const row = await this.caixaFechamentoRepo
-      .createQueryBuilder('c')
-      .select("MAX(TO_CHAR(c.dataOperacao, 'YYYY-MM-DD'))", 'ultima')
-      .where('c.status = :status', {
-        status: CaixaFechamentoStatus.CONFIRMADO,
-      })
-      .andWhere('c.unidade = :unidade', { unidade })
-      .getRawOne<{ ultima: string | null }>();
-    return row?.ultima ?? null;
-  }
-
-  /** Competência até o último caixa CONFIRMADO; sem confirmação no período, null. */
-  private dataTetoCaixaConfirmado(
-    dataInicial: string,
-    dataFinal: string,
-    ultimaConfirmada: string | null,
-  ): string | null {
-    if (!ultimaConfirmada || ultimaConfirmada < dataInicial) {
-      return null;
-    }
-    return ultimaConfirmada < dataFinal ? ultimaConfirmada : dataFinal;
-  }
-
   private async buscarRecebidoMarcaPropria(
     unidade: Unidade,
     dataInicial: string,
@@ -1430,7 +1395,7 @@ export class ComercialAcompanhamentoService {
     lojaRecebidoReq: number,
     lojaComissaoReq: number,
     lojaRecebidoMp: number,
-    ultimaConfirmada: string | null,
+    hoje: string,
   ): Promise<void> {
     const ids = [
       ...new Set(
@@ -1439,7 +1404,6 @@ export class ComercialAcompanhamentoService {
           .filter((id): id is string => !!id),
       ),
     ];
-    const hoje = ymdHojeSp();
     const mesAberto = competenciaAberta(
       hoje,
       periodo.dataInicial,
@@ -1523,7 +1487,7 @@ export class ComercialAcompanhamentoService {
     const realizados = somarDiasRealizadosVisitacao(
       periodo.dataInicial,
       periodo.dataFinal,
-      ultimaConfirmada,
+      hoje,
       sabado,
       feriadosSet,
     );

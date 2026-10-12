@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SincronizacaoConfig } from './entities/sincronizacao-config.entity';
+import { SincronizacaoLogErro } from './entities/sincronizacao-log-erro.entity';
 import { Cliente } from '../clientes/entities/cliente.entity';
 import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Orcamento } from '../orcamentos/entities/orcamento.entity';
@@ -16,15 +17,18 @@ import { SincronizacaoConfigController } from './sincronizacao-config.controller
 import { SincronizacaoService } from './sincronizacao.service';
 import { SincronizacaoController } from './sincronizacao.controller';
 import { SincronizacaoSchedulerService } from './sincronizacao-scheduler.service';
+import { SincronizacaoLogService } from './sincronizacao-log.service';
 import { PainelMedicosService } from '../painel-medicos/painel-medicos.service';
 import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.service';
 import { ProducaoEtapasLimpezaService } from './producao-etapas-limpeza.service';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { FechamentoCaixaModule } from '../fechamento-caixa/fechamento-caixa.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       SincronizacaoConfig,
+      SincronizacaoLogErro,
       Cliente,
       Prescritor,
       Orcamento,
@@ -36,11 +40,13 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
     JwtModule,
     ConfigModule,
     ScheduleModule.forRoot(),
+    FechamentoCaixaModule,
   ],
   controllers: [SincronizacaoConfigController, SincronizacaoController],
   providers: [
     SincronizacaoConfigService,
     SincronizacaoService,
+    SincronizacaoLogService,
     SincronizacaoSchedulerService,
     PainelMedicosService,
     ProducaoEtapasService,

@@ -45,6 +45,7 @@ import {
 } from './dto/fechamento-caixa-detalhado-response.dto';
 import {
   dividirPeriodoEmSegmentosMensais,
+  listarDiasIsoInclusive,
   normalizarDataIso,
 } from '../../common/utils/data-date.util';
 import {
@@ -354,6 +355,191 @@ export class FechamentoCaixaService {
     }
 
     await this.assertPodeAlterarDataCaixa(dto.unidade, dto.dataInicio);
+    await this.assertCaixaAbertoParaAtualizarVendas(
+      dto.unidade,
+      dto.dataInicio,
+    );
+  }
+
+  /** Atualizar Vendas (fechamento): só com caixa aberto; FECHADO exige Reabrir antes. */
+  private async assertCaixaAbertoParaAtualizarVendas(
+    unidade: Unidade,
+    data: string,
+  ): Promise<void> {
+    const dataNormalizada = normalizarDataIso(data) ?? data;
+    const fechado = await this.fechamentoRepo.findOne({
+      where: {
+        unidade,
+        dataOperacao: dataNormalizada,
+        status: CaixaFechamentoStatus.CONFIRMADO,
+      },
+    });
+    if (fechado) {
+      throw new ConflictException(
+        'Não é possível atualizar vendas com o caixa fechado. Reabra o caixa do dia e tente novamente.',
+      );
+    }
+  }
+
+  /**
+   * RN-CXA-010: sync automática — janela [último CONFIRMADO .. hoje].
+   * Dia FECHADO = só detalhes; dia aberto = upsert completo (sem substituir).
+   */
+  async sincronizarCaixaErpAutomatico(unidade: Unidade): Promise<{
+    dataInicio: string;
+    dataFim: string;
+    diasProcessados: number;
+    diasDetalhes: number;
+    diasUpsert: number;
+    diasComErro: number;
+    erros: string[];
+  }> {
+    const agente = this.getAgenteConfig(unidade);
+    if (!agente?.url || !agente?.token) {
+      throw new BadRequestException(
+        `Agente não configurado para a unidade ${unidade}.`,
+      );
+    }
+
+    const dataFim = this.dataIsoHojeBrasilia();
+    const ultima = await this.obterUltimaDataFechamentoConfirmada(unidade);
+    const dataInicio = ultima ?? dataFim;
+    if (dataInicio > dataFim) {
+      return {
+        dataInicio,
+        dataFim,
+        diasProcessados: 0,
+        diasDetalhes: 0,
+        diasUpsert: 0,
+        diasComErro: 0,
+        erros: [],
+      };
+    }
+
+    const dias = listarDiasIsoInclusive(dataInicio, dataFim);
+    const confirmados = await this.fechamentoRepo.find({
+      where: {
+        unidade,
+        status: CaixaFechamentoStatus.CONFIRMADO,
+        dataOperacao: Between(dataInicio, dataFim),
+      },
+      select: ['dataOperacao'],
+    });
+    const diasConfirmados = new Set(
+      confirmados.map((f) => normalizarDataIso(f.dataOperacao) ?? f.dataOperacao),
+    );
+
+    let diasDetalhes = 0;
+    let diasUpsert = 0;
+    let diasComErro = 0;
+    const erros: string[] = [];
+
+    this.logger.log(
+      `Sync caixa ERP automática ${unidade}: ${dataInicio}..${dataFim} (${dias.length} dia(s), últimoConfirmado=${ultima ?? 'nenhum'})`,
+    );
+
+    for (const dia of dias) {
+      const somenteDetalhes = diasConfirmados.has(dia);
+      try {
+        await this.importarSegmentoCaixaErp(
+          agente,
+          unidade,
+          dia,
+          dia,
+          1,
+          1,
+          false,
+          {
+            somenteDetalhes,
+            abortarSeIncompleto: false,
+            atualizarProgresso: false,
+          },
+        );
+        if (somenteDetalhes) {
+          diasDetalhes++;
+        } else {
+          diasUpsert++;
+        }
+      } catch (error: unknown) {
+        diasComErro++;
+        const msg = error instanceof Error ? error.message : String(error);
+        erros.push(`${dia}: ${msg}`);
+        this.logger.error(
+          `Sync caixa ERP automática ${unidade} dia ${dia} falhou: ${msg}`,
+        );
+      }
+    }
+
+    return {
+      dataInicio,
+      dataFim,
+      diasProcessados: dias.length,
+      diasDetalhes,
+      diasUpsert,
+      diasComErro,
+      erros,
+    };
+  }
+
+  /**
+   * RN-CXA-012: dias com movimento ERP sem caixa CONFIRMADO entre o último fechado e D.
+   */
+  async listarDiasComMovimentoSemCaixaFechado(
+    unidade: Unidade,
+    dataFechamento: string,
+  ): Promise<string[]> {
+    const dataD = normalizarDataIso(dataFechamento) ?? dataFechamento;
+    const ultima = await this.obterUltimaDataFechamentoConfirmada(unidade);
+    if (ultima && ultima >= dataD) {
+      return [];
+    }
+
+    const rows = (await this.pagamentoRepo.manager.query(
+      `
+      SELECT DISTINCT dia FROM (
+        SELECT TO_CHAR(p.data_operacao, 'YYYY-MM-DD') AS dia
+        FROM caixa_pagamentos_erp p
+        WHERE p.unidade = $1
+          AND p.data_operacao < $2::date
+          AND ($3::date IS NULL OR p.data_operacao > $3::date)
+        UNION
+        SELECT TO_CHAR(r.data_pagamento, 'YYYY-MM-DD') AS dia
+        FROM caixa_requisicoes_pagas r
+        WHERE r.unidade = $1
+          AND r.data_pagamento < $2::date
+          AND ($3::date IS NULL OR r.data_pagamento > $3::date)
+      ) x
+      ORDER BY dia
+      `,
+      [unidade, dataD, ultima],
+    )) as Array<{ dia: string }>;
+
+    if (!rows.length) {
+      return [];
+    }
+
+    const confirmados = await this.fechamentoRepo.find({
+      where: {
+        unidade,
+        status: CaixaFechamentoStatus.CONFIRMADO,
+        dataOperacao: Between(rows[0].dia, rows[rows.length - 1].dia),
+      },
+      select: ['dataOperacao'],
+    });
+    const setConfirmados = new Set(
+      confirmados.map((f) => normalizarDataIso(f.dataOperacao) ?? f.dataOperacao),
+    );
+
+    return rows.map((r) => r.dia).filter((dia) => !setConfirmados.has(dia));
+  }
+
+  private dataIsoHojeBrasilia(date: Date = new Date()): string {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
   }
 
   private async importarSegmentoCaixaErp(
@@ -364,11 +550,20 @@ export class FechamentoCaixaService {
     segmentoAtual: number,
     segmentosTotal: number,
     substituirDia: boolean,
+    opcoes?: {
+      somenteDetalhes?: boolean;
+      abortarSeIncompleto?: boolean;
+      atualizarProgresso?: boolean;
+    },
   ): Promise<{
     pagamentosStats: UpsertStats;
     itensStats: UpsertStats;
     requisicoesStats: UpsertStats;
   }> {
+    const somenteDetalhes = opcoes?.somenteDetalhes === true;
+    const abortarSeIncompleto = opcoes?.abortarSeIncompleto !== false;
+    const atualizarProgresso = opcoes?.atualizarProgresso !== false;
+
     const body = {
       unit: agente.unit,
       start: dataInicio,
@@ -376,50 +571,65 @@ export class FechamentoCaixaService {
     };
 
     this.logger.log(
-      `Caixa sync ${unidade}: início segmento ${dataInicio}..${dataFim} (${segmentoAtual}/${segmentosTotal}) cdfil=${agente.unit}`,
+      `Caixa sync ${unidade}: início segmento ${dataInicio}..${dataFim} (${segmentoAtual}/${segmentosTotal}) cdfil=${agente.unit}${somenteDetalhes ? ' [somente_detalhes]' : ''}`,
     );
     const inicioSegmento = Date.now();
 
     const pctBase = Math.round(((segmentoAtual - 1) / segmentosTotal) * 100);
     const pctSlice = Math.round(100 / segmentosTotal);
+    const prog = (
+      fase: 'consultando_agente' | 'gravando_postgres',
+      message: string,
+      percentual: number,
+    ): void => {
+      if (!atualizarProgresso) {
+        return;
+      }
+      this.importacaoProgressService.atualizar({ fase, message, percentual });
+    };
 
-    this.importacaoProgressService.atualizar({
-      fase: 'consultando_agente',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: buscando pagamentos no agente...`,
-      percentual: pctBase,
-    });
+    let pagamentosRows: AgenteCaixaPagamentoRow[] = [];
+    let itensRows: AgenteCaixaItemRow[] = [];
 
-    const pagamentosResp = await this.chamarAgente<{
-      pagamentos: AgenteCaixaPagamentoRow[];
-    }>(agente, '/api/v1/caixa/pagamentos', body, 'pagamentos', unidade);
+    if (!somenteDetalhes) {
+      prog(
+        'consultando_agente',
+        `Segmento ${segmentoAtual}/${segmentosTotal}: buscando pagamentos no agente...`,
+        pctBase,
+      );
 
-    this.importacaoProgressService.atualizar({
-      fase: 'consultando_agente',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: buscando itens no agente...`,
-      percentual: pctBase + Math.round(pctSlice * 0.15),
-    });
+      const pagamentosResp = await this.chamarAgente<{
+        pagamentos: AgenteCaixaPagamentoRow[];
+      }>(agente, '/api/v1/caixa/pagamentos', body, 'pagamentos', unidade);
 
-    const itensResp = await this.chamarAgente<{ itens: AgenteCaixaItemRow[] }>(
-      agente,
-      '/api/v1/caixa/itens',
-      body,
-      'itens',
-      unidade,
+      prog(
+        'consultando_agente',
+        `Segmento ${segmentoAtual}/${segmentosTotal}: buscando itens no agente...`,
+        pctBase + Math.round(pctSlice * 0.15),
+      );
+
+      const itensResp = await this.chamarAgente<{ itens: AgenteCaixaItemRow[] }>(
+        agente,
+        '/api/v1/caixa/itens',
+        body,
+        'itens',
+        unidade,
+      );
+      pagamentosRows = pagamentosResp.pagamentos ?? [];
+      itensRows = itensResp.itens ?? [];
+    }
+
+    prog(
+      'consultando_agente',
+      `Segmento ${segmentoAtual}/${segmentosTotal}: buscando requisições pagas no agente...`,
+      pctBase + Math.round(pctSlice * 0.3),
     );
-
-    this.importacaoProgressService.atualizar({
-      fase: 'consultando_agente',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: buscando requisições pagas no agente...`,
-      percentual: pctBase + Math.round(pctSlice * 0.3),
-    });
 
     const requisicoesResp = await this.chamarAgente<{
       requisicoes: AgenteCaixaRequisicaoRow[];
       nrrquCupomComPaga?: number;
     }>(agente, '/api/v1/caixa/requisicoes-pagas', body, 'requisicoes-pagas', unidade);
 
-    const pagamentosRows = pagamentosResp.pagamentos ?? [];
-    const itensRows = itensResp.itens ?? [];
     const requisicoesRows = requisicoesResp.requisicoes ?? [];
     const nrrquCupomComPaga = requisicoesResp.nrrquCupomComPaga;
 
@@ -439,10 +649,11 @@ export class FechamentoCaixaService {
     );
 
     this.logger.log(
-      `Caixa sync ${unidade}: snapshot agente ${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes} formulas=${qtdFormulas} cupomComPaga=${nrrquCupomComPaga ?? 'n/a'} (vendedor=${reqComVendedor} crm=${reqComCrm})`,
+      `Caixa sync ${unidade}: snapshot agente ${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes} formulas=${qtdFormulas} cupomComPaga=${nrrquCupomComPaga ?? 'n/a'} (vendedor=${reqComVendedor} crm=${reqComCrm})${somenteDetalhes ? ' [somente_detalhes]' : ''}`,
     );
 
     if (
+      !somenteDetalhes &&
       this.snapshotRequisicoesPagasIncompleto(
         itensRows,
         requisicoesRows,
@@ -454,81 +665,111 @@ export class FechamentoCaixaService {
       this.logger.error(
         `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: complemento incompleto (${qtdRequisicoes} paga(s) vs ${esperadas} requisição(ões) já em FC17000 / ${nrrquItens} nos itens). Importação abortada.`,
       );
-      throw new ServiceUnavailableException(
-        `O detalhe das requisições pagas não veio completo do ERP (${qtdRequisicoes} paga(s) para ${esperadas} requisição(ões) já baixadas nos cupons de ${this.formatDateDisplay(dataInicio)} a ${this.formatDateDisplay(dataFim)}). Os valores do caixa não foram gravados. Atualize as vendas de novo antes de fechar o dia.`,
+      if (abortarSeIncompleto) {
+        throw new ServiceUnavailableException(
+          `O detalhe das requisições pagas não veio completo do ERP (${qtdRequisicoes} paga(s) para ${esperadas} requisição(ões) já baixadas nos cupons de ${this.formatDateDisplay(dataInicio)} a ${this.formatDateDisplay(dataFim)}). Os valores do caixa não foram gravados. Atualize as vendas de novo antes de fechar o dia.`,
+        );
+      }
+      throw new Error(
+        `Complemento incompleto (${qtdRequisicoes} paga(s) vs ${esperadas} já em FC17000); dia ignorado na sync automática`,
       );
     }
 
-    this.importacaoProgressService.atualizar({
-      fase: 'gravando_postgres',
-      message: substituirDia
-        ? `Segmento ${segmentoAtual}/${segmentosTotal}: substituindo dados do dia (${dataInicio}..${dataFim})...`
-        : `Segmento ${segmentoAtual}/${segmentosTotal}: atualizando registros ERP (${dataInicio}..${dataFim})...`,
-      percentual: pctBase + Math.round(pctSlice * 0.4),
-    });
-
-    if (substituirDia) {
-      await this.cronometrarCaixa(
-        unidade,
-        'limpar dia (substituir)',
-        `${dataInicio}..${dataFim}`,
-        () => this.limparCaixaErpDoPeriodo(unidade, dataInicio, dataFim),
-      );
-    } else {
-      this.logger.log(
-        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: importação histórica — só atualiza/insere, não apaga o período`,
-      );
+    if (
+      somenteDetalhes &&
+      typeof nrrquCupomComPaga === 'number' &&
+      nrrquCupomComPaga > 0
+    ) {
+      const nrrquPagas = new Set(
+        requisicoesRows.filter((r) => r.requisicao > 0).map((r) => r.requisicao),
+      ).size;
+      if (nrrquPagas < nrrquCupomComPaga) {
+        const msg = `Complemento incompleto no modo detalhes (${nrrquPagas} paga(s) vs ${nrrquCupomComPaga} cupomComPaga)`;
+        this.logger.warn(`Sync caixa ERP ${unidade} ${dataInicio}: ${msg}`);
+        if (abortarSeIncompleto) {
+          throw new ServiceUnavailableException(msg);
+        }
+        throw new Error(`${msg}; dia ignorado na sync automática`);
+      }
     }
 
-    this.importacaoProgressService.atualizar({
-      fase: 'gravando_postgres',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdPagamentos} pagamentos no PostgreSQL...`,
-      percentual: pctBase + Math.round(pctSlice * 0.45),
-    });
-
-    const pagamentosStats = await this.cronometrarCaixa(
-      unidade,
-      'upsert pagamentos',
-      `${qtdPagamentos} linha(s)`,
-      () => this.upsertPagamentos(pagamentosRows, unidade, true),
+    prog(
+      'gravando_postgres',
+      somenteDetalhes
+        ? `Segmento ${segmentoAtual}/${segmentosTotal}: gravando detalhes (pagas/fórmulas)...`
+        : substituirDia
+          ? `Segmento ${segmentoAtual}/${segmentosTotal}: substituindo dados do dia (${dataInicio}..${dataFim})...`
+          : `Segmento ${segmentoAtual}/${segmentosTotal}: atualizando registros ERP (${dataInicio}..${dataFim})...`,
+      pctBase + Math.round(pctSlice * 0.4),
     );
 
-    const pagamentoChaves = pagamentosRows.map((p) =>
-      this.buildChavePagamento(unidade, p),
-    );
-    const pagamentoMap = await this.cronometrarCaixa(
-      unidade,
-      'mapa pagamentos',
-      `${pagamentoChaves.length} chave(s)`,
-      () => this.carregarMapaPagamentos(pagamentoChaves),
-    );
+    let pagamentosStats: UpsertStats = { importados: 0, atualizados: 0 };
+    let itensStats: UpsertStats = { importados: 0, atualizados: 0 };
 
-    this.importacaoProgressService.atualizar({
-      fase: 'gravando_postgres',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdItens} itens no PostgreSQL...`,
-      percentual: pctBase + Math.round(pctSlice * 0.65),
-    });
-
-    const itensStats = await this.cronometrarCaixa(
-      unidade,
-      'upsert itens',
-      `${qtdItens} linha(s)`,
-      () =>
-        this.upsertItens(
-          itensRows,
+    if (!somenteDetalhes) {
+      if (substituirDia) {
+        await this.cronometrarCaixa(
           unidade,
-          dataInicio,
-          dataFim,
-          pagamentoMap,
-          true,
-        ),
-    );
+          'limpar dia (substituir)',
+          `${dataInicio}..${dataFim}`,
+          () => this.limparCaixaErpDoPeriodo(unidade, dataInicio, dataFim),
+        );
+      } else {
+        this.logger.debug(
+          `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: importação upsert — só atualiza/insere, não apaga o período`,
+        );
+      }
 
-    this.importacaoProgressService.atualizar({
-      fase: 'gravando_postgres',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdRequisicoes} requisições no PostgreSQL...`,
-      percentual: pctBase + Math.round(pctSlice * 0.85),
-    });
+      prog(
+        'gravando_postgres',
+        `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdPagamentos} pagamentos no PostgreSQL...`,
+        pctBase + Math.round(pctSlice * 0.45),
+      );
+
+      pagamentosStats = await this.cronometrarCaixa(
+        unidade,
+        'upsert pagamentos',
+        `${qtdPagamentos} linha(s)`,
+        () => this.upsertPagamentos(pagamentosRows, unidade, true),
+      );
+
+      const pagamentoChaves = pagamentosRows.map((p) =>
+        this.buildChavePagamento(unidade, p),
+      );
+      const pagamentoMap = await this.cronometrarCaixa(
+        unidade,
+        'mapa pagamentos',
+        `${pagamentoChaves.length} chave(s)`,
+        () => this.carregarMapaPagamentos(pagamentoChaves),
+      );
+
+      prog(
+        'gravando_postgres',
+        `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdItens} itens no PostgreSQL...`,
+        pctBase + Math.round(pctSlice * 0.65),
+      );
+
+      itensStats = await this.cronometrarCaixa(
+        unidade,
+        'upsert itens',
+        `${qtdItens} linha(s)`,
+        () =>
+          this.upsertItens(
+            itensRows,
+            unidade,
+            dataInicio,
+            dataFim,
+            pagamentoMap,
+            true,
+          ),
+      );
+    }
+
+    prog(
+      'gravando_postgres',
+      `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdRequisicoes} requisições no PostgreSQL...`,
+      pctBase + Math.round(pctSlice * 0.85),
+    );
 
     const requisicoesStats = await this.cronometrarCaixa(
       unidade,
@@ -544,17 +785,17 @@ export class FechamentoCaixaService {
       () => this.upsertFormulasDasPagas(requisicoesRows, unidade),
     );
 
-    this.importacaoProgressService.atualizar({
-      fase: 'gravando_postgres',
-      message: `Segmento ${segmentoAtual}/${segmentosTotal} concluído (${qtdPagamentos} pag., ${qtdItens} itens, ${qtdRequisicoes} req.).`,
-      percentual: pctBase + pctSlice,
-    });
+    prog(
+      'gravando_postgres',
+      `Segmento ${segmentoAtual}/${segmentosTotal} concluído (${qtdPagamentos} pag., ${qtdItens} itens, ${qtdRequisicoes} req.).`,
+      pctBase + pctSlice,
+    );
 
     this.logCaixaTempo(
       unidade,
       'segmento total',
       Date.now() - inicioSegmento,
-      `${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes}`,
+      `${dataInicio}..${dataFim} pag=${qtdPagamentos} itens=${qtdItens} req=${qtdRequisicoes}${somenteDetalhes ? ' [somente_detalhes]' : ''}`,
     );
 
     return { pagamentosStats, itensStats, requisicoesStats };
@@ -1753,9 +1994,18 @@ export class FechamentoCaixaService {
     const msg = `Caixa sync ${unidade}: ${etapa} ${ms}ms${detalhe}`;
     if (ms >= FechamentoCaixaService.CAIXA_SYNC_LENTO_MS) {
       this.logger.warn(`${msg} [lento]`);
-    } else {
-      this.logger.log(msg);
+      return;
     }
+    // Upserts/mapa vazios: debug (evita ruído na sync automática dia a dia)
+    const vazio =
+      /\b0 linha/.test(extra) ||
+      /\b0 chave/.test(extra) ||
+      /\bpag=0 itens=0 req=0\b/.test(extra);
+    if (vazio) {
+      this.logger.debug(msg);
+      return;
+    }
+    this.logger.log(msg);
   }
 
   private async cronometrarCaixa<T>(

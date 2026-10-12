@@ -25,6 +25,7 @@ import { parsePainelContratoRepresentantes } from '../../common/utils/painel-con
 import {
   dividirPeriodoEmSegmentosPorDias,
   normalizarDataIso,
+  subtrairDiasIso,
 } from '../../common/utils/data-date.util';
 import {
   MENSAGEM_ERRO_CONEXAO_AGENTE,
@@ -40,6 +41,9 @@ import {
   ImportarOrcamentosResponseDto,
 } from './dto/importar-orcamentos.dto';
 import { ImportacaoManualProgressService } from '../../common/importacao-manual/importacao-manual-progress.service';
+import { FechamentoCaixaService } from '../fechamento-caixa/fechamento-caixa.service';
+import { SincronizacaoLogService } from './sincronizacao-log.service';
+import { SincronizacaoNivelLog } from './enums/sincronizacao-nivel-log.enum';
 
 interface AgenteCliente {
   cdcli: number;
@@ -78,6 +82,24 @@ interface AgenteOrcamento {
   nome_medico?: string | null;
 }
 
+interface AgenteOrcamentoExclusao {
+  filial: number;
+  nrorc: number;
+  serieo: string;
+  data_exclusao: string;
+  hora_exclusao?: string | null;
+  cdusu?: number | null;
+  motivo?: string | null;
+  evento: string;
+}
+
+/** Default de lookback/overlap de etapas quando a config do agente não tem valor válido. */
+const OVERLAP_DIAS_PRODUCAO_ETAPAS_DEFAULT = 5;
+/** Teto do lookback configurável de etapas (dias). */
+const OVERLAP_DIAS_PRODUCAO_ETAPAS_MAX = 90;
+/** Janela mínima de lookback para exclusões de orçamento na sync (dias). */
+const LOOKBACK_DIAS_EXCLUSAO_ORCAMENTO = 90;
+
 export interface SincronizacaoResult {
   agente: string;
   clientesProcessados: number;
@@ -89,6 +111,8 @@ export interface SincronizacaoResult {
   orcamentosProcessados: number;
   orcamentosCriados: number;
   orcamentosAtualizados: number;
+  /** RN-ORC-008: orçamentos com exclusão ERP confirmada (FC15100 ausente). */
+  orcamentosRemovidos: number;
   painelProcessados: number;
   painelCriados: number;
   painelAtualizados: number;
@@ -103,7 +127,14 @@ export interface SincronizacaoResult {
   /** RN-PCP-012: remarcação de retirada via auditoria AGENDAMENTO. */
   producaoEtapasRetiradaAgendamentoFormulas: number;
   producaoEtapasRetiradaAgendamentoLinhas: number;
+  /** RN-CXA-010: sync caixa ERP (baixas + detalhes). */
+  caixaErpDiasProcessados: number;
+  caixaErpDiasDetalhes: number;
+  caixaErpDiasUpsert: number;
+  caixaErpDiasComErro: number;
   erros: string[];
+  /** Política de gravação em sincronizacao_log_erro (da config do agente). */
+  nivelLogSync?: string;
 }
 
 export type SincronizacaoProgressEtapa =
@@ -114,6 +145,7 @@ export type SincronizacaoProgressEtapa =
   | 'orcamentos'
   | 'painel'
   | 'producao_etapas'
+  | 'caixa_erp'
   | 'finalizando'
   | 'concluido';
 
@@ -199,6 +231,8 @@ export class SincronizacaoService {
     private readonly painelMedicosService: PainelMedicosService,
     private readonly producaoEtapasService: ProducaoEtapasService,
     private readonly importacaoProgressService: ImportacaoManualProgressService,
+    private readonly fechamentoCaixaService: FechamentoCaixaService,
+    private readonly sincronizacaoLogService: SincronizacaoLogService,
   ) {}
 
   /** Registra erro de sync; deduplica mensagem amigável de agente indisponível. */
@@ -213,15 +247,90 @@ export class SincronizacaoService {
       const jaRegistrado = resultado.erros.some((e) => e.includes(titulo));
       if (!jaRegistrado) {
         resultado.erros.push(MENSAGEM_ERRO_CONEXAO_AGENTE);
+        void this.persistirLogSync(
+          resultado.agente,
+          contexto,
+          'error',
+          MENSAGEM_ERRO_CONEXAO_AGENTE,
+          null,
+          resultado.nivelLogSync,
+        );
       }
       return;
     }
-    resultado.erros.push(`${contexto}: ${msg}`);
+    const texto = `${contexto}: ${msg}`;
+    resultado.erros.push(texto);
+    void this.persistirLogSync(
+      resultado.agente,
+      contexto,
+      'error',
+      texto,
+      null,
+      resultado.nivelLogSync,
+    );
+  }
+
+  private devePersistirLogSync(
+    politica: string | null | undefined,
+    nivel: 'warn' | 'error',
+  ): boolean {
+    const p = String(politica ?? SincronizacaoNivelLog.TODOS)
+      .trim()
+      .toLowerCase();
+    if (p === SincronizacaoNivelLog.NAO_GRAVAR) {
+      return false;
+    }
+    if (p === SincronizacaoNivelLog.ERROS) {
+      return nivel === 'error';
+    }
+    if (p === SincronizacaoNivelLog.ALERTAS) {
+      return nivel === 'warn';
+    }
+    return true;
+  }
+
+  private persistirLogSync(
+    agente: string,
+    contextoOuEtapa: string,
+    nivel: 'warn' | 'error',
+    mensagem: string,
+    detalhe?: string | null,
+    politicaNivel?: string | null,
+  ): void {
+    if (!this.devePersistirLogSync(politicaNivel, nivel)) {
+      return;
+    }
+    const etapa = this.normalizarEtapaLog(contextoOuEtapa);
+    void this.sincronizacaoLogService.gravar({
+      agente,
+      etapa,
+      nivel,
+      mensagem,
+      detalhe: detalhe ?? null,
+    });
+  }
+
+  private normalizarEtapaLog(contexto: string): string {
+    const c = contexto.toLowerCase();
+    if (c.includes('exclus')) return 'producao_exclusoes';
+    if (c.includes('agendamento') || c.includes('retirada')) {
+      return 'producao_agendamento';
+    }
+    if (c.includes('etapa') || c.includes('produção') || c.includes('producao')) {
+      return 'producao_etapas';
+    }
+    if (c.includes('caixa')) return 'caixa_erp';
+    if (c.includes('orçamento') || c.includes('orcamento')) return 'orcamentos';
+    if (c.includes('painel')) return 'painel';
+    if (c.includes('cliente')) return 'clientes';
+    if (c.includes('prescritor')) return 'prescritores';
+    return contexto.slice(0, 80) || 'geral';
   }
 
   private criarResultadoVazio(
     agente: string,
     erros: string[] = [],
+    nivelLogSync?: string | null,
   ): SincronizacaoResult {
     return {
       agente,
@@ -234,6 +343,7 @@ export class SincronizacaoService {
       orcamentosProcessados: 0,
       orcamentosCriados: 0,
       orcamentosAtualizados: 0,
+      orcamentosRemovidos: 0,
       painelProcessados: 0,
       painelCriados: 0,
       painelAtualizados: 0,
@@ -246,8 +356,28 @@ export class SincronizacaoService {
       producaoEtapasRemovidas: 0,
       producaoEtapasRetiradaAgendamentoFormulas: 0,
       producaoEtapasRetiradaAgendamentoLinhas: 0,
+      caixaErpDiasProcessados: 0,
+      caixaErpDiasDetalhes: 0,
+      caixaErpDiasUpsert: 0,
+      caixaErpDiasComErro: 0,
       erros,
+      nivelLogSync: nivelLogSync ?? SincronizacaoNivelLog.TODOS,
     };
+  }
+
+  private nivelLogDaConfig(config: SincronizacaoConfig): string {
+    const v = String(config.nivelLogSync ?? SincronizacaoNivelLog.TODOS)
+      .trim()
+      .toLowerCase();
+    if (
+      v === SincronizacaoNivelLog.ALERTAS ||
+      v === SincronizacaoNivelLog.ERROS ||
+      v === SincronizacaoNivelLog.NAO_GRAVAR ||
+      v === SincronizacaoNivelLog.TODOS
+    ) {
+      return v;
+    }
+    return SincronizacaoNivelLog.TODOS;
   }
 
   getProgress(): SincronizacaoProgress | null {
@@ -449,11 +579,21 @@ export class SincronizacaoService {
             `Erro ao sincronizar agente ${config.agente}:`,
             error,
           );
-          resultados.push(
-            this.criarResultadoVazio(config.agente, [
-              error.message || 'Erro desconhecido',
-            ]),
+          const msgErro = error.message || 'Erro desconhecido';
+          const resultadoErro = this.criarResultadoVazio(
+            config.agente,
+            [msgErro],
+            this.nivelLogDaConfig(config),
           );
+          this.persistirLogSync(
+            config.agente,
+            'sincronizacao',
+            'error',
+            msgErro,
+            null,
+            this.nivelLogDaConfig(config),
+          );
+          resultados.push(resultadoErro);
           if (this.syncProgress) {
             this.syncProgress.erros += 1;
           }
@@ -505,9 +645,11 @@ export class SincronizacaoService {
       this.logger.warn(
         `Sync agendada ignorada para ${config.agente}: sincronização já em execução`,
       );
-      return this.criarResultadoVazio(config.agente, [
-        'Sincronização já em execução',
-      ]);
+      return this.criarResultadoVazio(
+        config.agente,
+        ['Sincronização já em execução'],
+        this.nivelLogDaConfig(config),
+      );
     }
 
     this.isRunning = true;
@@ -531,7 +673,19 @@ export class SincronizacaoService {
         error,
       );
       this.finalizarProgresso('error', msg);
-      return this.criarResultadoVazio(config.agente, [msg]);
+      this.persistirLogSync(
+        config.agente,
+        'sincronizacao',
+        'error',
+        msg,
+        null,
+        this.nivelLogDaConfig(config),
+      );
+      return this.criarResultadoVazio(
+        config.agente,
+        [msg],
+        this.nivelLogDaConfig(config),
+      );
     } finally {
       this.isRunning = false;
     }
@@ -597,10 +751,21 @@ export class SincronizacaoService {
             `Erro ao sincronizar orçamentos do agente ${config.agente}:`,
             error,
           );
+          const msgErro = error.message || 'Erro desconhecido';
+          this.persistirLogSync(
+            config.agente,
+            'orcamentos',
+            'error',
+            msgErro,
+            null,
+            this.nivelLogDaConfig(config),
+          );
           resultados.push(
-            this.criarResultadoVazio(config.agente, [
-              error.message || 'Erro desconhecido',
-            ]),
+            this.criarResultadoVazio(
+              config.agente,
+              [msgErro],
+              this.nivelLogDaConfig(config),
+            ),
           );
           if (this.syncProgress) {
             this.syncProgress.erros += 1;
@@ -653,7 +818,11 @@ export class SincronizacaoService {
       );
     }
 
-    const resultado = this.criarResultadoVazio(config.agente);
+    const resultado = this.criarResultadoVazio(
+      config.agente,
+      [],
+      this.nivelLogDaConfig(config),
+    );
 
     if (!config.ultimaModificacaoOrcamento) {
       resultado.erros.push('ultimaModificacaoOrcamento não configurada');
@@ -708,7 +877,11 @@ export class SincronizacaoService {
       );
     }
 
-    const resultado = this.criarResultadoVazio(config.agente);
+    const resultado = this.criarResultadoVazio(
+      config.agente,
+      [],
+      this.nivelLogDaConfig(config),
+    );
 
     // Preparar datas mínimas (já vêm como string YYYY-MM-DD do transformer)
     const dataMinimaCliente = config.ultimaDataCliente
@@ -1005,6 +1178,16 @@ export class SincronizacaoService {
       );
     }
 
+    try {
+      await this.sincronizarCaixaErp(config, resultado);
+    } catch (error: unknown) {
+      this.logger.error(
+        `Erro ao sincronizar caixa ERP do agente ${config.agente}:`,
+        error,
+      );
+      this.registrarErroSincronizacaoAgente(resultado, 'Caixa ERP', error);
+    }
+
     // Antes de salvar, garantir que as datas sejam strings YYYY-MM-DD
     // CORREÇÃO: Manter a data atual se não foi atualizada (não usar '2000-01-01')
     const ultimaDataClienteStr = config.ultimaDataCliente
@@ -1080,9 +1263,56 @@ export class SincronizacaoService {
       throw new Error(`Unidade não mapeada para o agente: ${config.agente}`);
     }
 
+    const unidade =
+      this.agenteUnidadeMap[config.agente] ||
+      this.unidadeMap[unit] ||
+      Unidade.INHUMAS;
+
     const dataMinimaModificacao = this.formatDateTimeForAgent(
       config.ultimaModificacaoOrcamento,
     );
+
+    const watermarkIso = normalizarDataIso(config.ultimaModificacaoOrcamento);
+    const fimExclusoes = this.dataIsoHojeBrasilia();
+    const inicioExclusoes =
+      subtrairDiasIso(
+        watermarkIso ?? fimExclusoes,
+        LOOKBACK_DIAS_EXCLUSAO_ORCAMENTO,
+      ) ?? fimExclusoes;
+
+    if (inicioExclusoes <= fimExclusoes) {
+      this.atualizarProgresso({
+        etapa: 'orcamentos',
+        message: `Verificando exclusões de orçamentos (${config.agente}, ${inicioExclusoes}..${fimExclusoes})...`,
+        fase: 0.7,
+      });
+      try {
+        const exclusoes = await this.buscarExclusoesOrcamentosDoAgente(
+          url,
+          token,
+          unit,
+          inicioExclusoes,
+          fimExclusoes,
+          config.agente,
+        );
+        const removidos = await this.aplicarExclusoesOrcamentos(
+          unidade,
+          exclusoes,
+          config.agente,
+        );
+        resultado.orcamentosRemovidos = removidos;
+      } catch (error: unknown) {
+        this.logger.error(
+          `[${config.agente}] Falha ao verificar exclusões ORCAMENTO; continuando sync incremental`,
+          error,
+        );
+        this.registrarErroSincronizacaoAgente(
+          resultado,
+          'Orçamentos (exclusões ORCAMENTO)',
+          error,
+        );
+      }
+    }
 
     this.logger.log(
       `[${config.agente}] Sincronizando orçamentos desde ${dataMinimaModificacao}`,
@@ -1109,11 +1339,6 @@ export class SincronizacaoService {
       this.atualizarWatermarkOrcamentos(config);
       return;
     }
-
-    const unidade =
-      this.agenteUnidadeMap[config.agente] ||
-      this.unidadeMap[unit] ||
-      Unidade.INHUMAS;
 
     this.logger.log(
       `[${config.agente}] Processando ${orcamentos.length} orçamentos...`,
@@ -1247,6 +1472,54 @@ export class SincronizacaoService {
     }
   }
 
+  /** RN-CXA-010: baixas + detalhes do caixa ERP (último CONFIRMADO → hoje). */
+  private async sincronizarCaixaErp(
+    config: SincronizacaoConfig,
+    resultado: SincronizacaoResult,
+  ): Promise<void> {
+    const unidade = this.agenteUnidadeMap[config.agente];
+    if (!unidade) {
+      throw new Error(`Unidade não mapeada para o agente: ${config.agente}`);
+    }
+
+    this.atualizarProgresso({
+      etapa: 'caixa_erp',
+      message: `Sincronizando caixa ERP (${config.agente} / ${unidade})...`,
+      fase: 0.96,
+    });
+
+    const caixa = await this.fechamentoCaixaService.sincronizarCaixaErpAutomatico(
+      unidade,
+    );
+    resultado.caixaErpDiasProcessados = caixa.diasProcessados;
+    resultado.caixaErpDiasDetalhes = caixa.diasDetalhes;
+    resultado.caixaErpDiasUpsert = caixa.diasUpsert;
+    resultado.caixaErpDiasComErro = caixa.diasComErro;
+    for (const err of caixa.erros) {
+      const texto = `Caixa ERP: ${err}`;
+      resultado.erros.push(texto);
+      this.persistirLogSync(
+        config.agente,
+        'caixa_erp',
+        'error',
+        texto,
+        null,
+        this.nivelLogDaConfig(config),
+      );
+    }
+
+    this.logger.log(
+      `[${config.agente}] Caixa ERP sync ${caixa.dataInicio}..${caixa.dataFim}: ` +
+        `${caixa.diasProcessados} dia(s) (upsert=${caixa.diasUpsert}, detalhes=${caixa.diasDetalhes}, erros=${caixa.diasComErro})`,
+    );
+
+    this.atualizarProgresso({
+      etapa: 'caixa_erp',
+      message: `Caixa ERP concluído (${config.agente}: ${caixa.diasUpsert} aberto(s), ${caixa.diasDetalhes} detalhe(s))`,
+      fase: 0.97,
+    });
+  }
+
   private async sincronizarProducaoEtapas(
     config: SincronizacaoConfig,
     url: string,
@@ -1262,19 +1535,26 @@ export class SincronizacaoService {
       config.agente,
     );
 
-    const dataMinimaMovimento = this.formatDateTimeForAgent(
-      config.ultimaModificacaoProducaoEtapas,
+    const overlapDias = this.resolverOverlapDiasProducaoEtapas(config);
+    const dataMinimaMovimento = this.aplicarOverlapWatermarkProducaoEtapas(
+      this.formatDateTimeForAgent(config.ultimaModificacaoProducaoEtapas),
+      overlapDias,
     );
 
-    const inicioExclusoes = normalizarDataIso(
+    const watermarkData = normalizarDataIso(
       config.ultimaModificacaoProducaoEtapas,
     );
+    const inicioExclusoes = watermarkData
+      ? (subtrairDiasIso(watermarkData, overlapDias) ?? watermarkData)
+      : null;
     const fimExclusoes = this.dataIsoHojeBrasilia();
+    /** RN-PCP-008/012: se falhar, não avança watermark (próximo ciclo reprocessa a janela). */
+    let auxiliaresOk = true;
 
     if (inicioExclusoes && inicioExclusoes <= fimExclusoes) {
       this.atualizarProgresso({
         etapa: 'producao_etapas',
-        message: `Verificando exclusões de fórmulas (${config.agente}, ${inicioExclusoes}..${fimExclusoes})...`,
+        message: `Verificando exclusões de fórmulas (${config.agente}, ${inicioExclusoes}..${fimExclusoes}, −${overlapDias}d)...`,
         fase: 0.86,
       });
 
@@ -1303,8 +1583,9 @@ export class SincronizacaoService {
           );
         }
       } catch (error: unknown) {
+        auxiliaresOk = false;
         this.logger.error(
-          `[${config.agente}] Falha ao verificar exclusões RECEITAS; continuando sync incremental de etapas`,
+          `[${config.agente}] Falha ao verificar exclusões RECEITAS; continuando sync incremental de etapas (watermark não avançará)`,
           error,
         );
         this.registrarErroSincronizacaoAgente(
@@ -1322,7 +1603,7 @@ export class SincronizacaoService {
     if (inicioExclusoes && inicioExclusoes <= fimExclusoes) {
       this.atualizarProgresso({
         etapa: 'producao_etapas',
-        message: `Verificando remarcações de retirada (${config.agente}, ${inicioExclusoes}..${fimExclusoes})...`,
+        message: `Verificando remarcações de retirada (${config.agente}, ${inicioExclusoes}..${fimExclusoes}, −${overlapDias}d)...`,
         fase: 0.87,
       });
 
@@ -1354,8 +1635,9 @@ export class SincronizacaoService {
           );
         }
       } catch (error: unknown) {
+        auxiliaresOk = false;
         this.logger.error(
-          `[${config.agente}] Falha ao verificar alterações AGENDAMENTO; continuando sync incremental de etapas`,
+          `[${config.agente}] Falha ao verificar alterações AGENDAMENTO; continuando sync incremental de etapas (watermark não avançará)`,
           error,
         );
         this.registrarErroSincronizacaoAgente(
@@ -1384,7 +1666,7 @@ export class SincronizacaoService {
       this.logger.log(
         `[${config.agente}] Nenhuma etapa de produção retornada pelo agente`,
       );
-      this.atualizarWatermarkProducaoEtapas(config);
+      this.concluirWatermarkProducaoEtapasSeOk(config, auxiliaresOk);
       return;
     }
 
@@ -1416,7 +1698,7 @@ export class SincronizacaoService {
       );
     }
 
-    this.atualizarWatermarkProducaoEtapas(config);
+    this.concluirWatermarkProducaoEtapasSeOk(config, auxiliaresOk);
   }
 
   async importarProducaoEtapasManual(
@@ -1595,8 +1877,40 @@ export class SincronizacaoService {
     let processados = 0;
     let criados = 0;
     let atualizados = 0;
+    let removidos = 0;
 
     try {
+      this.importacaoProgressService.atualizar({
+        fase: 'consultando_agente',
+        message: `Consultando exclusões de orçamentos no agente ${agente}...`,
+        agente,
+        percentual: 3,
+      });
+
+      try {
+        const exclusoes = await this.buscarExclusoesOrcamentosDoAgente(
+          agenteConfig.url,
+          agenteConfig.token,
+          unit,
+          dto.dataInicio,
+          dto.dataFim,
+          agente,
+        );
+        removidos = await this.aplicarExclusoesOrcamentos(
+          dto.unidade,
+          exclusoes,
+          agente,
+        );
+      } catch (error: unknown) {
+        const msgExcl =
+          error instanceof Error ? error.message : 'Erro nas exclusões';
+        this.logger.error(
+          `[${agente}] Falha ao aplicar exclusões ORCAMENTO na importação manual`,
+          error,
+        );
+        erros.push(`Exclusões ORCAMENTO: ${msgExcl}`);
+      }
+
       this.importacaoProgressService.atualizar({
         fase: 'consultando_agente',
         message: `Consultando agente ${agente} (Firebird)...`,
@@ -1660,7 +1974,7 @@ export class SincronizacaoService {
         }
       }
 
-      const mensagemFinal = `Importação concluída: ${processados} processados (${criados} criados, ${atualizados} atualizados).`;
+      const mensagemFinal = `Importação concluída: ${processados} processados (${criados} criados, ${atualizados} atualizados, ${removidos} removidos por exclusão ERP).`;
       this.importacaoProgressService.finalizar('completed', mensagemFinal);
 
       return {
@@ -1668,6 +1982,7 @@ export class SincronizacaoService {
         processados,
         criados,
         atualizados,
+        removidos,
         erros,
       };
     } catch (error: any) {
@@ -1680,9 +1995,157 @@ export class SincronizacaoService {
         processados,
         criados,
         atualizados,
+        removidos,
         erros,
       };
     }
+  }
+
+  /** Lookback/overlap de etapas a partir da config do agente (padrão 5, teto 90). */
+  private resolverOverlapDiasProducaoEtapas(
+    config: SincronizacaoConfig,
+  ): number {
+    const n = Number(config.overlapDiasProducaoEtapas);
+    if (!Number.isFinite(n) || n < 0) {
+      return OVERLAP_DIAS_PRODUCAO_ETAPAS_DEFAULT;
+    }
+    return Math.min(Math.floor(n), OVERLAP_DIAS_PRODUCAO_ETAPAS_MAX);
+  }
+
+  private concluirWatermarkProducaoEtapasSeOk(
+    config: SincronizacaoConfig,
+    auxiliaresOk: boolean,
+  ): void {
+    if (!auxiliaresOk) {
+      const msg =
+        'Watermark de etapas NÃO avançado: falha em exclusões RECEITAS e/ou agendamento de retirada (RN-PCP-008/012)';
+      this.logger.warn(`[${config.agente}] ${msg}`);
+      this.persistirLogSync(
+        config.agente,
+        'producao_etapas',
+        'warn',
+        msg,
+        null,
+        this.nivelLogDaConfig(config),
+      );
+      return;
+    }
+    this.atualizarWatermarkProducaoEtapas(config);
+  }
+
+  /**
+   * Recua o watermark de etapas em N dias (mantém hora) para reprocessar a borda
+   * do corte incremental — upsert idempotente absorve duplicatas.
+   */
+  private aplicarOverlapWatermarkProducaoEtapas(
+    dataHoraIso: string,
+    overlapDias: number,
+  ): string {
+    const normalizada = dataHoraIso.trim().replace(' ', 'T');
+    const data = normalizarDataIso(normalizada);
+    if (!data) {
+      return dataHoraIso;
+    }
+    const dataComOverlap = subtrairDiasIso(data, overlapDias) ?? data;
+    const horaMatch = normalizada.match(/T(\d{2}:\d{2}(:\d{2})?)/);
+    const hora = horaMatch?.[1]
+      ? horaMatch[1].length === 5
+        ? `${horaMatch[1]}:00`
+        : horaMatch[1].slice(0, 8)
+      : '00:00:00';
+    this.logger.log(
+      `Overlap etapas PCP: watermark ${normalizada} → busca desde ${dataComOverlap}T${hora} (−${overlapDias}d)`,
+    );
+    return `${dataComOverlap}T${hora}`;
+  }
+
+  private async buscarExclusoesOrcamentosDoAgente(
+    url: string,
+    token: string,
+    unit: number,
+    start: string,
+    end: string,
+    agente: string,
+  ): Promise<AgenteOrcamentoExclusao[]> {
+    const urlCompleta = `${url}/api/v1/orcamentos/exclusoes`;
+    this.logger.log(
+      `[${agente}] Consultando exclusões ORCAMENTO: ${urlCompleta} (${start}..${end}, unit=${unit})`,
+    );
+
+    const response = await this.fetchDoAgente(
+      urlCompleta,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ unit, start, end }),
+      },
+      120000,
+      agente,
+      'exclusões ORCAMENTO',
+    );
+
+    const data = (await response.json()) as {
+      exclusoes?: AgenteOrcamentoExclusao[];
+    };
+    const exclusoes = data.exclusoes ?? [];
+    this.logger.log(
+      `[${agente}] Agente retornou ${exclusoes.length} exclusão(ões) de orçamento confirmada(s) (FC15100 ausente)`,
+    );
+    return exclusoes;
+  }
+
+  /** RN-ORC-008: remove orçamentos excluídos no ERP (sem histórico local). */
+  private async aplicarExclusoesOrcamentos(
+    unidade: Unidade,
+    exclusoes: AgenteOrcamentoExclusao[],
+    agente: string,
+  ): Promise<number> {
+    let removidos = 0;
+    const vistos = new Set<string>();
+
+    for (const item of exclusoes) {
+      const nrorc = Number(item.nrorc);
+      const serieoInt = Number(item.serieo);
+      const filial = Number(item.filial);
+      if (!Number.isFinite(nrorc) || !Number.isFinite(serieoInt)) {
+        continue;
+      }
+      const key = `${filial}|${nrorc}|${serieoInt}`;
+      if (vistos.has(key)) {
+        continue;
+      }
+      vistos.add(key);
+
+      const deleteResult = await this.orcamentoRepository
+        .createQueryBuilder()
+        .delete()
+        .from(Orcamento)
+        .where('unidade = :unidade', { unidade })
+        .andWhere('cdfil = :cdfil', { cdfil: filial })
+        .andWhere('nrorc = :nrorc', { nrorc })
+        .andWhere('CAST(TRIM(serieo) AS INTEGER) = :serieo', {
+          serieo: serieoInt,
+        })
+        .execute();
+
+      const afetadas = deleteResult.affected ?? 0;
+      removidos += afetadas;
+      if (afetadas > 0) {
+        this.logger.log(
+          `[${agente}] Exclusão ERP orçamento ${nrorc}-${serieoInt}: ${afetadas} linha(s) removida(s)${item.motivo ? ` (motivo: ${item.motivo})` : ''}`,
+        );
+      }
+    }
+
+    if (removidos > 0) {
+      this.logger.log(
+        `[${agente}] RN-ORC-008: ${removidos} orçamento(s) removido(s) do PostgreSQL`,
+      );
+    }
+    return removidos;
   }
 
   private formatarDataHoraBrasilia(date: Date = new Date()): string {

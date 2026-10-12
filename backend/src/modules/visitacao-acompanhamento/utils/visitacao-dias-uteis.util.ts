@@ -138,20 +138,21 @@ export function somarPesoDiasVisitacao(
 }
 
 /**
- * Dias realizados: úteis da competência até o último caixa CONFIRMADO
- * (Fechado ou Bloqueado na tela). Sem confirmação, 0.
+ * Dias realizados (prévia): úteis da competência até hoje (America/Sao_Paulo),
+ * limitado ao fim da competência. Competência futura → 0.
+ * Não corta no último caixa CONFIRMADO (RN-VIS-010 / RN-CXA-010).
  */
 export function somarDiasRealizadosVisitacao(
   dataInicial: string,
   dataFinal: string,
-  ultimaConfirmada: string | null,
+  hoje: string | null,
   sabadoMeioDia: boolean,
   feriados: ReadonlySet<string>,
 ): number {
-  if (!ultimaConfirmada || ultimaConfirmada < dataInicial) {
+  if (!hoje || hoje < dataInicial) {
     return 0;
   }
-  const ate = ultimaConfirmada < dataFinal ? ultimaConfirmada : dataFinal;
+  const ate = hoje < dataFinal ? hoje : dataFinal;
   return somarDiasUteisVisitacao(dataInicial, ate, sabadoMeioDia, feriados);
 }
 

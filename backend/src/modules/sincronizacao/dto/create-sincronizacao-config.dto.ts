@@ -6,9 +6,11 @@ import {
   IsInt,
   IsBoolean,
   Min,
+  Max,
   IsIn,
   Matches,
 } from 'class-validator';
+import { SINCRONIZACAO_NIVEL_LOG_VALUES } from '../enums/sincronizacao-nivel-log.enum';
 
 export class CreateSincronizacaoConfigDto {
   @ApiProperty({
@@ -84,6 +86,30 @@ export class CreateSincronizacaoConfigDto {
   @IsInt()
   @Min(1)
   intervaloMinutos?: number;
+
+  @ApiProperty({
+    description:
+      'Dias de lookback/overlap da sync de etapas (PCP, exclusões e agendamento). Padrão 5.',
+    example: 5,
+    default: 5,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(90)
+  overlapDiasProducaoEtapas?: number;
+
+  @ApiProperty({
+    description:
+      'Persistência de logs da sync: todos (warn+error), alertas (só warn), erros (só error), nao_gravar',
+    example: 'todos',
+    default: 'todos',
+    enum: SINCRONIZACAO_NIVEL_LOG_VALUES,
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(SINCRONIZACAO_NIVEL_LOG_VALUES)
+  nivelLogSync?: string;
 
   @ApiProperty({
     description: 'Se a sincronização está ativa para este agente',

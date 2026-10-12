@@ -278,6 +278,20 @@ export class CaixaFechamentoConsolidadoService {
       data,
     );
 
+    // RN-CXA-012: buracos com movimento entre o último CONFIRMADO e D
+    const diasPendentes =
+      await this.fechamentoCaixaService.listarDiasComMovimentoSemCaixaFechado(
+        unidade,
+        data,
+      );
+    if (diasPendentes.length > 0) {
+      const dataDFmt = this.formatarDataBr(data);
+      const datasFmt = diasPendentes.map((d) => this.formatarDataBr(d)).join(', ');
+      throw new ConflictException(
+        `Não é possível fechar o caixa de ${dataDFmt}: existem vendas sem caixa fechado em ${datasFmt}. Feche esses dias ou corrija os movimentos no ERP e use Atualizar Vendas no dia aberto correspondente para limpar, e tente novamente.`,
+      );
+    }
+
     const consolidado = await this.obterConsolidado({ unidade, data });
     let fechamento = await this.fechamentoRepo.findOne({
       where: { unidade, dataOperacao: data },
@@ -515,5 +529,14 @@ export class CaixaFechamentoConsolidadoService {
     data: string,
   ): Promise<void> {
     await this.fechamentoCaixaService.assertPodeAlterarDataCaixa(unidade, data);
+  }
+
+  private formatarDataBr(iso: string): string {
+    const ymd = normalizarDataIso(iso) ?? iso;
+    const [y, m, d] = ymd.split('-');
+    if (!y || !m || !d) {
+      return iso;
+    }
+    return `${d}/${m}/${y}`;
   }
 }

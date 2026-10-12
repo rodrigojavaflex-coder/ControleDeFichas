@@ -145,6 +145,25 @@ export class SincronizacaoConfig extends BaseEntity {
   intervaloMinutos: number;
 
   @ApiProperty({
+    description:
+      'Dias de lookback/overlap da sync de etapas (PCP, exclusões RECEITAS e agendamento de retirada)',
+    example: 5,
+    default: 5,
+  })
+  @Column({ type: 'integer', default: 5 })
+  overlapDiasProducaoEtapas: number;
+
+  @ApiProperty({
+    description:
+      'O que gravar em sincronizacao_log_erro: todos | alertas | erros | nao_gravar',
+    example: 'todos',
+    default: 'todos',
+    enum: ['todos', 'alertas', 'erros', 'nao_gravar'],
+  })
+  @Column({ type: 'varchar', length: 20, default: 'todos' })
+  nivelLogSync: string;
+
+  @ApiProperty({
     description: 'Se a sincronização está ativa para este agente',
     example: true,
     default: true,

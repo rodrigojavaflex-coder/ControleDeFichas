@@ -217,7 +217,7 @@ export class ProducaoEtapasService {
       resultado.linhasRemovidas += afetadas;
 
       if (afetadas > 0) {
-        this.logger.log(
+        this.logger.debug(
           `[${agente}] Exclusão ERP: req.${item.requisicao} fórmula ${formula} — ${afetadas} linha(s) removida(s)${item.motivo ? ` (motivo: ${item.motivo})` : ''}`,
         );
       }
@@ -301,7 +301,7 @@ export class ProducaoEtapasService {
       resultado.linhasAtualizadas += afetadas;
 
       if (afetadas > 0) {
-        this.logger.log(
+        this.logger.debug(
           `[${agente}] RN-PCP-012: req.${item.requisicao} fórmula ${formula} — retirada ${patch.dataRetirada ?? '?'} ${patch.horaRetirada ?? ''} em ${afetadas} linha(s)`,
         );
       }

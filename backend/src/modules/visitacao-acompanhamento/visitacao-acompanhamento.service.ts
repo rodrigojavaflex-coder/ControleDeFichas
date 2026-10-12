@@ -2167,7 +2167,7 @@ export class VisitacaoAcompanhamentoService {
       unidades.add(unidadeFiltro);
     }
     const unidadesList = [...unidades];
-    const [calendarios, feriadosRows, caixasFechados] = await Promise.all([
+    const [calendarios, feriadosRows] = await Promise.all([
       unidadesList.length
         ? this.calendarioRepository.find({
             where: { unidade: In(unidadesList) },
@@ -2183,18 +2183,6 @@ export class VisitacaoAcompanhamentoService {
             })
             .getMany()
         : Promise.resolve([]),
-      unidadesList.length
-        ? this.caixaFechamentoRepository
-            .createQueryBuilder('c')
-            .select('c.unidade', 'unidade')
-            .addSelect("MAX(TO_CHAR(c.dataOperacao, 'YYYY-MM-DD'))", 'ultima')
-            .where('c.status = :status', {
-              status: CaixaFechamentoStatus.CONFIRMADO,
-            })
-            .andWhere('c.unidade IN (:...unidades)', { unidades: unidadesList })
-            .groupBy('c.unidade')
-            .getRawMany<{ unidade: Unidade; ultima: string }>()
-        : Promise.resolve([]),
     ]);
     const sabadoPorUnidade = new Map<Unidade, boolean>();
     for (const c of calendarios) {
@@ -2206,12 +2194,6 @@ export class VisitacaoAcompanhamentoService {
     }
     for (const f of feriadosRows) {
       feriadosPorUnidade.get(f.unidade)?.add(f.data);
-    }
-    const ultimaConfirmadaPorUnidade = new Map<Unidade, string>();
-    for (const row of caixasFechados) {
-      if (row.unidade && row.ultima) {
-        ultimaConfirmadaPorUnidade.set(row.unidade, row.ultima);
-      }
     }
 
     const duDe = (unidade: Unidade, ate: string): number => {
@@ -2230,7 +2212,7 @@ export class VisitacaoAcompanhamentoService {
       return somarDiasRealizadosVisitacao(
         periodo.dataInicial,
         periodo.dataFinal,
-        ultimaConfirmadaPorUnidade.get(unidade) ?? null,
+        hoje,
         sabado,
         feriados,
       );
