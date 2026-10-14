@@ -11,10 +11,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as express from 'express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { ConfiguracaoService } from './configuracao.service';
 import { CreateConfiguracaoDto } from './dto/create-configuracao.dto';
 import { UpdateConfiguracaoDto } from './dto/update-configuracao.dto';
+import { MobileVersaoMinimaDto } from './dto/mobile-versao-minima.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { AppRequest } from '../../common/types/http-request.types';
@@ -55,6 +56,16 @@ export class ConfiguracaoController {
   @ApiOperation({ summary: 'Buscar configuração' })
   async findOne() {
     return this.configuracaoService.findOneWithHasLogo();
+  }
+
+  @Get('mobile-versao-minima')
+  @ApiOperation({
+    summary:
+      'Versão mínima do app mobile (público — usado no boot e no login do aplicativo)',
+  })
+  @ApiResponse({ status: 200, type: MobileVersaoMinimaDto })
+  findMobileVersaoMinima(): Promise<MobileVersaoMinimaDto> {
+    return this.configuracaoService.findMobileVersaoMinima();
   }
 
   @Get('logo')

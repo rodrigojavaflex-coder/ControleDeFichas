@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Configuracao } from './entities/configuracao.entity';
 import { CreateConfiguracaoDto } from './dto/create-configuracao.dto';
 import { UpdateConfiguracaoDto } from './dto/update-configuracao.dto';
+import { MobileVersaoMinimaDto } from './dto/mobile-versao-minima.dto';
 import { AuditoriaService } from '../../common/services/auditoria.service';
 import { AuditAction } from '../../common/enums/auditoria.enum';
+import { MobileAppVersionGuard } from '../../common/guards/mobile-app-version.guard';
+import { isValidSemver } from '../../common/utils/semver.util';
+import { loadMobileAppVersionsCatalog } from '../../common/utils/mobile-app-versions.util';
 
 const LOGO_RELATORIO_MARKER = '/configuracao/logo';
 
@@ -20,7 +24,41 @@ export class ConfiguracaoService {
     @InjectRepository(Configuracao)
     private readonly configuracaoRepository: Repository<Configuracao>,
     private readonly auditoriaService: AuditoriaService,
+    private readonly mobileAppVersionGuard: MobileAppVersionGuard,
   ) {}
+
+  private normalizeMobileVersaoMinima(
+    input: unknown,
+  ): string | null | undefined {
+    if (input === undefined) {
+      return undefined;
+    }
+    if (input === null || input === '') {
+      return null;
+    }
+    const texto = String(input).trim();
+    if (!texto) {
+      return null;
+    }
+    if (!isValidSemver(texto)) {
+      throw new BadRequestException(
+        'Versão mínima do app deve estar no formato x.y.z (ex.: 1.0.0).',
+      );
+    }
+    return texto;
+  }
+
+  private applyMobileVersaoMinima<T extends { mobileVersaoMinima?: string | null }>(
+    dto: T,
+  ): T {
+    if (dto.mobileVersaoMinima === undefined) {
+      return dto;
+    }
+    dto.mobileVersaoMinima = this.normalizeMobileVersaoMinima(
+      dto.mobileVersaoMinima,
+    );
+    return dto;
+  }
 
   async create(
     dto: CreateConfiguracaoDto,
@@ -30,7 +68,7 @@ export class ConfiguracaoService {
     let config = await this.configuracaoRepository.findOne({ where: {} });
     if (config) {
       const dadosAnteriores = { ...config };
-      Object.assign(config, dto);
+      Object.assign(config, this.applyMobileVersaoMinima(dto));
       if (logo) {
         config.logoImagem = logo.buffer;
         config.logoImagemMime = logo.mime;
@@ -38,6 +76,7 @@ export class ConfiguracaoService {
       }
 
       await this.configuracaoRepository.save(config);
+      this.mobileAppVersionGuard.invalidateCache();
 
       await this.auditoriaService.createLog({
         acao: AuditAction.UPDATE,
@@ -52,13 +91,14 @@ export class ConfiguracaoService {
       return this.findOne();
     }
 
-    config = this.configuracaoRepository.create(dto);
+    config = this.configuracaoRepository.create(this.applyMobileVersaoMinima(dto));
     if (logo) {
       config.logoImagem = logo.buffer;
       config.logoImagemMime = logo.mime;
       config.logoRelatorio = LOGO_RELATORIO_MARKER;
     }
     await this.configuracaoRepository.save(config);
+    this.mobileAppVersionGuard.invalidateCache();
 
     await this.auditoriaService.createLog({
       acao: AuditAction.CREATE,
@@ -76,6 +116,17 @@ export class ConfiguracaoService {
     const config = await this.configuracaoRepository.findOne({ where: {} });
     if (!config) throw new NotFoundException('Configuração não encontrada');
     return config;
+  }
+
+  async findMobileVersaoMinima(): Promise<MobileVersaoMinimaDto> {
+    const config = await this.configuracaoRepository.findOne({ where: {} });
+    const raw = config?.mobileVersaoMinima?.trim() || null;
+    const versaoMinima = raw && isValidSemver(raw) ? raw : null;
+    return {
+      versaoMinima,
+      bloqueioAtivo: !!versaoMinima,
+      versoes: loadMobileAppVersionsCatalog(),
+    };
   }
 
   async findOneWithHasLogo(): Promise<Configuracao & { hasLogo: boolean }> {
@@ -122,7 +173,7 @@ export class ConfiguracaoService {
     if (!config) throw new NotFoundException('Configuração não encontrada');
 
     const dadosAnteriores = { ...config };
-    Object.assign(config, dto);
+    Object.assign(config, this.applyMobileVersaoMinima(dto));
     if (logo) {
       config.logoImagem = logo.buffer;
       config.logoImagemMime = logo.mime;
@@ -130,6 +181,7 @@ export class ConfiguracaoService {
     }
 
     await this.configuracaoRepository.save(config);
+    this.mobileAppVersionGuard.invalidateCache();
 
     await this.auditoriaService.createLog({
       acao: AuditAction.UPDATE,

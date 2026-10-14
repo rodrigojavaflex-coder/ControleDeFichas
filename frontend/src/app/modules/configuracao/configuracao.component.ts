@@ -144,7 +144,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       auditarCriacao: [true],
       auditarAlteracao: [true],
       auditarExclusao: [true],
-      auditarSenhaAlterada: [true]
+      auditarSenhaAlterada: [true],
+      mobileVersaoMinima: ['', Validators.pattern(/^\d+\.\d+\.\d+$/)],
     });
   }
 
@@ -162,7 +163,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
           auditarCriacao: config.auditarCriacao ?? true,
           auditarAlteracao: config.auditarAlteracao ?? true,
           auditarExclusao: config.auditarExclusao ?? true,
-          auditarSenhaAlterada: config.auditarSenhaAlterada ?? true
+          auditarSenhaAlterada: config.auditarSenhaAlterada ?? true,
+          mobileVersaoMinima: config.mobileVersaoMinima || '',
         });
         this.logoPreview = config.hasLogo
           ? `${environment.apiUrl}/configuracao/logo?t=${Date.now()}`
@@ -807,6 +809,10 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     formData.append('auditarAlteracao', this.form.value.auditarAlteracao.toString());
     formData.append('auditarExclusao', this.form.value.auditarExclusao.toString());
     formData.append('auditarSenhaAlterada', this.form.value.auditarSenhaAlterada.toString());
+    formData.append(
+      'mobileVersaoMinima',
+      (this.form.value.mobileVersaoMinima || '').trim(),
+    );
     const handleError = (err: any) => {
       this.loading = false;
       this.success = null;

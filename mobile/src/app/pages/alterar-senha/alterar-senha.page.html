@@ -1,0 +1,123 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Alterar senha</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="solid" (click)="voltar()">Voltar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="login-wrapper alterar-senha-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        <h1 class="login-title">Alterar senha</h1>
+        <p class="login-subtitle">Informe a senha atual e defina uma nova</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
+        <div class="input-group">
+          <label class="field-label" for="as-current">Senha atual</label>
+          <div class="password-field">
+            <input
+              [type]="showCurrentPassword ? 'text' : 'password'"
+              id="as-current"
+              formControlName="currentPassword"
+              class="form-input form-input-with-toggle"
+              [class.error]="
+                form.get('currentPassword')?.invalid && form.get('currentPassword')?.touched
+              "
+              placeholder="Senha atual"
+              autocomplete="current-password"
+            />
+            <app-password-toggle-button
+              [visible]="showCurrentPassword"
+              [disabled]="isLoading"
+              showLabel="Mostrar senha atual"
+              hideLabel="Ocultar senha atual"
+              (toggled)="toggleCurrentPassword()"
+            />
+          </div>
+          @if (form.get('currentPassword')?.invalid && form.get('currentPassword')?.touched) {
+            <div class="error-message">Senha atual é obrigatória</div>
+          }
+        </div>
+
+        <div class="input-group">
+          <label class="field-label" for="as-new">Nova senha</label>
+          <div class="password-field">
+            <input
+              [type]="showNewPassword ? 'text' : 'password'"
+              id="as-new"
+              formControlName="newPassword"
+              class="form-input form-input-with-toggle"
+              [class.error]="form.get('newPassword')?.invalid && form.get('newPassword')?.touched"
+              placeholder="Nova senha"
+              autocomplete="new-password"
+            />
+            <app-password-toggle-button
+              [visible]="showNewPassword"
+              [disabled]="isLoading"
+              showLabel="Mostrar nova senha"
+              hideLabel="Ocultar nova senha"
+              (toggled)="toggleNewPassword()"
+            />
+          </div>
+          @if (form.get('newPassword')?.invalid && form.get('newPassword')?.touched) {
+            <div class="error-message">Mín. 6 caracteres, com letra e número</div>
+          }
+        </div>
+
+        <div class="input-group">
+          <label class="field-label" for="as-confirm">Confirmar nova senha</label>
+          <div class="password-field">
+            <input
+              [type]="showConfirmPassword ? 'text' : 'password'"
+              id="as-confirm"
+              formControlName="confirmPassword"
+              class="form-input form-input-with-toggle"
+              [class.error]="
+                (form.get('confirmPassword')?.invalid && form.get('confirmPassword')?.touched) ||
+                (form.get('confirmPassword')?.touched && passwordsMismatch)
+              "
+              placeholder="Confirmar nova senha"
+              autocomplete="new-password"
+            />
+            <app-password-toggle-button
+              [visible]="showConfirmPassword"
+              [disabled]="isLoading"
+              showLabel="Mostrar confirmação de senha"
+              hideLabel="Ocultar confirmação de senha"
+              (toggled)="toggleConfirmPassword()"
+            />
+          </div>
+          @if (form.get('confirmPassword')?.touched && passwordsMismatch) {
+            <div class="error-message">As senhas não conferem</div>
+          }
+        </div>
+
+        <p class="password-hint">
+          A senha deve ter pelo menos 6 caracteres, incluindo letra e número.
+        </p>
+
+        @if (errorMessage) {
+          <div class="alert-error">{{ errorMessage }}</div>
+        }
+
+        <button type="submit" class="login-button" [disabled]="form.invalid || isLoading || passwordsMismatch">
+          @if (!isLoading) {
+            <span class="button-text">Alterar senha</span>
+          } @else {
+            <span class="button-text">
+              <ion-spinner name="crescent"></ion-spinner>
+              Salvando...
+            </span>
+          }
+        </button>
+      </form>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,75 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Configurações</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="solid" (click)="voltar()">Voltar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="config-page">
+    <div class="config-hero">
+      <div class="config-logo" aria-hidden="true">
+        <ion-icon name="settings-outline"></ion-icon>
+      </div>
+      <h1>Configurações</h1>
+      <p class="config-tag">Preferências de acesso e segurança</p>
+    </div>
+
+    <section class="config-section" aria-labelledby="config-seguranca-titulo">
+      <h2 id="config-seguranca-titulo" class="config-section-title">Segurança</h2>
+      <ion-card class="config-card">
+        <ion-card-content>
+          <div
+            class="config-row"
+            [class.is-disabled]="!biometricAvailable || biometricSaving"
+          >
+            <div class="config-row-icon" aria-hidden="true">
+              <ion-icon name="finger-print-outline"></ion-icon>
+            </div>
+            <div class="config-row-text">
+              <span class="config-row-title">Login por digital</span>
+              <span class="config-row-desc">
+                Ative para entrar no aplicativo usando biometria.
+              </span>
+              <span class="config-row-hint" *ngIf="!biometricAvailable">
+                Biometria não disponível neste dispositivo.
+              </span>
+            </div>
+            <ion-toggle
+              aria-label="Login por digital"
+              [checked]="biometricEnabled"
+              [disabled]="!biometricAvailable || biometricSaving"
+              (ionChange)="onBiometricToggle($event)"
+            ></ion-toggle>
+          </div>
+
+          <button
+            type="button"
+            class="config-row config-row-action"
+            (click)="irParaAlterarSenha()"
+          >
+            <div class="config-row-icon" aria-hidden="true">
+              <ion-icon name="key-outline"></ion-icon>
+            </div>
+            <div class="config-row-text">
+              <span class="config-row-title">Alterar senha</span>
+              <span class="config-row-desc">
+                Informe a senha atual e defina uma nova.
+              </span>
+            </div>
+            <ion-icon
+              name="chevron-forward-outline"
+              class="config-row-chevron"
+              aria-hidden="true"
+            ></ion-icon>
+          </button>
+        </ion-card-content>
+      </ion-card>
+    </section>
+  </div>
+</ion-content>

@@ -1,0 +1,246 @@
+.menu-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.profile-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  margin: 12px 12px 4px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #1d4ed8;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.profile-title {
+  min-width: 0;
+  flex: 1;
+
+  h1 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    color: #0f172a;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.profile-details {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+}
+
+.perfis-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0 2px;
+}
+
+.perfil-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.perfil-chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.detail-label {
+  color: #475569;
+  font-size: 13px;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.detail-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.detail-badge.active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.menu-list {
+  flex: 1;
+  padding: 8px 10px 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.menu-item {
+  --background: #ffffff;
+  --border-radius: 12px;
+  --padding-start: 12px;
+  --inner-padding-end: 8px;
+  --min-height: 46px;
+  margin: 6px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.menu-item.item-disabled {
+  opacity: 0.55;
+}
+
+.menu-item-icon {
+  color: #1d4ed8;
+  font-size: 18px;
+  margin-right: 8px;
+}
+
+.menu-item-label {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.menu-item.menu-item-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.menu-footer {
+  padding: 16px 16px calc(16px + var(--ion-safe-area-bottom, 0px));
+  margin-top: auto;
+  background: linear-gradient(to top, #ffffff 75%, rgba(255, 255, 255, 0));
+}
+
+.app-update-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(1rem + var(--ion-safe-area-top, 0px)) 1.25rem
+    calc(1rem + var(--ion-safe-area-bottom, 0px));
+  background: color-mix(in srgb, var(--ion-background-color, #0f172a) 72%, #0f172a);
+  backdrop-filter: blur(4px);
+}
+
+.app-update-card {
+  width: 100%;
+  max-width: 360px;
+  padding: 1.5rem 1.25rem;
+  border-radius: 16px;
+  border: 1px solid var(--ion-border-color, #cbd5e1);
+  background: var(--ion-card-background, var(--ion-background-color, #ffffff));
+  color: var(--ion-text-color, #0f172a);
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
+}
+
+.app-update-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 0.75rem;
+  border-radius: 14px;
+  background: var(--ion-color-primary-tint, #dbeafe);
+  color: var(--ion-color-primary, #2563eb);
+  font-size: 1.75rem;
+}
+
+.app-update-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.app-update-message {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--ion-color-medium-shade, #475569);
+}
+
+.app-update-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  text-align: left;
+}
+
+.app-update-meta > div {
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  background: var(--ion-color-light, #f1f5f9);
+}
+
+.app-update-meta dt {
+  margin: 0 0 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ion-color-medium-shade, #64748b);
+}
+
+.app-update-meta dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ion-text-color, #0f172a);
+}
+
+.app-update-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--ion-color-medium, #64748b);
+}
+

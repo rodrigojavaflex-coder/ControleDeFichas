@@ -1,0 +1,47 @@
+{
+  "name": "mobile",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "serve": "ionic serve --project=mobile",
+    "serve:open": "ionic serve --project=mobile",
+    "serve:no-open": "ionic serve --project=mobile --no-open",
+    "sync": "npx cap sync",
+    "postinstall": "node scripts/fix-agp9-proguard.mjs",
+    "fix:agp9-proguard": "node scripts/fix-agp9-proguard.mjs"
+  },
+  "dependencies": {
+    "@angular/common": "20.3.20",
+    "@angular/core": "20.3.20",
+    "@angular/forms": "20.3.20",
+    "@angular/platform-browser": "20.3.20",
+    "@angular/router": "20.3.20",
+    "@aparajita/capacitor-biometric-auth": "^10.0.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
+    "@ionic/angular": "^7.0.0",
+    "capacitor-secure-storage-plugin": "^0.13.0",
+    "ionicons": "^7.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^20.3.25",
+    "@angular/cli": "^20.3.25",
+    "@angular/compiler": "20.3.20",
+    "@angular/compiler-cli": "20.3.20",
+    "@capacitor/cli": "^8.0.0",
+    "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "@babel/runtime": "^7.26.10"
+  }
+}

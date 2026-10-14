@@ -13,6 +13,8 @@ export interface Configuracao {
   auditarAlteracao: boolean;
   auditarExclusao: boolean;
   auditarSenhaAlterada: boolean;
+  /** Versão mínima do app (x.y.z). Vazio não bloqueia. */
+  mobileVersaoMinima?: string | null;
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -28,6 +30,7 @@ export interface CreateConfiguracaoDto {
   auditarAlteracao?: boolean;
   auditarExclusao?: boolean;
   auditarSenhaAlterada?: boolean;
+  mobileVersaoMinima?: string | null;
 }
 
 export interface UpdateConfiguracaoDto extends Partial<CreateConfiguracaoDto> {}

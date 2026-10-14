@@ -1,0 +1,118 @@
+<ion-app>
+  <ion-menu
+    *ngIf="isAuthenticated && isNative"
+    menuId="main-menu"
+    contentId="main-content"
+  >
+    <ion-header>
+      <ion-toolbar>
+        <ion-title></ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="fecharMenu()">x</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="menu-content">
+      <div class="profile-card" *ngIf="user">
+        <div class="profile-header">
+          <div class="avatar">{{ user.nome.slice(0, 1) }}</div>
+          <div class="profile-title">
+            <h1>Olá, {{ user.nome }}</h1>
+            <p>{{ user.email }}</p>
+          </div>
+        </div>
+        <div class="profile-details">
+          <div class="perfis-block">
+            <span class="detail-label">Perfis</span>
+            @if (profileNames.length === 0) {
+              <span class="detail-value">Sem perfil</span>
+            } @else {
+              <div class="perfil-chips">
+                @for (nome of profileNames; track $index) {
+                  <span class="perfil-chip">{{ nome }}</span>
+                }
+              </div>
+            }
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-badge" [class.active]="userAtivo">
+              {{ userAtivo ? 'Ativo' : 'Inativo' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <ion-list class="menu-list">
+        <ion-item
+          lines="none"
+          button
+          detail="true"
+          class="menu-item"
+          (click)="goTo('/configuracoes')"
+        >
+          <ion-icon name="settings-outline" slot="start" class="menu-item-icon"></ion-icon>
+          <ion-label class="menu-item-label">Configurações</ion-label>
+        </ion-item>
+        <ion-item
+          lines="none"
+          button
+          detail="true"
+          class="menu-item"
+          (click)="goTo('/alterar-senha')"
+        >
+          <ion-icon name="key-outline" slot="start" class="menu-item-icon"></ion-icon>
+          <ion-label class="menu-item-label">Alterar senha</ion-label>
+        </ion-item>
+        <ion-item
+          lines="none"
+          button
+          detail="true"
+          class="menu-item"
+          (click)="goTo('/sobre')"
+        >
+          <ion-icon name="information-circle-outline" slot="start" class="menu-item-icon"></ion-icon>
+          <ion-label class="menu-item-label">Sobre</ion-label>
+        </ion-item>
+      </ion-list>
+      <div class="menu-footer">
+        <ion-button
+          expand="block"
+          color="danger"
+          (click)="logout()">
+          <ion-icon name="log-out-outline" slot="start"></ion-icon>
+          Sair
+        </ion-button>
+      </div>
+    </ion-content>
+  </ion-menu>
+
+  <ion-router-outlet id="main-content"></ion-router-outlet>
+
+  @if (updateRequired()) {
+    <div class="app-update-overlay" role="alertdialog" aria-modal="true" aria-labelledby="app-update-title">
+      <div class="app-update-card">
+        <div class="app-update-icon" aria-hidden="true">
+          <ion-icon name="cloud-download-outline"></ion-icon>
+        </div>
+        <h2 id="app-update-title">Atualização necessária</h2>
+        <p class="app-update-message">{{ updateMessage() }}</p>
+        <dl class="app-update-meta">
+          <div>
+            <dt>Versão instalada</dt>
+            <dd>{{ updateVersaoApp() }}</dd>
+          </div>
+          @if (updateVersaoMinima()) {
+            <div>
+              <dt>Versão mínima</dt>
+              <dd>{{ updateVersaoMinima() }}</dd>
+            </div>
+          }
+        </dl>
+        <p class="app-update-hint">
+          Instale o APK mais recente fornecido pela equipe e abra o aplicativo novamente.
+        </p>
+      </div>
+    </div>
+  }
+</ion-app>

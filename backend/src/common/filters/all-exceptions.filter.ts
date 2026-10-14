@@ -27,6 +27,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Erro interno do servidor';
 
+    let extra: Record<string, unknown> = {};
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
@@ -36,6 +37,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
           : Array.isArray((res as any).message)
             ? (res as any).message.join(', ')
             : (res as any).message || message;
+      if (res && typeof res === 'object' && !Array.isArray(res)) {
+        const body = res as Record<string, unknown>;
+        if (typeof body.code === 'string') {
+          extra.code = body.code;
+        }
+        if (body.versaoMinima !== undefined) {
+          extra.versaoMinima = body.versaoMinima;
+        }
+        if (body.versaoApp !== undefined) {
+          extra.versaoApp = body.versaoApp;
+        }
+      }
     } else if (exception instanceof QueryFailedError) {
       const err = exception as any;
       const code = err.driverError.code;
@@ -91,6 +104,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       message,
+      ...extra,
     });
   }
 }

@@ -20,6 +20,15 @@ agent/dist/
 agent/.env
 agent/agent-deploy/
 
+# Mobile (App Farma +)
+mobile/node_modules/
+mobile/dist/
+mobile/.angular/
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/.cxx/
+
 # Logs
 *.log
 npm-debug.log*

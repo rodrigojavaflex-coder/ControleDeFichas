@@ -44,4 +44,11 @@ export class Configuracao extends BaseEntity {
 
   @Column({ default: true })
   auditarSenhaAlterada: boolean;
+
+  /**
+   * Versão mínima do app (semver x.y.z). Null ou vazio não bloqueia.
+   * Requests com header X-App-Version abaixo desta versão recebem HTTP 426.
+   */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  mobileVersaoMinima?: string | null;
 }

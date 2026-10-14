@@ -16,14 +16,32 @@ export default registerAs('app', () => {
   const defaultOrigins =
     environment === 'production'
       ? []
-      : ['http://localhost:4200', 'http://localhost:3000'];
+      : [
+          'http://localhost:4200',
+          'http://localhost:3000',
+          'http://localhost:8100',
+          'http://127.0.0.1:8100',
+        ];
+
+  const capacitorOrigins = [
+    'https://localhost',
+    'capacitor://localhost',
+    'ionic://localhost',
+  ];
+
+  const origins = [
+    ...new Set([
+      ...parseList(process.env.CORS_ORIGINS, defaultOrigins),
+      ...capacitorOrigins,
+    ]),
+  ];
 
   return {
     port: parseInt(process.env.PORT || '3000', 10),
     environment,
     jwtSecret: process.env.JWT_SECRET || '',
     cors: {
-      origins: parseList(process.env.CORS_ORIGINS, defaultOrigins),
+      origins,
       methods: parseList(process.env.CORS_METHODS, [
         'GET',
         'POST',

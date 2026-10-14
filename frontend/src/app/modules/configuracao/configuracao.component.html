@@ -50,6 +50,20 @@
       <input id="farmaceuticoResponsavel" type="text" formControlName="farmaceuticoResponsavel" class="form-input" placeholder="Digite o nome do farmacêutico" />
     </div>
 
+    <div class="form-group">
+      <label for="mobileVersaoMinima" class="form-label">Versão mínima do app</label>
+      <input
+        id="mobileVersaoMinima"
+        type="text"
+        formControlName="mobileVersaoMinima"
+        class="form-input"
+        placeholder="1.0.0"
+        inputmode="decimal"
+        autocomplete="off"
+      />
+      <small class="field-description">Formato x.y.z. Deixe vazio para não bloquear o App Farma +. Grave a mínima só depois de instalar essa versão nos aparelhos.</small>
+    </div>
+
     <!-- Seção de Configurações de Auditoria -->
     <div class="audit-section">
       <h3 class="section-title">Configurações de Auditoria</h3>

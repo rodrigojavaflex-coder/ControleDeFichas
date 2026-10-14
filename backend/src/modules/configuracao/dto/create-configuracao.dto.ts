@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, Matches, ValidateIf } from 'class-validator';
 
 export class CreateConfiguracaoDto {
   @ApiPropertyOptional({
@@ -79,4 +79,18 @@ export class CreateConfiguracaoDto {
   @IsOptional()
   @IsBoolean()
   auditarSenhaAlterada?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Versão mínima do app mobile (x.y.z). Vazio não bloqueia o aplicativo.',
+    example: '1.0.0',
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== '')
+  @IsString()
+  @Matches(/^\d+\.\d+\.\d+$/, {
+    message: 'Versão mínima do app deve estar no formato x.y.z (ex.: 1.0.0).',
+  })
+  mobileVersaoMinima?: string | null;
 }

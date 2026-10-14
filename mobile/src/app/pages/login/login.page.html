@@ -1,0 +1,253 @@
+<ion-content [fullscreen]="true">
+  <div class="login-wrapper">
+    <div class="login-card">
+      @if (managingSavedEmails) {
+        <div class="login-header">
+          <h1 class="login-title">E-mails salvos</h1>
+          <p class="login-subtitle">Veja a lista completa e remova os que não quiser mais neste aparelho.</p>
+        </div>
+
+        @if (savedAccounts.length > 0) {
+          <div class="saved-accounts-manage" role="list" aria-label="Lista de e-mails salvos">
+            @for (account of savedAccounts; track account.email) {
+              <div class="saved-account-manage-row" role="listitem">
+                <span class="saved-account-avatar" aria-hidden="true">{{ accountInitial(account) }}</span>
+                <span class="saved-account-meta">
+                  <span class="saved-account-name">{{ account.nome }}</span>
+                  <span class="saved-account-email">{{ account.email }}</span>
+                </span>
+                <button
+                  type="button"
+                  class="saved-account-remove-btn"
+                  [disabled]="isLoading || isBiometricLoading"
+                  [attr.aria-label]="'Remover e-mail ' + account.email"
+                  (click)="confirmRemoveAccount(account)"
+                >
+                  Remover
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="manage-empty">Nenhum e-mail salvo neste aparelho.</p>
+        }
+
+        <button
+          type="button"
+          class="text-action"
+          [disabled]="isLoading || isBiometricLoading"
+          (click)="closeSavedAccountsManager()"
+        >
+          Voltar ao login
+        </button>
+      } @else {
+      <div class="login-header">
+        <h1 class="login-title">{{ showSavedAccounts ? 'Bem vindo!' : 'Bem-vindo' }}</h1>
+        <p class="login-subtitle">
+          {{ showSavedAccounts ? 'Escolha um e-mail salvo ou entre com outro.' : 'Entre com suas credenciais' }}
+        </p>
+      </div>
+
+      @if (showSavedAccounts) {
+        <div
+          #savedAccountsList
+          class="saved-accounts"
+          role="list"
+          aria-label="E-mails salvos"
+          (scroll)="onSavedAccountsScroll()"
+        >
+          @for (account of savedAccounts; track account.email) {
+            <div
+              class="saved-account-card"
+              role="listitem"
+              [attr.data-email]="account.email"
+              [class.is-selected]="selectedEmail === account.email"
+              (click)="selectAccount(account)"
+            >
+              <button
+                type="button"
+                class="saved-account-main"
+                [attr.aria-pressed]="selectedEmail === account.email"
+                [disabled]="isLoading || isBiometricLoading"
+                (click)="selectAccount(account)"
+              >
+                <span class="saved-account-avatar" aria-hidden="true">{{ accountInitial(account) }}</span>
+                <span class="saved-account-meta">
+                  <span class="saved-account-name">{{ account.nome }}</span>
+                  <span class="saved-account-email">{{ account.email }}</span>
+                </span>
+                <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+              </button>
+            </div>
+          }
+        </div>
+        <div class="saved-actions">
+          <button
+            type="button"
+            class="text-action"
+            [disabled]="isLoading || isBiometricLoading"
+            (click)="useOtherEmail()"
+          >
+            Usar outro e-mail
+          </button>
+          <button
+            type="button"
+            class="text-action"
+            [disabled]="isLoading || isBiometricLoading"
+            (click)="openSavedAccountsManager()"
+          >
+            Gerenciar e-mails
+          </button>
+        </div>
+      }
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+        @if (showSavedAccounts) {
+          <input
+            type="email"
+            formControlName="email"
+            class="visually-hidden"
+            tabindex="-1"
+            autocomplete="username"
+            readonly
+            aria-hidden="true"
+          />
+        }
+        @if (showEmailField) {
+          <div class="input-group">
+            <input
+              #emailInput
+              type="email"
+              id="email"
+              name="username"
+              formControlName="email"
+              class="form-input"
+              [class.error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+              placeholder="Email"
+              autocomplete="username"
+              inputmode="email"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              required
+            />
+            <label for="email" class="form-label">E-mail</label>
+            @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+              <div class="error-message">
+                @if (loginForm.get('email')?.errors?.['required']) {
+                  <span>Email é obrigatório</span>
+                }
+                @if (loginForm.get('email')?.errors?.['email']) {
+                  <span>Email inválido</span>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <div class="input-group">
+          <input
+            #passwordInput
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            formControlName="password"
+            class="form-input form-input-with-toggle"
+            [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+            placeholder="Senha"
+            autocomplete="current-password"
+            required
+          />
+          <app-password-toggle-button
+            [visible]="showPassword"
+            [disabled]="isLoading || isBiometricLoading"
+            (toggled)="togglePasswordVisibility()"
+          />
+          <label for="password" class="form-label">Senha</label>
+          @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+            <div class="error-message">
+              @if (loginForm.get('password')?.errors?.['required']) {
+                <span>Senha é obrigatória</span>
+              }
+              @if (loginForm.get('password')?.errors?.['minlength']) {
+                <span>Senha deve ter no mínimo 6 caracteres</span>
+              }
+            </div>
+          }
+        </div>
+
+        @if (showEmailField) {
+          <label class="remember-row">
+            <input
+              type="checkbox"
+              [(ngModel)]="rememberEmail"
+              [ngModelOptions]="{ standalone: true }"
+              [disabled]="isLoading || isBiometricLoading"
+            />
+            <span>Lembrar e-mail neste aparelho</span>
+          </label>
+        }
+
+        @if (errorMessage) {
+          <div class="alert-error">{{ errorMessage }}</div>
+        }
+
+        <button type="submit" class="login-button" [disabled]="loginForm.invalid || isLoading || updateBlocked()">
+          @if (!isLoading) {
+            <span class="button-text">Entrar</span>
+          }
+          @if (isLoading) {
+            <span class="button-text">
+              <ion-spinner name="crescent"></ion-spinner>
+              Entrando...
+            </span>
+          }
+        </button>
+
+        @if (showBiometricButton) {
+          <button
+            type="button"
+            class="biometric-button"
+            (click)="onBiometricLogin()"
+            [disabled]="isLoading || isBiometricLoading || updateBlocked()"
+          >
+            @if (!isBiometricLoading) {
+              <ion-icon name="finger-print-outline" aria-hidden="true"></ion-icon>
+              <span>Entrar com digital</span>
+            }
+            @if (isBiometricLoading) {
+              <ion-spinner name="crescent"></ion-spinner>
+              <span>Autenticando...</span>
+            }
+          </button>
+        }
+
+        @if (usingOtherEmail && savedAccounts.length > 0) {
+          <div class="saved-actions">
+            <button
+              type="button"
+              class="text-action"
+              [disabled]="isLoading || isBiometricLoading"
+              (click)="showSavedAccountList()"
+            >
+              Ver e-mails salvos
+            </button>
+            <button
+              type="button"
+              class="text-action"
+              [disabled]="isLoading || isBiometricLoading"
+              (click)="openSavedAccountsManager()"
+            >
+              Gerenciar e-mails
+            </button>
+          </div>
+        }
+
+      </form>
+      }
+
+      <p class="login-version" aria-label="Versão do aplicativo">
+        Versão {{ appVersion }}
+      </p>
+    </div>
+  </div>
+</ion-content>

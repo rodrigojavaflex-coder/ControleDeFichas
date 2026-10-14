@@ -1,0 +1,43 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Sobre</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="solid" (click)="voltar()">Voltar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="sobre-page">
+    <div class="sobre-hero">
+      <div class="sobre-logo" aria-hidden="true">{{ inicialApp() }}</div>
+      <h1>{{ appName() }}</h1>
+      <p class="sobre-tag">Informações do aplicativo</p>
+      <span class="sobre-badge">Versão {{ appVersion() }}</span>
+    </div>
+
+    <ion-card class="sobre-card">
+      <ion-card-content>
+        <div class="info-row">
+          <span class="info-label">Aplicativo</span>
+          <span class="info-value">{{ appName() }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Versão</span>
+          <span class="info-value">{{ appVersion() }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Build</span>
+          <span class="info-value">{{ buildVersion() }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Data da versão</span>
+          <span class="info-value">{{ versaoDataExibicao() }}</span>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

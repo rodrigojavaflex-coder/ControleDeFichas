@@ -18,6 +18,20 @@ function parseBoolField(value: unknown, defaultValue: boolean): boolean {
   return defaultValue;
 }
 
+function mobileVersaoField(
+  body: Record<string, unknown>,
+): string | null | undefined {
+  if (!Object.prototype.hasOwnProperty.call(body, 'mobileVersaoMinima')) {
+    return undefined;
+  }
+  const value = body.mobileVersaoMinima;
+  if (value === undefined || value === null) {
+    return null;
+  }
+  const texto = String(value).trim();
+  return texto.length > 0 ? texto : null;
+}
+
 function strField(
   body: Record<string, unknown>,
   key: string,
@@ -51,6 +65,7 @@ export function parseCreateConfiguracaoBody(
     auditarAlteracao: parseBoolField(body.auditarAlteracao, true),
     auditarExclusao: parseBoolField(body.auditarExclusao, true),
     auditarSenhaAlterada: parseBoolField(body.auditarSenhaAlterada, true),
+    mobileVersaoMinima: mobileVersaoField(body),
   };
 }
 
@@ -78,6 +93,9 @@ export function parseUpdateConfiguracaoBody(
   }
   if (body.auditarSenhaAlterada !== undefined) {
     dto.auditarSenhaAlterada = parseBoolField(body.auditarSenhaAlterada, true);
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'mobileVersaoMinima')) {
+    dto.mobileVersaoMinima = mobileVersaoField(body);
   }
   return dto;
 }

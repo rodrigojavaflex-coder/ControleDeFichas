@@ -1,0 +1,179 @@
+.config-page {
+  padding: 20px 16px 32px;
+  min-height: 100%;
+}
+
+.config-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.config-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: var(--ion-color-primary, #3880ff);
+  color: var(--ion-color-primary-contrast, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.config-logo ion-icon {
+  font-size: 2rem;
+}
+
+.config-hero h1 {
+  margin: 12px 0 4px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ion-text-color, #0f172a);
+}
+
+.config-tag {
+  margin: 0;
+  color: var(--ion-color-medium, #64748b);
+  font-size: 0.9rem;
+}
+
+.config-section-title {
+  margin: 0 0 8px 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ion-color-medium, #64748b);
+}
+
+.config-card {
+  margin: 0;
+  border-radius: 16px;
+  border: 1px solid var(--ion-border-color, #e2e8f0);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.config-card ion-card-content {
+  padding: 4px 8px;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--ion-item-border-color, var(--ion-color-step-150, #e2e8f0));
+}
+
+.config-row:last-child {
+  border-bottom: none;
+}
+
+.config-row-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ion-color-step-50, #f1f5f9);
+  color: var(--ion-color-primary, #3880ff);
+}
+
+.config-row-icon ion-icon {
+  font-size: 1.25rem;
+}
+
+.config-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config-row-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--ion-text-color, #0f172a);
+}
+
+.config-row-desc {
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--ion-color-medium, #64748b);
+}
+
+.config-row-hint {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--ion-color-medium, #64748b);
+}
+
+.config-row.is-disabled .config-row-title,
+.config-row.is-disabled .config-row-desc,
+.config-row.is-disabled .config-row-icon {
+  opacity: 0.65;
+}
+
+.config-row-action {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.config-row-action:hover {
+  background: var(--ion-color-step-50, #f8fafc);
+}
+
+.config-row-action:focus-visible {
+  outline: 2px solid var(--ion-color-primary, #3880ff);
+  outline-offset: 2px;
+}
+
+.config-row-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.config-row-chevron {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  color: var(--ion-color-medium, #64748b);
+}
+
+ion-toggle {
+  flex-shrink: 0;
+  --handle-width: 22px;
+  --handle-height: 22px;
+}
+
+ion-button {
+  text-transform: none;
+}
+
+ion-button:focus-visible {
+  outline: 2px solid var(--ion-color-primary, #3880ff);
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .config-card {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .config-row-icon {
+    background: var(--ion-color-step-100, #1e293b);
+  }
+
+  .config-row-action:hover {
+    background: var(--ion-color-step-100, #1e293b);
+  }
+}
