@@ -44,11 +44,20 @@ type MovimentoRow = {
   valor: string | number;
   qtd: string | number;
   qtd_formulas?: string | number | null;
+  valor_setores?: string | number | null;
+  qtd_setores?: string | number | null;
 };
 
 type MapaMovimento = Map<
   number,
-  { nome: string; valor: number; qtd: number; qtdFormulas: number }
+  {
+    nome: string;
+    valor: number;
+    qtd: number;
+    qtdFormulas: number;
+    valorSetores?: number;
+    qtdSetores?: number;
+  }
 >;
 
 @Injectable()
@@ -126,7 +135,7 @@ export class ComercialAcompanhamentoService {
       vinculados,
       volumeLoja,
       revendaMap,
-      politicasReq,
+      politicasVend,
       terceirosLoja,
       terceirosPorCodigo,
     ] =
@@ -181,8 +190,11 @@ export class ComercialAcompanhamentoService {
           .createQueryBuilder('p')
           .innerJoinAndSelect('p.funcionario', 'f')
           .where('f.unidade = :unidade', { unidade: dto.unidade })
-          .andWhere('p.tipoBase = :tipo', {
-            tipo: ComercialTipoBase.REQUISICAO,
+          .andWhere('p.tipoBase IN (:...tipos)', {
+            tipos: [
+              ComercialTipoBase.REQUISICAO,
+              ComercialTipoBase.MARCA_PROPRIA,
+            ],
           })
           .getMany(),
         tetoLoja
@@ -202,13 +214,21 @@ export class ComercialAcompanhamentoService {
       ]);
 
     const setoresRevendaPorCodigo = new Map<number, number[]>();
-    for (const p of politicasReq) {
+    const setoresMpPorCodigo = new Map<number, number[]>();
+    for (const p of politicasVend) {
       const codigo = p.funcionario?.codigoVendedorErp;
       if (codigo == null || codigo <= 0) continue;
-      setoresRevendaPorCodigo.set(
-        codigo,
-        this.normalizarCodigosSetor(p.codigosSetorRevendaManipulados),
-      );
+      if (p.tipoBase === ComercialTipoBase.REQUISICAO) {
+        setoresRevendaPorCodigo.set(
+          codigo,
+          this.normalizarCodigosSetor(p.codigosSetorRevendaManipulados),
+        );
+      } else if (p.tipoBase === ComercialTipoBase.MARCA_PROPRIA) {
+        setoresMpPorCodigo.set(
+          codigo,
+          this.normalizarCodigosSetor(p.codigosSetor),
+        );
+      }
     }
 
     const todosItens: ComercialAcompanhamentoItemDto[] = vinculados
@@ -222,6 +242,7 @@ export class ComercialAcompanhamentoService {
           rejMap,
           revendaMap,
           setoresRevendaPorCodigo.get(f.codigoVendedorErp!) ?? [],
+          setoresMpPorCodigo.get(f.codigoVendedorErp!) ?? [],
           terceirosPorCodigo,
         ),
       )
@@ -235,13 +256,17 @@ export class ComercialAcompanhamentoService {
     const totais = this.somarTotais(todosItens);
     const lojaRecebidoMp = volumeLoja.marcaPropria;
     const lojaRejeitado = this.somarMapa(rejMap);
-    const usaSetores = setoresUnidade.length > 0;
-    const lojaMpMeta = usaSetores
-      ? lojaRecebidoMp.valorSetores
-      : lojaRecebidoMp.valor;
-    const lojaMpQtd = usaSetores
-      ? lojaRecebidoMp.qtdSetores
-      : lojaRecebidoMp.qtd;
+    const lojaMpTotal = this.round2(lojaRecebidoMp.valor);
+    const lojaMpQtdTotal = lojaRecebidoMp.qtd;
+    const lojaMpSetores = this.round2(
+      setoresUnidade.length > 0 ? lojaRecebidoMp.valorSetores : 0,
+    );
+    const lojaMpQtdSetores =
+      setoresUnidade.length > 0 ? lojaRecebidoMp.qtdSetores : 0;
+    const lojaMpOutros = this.round2(lojaMpTotal - lojaMpSetores);
+    const lojaMpQtdOutros = Math.max(0, lojaMpQtdTotal - lojaMpQtdSetores);
+    const lojaComissaoMp =
+      setoresUnidade.length > 0 ? lojaMpSetores : lojaMpTotal;
     const puraLoja = this.round2(totais.valorRequisicaoPura);
     const extraLoja = volumeLoja.revendaManipulados;
     const terceirosValor = this.round2(terceirosLoja.valor);
@@ -254,11 +279,14 @@ export class ComercialAcompanhamentoService {
     totais.quantidadeTerceirosManipulados = terceirosLoja.qtd;
     totais.valorComissaoBaseRequisicao = lojaComissaoReq;
     totais.valorRecebidoRequisicao = this.round2(lojaComissaoReq + terceirosValor);
-    totais.valorRecebidoMarcaPropria = lojaMpMeta;
-    totais.quantidadeRecebidoMarcaPropria = lojaMpQtd;
+    totais.valorRecebidoMarcaPropria = lojaMpTotal;
+    totais.quantidadeRecebidoMarcaPropria = lojaMpQtdTotal;
     totais.codigosSetorMarcaPropria = setoresUnidade;
-    totais.valorRecebidoMarcaPropriaSetores = lojaRecebidoMp.valorSetores;
-    totais.quantidadeRecebidoMarcaPropriaSetores = lojaRecebidoMp.qtdSetores;
+    totais.valorRecebidoMarcaPropriaSetores = lojaMpSetores;
+    totais.quantidadeRecebidoMarcaPropriaSetores = lojaMpQtdSetores;
+    totais.valorRecebidoMarcaPropriaOutros = lojaMpOutros;
+    totais.quantidadeRecebidoMarcaPropriaOutros = lojaMpQtdOutros;
+    totais.valorComissaoBaseMarcaPropria = lojaComissaoMp;
     totais.valorRejeitado = lojaRejeitado.valor;
     totais.quantidadeRejeitado = lojaRejeitado.qtd;
 
@@ -270,7 +298,8 @@ export class ComercialAcompanhamentoService {
       exporComissao,
       totais.valorRecebidoRequisicao,
       lojaComissaoReq,
-      lojaMpMeta,
+      lojaMpTotal,
+      lojaComissaoMp,
       hoje,
     );
 
@@ -319,29 +348,21 @@ export class ComercialAcompanhamentoService {
       periodo.dataFinal,
       codigo,
     ];
-    const [politicaMp, politicaReq] = await Promise.all([
-      this.politicaRepo.findOne({
-        where: {
-          funcionario: { id: funcionario.id },
-          tipoBase: ComercialTipoBase.MARCA_PROPRIA,
-        },
-      }),
-      this.politicaRepo.findOne({
-        where: {
-          funcionario: { id: funcionario.id },
-          tipoBase: ComercialTipoBase.REQUISICAO,
-        },
-      }),
-    ]);
-    const setoresMp = (politicaMp?.codigosSetor ?? [])
-      .map((n) => Number(n))
-      .filter((n) => Number.isInteger(n) && n > 0);
+    const politicaReq = await this.politicaRepo.findOne({
+      where: {
+        funcionario: { id: funcionario.id },
+        tipoBase: ComercialTipoBase.REQUISICAO,
+      },
+    });
     const setoresRevenda = (politicaReq?.codigosSetorRevendaManipulados ?? [])
       .map((n) => Number(n))
       .filter((n) => Number.isInteger(n) && n > 0);
-    const filtroSetorSql =
-      setoresMp.length > 0 ? ' AND i.codigo_setor = ANY($5::int[])' : '';
-    const paramsMp = setoresMp.length > 0 ? [...paramsMpRej, setoresMp] : paramsMpRej;
+    const paramsMp = [
+      dto.unidade,
+      periodo.dataInicial,
+      tetoManip ?? periodo.dataFinal,
+      codigo,
+    ];
 
     const [reqRows, mpRows, rejRows, tercRows, setorRows] = await Promise.all([
       tetoManip
@@ -409,12 +430,14 @@ export class ComercialAcompanhamentoService {
             }>
           >)
         : Promise.resolve([]),
-      this.dataSource.query(
-        `
+      tetoManip
+        ? (this.dataSource.query(
+            `
           SELECT
             i.data_operacao AS data,
             i.numero_cupom,
             i.descricao_item,
+            i.codigo_setor,
             i.quantidade,
             GREATEST(
               0,
@@ -427,19 +450,20 @@ export class ComercialAcompanhamentoService {
             AND i.data_operacao >= $2
             AND i.data_operacao <= $3
             AND p.codigo_operador_caixa = $4
-            ${filtroSetorSql}
           ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
         `,
-        paramsMp,
-      ) as Promise<
-        Array<{
-          data: string | Date;
-          numero_cupom: string | number;
-          descricao_item: string | null;
-          quantidade: string | number;
-          valor: string | number;
-        }>
-      >,
+            paramsMp,
+          ) as Promise<
+            Array<{
+              data: string | Date;
+              numero_cupom: string | number;
+              descricao_item: string | null;
+              codigo_setor: string | number | null;
+              quantidade: string | number;
+              valor: string | number;
+            }>
+          >)
+        : Promise.resolve([]),
       this.dataSource.query(
         `
           SELECT
@@ -569,6 +593,8 @@ export class ComercialAcompanhamentoService {
         data: this.toYmd(row.data),
         numeroCupom: this.toInt(row.numero_cupom),
         descricaoItem: row.descricao_item,
+        codigoSetor:
+          row.codigo_setor == null ? null : this.toInt(row.codigo_setor),
         quantidade: this.toNumber(row.quantidade),
         valor: this.round2(this.toNumber(row.valor)),
       })),
@@ -601,9 +627,6 @@ export class ComercialAcompanhamentoService {
     const politicaUnidade = await this.politicaUnidadeRepo.findOne({
       where: { unidade: dto.unidade },
     });
-    const setoresMp = this.normalizarCodigosSetor(
-      politicaUnidade?.codigosSetor,
-    );
     const setoresRevenda = this.normalizarCodigosSetor(
       politicaUnidade?.codigosSetorRevendaManipulados,
     );
@@ -616,11 +639,11 @@ export class ComercialAcompanhamentoService {
           AND f."codigoVendedorErp" > 0
       )
     `;
-    const filtroMpSql =
-      setoresMp.length > 0 ? ' AND i.codigo_setor = ANY($4::int[])' : '';
-    const paramsMp = setoresMp.length
-      ? [dto.unidade, periodo.dataInicial, tetoManip ?? periodo.dataFinal, setoresMp]
-      : [dto.unidade, periodo.dataInicial, tetoManip ?? periodo.dataFinal];
+    const paramsMp = [
+      dto.unidade,
+      periodo.dataInicial,
+      tetoManip ?? periodo.dataFinal,
+    ];
 
     const [reqRows, mpRows, rejRows, tercRows, setorRows] = await Promise.all([
       tetoManip
@@ -688,13 +711,14 @@ export class ComercialAcompanhamentoService {
             }>
           >)
         : Promise.resolve([]),
-      this.dataSource.query(
-        setoresMp.length
-          ? `
+      tetoManip
+        ? (this.dataSource.query(
+            `
           SELECT
             i.data_operacao AS data,
             i.numero_cupom,
             i.descricao_item,
+            i.codigo_setor,
             i.quantidade,
             GREATEST(
               0,
@@ -706,33 +730,20 @@ export class ComercialAcompanhamentoService {
             AND i.unidade = $1
             AND i.data_operacao >= $2
             AND i.data_operacao <= $3
-            ${filtroMpSql}
-          ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
-        `
-          : `
-          SELECT
-            i.data_operacao AS data,
-            i.numero_cupom,
-            i.descricao_item,
-            i.quantidade,
-            i.valor_liquido_item AS valor
-          FROM caixa_itens_erp i
-          WHERE i.tipo_item = 'PRODUTO'
-            AND i.unidade = $1
-            AND i.data_operacao >= $2
-            AND i.data_operacao <= $3
           ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
         `,
-        paramsMp,
-      ) as Promise<
-        Array<{
-          data: string | Date;
-          numero_cupom: string | number;
-          descricao_item: string | null;
-          quantidade: string | number;
-          valor: string | number;
-        }>
-      >,
+            paramsMp,
+          ) as Promise<
+            Array<{
+              data: string | Date;
+              numero_cupom: string | number;
+              descricao_item: string | null;
+              codigo_setor: string | number | null;
+              quantidade: string | number;
+              valor: string | number;
+            }>
+          >)
+        : Promise.resolve([]),
       this.dataSource.query(
         `
           SELECT
@@ -848,6 +859,8 @@ export class ComercialAcompanhamentoService {
         data: this.toYmd(row.data),
         numeroCupom: this.toInt(row.numero_cupom),
         descricaoItem: row.descricao_item,
+        codigoSetor:
+          row.codigo_setor == null ? null : this.toInt(row.codigo_setor),
         quantidade: this.toNumber(row.quantidade),
         valor: this.round2(this.toNumber(row.valor)),
       })),
@@ -877,6 +890,7 @@ export class ComercialAcompanhamentoService {
     rejMap: MapaMovimento,
     revendaMap: MapaMovimento,
     setoresRevenda: number[],
+    setoresMp: number[],
     terceirosPorCodigo: Map<number, { valor: number; qtd: number }>,
   ): ComercialAcompanhamentoItemDto {
     const req = reqMap.get(codigo);
@@ -888,6 +902,15 @@ export class ComercialAcompanhamentoService {
     const valorRevenda = this.round2(revenda?.valor ?? 0);
     const valorTerceiros = this.round2(terceiros?.valor ?? 0);
     const comissaoBase = this.round2(valorPura + valorRevenda);
+    const mpTotal = this.round2(mp?.valor ?? 0);
+    const mpQtdTotal = mp?.qtd ?? 0;
+    const mpSetores = this.round2(
+      setoresMp.length > 0 ? (mp?.valorSetores ?? 0) : 0,
+    );
+    const mpQtdSetores = setoresMp.length > 0 ? (mp?.qtdSetores ?? 0) : 0;
+    const mpOutros = this.round2(mpTotal - mpSetores);
+    const mpQtdOutros = Math.max(0, mpQtdTotal - mpQtdSetores);
+    const comissaoBaseMp = setoresMp.length > 0 ? mpSetores : mpTotal;
     return {
       funcionarioId,
       nomeVendedor: nome,
@@ -902,8 +925,14 @@ export class ComercialAcompanhamentoService {
       valorRecebidoRequisicao: this.round2(comissaoBase + valorTerceiros),
       quantidadeRecebidoRequisicao: req?.qtd ?? 0,
       quantidadeFormulasRequisicao: req?.qtdFormulas ?? 0,
-      valorRecebidoMarcaPropria: mp?.valor ?? 0,
-      quantidadeRecebidoMarcaPropria: mp?.qtd ?? 0,
+      valorRecebidoMarcaPropria: mpTotal,
+      quantidadeRecebidoMarcaPropria: mpQtdTotal,
+      valorRecebidoMarcaPropriaSetores: mpSetores,
+      quantidadeRecebidoMarcaPropriaSetores: mpQtdSetores,
+      valorRecebidoMarcaPropriaOutros: mpOutros,
+      quantidadeRecebidoMarcaPropriaOutros: mpQtdOutros,
+      valorComissaoBaseMarcaPropria: comissaoBaseMp,
+      codigosSetorMarcaPropria: setoresMp,
       valorRejeitado: rej?.valor ?? 0,
       quantidadeRejeitado: rej?.qtd ?? 0,
     };
@@ -930,14 +959,25 @@ export class ComercialAcompanhamentoService {
           acc.valorRecebidoMarcaPropria + i.valorRecebidoMarcaPropria,
         quantidadeRecebidoMarcaPropria:
           acc.quantidadeRecebidoMarcaPropria + i.quantidadeRecebidoMarcaPropria,
+        valorRecebidoMarcaPropriaSetores:
+          (acc.valorRecebidoMarcaPropriaSetores ?? 0) +
+          (i.valorRecebidoMarcaPropriaSetores ?? 0),
+        quantidadeRecebidoMarcaPropriaSetores:
+          (acc.quantidadeRecebidoMarcaPropriaSetores ?? 0) +
+          (i.quantidadeRecebidoMarcaPropriaSetores ?? 0),
+        valorRecebidoMarcaPropriaOutros:
+          (acc.valorRecebidoMarcaPropriaOutros ?? 0) +
+          (i.valorRecebidoMarcaPropriaOutros ?? 0),
+        quantidadeRecebidoMarcaPropriaOutros:
+          (acc.quantidadeRecebidoMarcaPropriaOutros ?? 0) +
+          (i.quantidadeRecebidoMarcaPropriaOutros ?? 0),
+        valorComissaoBaseMarcaPropria:
+          (acc.valorComissaoBaseMarcaPropria ?? 0) +
+          (i.valorComissaoBaseMarcaPropria ?? 0),
         valorRejeitado: acc.valorRejeitado + i.valorRejeitado,
         quantidadeRejeitado: acc.quantidadeRejeitado + i.quantidadeRejeitado,
         quantidadeVendedores: acc.quantidadeVendedores + (i.funcionarioId ? 1 : 0),
         codigosSetorMarcaPropria: acc.codigosSetorMarcaPropria,
-        valorRecebidoMarcaPropriaSetores:
-          acc.valorRecebidoMarcaPropriaSetores,
-        quantidadeRecebidoMarcaPropriaSetores:
-          acc.quantidadeRecebidoMarcaPropriaSetores,
       }),
       {
         valorRecebidoRequisicao: 0,
@@ -951,12 +991,15 @@ export class ComercialAcompanhamentoService {
         quantidadeFormulasRequisicao: 0,
         valorRecebidoMarcaPropria: 0,
         quantidadeRecebidoMarcaPropria: 0,
+        valorRecebidoMarcaPropriaSetores: 0,
+        quantidadeRecebidoMarcaPropriaSetores: 0,
+        valorRecebidoMarcaPropriaOutros: 0,
+        quantidadeRecebidoMarcaPropriaOutros: 0,
+        valorComissaoBaseMarcaPropria: 0,
         valorRejeitado: 0,
         quantidadeRejeitado: 0,
         quantidadeVendedores: 0,
         codigosSetorMarcaPropria: [],
-        valorRecebidoMarcaPropriaSetores: 0,
-        quantidadeRecebidoMarcaPropriaSetores: 0,
       },
     );
   }
@@ -1120,9 +1163,18 @@ export class ComercialAcompanhamentoService {
       this.dataSource.query(
         `
           SELECT
-            COALESCE(SUM(i.valor_liquido_item), 0) AS valor,
-            COUNT(*)::int AS qtd
+            COALESCE(
+              SUM(
+                GREATEST(
+                  0,
+                  i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+                )
+              ),
+              0
+            ) AS valor,
+            COALESCE(SUM(i.quantidade), 0) AS qtd
           FROM caixa_itens_erp i
+          INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
           WHERE i.tipo_item = 'PRODUTO'
             AND i.unidade = $1
             AND i.data_operacao >= $2
@@ -1222,7 +1274,26 @@ export class ComercialAcompanhamentoService {
                  i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
                )
              ) AS valor,
-             SUM(i.quantidade) AS qtd
+             SUM(i.quantidade) AS qtd,
+             SUM(
+               CASE
+                 WHEN COALESCE(cardinality(pol."codigosSetor"), 0) > 0
+                  AND i.codigo_setor = ANY(pol."codigosSetor")
+                 THEN GREATEST(
+                   0,
+                   i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+                 )
+                 ELSE 0
+               END
+             ) AS valor_setores,
+             SUM(
+               CASE
+                 WHEN COALESCE(cardinality(pol."codigosSetor"), 0) > 0
+                  AND i.codigo_setor = ANY(pol."codigosSetor")
+                 THEN i.quantidade
+                 ELSE 0
+               END
+             ) AS qtd_setores
       FROM caixa_itens_erp i
       INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
       LEFT JOIN LATERAL (
@@ -1240,11 +1311,6 @@ export class ComercialAcompanhamentoService {
         AND i.unidade = $1
         AND i.data_operacao >= $2
         AND i.data_operacao <= $3
-        AND (
-          pol."codigosSetor" IS NULL
-          OR COALESCE(cardinality(pol."codigosSetor"), 0) = 0
-          OR i.codigo_setor = ANY(pol."codigosSetor")
-        )
       GROUP BY p.codigo_operador_caixa
     `;
     const rows = (await this.dataSource.query(sql, [
@@ -1370,10 +1436,14 @@ export class ComercialAcompanhamentoService {
       const valor = this.toNumber(row.valor);
       const qtd = this.toInt(row.qtd);
       const qtdFormulas = this.toInt(row.qtd_formulas);
+      const valorSetores = this.toNumber(row.valor_setores);
+      const qtdSetores = this.toInt(row.qtd_setores);
       if (atual) {
         atual.valor += valor;
         atual.qtd += qtd;
         atual.qtdFormulas += qtdFormulas;
+        atual.valorSetores = (atual.valorSetores ?? 0) + valorSetores;
+        atual.qtdSetores = (atual.qtdSetores ?? 0) + qtdSetores;
         continue;
       }
       map.set(codigo, {
@@ -1381,6 +1451,8 @@ export class ComercialAcompanhamentoService {
         valor,
         qtd,
         qtdFormulas,
+        valorSetores,
+        qtdSetores,
       });
     }
     return map;
@@ -1395,6 +1467,7 @@ export class ComercialAcompanhamentoService {
     lojaRecebidoReq: number,
     lojaComissaoReq: number,
     lojaRecebidoMp: number,
+    lojaComissaoMp: number,
     hoje: string,
   ): Promise<void> {
     const ids = [
@@ -1570,6 +1643,10 @@ export class ComercialAcompanhamentoService {
       mesAberto && realizados > 0
         ? this.round2((lojaRecebidoMp / realizados) * duMes)
         : null;
+    const lojaProjetadoComissaoMp =
+      mesAberto && realizados > 0
+        ? this.round2((lojaComissaoMp / realizados) * duMes)
+        : null;
     const pctLojaProjReq =
       lojaProjetadoReq != null &&
       totais.valorMetaRequisicao != null &&
@@ -1613,18 +1690,27 @@ export class ComercialAcompanhamentoService {
         lojaProjetadoComissaoReq,
         'Requisicao',
       );
+      const itemProjComissaoMp =
+        mesAberto && realizados > 0
+          ? this.round2(
+              ((item.valorComissaoBaseMarcaPropria ??
+                item.valorRecebidoMarcaPropria) /
+                realizados) *
+                duMes,
+            )
+          : null;
       this.anexarComissaoTipo(
         item,
         faixasPorFuncTipo.get(`${fid}|${ComercialTipoBase.MARCA_PROPRIA}`) ?? [],
         politicaPorFuncTipo.get(`${fid}|${ComercialTipoBase.MARCA_PROPRIA}`),
         item.percentualMetaMarcaPropria,
         item.percentualProjecaoMarcaPropria,
-        item.valorRecebidoMarcaPropria,
-        item.valorProjetadoMarcaPropria,
+        item.valorComissaoBaseMarcaPropria ?? item.valorRecebidoMarcaPropria,
+        itemProjComissaoMp,
         totais.percentualMetaMarcaPropria,
         pctLojaProjMp,
-        lojaRecebidoMp,
-        lojaProjetadoMp,
+        lojaComissaoMp,
+        lojaProjetadoComissaoMp,
         'MarcaPropria',
       );
     }

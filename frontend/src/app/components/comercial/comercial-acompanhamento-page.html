@@ -125,7 +125,14 @@
                   class="comercial-acomp-card"
                   [class.is-total]="card.isTotal">
                   <header class="comercial-acomp-card-head">
-                    <h3>{{ card.titulo }}</h3>
+                    <h3>
+                      {{ card.titulo }}
+                      @if (card.isTotal) {
+                        <i class="fas fa-building comercial-acomp-card-tipo-icon" aria-hidden="true" title="Unidade"></i>
+                      } @else {
+                        <i class="fas fa-user comercial-acomp-card-tipo-icon" aria-hidden="true" title="Vendedor"></i>
+                      }
+                    </h3>
                     <div class="comercial-acomp-card-head-end">
                       <div class="comercial-acomp-card-head-total">
                         <span class="label">Total vendido</span>
@@ -194,11 +201,12 @@
                       <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
                     </div>
                   </div>
-                  <div class="comercial-acomp-card-metrics">
+                  <div class="comercial-acomp-mp-grid">
                     <div class="comercial-acomp-metric is-primary">
                       <span class="label">
                         Marca própria
-                        @if (card.isTotal && temSetoresUnidade(card)) {
+                        <small>({{ rotuloMarcaPropriaSetor(card) }})</small>
+                        @if (card.isTotal) {
                           <button
                             type="button"
                             class="comercial-acomp-info-btn"
@@ -209,9 +217,27 @@
                           </button>
                         }
                       </span>
-                      <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
-                      <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+                      <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
+                      <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaSetores) }}</span>
                     </div>
+                    <div class="comercial-acomp-metric is-primary">
+                      <span class="label">
+                        Marca própria
+                        <small>(outros)</small>
+                      </span>
+                      <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
+                      <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaOutros) }}</span>
+                    </div>
+                    <div class="comercial-acomp-metric is-primary is-total-mp">
+                      <span class="label">
+                        Marca própria
+                        <small>(total)</small>
+                      </span>
+                      <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+                      <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
+                    </div>
+                  </div>
+                  <div class="comercial-acomp-card-metrics comercial-acomp-card-metrics-rejeitado">
                     <div class="comercial-acomp-metric is-rejeitado">
                       <span class="label">Rejeitado</span>
                       <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
@@ -291,9 +317,12 @@
   <div class="comercial-acomp-bloco comercial-acomp-bloco-metas">
     <h4 class="comercial-acomp-bloco-titulo">Metas</h4>
     <div class="comercial-acomp-bases">
-      <section class="comercial-acomp-base">
+      <section class="comercial-acomp-base is-manip">
         <header class="comercial-acomp-base-head">
-          <h4>Manipulados</h4>
+          <h4>
+            <span class="comercial-acomp-base-mark is-verde" aria-hidden="true"></span>
+            Manipulados
+          </h4>
           <p class="comercial-acomp-base-meta">
             Meta
             <strong>
@@ -314,7 +343,8 @@
               bonus: card.valorBonusRequisicao,
               faixa: card.percentualComissaoFaixaRequisicao,
               mostrarComissao: podeVerComissao() && !card.isTotal,
-              projetado: false
+              projetado: false,
+              barraVerde: true
             }"></ng-container>
           @if (card.mesAberto) {
             <ng-container
@@ -327,14 +357,20 @@
                 bonus: card.valorBonusProjetadoRequisicao,
                 faixa: card.percentualComissaoFaixaProjetadoRequisicao,
                 mostrarComissao: podeVerComissao() && !card.isTotal,
-                projetado: true
+                projetado: true,
+                barraVerde: true,
+                card: card,
+                baseTipo: 'requisicao'
               }"></ng-container>
           }
         </div>
       </section>
       <section class="comercial-acomp-base is-marca">
         <header class="comercial-acomp-base-head">
-          <h4>Marca própria</h4>
+          <h4>
+            <span class="comercial-acomp-base-mark is-azul" aria-hidden="true"></span>
+            Marca própria
+          </h4>
           <p class="comercial-acomp-base-meta">
             Meta
             <strong>
@@ -368,7 +404,9 @@
                 bonus: card.valorBonusProjetadoMarcaPropria,
                 faixa: card.percentualComissaoFaixaProjetadoMarcaPropria,
                 mostrarComissao: podeVerComissao() && !card.isTotal,
-                projetado: true
+                projetado: true,
+                card: card,
+                baseTipo: 'marcaPropria'
               }"></ng-container>
           }
         </div>
@@ -387,31 +425,74 @@
   let-bonus="bonus"
   let-faixa="faixa"
   let-mostrarComissao="mostrarComissao"
-  let-projetado="projetado">
-  <article class="comercial-acomp-meta-col" [class.is-projetado]="projetado">
+  let-projetado="projetado"
+  let-barraVerde="barraVerde"
+  let-card="card"
+  let-baseTipo="baseTipo">
+  <article
+    class="comercial-acomp-meta-col"
+    [class.is-projetado]="projetado"
+    [class.is-verde]="barraVerde">
     <h5>
       {{ titulo }}
       @if (mostrarComissao && faixa != null) {
         <span class="faixa">({{ formatarPercentualFaixa(faixa) }})</span>
       }
+      @if (projetado && card && baseTipo) {
+        <button
+          type="button"
+          class="comercial-acomp-info-btn"
+          title="Como a projeção é calculada"
+          aria-label="Informação sobre a projeção"
+          (click)="abrirInfoProjecao($event, card, baseTipo)">
+          <i class="fas fa-info-circle" aria-hidden="true"></i>
+        </button>
+      }
     </h5>
-    <span class="value">{{ formatarMoeda(valor) }}</span>
+    <div class="comercial-acomp-meta-body">
+      <div class="comercial-acomp-meta-main">
+        <span class="value">{{ formatarMoeda(valor) }}</span>
+        @if (temMetaCadastrada(meta)) {
+          <span class="sub">{{ formatarPercentualMeta(percentual) }} da meta</span>
+        } @else {
+          <span class="sub">Sem meta</span>
+        }
+      </div>
+      @if (temMetaCadastrada(meta)) {
+        <div
+          class="comercial-acomp-meta-ring-wrap"
+          role="progressbar"
+          [attr.aria-valuenow]="percentual"
+          [attr.aria-label]="titulo + ' da meta'"
+          aria-valuemin="0"
+          aria-valuemax="100">
+          <svg class="comercial-acomp-meta-ring" viewBox="0 0 36 36" aria-hidden="true">
+            <circle class="comercial-acomp-meta-ring-bg" cx="18" cy="18" r="15.5"></circle>
+            <circle
+              class="comercial-acomp-meta-ring-fg"
+              cx="18"
+              cy="18"
+              r="15.5"
+              [attr.stroke-dasharray]="arcoMetaRing(percentual)"
+              stroke-dashoffset="0"></circle>
+          </svg>
+          <span class="comercial-acomp-meta-ring-pct">{{ formatarPercentualMeta(percentual) }}</span>
+        </div>
+      }
+    </div>
     @if (temMetaCadastrada(meta)) {
-      <span class="sub">{{ formatarPercentualMeta(percentual) }} da meta</span>
       <span
         class="comercial-acomp-meta-bar"
         role="progressbar"
         [attr.aria-valuenow]="percentual"
-        [attr.aria-label]="titulo + ' da meta'"
+        [attr.aria-label]="titulo + ' — barra da meta'"
         aria-valuemin="0"
         aria-valuemax="100">
         <span
           class="comercial-acomp-meta-bar-fill"
-          [class.is-ok]="(percentual ?? 0) >= 100"
+          [class.is-verde]="barraVerde"
           [style.width.%]="larguraBarraMeta(percentual)"></span>
       </span>
-    } @else {
-      <span class="sub">Sem meta</span>
     }
     @if (mostrarComissao) {
       <div class="comercial-acomp-meta-col-comissao">
@@ -512,12 +593,33 @@
                 <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
               </div>
             </div>
-            <div class="comercial-acomp-card-metrics">
+            <div class="comercial-acomp-mp-grid">
               <div class="comercial-acomp-metric is-primary">
-                <span class="label">Marca própria</span>
-                <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
-                <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+                <span class="label">
+                  Marca própria
+                  <small>({{ rotuloMarcaPropriaSetor(card) }})</small>
+                </span>
+                <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
+                <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaSetores) }}</span>
               </div>
+              <div class="comercial-acomp-metric is-primary">
+                <span class="label">
+                  Marca própria
+                  <small>(outros)</small>
+                </span>
+                <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
+                <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaOutros) }}</span>
+              </div>
+              <div class="comercial-acomp-metric is-primary is-total-mp">
+                <span class="label">
+                  Marca própria
+                  <small>(total)</small>
+                </span>
+                <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+                <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
+              </div>
+            </div>
+            <div class="comercial-acomp-card-metrics comercial-acomp-card-metrics-rejeitado">
               <div class="comercial-acomp-metric is-rejeitado">
                 <span class="label">Rejeitado</span>
                 <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
@@ -543,7 +645,7 @@
                 [attr.aria-expanded]="detalheSecoesAbertas.requisicoes">
                 <span class="comercial-acomp-detalhe-card-title">
                   <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                  Requisições
+                  Manipulado (Requisições)
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
                   <span class="qtd">{{ rotuloQtdManipulados(itemDetalhe.quantidadeRecebidoRequisicao, itemDetalhe.quantidadeFormulasRequisicao) }}</span>
@@ -665,7 +767,7 @@
                 [attr.aria-expanded]="detalheSecoesAbertas.terceiros">
                 <span class="comercial-acomp-detalhe-card-title">
                   <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                  Terceiros
+                  Manipulado (Terceiros)
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
                   <span class="qtd">{{ rotuloQtdTerceiros(itemDetalhe.quantidadeTerceirosManipulados) }}</span>
@@ -718,22 +820,22 @@
 
             <article
               class="comercial-acomp-detalhe-card"
-              [class.is-open]="detalheSecoesAbertas.marcaPropria">
+              [class.is-open]="detalheSecoesAbertas.marcaPropriaSetor">
               <button
                 type="button"
                 class="comercial-acomp-detalhe-card-header"
-                (click)="toggleDetalheSecao('marcaPropria')"
-                [attr.aria-expanded]="detalheSecoesAbertas.marcaPropria">
+                (click)="toggleDetalheSecao('marcaPropriaSetor')"
+                [attr.aria-expanded]="detalheSecoesAbertas.marcaPropriaSetor">
                 <span class="comercial-acomp-detalhe-card-title">
                   <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                  Marca própria
+                  {{ rotuloTituloMarcaPropriaSetor(itemDetalhe) }}
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
-                  <span class="qtd">{{ itemDetalhe.quantidadeRecebidoMarcaPropria }} item(ns)</span>
-                  <span class="valor is-primary">{{ formatarMoeda(itemDetalhe.valorRecebidoMarcaPropria) }}</span>
+                  <span class="qtd">{{ itemDetalhe.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
+                  <span class="valor is-primary">{{ formatarMoeda(itemDetalhe.valorRecebidoMarcaPropriaSetores) }}</span>
                 </span>
               </button>
-              @if (detalheSecoesAbertas.marcaPropria) {
+              @if (detalheSecoesAbertas.marcaPropriaSetor) {
                 <div class="comercial-acomp-detalhe-card-body">
                   <div class="table-wrapper comercial-acomp-detalhe-table">
                     <table class="vendas-table comercial-acomp-table">
@@ -741,32 +843,97 @@
                         <tr>
                           <th>Data</th>
                           <th>Cupom</th>
+                          <th>Setor</th>
                           <th>Item</th>
                           <th class="col-num">Qtd</th>
                           <th class="col-num">Valor</th>
                         </tr>
                       </thead>
                       <tbody>
-                        @for (prod of detalhe.marcaPropria; track $index) {
+                        @for (prod of detalheMarcaPropriaSetores; track $index) {
                           <tr>
                             <td>{{ formatarData(prod.data) }}</td>
                             <td>{{ prod.numeroCupom }}</td>
+                            <td>{{ prod.codigoSetor ?? '—' }}</td>
                             <td>{{ prod.descricaoItem || '—' }}</td>
                             <td class="col-num">{{ prod.quantidade }}</td>
                             <td class="col-num is-primary">{{ formatarMoeda(prod.valor) }}</td>
                           </tr>
                         } @empty {
                           <tr class="no-data">
-                            <td colspan="5">Nenhum produto no período</td>
+                            <td colspan="6">Nenhum produto de setor no período</td>
                           </tr>
                         }
                       </tbody>
-                      @if (detalhe.marcaPropria.length) {
+                      @if (detalheMarcaPropriaSetores.length) {
                         <tfoot>
                           <tr>
-                            <td colspan="4"><strong>Total marca própria</strong></td>
+                            <td colspan="5"><strong>Total {{ rotuloTituloMarcaPropriaSetor(itemDetalhe) }}</strong></td>
                             <td class="col-num is-primary">
-                              <strong>{{ formatarMoeda(totalDetalheMarcaPropria) }}</strong>
+                              <strong>{{ formatarMoeda(totalDetalheMarcaPropriaSetores) }}</strong>
+                            </td>
+                          </tr>
+                        </tfoot>
+                      }
+                    </table>
+                  </div>
+                </div>
+              }
+            </article>
+
+            <article
+              class="comercial-acomp-detalhe-card"
+              [class.is-open]="detalheSecoesAbertas.marcaPropriaOutros">
+              <button
+                type="button"
+                class="comercial-acomp-detalhe-card-header"
+                (click)="toggleDetalheSecao('marcaPropriaOutros')"
+                [attr.aria-expanded]="detalheSecoesAbertas.marcaPropriaOutros">
+                <span class="comercial-acomp-detalhe-card-title">
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                  Marca própria (outros)
+                </span>
+                <span class="comercial-acomp-detalhe-card-resumo">
+                  <span class="qtd">{{ itemDetalhe.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
+                  <span class="valor is-primary">{{ formatarMoeda(itemDetalhe.valorRecebidoMarcaPropriaOutros) }}</span>
+                </span>
+              </button>
+              @if (detalheSecoesAbertas.marcaPropriaOutros) {
+                <div class="comercial-acomp-detalhe-card-body">
+                  <div class="table-wrapper comercial-acomp-detalhe-table">
+                    <table class="vendas-table comercial-acomp-table">
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Cupom</th>
+                          <th>Setor</th>
+                          <th>Item</th>
+                          <th class="col-num">Qtd</th>
+                          <th class="col-num">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (prod of detalheMarcaPropriaOutros; track $index) {
+                          <tr>
+                            <td>{{ formatarData(prod.data) }}</td>
+                            <td>{{ prod.numeroCupom }}</td>
+                            <td>{{ prod.codigoSetor ?? '—' }}</td>
+                            <td>{{ prod.descricaoItem || '—' }}</td>
+                            <td class="col-num">{{ prod.quantidade }}</td>
+                            <td class="col-num is-primary">{{ formatarMoeda(prod.valor) }}</td>
+                          </tr>
+                        } @empty {
+                          <tr class="no-data">
+                            <td colspan="6">Nenhum produto outros no período</td>
+                          </tr>
+                        }
+                      </tbody>
+                      @if (detalheMarcaPropriaOutros.length) {
+                        <tfoot>
+                          <tr>
+                            <td colspan="5"><strong>Total marca própria (outros)</strong></td>
+                            <td class="col-num is-primary">
+                              <strong>{{ formatarMoeda(totalDetalheMarcaPropriaOutros) }}</strong>
                             </td>
                           </tr>
                         </tfoot>
@@ -911,7 +1078,7 @@
 }
 
 @if (infoManipuladosAberto && infoManipuladosCard) {
-  <div class="modal-overlay" (click)="fecharInfoManipulados()">
+  <div class="modal-overlay nao-clicavel">
     <div
       class="modal-conteudo comercial-acomp-modal-info"
       (click)="$event.stopPropagation()"
@@ -994,7 +1161,7 @@
   </div>
 }
 @if (infoMarcaPropriaAberto) {
-  <div class="modal-overlay" (click)="fecharInfoMarcaPropria()">
+  <div class="modal-overlay nao-clicavel">
     <div
       class="modal-conteudo comercial-acomp-modal-info"
       (click)="$event.stopPropagation()"
@@ -1013,16 +1180,114 @@
       </div>
       <div class="modal-corpo">
         <p class="comercial-acomp-info-lead">
-          No card TOTAL entram só os produtos dos setores da unidade, no valor, no % da meta e na projeção.
+          O card exibe três parcelas: setores configurados, outros e total. O
+          <strong>total</strong> define o % da meta e a projeção. A comissão usa
+          só os setores configurados; sem lista, a base da comissão é o total e a
+          parcela de setores fica zerada.
         </p>
         @if ((totais.codigosSetorMarcaPropria ?? []).length) {
-          <p class="comercial-acomp-info-setores-label">Setores considerados</p>
+          <p class="comercial-acomp-info-setores-label">Setores da comissão</p>
           <ul class="comercial-acomp-info-setores">
             @for (codigo of totais.codigosSetorMarcaPropria; track codigo) {
               <li>{{ codigo }}</li>
             }
           </ul>
+        } @else {
+          <p class="comercial-acomp-info-setores-label">Nenhum setor configurado (setor = 0)</p>
         }
+      </div>
+    </div>
+  </div>
+}
+
+@if (infoProjecaoAberto && infoProjecaoCard && infoProjecaoBase) {
+  <div class="modal-overlay nao-clicavel">
+    <div
+      class="modal-conteudo comercial-acomp-modal-info"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ca-proj-info-titulo">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo" id="ca-proj-info-titulo">
+          Projeção — {{ rotuloBaseProjecao(infoProjecaoBase) }}
+          <small>{{ infoProjecaoCard.titulo }}</small>
+        </h3>
+        <button
+          type="button"
+          class="modal-fechar"
+          (click)="fecharInfoProjecao()"
+          aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p class="comercial-acomp-info-lead">
+          Projeção = (Realizado ÷ Dias realizados) × Dias úteis do mês
+        </p>
+        <dl class="comercial-acomp-info-linhas">
+          <div class="comercial-acomp-info-linha">
+            <dt>Realizado</dt>
+            <dd>
+              <span class="valor">{{ formatarMoeda(valorRealizadoProjecao(infoProjecaoCard, infoProjecaoBase)) }}</span>
+            </dd>
+          </div>
+          <div class="comercial-acomp-info-linha">
+            <dt>Dias realizados</dt>
+            <dd>
+              <span class="valor">{{ formatarDiasUteis(totais.diasRealizados) }}</span>
+            </dd>
+          </div>
+          <div class="comercial-acomp-info-linha">
+            <dt>Valor médio / dia</dt>
+            <dd>
+              <span class="valor">{{ formatarMoeda(valorMedioDiaProjecao(infoProjecaoCard, infoProjecaoBase)) }}</span>
+            </dd>
+          </div>
+          <div class="comercial-acomp-info-linha">
+            <dt>Dias úteis do mês</dt>
+            <dd>
+              <span class="valor">{{ formatarDiasUteis(totais.diasUteisMes) }}</span>
+            </dd>
+          </div>
+          <div class="comercial-acomp-info-linha">
+            <dt>Dias restantes</dt>
+            <dd>
+              <span class="valor">{{ formatarDiasUteis(diasRestantesProjecao()) }}</span>
+            </dd>
+          </div>
+          <div class="comercial-acomp-info-linha is-total">
+            <dt>Projetado</dt>
+            <dd>
+              <span class="valor">{{ formatarMoeda(valorProjetadoInfo(infoProjecaoCard, infoProjecaoBase)) }}</span>
+            </dd>
+          </div>
+        </dl>
+        <p class="comercial-acomp-info-lead comercial-acomp-info-lead-pct">
+          % da projeção = Projetado ÷ Meta × 100
+        </p>
+        <dl class="comercial-acomp-info-linhas">
+          <div class="comercial-acomp-info-linha">
+            <dt>Meta</dt>
+            <dd>
+              <span class="valor">
+                {{ temMetaCadastrada(valorMetaProjecao(infoProjecaoCard, infoProjecaoBase))
+                  ? formatarMoeda(valorMetaProjecao(infoProjecaoCard, infoProjecaoBase))
+                  : 'Sem meta' }}
+              </span>
+            </dd>
+          </div>
+          <div class="comercial-acomp-info-linha is-total">
+            <dt>% da projeção</dt>
+            <dd>
+              <span class="valor">
+                {{ temMetaCadastrada(valorMetaProjecao(infoProjecaoCard, infoProjecaoBase))
+                  ? formatarPercentualMeta(percentualProjecaoInfo(infoProjecaoCard, infoProjecaoBase))
+                  : 'Sem meta' }}
+              </span>
+            </dd>
+          </div>
+        </dl>
       </div>
     </div>
   </div>

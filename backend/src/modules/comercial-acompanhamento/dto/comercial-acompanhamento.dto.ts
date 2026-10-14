@@ -129,11 +129,42 @@ export class ComercialAcompanhamentoItemDto extends ComercialDesempenhoBaseDto {
   })
   valorComissaoBaseRequisicao: number;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Marca própria total (setores configurados + outros).',
+  })
   valorRecebidoMarcaPropria: number;
 
   @ApiProperty()
   quantidadeRecebidoMarcaPropria: number;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    description: 'Setores de marca própria configurados neste card.',
+  })
+  codigosSetorMarcaPropria?: number[];
+
+  @ApiPropertyOptional({
+    description:
+      'Parcela dos setores configurados. Sem lista = 0 (exibida mesmo assim).',
+  })
+  valorRecebidoMarcaPropriaSetores?: number;
+
+  @ApiPropertyOptional()
+  quantidadeRecebidoMarcaPropriaSetores?: number;
+
+  @ApiPropertyOptional({
+    description: 'Parcela fora dos setores configurados (total − setores).',
+  })
+  valorRecebidoMarcaPropriaOutros?: number;
+
+  @ApiPropertyOptional()
+  quantidadeRecebidoMarcaPropriaOutros?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Base da comissão de Marca própria: setores se houver lista; senão o total.',
+  })
+  valorComissaoBaseMarcaPropria?: number;
 
   @ApiProperty()
   valorRejeitado: number;
@@ -250,7 +281,9 @@ export class ComercialAcompanhamentoTotaisDto extends ComercialDesempenhoBaseDto
   })
   valorComissaoBaseRequisicao: number;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Marca própria total da loja (setores + outros).',
+  })
   valorRecebidoMarcaPropria: number;
 
   @ApiProperty()
@@ -258,19 +291,32 @@ export class ComercialAcompanhamentoTotaisDto extends ComercialDesempenhoBaseDto
 
   @ApiPropertyOptional({
     type: [Number],
-    description:
-      'Setores da marca própria da loja. Vazio = card TOTAL não exibe o recorte.',
+    description: 'Setores da marca própria da loja.',
   })
   codigosSetorMarcaPropria?: number[];
 
   @ApiPropertyOptional({
     description:
-      'Volume de marca própria da loja filtrado pelos setores da unidade.',
+      'Parcela dos setores da unidade. Sem lista = 0 (exibida mesmo assim).',
   })
   valorRecebidoMarcaPropriaSetores?: number;
 
   @ApiPropertyOptional()
   quantidadeRecebidoMarcaPropriaSetores?: number;
+
+  @ApiPropertyOptional({
+    description: 'Parcela fora dos setores da unidade (total − setores).',
+  })
+  valorRecebidoMarcaPropriaOutros?: number;
+
+  @ApiPropertyOptional()
+  quantidadeRecebidoMarcaPropriaOutros?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Base da comissão de Marca própria da loja: setores se houver lista; senão o total.',
+  })
+  valorComissaoBaseMarcaPropria?: number;
 
   @ApiProperty()
   valorRejeitado: number;
@@ -384,6 +430,9 @@ export class ComercialAcompanhamentoMovimentoProdutoDto {
 
   @ApiPropertyOptional({ nullable: true })
   descricaoItem?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  codigoSetor?: number | null;
 
   @ApiProperty()
   quantidade: number;

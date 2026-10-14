@@ -68,7 +68,49 @@
       } @else {
         @if (mostrarMetaUnidade()) {
           <section class="comercial-meta-unidade-panel" aria-label="Meta da loja">
-            <h3>Meta da loja</h3>
+            <div class="comercial-meta-unidade-titulo">
+              <h3>Meta da loja</h3>
+              @if (podeEditarMeta()) {
+                <div class="action-buttons comercial-meta-unidade-acoes">
+                  @if (editandoUnidade) {
+                    <button
+                      type="button"
+                      class="btn btn-salvar"
+                      [disabled]="salvandoUnidade"
+                      (click)="salvarUnidade()">
+                      <i class="fas fa-save" aria-hidden="true"></i>
+                      {{ salvandoUnidade ? 'Salvando…' : 'Salvar' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-cancelar"
+                      [disabled]="salvandoUnidade"
+                      (click)="cancelarUnidade()">
+                      <i class="fas fa-times" aria-hidden="true"></i>
+                      Cancelar
+                    </button>
+                  } @else if (!temMetaUnidadeCadastrada()) {
+                    <button
+                      type="button"
+                      class="btn btn-salvar"
+                      [disabled]="temLinhaEmEdicao()"
+                      (click)="incluirUnidade()">
+                      <i class="fas fa-plus" aria-hidden="true"></i>
+                      Incluir
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn btn-editar"
+                      [disabled]="temLinhaEmEdicao()"
+                      (click)="alterarUnidade()">
+                      <i class="fas fa-pen" aria-hidden="true"></i>
+                      Alterar
+                    </button>
+                  }
+                </div>
+              }
+            </div>
             <div class="comercial-meta-unidade-campos">
               <div class="comercial-meta-unidade-campo">
                 <label class="form-label" for="cm-meta-loja-req">Manipulados</label>
@@ -109,42 +151,6 @@
                 }
               </div>
             </div>
-            @if (podeEditarMeta()) {
-              <div class="action-buttons comercial-meta-unidade-acoes">
-                @if (editandoUnidade) {
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-salvar"
-                    [disabled]="salvandoUnidade"
-                    (click)="salvarUnidade()">
-                    {{ salvandoUnidade ? 'Salvando…' : 'Salvar' }}
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-cancelar"
-                    [disabled]="salvandoUnidade"
-                    (click)="cancelarUnidade()">
-                    Cancelar
-                  </button>
-                } @else if (!temMetaUnidadeCadastrada()) {
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-salvar"
-                    [disabled]="temLinhaEmEdicao()"
-                    (click)="incluirUnidade()">
-                    Incluir
-                  </button>
-                } @else {
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-editar"
-                    [disabled]="temLinhaEmEdicao()"
-                    (click)="alterarUnidade()">
-                    Alterar
-                  </button>
-                }
-              </div>
-            }
           </section>
         }
         <div class="table-container comercial-metas-table-wrap">
@@ -204,32 +210,36 @@
                       @if (row.editando) {
                         <button
                           type="button"
-                          class="btn btn-sm btn-salvar"
+                          class="btn btn-salvar"
                           [disabled]="row.salvando"
                           (click)="salvarLinha(row)">
+                          <i class="fas fa-save" aria-hidden="true"></i>
                           {{ row.salvando ? 'Salvando…' : 'Salvar' }}
                         </button>
                         <button
                           type="button"
-                          class="btn btn-sm btn-cancelar"
+                          class="btn btn-cancelar"
                           [disabled]="row.salvando"
                           (click)="cancelarEdicao(row)">
+                          <i class="fas fa-times" aria-hidden="true"></i>
                           Cancelar
                         </button>
                       } @else if (!temMetasCadastradas(row)) {
                         <button
                           type="button"
-                          class="btn btn-sm btn-salvar"
+                          class="btn btn-salvar"
                           [disabled]="temLinhaEmEdicao()"
                           (click)="incluirLinha(row)">
+                          <i class="fas fa-plus" aria-hidden="true"></i>
                           Incluir
                         </button>
                       } @else {
                         <button
                           type="button"
-                          class="btn btn-sm btn-editar"
+                          class="btn btn-editar"
                           [disabled]="temLinhaEmEdicao()"
                           (click)="alterarLinha(row)">
+                          <i class="fas fa-pen" aria-hidden="true"></i>
                           Alterar
                         </button>
                       }

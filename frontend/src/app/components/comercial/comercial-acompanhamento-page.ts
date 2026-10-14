@@ -10,6 +10,7 @@ import { Permission, Unidade } from '../../models/usuario.model';
 import {
   ComercialAcompanhamentoDetalhe,
   ComercialAcompanhamentoItem,
+  ComercialAcompanhamentoMovimentoProduto,
   ComercialAcompanhamentoTotais,
   ComercialAcompanhamentoVendedorOpcao,
 } from '../../models/comercial-acompanhamento.model';
@@ -31,6 +32,11 @@ interface CardResumo {
   quantidadeTerceirosManipulados: number;
   valorRecebidoMarcaPropria: number;
   quantidadeRecebidoMarcaPropria: number;
+  valorRecebidoMarcaPropriaSetores?: number;
+  quantidadeRecebidoMarcaPropriaSetores?: number;
+  valorRecebidoMarcaPropriaOutros?: number;
+  quantidadeRecebidoMarcaPropriaOutros?: number;
+  valorComissaoBaseMarcaPropria?: number;
   valorRejeitado: number;
   quantidadeRejeitado: number;
   valorMetaRequisicao?: number | null;
@@ -54,8 +60,6 @@ interface CardResumo {
   percentualComissaoFaixaMarcaPropria?: number | null;
   percentualComissaoFaixaProjetadoMarcaPropria?: number | null;
   codigosSetorMarcaPropria?: number[];
-  valorRecebidoMarcaPropriaSetores?: number;
-  quantidadeRecebidoMarcaPropriaSetores?: number;
 }
 
 const TOTAIS_VAZIOS: ComercialAcompanhamentoTotais = {
@@ -82,15 +86,18 @@ type ComercialDetalheSecao =
   | 'requisicoes'
   | 'setor'
   | 'terceiros'
-  | 'marcaPropria'
+  | 'marcaPropriaSetor'
+  | 'marcaPropriaOutros'
   | 'orcamentos';
+type ComercialProjecaoBase = 'requisicao' | 'marcaPropria';
 type ComercialPrintForma = 'resumido' | 'detalhado';
 
 const DETALHE_SECOES_FECHADAS: Record<ComercialDetalheSecao, boolean> = {
   requisicoes: false,
   setor: false,
   terceiros: false,
-  marcaPropria: false,
+  marcaPropriaSetor: false,
+  marcaPropriaOutros: false,
   orcamentos: false,
 };
 
@@ -136,6 +143,9 @@ export class ComercialAcompanhamentoPage implements OnInit {
   infoMarcaPropriaAberto = false;
   infoManipuladosAberto = false;
   infoManipuladosCard: CardResumo | null = null;
+  infoProjecaoAberto = false;
+  infoProjecaoCard: CardResumo | null = null;
+  infoProjecaoBase: ComercialProjecaoBase | null = null;
 
   ngOnInit(): void {
     if (!this.podeLer()) {
@@ -187,6 +197,16 @@ export class ComercialAcompanhamentoPage implements OnInit {
           this.totais.quantidadeTerceirosManipulados ?? 0,
         valorRecebidoMarcaPropria: this.totais.valorRecebidoMarcaPropria,
         quantidadeRecebidoMarcaPropria: this.totais.quantidadeRecebidoMarcaPropria,
+        valorRecebidoMarcaPropriaSetores:
+          this.totais.valorRecebidoMarcaPropriaSetores ?? 0,
+        quantidadeRecebidoMarcaPropriaSetores:
+          this.totais.quantidadeRecebidoMarcaPropriaSetores ?? 0,
+        valorRecebidoMarcaPropriaOutros:
+          this.totais.valorRecebidoMarcaPropriaOutros ?? 0,
+        quantidadeRecebidoMarcaPropriaOutros:
+          this.totais.quantidadeRecebidoMarcaPropriaOutros ?? 0,
+        valorComissaoBaseMarcaPropria:
+          this.totais.valorComissaoBaseMarcaPropria ?? 0,
         valorRejeitado: this.totais.valorRejeitado,
         quantidadeRejeitado: this.totais.quantidadeRejeitado,
         valorMetaRequisicao: this.totais.valorMetaRequisicao,
@@ -198,10 +218,6 @@ export class ComercialAcompanhamentoPage implements OnInit {
         valorProjetadoMarcaPropria: this.totais.valorProjetadoMarcaPropria,
         percentualProjecaoMarcaPropria: this.totais.percentualProjecaoMarcaPropria,
         codigosSetorMarcaPropria: this.totais.codigosSetorMarcaPropria ?? [],
-        valorRecebidoMarcaPropriaSetores:
-          this.totais.valorRecebidoMarcaPropriaSetores ?? 0,
-        quantidadeRecebidoMarcaPropriaSetores:
-          this.totais.quantidadeRecebidoMarcaPropriaSetores ?? 0,
       },
     ];
     for (const item of this.itens) {
@@ -224,6 +240,16 @@ export class ComercialAcompanhamentoPage implements OnInit {
           item.quantidadeTerceirosManipulados ?? 0,
         valorRecebidoMarcaPropria: item.valorRecebidoMarcaPropria,
         quantidadeRecebidoMarcaPropria: item.quantidadeRecebidoMarcaPropria,
+        valorRecebidoMarcaPropriaSetores:
+          item.valorRecebidoMarcaPropriaSetores ?? 0,
+        quantidadeRecebidoMarcaPropriaSetores:
+          item.quantidadeRecebidoMarcaPropriaSetores ?? 0,
+        valorRecebidoMarcaPropriaOutros:
+          item.valorRecebidoMarcaPropriaOutros ?? 0,
+        quantidadeRecebidoMarcaPropriaOutros:
+          item.quantidadeRecebidoMarcaPropriaOutros ?? 0,
+        valorComissaoBaseMarcaPropria: item.valorComissaoBaseMarcaPropria ?? 0,
+        codigosSetorMarcaPropria: item.codigosSetorMarcaPropria ?? [],
         valorRejeitado: item.valorRejeitado,
         quantidadeRejeitado: item.quantidadeRejeitado,
         valorMetaRequisicao: item.valorMetaRequisicao,
@@ -319,7 +345,22 @@ export class ComercialAcompanhamentoPage implements OnInit {
     codigosSetorRevendaManipulados?: number[];
   }): string {
     const setores = this.rotuloSetores(origem.codigosSetorRevendaManipulados);
-    return setores === '—' ? 'Setor' : `Setor ${setores}`;
+    return setores === '—'
+      ? 'Manipulado (Setor)'
+      : `Manipulado (Setor ${setores})`;
+  }
+
+  rotuloMarcaPropriaSetor(origem: {
+    codigosSetorMarcaPropria?: number[];
+  }): string {
+    const setores = this.rotuloSetores(origem.codigosSetorMarcaPropria);
+    return setores === '—' ? 'setor 0' : `setor ${setores}`;
+  }
+
+  rotuloTituloMarcaPropriaSetor(origem: {
+    codigosSetorMarcaPropria?: number[];
+  }): string {
+    return `Marca própria (${this.rotuloMarcaPropriaSetor(origem)})`;
   }
 
   get cardItemDetalhe(): CardResumo | null {
@@ -362,6 +403,14 @@ export class ComercialAcompanhamentoPage implements OnInit {
   larguraBarraMeta(valor: number | null | undefined): number {
     if (valor == null || !Number.isFinite(valor) || valor <= 0) return 0;
     return Math.min(100, valor);
+  }
+
+  /** Circunferência do anel SVG (r=15.5) → dasharray "preenchido restante". */
+  arcoMetaRing(valor: number | null | undefined): string {
+    const circunferencia = 2 * Math.PI * 15.5;
+    const pct = this.larguraBarraMeta(valor) / 100;
+    const preenchido = circunferencia * pct;
+    return `${preenchido.toFixed(2)} ${(circunferencia - preenchido).toFixed(2)}`;
   }
 
   temMetaCadastrada(valor: number | null | undefined): boolean {
@@ -419,15 +468,81 @@ export class ComercialAcompanhamentoPage implements OnInit {
   onEscape(): void {
     if (this.printDetalheAberto) {
       this.fecharImpressaoDetalhe();
-      return;
     }
-    if (this.infoMarcaPropriaAberto) {
-      this.fecharInfoMarcaPropria();
-      return;
-    }
-    if (this.infoManipuladosAberto) {
-      this.fecharInfoManipulados();
-    }
+  }
+
+  abrirInfoProjecao(
+    event: Event,
+    card: CardResumo,
+    base: ComercialProjecaoBase,
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.infoProjecaoCard = card;
+    this.infoProjecaoBase = base;
+    this.infoProjecaoAberto = true;
+  }
+
+  fecharInfoProjecao(): void {
+    this.infoProjecaoAberto = false;
+    this.infoProjecaoCard = null;
+    this.infoProjecaoBase = null;
+  }
+
+  rotuloBaseProjecao(base: ComercialProjecaoBase | null): string {
+    return base === 'marcaPropria' ? 'Marca própria' : 'Manipulados';
+  }
+
+  valorRealizadoProjecao(
+    card: CardResumo,
+    base: ComercialProjecaoBase,
+  ): number {
+    return base === 'marcaPropria'
+      ? Number(card.valorRecebidoMarcaPropria || 0)
+      : Number(card.valorRecebidoRequisicao || 0);
+  }
+
+  valorProjetadoInfo(
+    card: CardResumo,
+    base: ComercialProjecaoBase,
+  ): number | null | undefined {
+    return base === 'marcaPropria'
+      ? card.valorProjetadoMarcaPropria
+      : card.valorProjetadoRequisicao;
+  }
+
+  valorMetaProjecao(
+    card: CardResumo,
+    base: ComercialProjecaoBase,
+  ): number | null | undefined {
+    return base === 'marcaPropria'
+      ? card.valorMetaMarcaPropria
+      : card.valorMetaRequisicao;
+  }
+
+  percentualProjecaoInfo(
+    card: CardResumo,
+    base: ComercialProjecaoBase,
+  ): number | null | undefined {
+    return base === 'marcaPropria'
+      ? card.percentualProjecaoMarcaPropria
+      : card.percentualProjecaoRequisicao;
+  }
+
+  valorMedioDiaProjecao(
+    card: CardResumo,
+    base: ComercialProjecaoBase,
+  ): number | null {
+    const realizados = Number(this.totais.diasRealizados ?? 0);
+    if (realizados <= 0) return null;
+    return this.valorRealizadoProjecao(card, base) / realizados;
+  }
+
+  diasRestantesProjecao(): number | null {
+    const mes = this.totais.diasUteisMes;
+    const realizados = this.totais.diasRealizados;
+    if (mes == null || realizados == null) return null;
+    return Math.max(0, Number(mes) - Number(realizados));
   }
 
   abrirInfoMarcaPropria(event: Event): void {
@@ -584,10 +699,43 @@ export class ComercialAcompanhamentoPage implements OnInit {
     );
   }
 
-  get totalDetalheMarcaPropria(): number {
-    return (this.detalhe?.marcaPropria ?? []).reduce(
+  get detalheMarcaPropriaSetores(): ComercialAcompanhamentoMovimentoProduto[] {
+    const setores = this.setoresMarcaPropriaConfigurados();
+    if (setores.size === 0) return [];
+    return (this.detalhe?.marcaPropria ?? []).filter(
+      (row) =>
+        row.codigoSetor != null && setores.has(Number(row.codigoSetor)),
+    );
+  }
+
+  get detalheMarcaPropriaOutros(): ComercialAcompanhamentoMovimentoProduto[] {
+    const setores = this.setoresMarcaPropriaConfigurados();
+    if (setores.size === 0) return this.detalhe?.marcaPropria ?? [];
+    return (this.detalhe?.marcaPropria ?? []).filter(
+      (row) =>
+        row.codigoSetor == null || !setores.has(Number(row.codigoSetor)),
+    );
+  }
+
+  get totalDetalheMarcaPropriaSetores(): number {
+    return this.detalheMarcaPropriaSetores.reduce(
       (acc, row) => acc + Number(row.valor || 0),
       0,
+    );
+  }
+
+  get totalDetalheMarcaPropriaOutros(): number {
+    return this.detalheMarcaPropriaOutros.reduce(
+      (acc, row) => acc + Number(row.valor || 0),
+      0,
+    );
+  }
+
+  private setoresMarcaPropriaConfigurados(): Set<number> {
+    return new Set(
+      (this.itemDetalhe?.codigosSetorMarcaPropria ?? [])
+        .map((n) => Number(n))
+        .filter((n) => Number.isInteger(n) && n > 0),
     );
   }
 
@@ -853,34 +1001,54 @@ export class ComercialAcompanhamentoPage implements OnInit {
     }
     terc.getRow(1).font = { bold: true };
 
-    const marca = workbook.addWorksheet('Marca própria');
-    marca.columns = [
-      { header: 'Data', key: 'data', width: 12 },
-      { header: 'Cupom', key: 'cupom', width: 12 },
-      { header: 'Item', key: 'item', width: 36 },
-      { header: 'Qtd', key: 'qtd', width: 10 },
-      { header: 'Valor', key: 'valor', width: 14 },
-    ];
-    detalhe.marcaPropria.forEach((row) =>
-      marca.addRow({
-        data: this.formatarData(row.data),
-        cupom: row.numeroCupom,
-        item: row.descricaoItem || '',
-        qtd: Number(row.quantidade || 0),
-        valor: Number(row.valor || 0),
-      }),
+    const adicionarAbaMarca = (
+      nome: string,
+      linhas: ComercialAcompanhamentoMovimentoProduto[],
+      total: number,
+    ): void => {
+      const marca = workbook.addWorksheet(nome.slice(0, 31));
+      marca.columns = [
+        { header: 'Data', key: 'data', width: 12 },
+        { header: 'Cupom', key: 'cupom', width: 12 },
+        { header: 'Setor', key: 'setor', width: 10 },
+        { header: 'Item', key: 'item', width: 36 },
+        { header: 'Qtd', key: 'qtd', width: 10 },
+        { header: 'Valor', key: 'valor', width: 14 },
+      ];
+      linhas.forEach((row) =>
+        marca.addRow({
+          data: this.formatarData(row.data),
+          cupom: row.numeroCupom,
+          setor: row.codigoSetor ?? '',
+          item: row.descricaoItem || '',
+          qtd: Number(row.quantidade || 0),
+          valor: Number(row.valor || 0),
+        }),
+      );
+      if (linhas.length) {
+        marca.addRow({
+          data: 'Total',
+          cupom: '',
+          setor: '',
+          item: '',
+          qtd: '',
+          valor: total,
+        });
+        marca.getRow(linhas.length + 2).font = { bold: true };
+      }
+      marca.getRow(1).font = { bold: true };
+    };
+
+    adicionarAbaMarca(
+      this.rotuloTituloMarcaPropriaSetor(item),
+      this.detalheMarcaPropriaSetores,
+      this.totalDetalheMarcaPropriaSetores,
     );
-    if (detalhe.marcaPropria.length) {
-      marca.addRow({
-        data: 'Total',
-        cupom: '',
-        item: '',
-        qtd: '',
-        valor: this.totalDetalheMarcaPropria,
-      });
-      marca.getRow(detalhe.marcaPropria.length + 2).font = { bold: true };
-    }
-    marca.getRow(1).font = { bold: true };
+    adicionarAbaMarca(
+      'Marca própria (outros)',
+      this.detalheMarcaPropriaOutros,
+      this.totalDetalheMarcaPropriaOutros,
+    );
 
     const rej = workbook.addWorksheet('Rejeitados');
     rej.columns = [
@@ -1036,19 +1204,26 @@ export class ComercialAcompanhamentoPage implements OnInit {
           .join('\n')
       : '<tr><td colspan="6">Nenhum item de setor no período</td></tr>';
 
-    const linhasMarca = detalhe.marcaPropria.length
-      ? detalhe.marcaPropria
-          .map(
-            (r) => `<tr>
+    const montarLinhasMarca = (
+      linhas: ComercialAcompanhamentoMovimentoProduto[],
+    ): string =>
+      linhas.length
+        ? linhas
+            .map(
+              (r) => `<tr>
           <td>${this.escapeHtml(this.formatarData(r.data))}</td>
           <td>${r.numeroCupom}</td>
+          <td>${r.codigoSetor ?? '—'}</td>
           <td>${this.escapeHtml(r.descricaoItem || '—')}</td>
           <td class="num">${r.quantidade}</td>
           <td class="num">${this.escapeHtml(this.formatarMoeda(r.valor))}</td>
         </tr>`,
-          )
-          .join('\n')
-      : '<tr><td colspan="5">Nenhum produto no período</td></tr>';
+            )
+            .join('\n')
+        : '<tr><td colspan="6">Nenhum produto no período</td></tr>';
+
+    const linhasMarcaSetor = montarLinhasMarca(this.detalheMarcaPropriaSetores);
+    const linhasMarcaOutros = montarLinhasMarca(this.detalheMarcaPropriaOutros);
 
     const linhasRej = detalhe.rejeitados.length
       ? detalhe.rejeitados
@@ -1119,7 +1294,9 @@ export class ComercialAcompanhamentoPage implements OnInit {
     <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRevendaManipulados))}</strong><small>(${this.escapeHtml(this.rotuloManipuladoSetor(item))}) · ${this.escapeHtml(this.rotuloQtdSetorManipulado(item.quantidadeRevendaManipulados))}</small></div>
     <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorTerceirosManipulados))}</strong><small>(terceiros) · ${this.escapeHtml(this.rotuloQtdTerceiros(item.quantidadeTerceirosManipulados))}</small></div>
     <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoRequisicao))}</strong><small>(total)</small></div>
-    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropria))}</strong></div>
+    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropriaSetores))}</strong><small>(${this.escapeHtml(this.rotuloMarcaPropriaSetor(item))})</small></div>
+    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropriaOutros))}</strong><small>(outros)</small></div>
+    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropria))}</strong><small>(total)</small></div>
     <div><span>Rejeitado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRejeitado))}</strong></div>
     <div><span>% Meta manip.</span><strong>${this.escapeHtml(this.temMetaCadastrada(item.valorMetaRequisicao) ? this.formatarPercentualMeta(item.percentualMetaRequisicao) : 'Sem meta')}</strong></div>
     <div><span>% Meta marca</span><strong>${this.escapeHtml(this.temMetaCadastrada(item.valorMetaMarcaPropria) ? this.formatarPercentualMeta(item.percentualMetaMarcaPropria) : 'Sem meta')}</strong></div>
@@ -1128,7 +1305,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
   ${
     forma === 'detalhado'
       ? `
-  <h3>Requisições</h3>
+  <h3>Manipulado (Requisições)</h3>
   <table>
     <thead><tr><th>Data</th><th>Cupom</th><th>Requisição</th><th class="num">Valor</th></tr></thead>
     <tbody>${linhasManip}</tbody>
@@ -1138,19 +1315,25 @@ export class ComercialAcompanhamentoPage implements OnInit {
   <table>
     <thead><tr><th>Data</th><th>Cupom</th><th>Setor</th><th>Item</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead>
     <tbody>${linhasSetor}</tbody>
-    ${setorLinhas.length ? `<tfoot><tr><td colspan="5">Total ${this.escapeHtml(this.rotuloTituloSetor(item).toLowerCase())}</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheSetor))}</td></tr></tfoot>` : ''}
+    ${setorLinhas.length ? `<tfoot><tr><td colspan="5">Total ${this.escapeHtml(this.rotuloTituloSetor(item))}</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheSetor))}</td></tr></tfoot>` : ''}
   </table>
-  <h3>Terceiros</h3>
+  <h3>Manipulado (Terceiros)</h3>
   <table>
     <thead><tr><th>Data da baixa</th><th>Protocolo</th><th>Data da venda</th><th>Cliente</th><th class="num">Valor da baixa</th></tr></thead>
     <tbody>${linhasTerc}</tbody>
     ${terceiros.length ? `<tfoot><tr><td colspan="4">Total terceiros</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheTerceiros))}</td></tr></tfoot>` : ''}
   </table>
-  <h3>Marca própria</h3>
+  <h3>${this.escapeHtml(this.rotuloTituloMarcaPropriaSetor(item))}</h3>
   <table>
-    <thead><tr><th>Data</th><th>Cupom</th><th>Item</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead>
-    <tbody>${linhasMarca}</tbody>
-    ${detalhe.marcaPropria.length ? `<tfoot><tr><td colspan="4">Total marca própria</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheMarcaPropria))}</td></tr></tfoot>` : ''}
+    <thead><tr><th>Data</th><th>Cupom</th><th>Setor</th><th>Item</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead>
+    <tbody>${linhasMarcaSetor}</tbody>
+    ${this.detalheMarcaPropriaSetores.length ? `<tfoot><tr><td colspan="5">Total ${this.escapeHtml(this.rotuloTituloMarcaPropriaSetor(item))}</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheMarcaPropriaSetores))}</td></tr></tfoot>` : ''}
+  </table>
+  <h3>Marca própria (outros)</h3>
+  <table>
+    <thead><tr><th>Data</th><th>Cupom</th><th>Setor</th><th>Item</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead>
+    <tbody>${linhasMarcaOutros}</tbody>
+    ${this.detalheMarcaPropriaOutros.length ? `<tfoot><tr><td colspan="5">Total marca própria (outros)</td><td class="num">${this.escapeHtml(this.formatarMoeda(this.totalDetalheMarcaPropriaOutros))}</td></tr></tfoot>` : ''}
   </table>
   <h3>Orçamentos rejeitados</h3>
   <table>

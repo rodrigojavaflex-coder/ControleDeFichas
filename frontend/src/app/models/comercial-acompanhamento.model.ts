@@ -23,6 +23,12 @@ export interface ComercialAcompanhamentoItem {
   valorComissaoBaseRequisicao: number;
   valorRecebidoMarcaPropria: number;
   quantidadeRecebidoMarcaPropria: number;
+  codigosSetorMarcaPropria?: number[];
+  valorRecebidoMarcaPropriaSetores?: number;
+  quantidadeRecebidoMarcaPropriaSetores?: number;
+  valorRecebidoMarcaPropriaOutros?: number;
+  quantidadeRecebidoMarcaPropriaOutros?: number;
+  valorComissaoBaseMarcaPropria?: number;
   valorRejeitado: number;
   quantidadeRejeitado: number;
   valorMetaRequisicao?: number | null;
@@ -69,6 +75,9 @@ export interface ComercialAcompanhamentoTotais {
   codigosSetorMarcaPropria?: number[];
   valorRecebidoMarcaPropriaSetores?: number;
   quantidadeRecebidoMarcaPropriaSetores?: number;
+  valorRecebidoMarcaPropriaOutros?: number;
+  quantidadeRecebidoMarcaPropriaOutros?: number;
+  valorComissaoBaseMarcaPropria?: number;
   valorMetaRequisicao?: number | null;
   percentualMetaRequisicao?: number | null;
   valorMetaMarcaPropria?: number | null;
@@ -107,6 +116,7 @@ export interface ComercialAcompanhamentoMovimentoProduto {
   data: string;
   numeroCupom: number;
   descricaoItem?: string | null;
+  codigoSetor?: number | null;
   quantidade: number;
   valor: number;
 }
