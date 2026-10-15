@@ -122,10 +122,11 @@ const DETALHE_SECOES_PADRAO: Record<ComercialDetalheSecao, boolean> = {
   orcamentos: false,
 };
 
+/** Acompanhamento: Resultados, Metas e Análise fechados por padrão. */
 const CARD_BLOCO_DEFAULT: Record<ComercialCardBloco, boolean> = {
-  resultados: true,
-  metas: true,
-  analise: true,
+  resultados: false,
+  metas: false,
+  analise: false,
 };
 
 /** Valor do combo Vendedor para exibir só o card TOTAL da unidade. */

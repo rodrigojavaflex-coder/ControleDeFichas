@@ -31,9 +31,10 @@ const DETALHE_SECOES_PADRAO: Record<ComercialDetalheSecao, boolean> = {
   orcamentos: false,
 };
 
+/** Home: só Análise aberta; Resultados e Metas fechados. */
 const CARD_BLOCO_DEFAULT: Record<ComercialCardBloco, boolean> = {
-  resultados: true,
-  metas: true,
+  resultados: false,
+  metas: false,
   analise: true,
 };
 
