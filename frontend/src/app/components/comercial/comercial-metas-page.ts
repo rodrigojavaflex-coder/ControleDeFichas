@@ -8,6 +8,7 @@ import { ErrorModalService } from '../../services/error-modal.service';
 import { ComercialMetaService } from '../../services/comercial-meta.service';
 import { Permission, Unidade } from '../../models/usuario.model';
 import {
+  ComercialCriterioRanking,
   ComercialMetaItem,
   ComercialMetaListResponse,
   ComercialTipoBase,
@@ -57,6 +58,12 @@ export class ComercialMetasPage implements OnInit {
   draftUnidadeMarcaPropria = '';
   editandoUnidade = false;
   salvandoUnidade = false;
+
+  ComercialCriterioRanking = ComercialCriterioRanking;
+  criterioRanking: ComercialCriterioRanking =
+    ComercialCriterioRanking.PERCENTUAL;
+  draftCriterioRanking: ComercialCriterioRanking =
+    ComercialCriterioRanking.PERCENTUAL;
 
   copiarModalVisivel = false;
   copiarOrigem = '';
@@ -113,9 +120,18 @@ export class ComercialMetasPage implements OnInit {
       this.linhas = [];
       this.metaUnidadeRequisicao = null;
       this.metaUnidadeMarcaPropria = null;
+      this.criterioRanking = ComercialCriterioRanking.PERCENTUAL;
       return;
     }
     this.carregarMetas();
+  }
+
+  rotuloCriterioRanking(
+    criterio: ComercialCriterioRanking | null | undefined,
+  ): string {
+    return criterio === ComercialCriterioRanking.VALOR
+      ? 'Valor (R$)'
+      : '% da meta';
   }
 
   carregarMetas(): void {
@@ -142,6 +158,7 @@ export class ComercialMetasPage implements OnInit {
     this.editandoUnidade = true;
     this.draftUnidadeRequisicao = '';
     this.draftUnidadeMarcaPropria = '';
+    this.draftCriterioRanking = this.criterioRanking;
   }
 
   alterarUnidade(): void {
@@ -153,6 +170,7 @@ export class ComercialMetasPage implements OnInit {
     this.draftUnidadeMarcaPropria = this.formatarMoedaInput(
       this.metaUnidadeMarcaPropria,
     );
+    this.draftCriterioRanking = this.criterioRanking;
   }
 
   cancelarUnidade(): void {
@@ -164,6 +182,7 @@ export class ComercialMetasPage implements OnInit {
     this.draftUnidadeMarcaPropria = this.formatarMoedaInput(
       this.metaUnidadeMarcaPropria,
     );
+    this.draftCriterioRanking = this.criterioRanking;
   }
 
   formatarDraftUnidade(campo: 'requisicao' | 'marcaPropria'): void {
@@ -198,6 +217,7 @@ export class ComercialMetasPage implements OnInit {
         anoMes: this.anoMesSelecionado(),
         valorMetaRequisicao: valorReq,
         valorMetaMarcaPropria: valorMp,
+        criterioRanking: this.draftCriterioRanking,
       })
       .subscribe({
         next: (res) => {
@@ -399,6 +419,9 @@ export class ComercialMetasPage implements OnInit {
   private aplicarLista(res: ComercialMetaListResponse): void {
     this.metaUnidadeRequisicao = res.metaUnidadeRequisicao ?? null;
     this.metaUnidadeMarcaPropria = res.metaUnidadeMarcaPropria ?? null;
+    this.criterioRanking =
+      res.criterioRanking ?? ComercialCriterioRanking.PERCENTUAL;
+    this.draftCriterioRanking = this.criterioRanking;
     this.draftUnidadeRequisicao = this.formatarMoedaInput(
       this.metaUnidadeRequisicao,
     );

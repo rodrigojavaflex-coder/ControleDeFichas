@@ -10,6 +10,11 @@ export enum ComercialIncidenciaComissao {
   LOJA = 'LOJA',
 }
 
+export enum ComercialCriterioRanking {
+  PERCENTUAL = 'PERCENTUAL',
+  VALOR = 'VALOR',
+}
+
 export interface ComercialMetaItem {
   funcionarioId: string;
   nome: string;
@@ -27,6 +32,7 @@ export interface ComercialMetaListResponse {
   mes: number | null;
   metaUnidadeRequisicao: number | null;
   metaUnidadeMarcaPropria: number | null;
+  criterioRanking: ComercialCriterioRanking;
   itens: ComercialMetaItem[];
 }
 
@@ -42,6 +48,14 @@ export interface SalvarComercialMetaUnidadeDto {
   anoMes: string;
   valorMetaRequisicao: number;
   valorMetaMarcaPropria: number;
+  criterioRanking?: ComercialCriterioRanking;
+}
+
+export interface SalvarComercialCriterioRankingDto {
+  unidade: Unidade;
+  criterioRanking: ComercialCriterioRanking;
+  ano?: number;
+  mes?: number;
 }
 
 export interface CopiarComercialMetaDto {

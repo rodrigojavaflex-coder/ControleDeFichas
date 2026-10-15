@@ -268,6 +268,13 @@ export class ComercialComissaoPoliticaUnidadeResponseDto {
       'Setores de revenda que somam em Manipulados no TOTAL. Vazio = só requisições.',
   })
   codigosSetorRevendaManipulados: number[];
+
+  @ApiProperty({
+    enum: ['PERCENTUAL', 'VALOR'],
+    description: 'Critério de ranking dos vendedores no acompanhamento.',
+    default: 'PERCENTUAL',
+  })
+  criterioRanking: 'PERCENTUAL' | 'VALOR';
 }
 
 export class SalvarComercialComissaoPoliticaUnidadeDto {

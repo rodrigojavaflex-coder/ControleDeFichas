@@ -8,6 +8,7 @@ import {
   CopiarComercialMetaResponse,
   SalvarComercialMetaDto,
   SalvarComercialMetaUnidadeDto,
+  SalvarComercialCriterioRankingDto,
   ComercialMetaListResponse,
 } from '../models/comercial-meta.model';
 
@@ -39,6 +40,15 @@ export class ComercialMetaService {
     dto: SalvarComercialMetaUnidadeDto,
   ): Observable<ComercialMetaListResponse> {
     return this.http.put<ComercialMetaListResponse>(`${base}/unidade`, dto);
+  }
+
+  salvarCriterioRanking(
+    dto: SalvarComercialCriterioRankingDto,
+  ): Observable<ComercialMetaListResponse> {
+    return this.http.put<ComercialMetaListResponse>(
+      `${base}/criterio-ranking`,
+      dto,
+    );
   }
 
   copiar(dto: CopiarComercialMetaDto): Observable<CopiarComercialMetaResponse> {

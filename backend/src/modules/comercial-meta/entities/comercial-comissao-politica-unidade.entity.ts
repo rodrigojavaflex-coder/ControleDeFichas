@@ -2,6 +2,7 @@ import { Column, Entity, Unique } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Unidade } from '../../../common/enums/unidade.enum';
+import { ComercialCriterioRanking } from '../../../common/enums/comercial-criterio-ranking.enum';
 
 @Entity('comercial_comissao_politica_unidade')
 @Unique('uq_comercial_comissao_politica_unidade', ['unidade'])
@@ -39,4 +40,17 @@ export class ComercialComissaoPoliticaUnidade extends BaseEntity {
     default: '{}',
   })
   codigosSetorRevendaManipulados: number[];
+
+  @ApiProperty({
+    enum: ComercialCriterioRanking,
+    description:
+      'Critério de ranking dos vendedores no acompanhamento (Manipulados e Marca própria).',
+    default: ComercialCriterioRanking.PERCENTUAL,
+  })
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: ComercialCriterioRanking.PERCENTUAL,
+  })
+  criterioRanking: ComercialCriterioRanking;
 }

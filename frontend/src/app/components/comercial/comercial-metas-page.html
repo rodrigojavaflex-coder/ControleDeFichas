@@ -112,6 +112,29 @@
               }
             </div>
             <div class="comercial-meta-unidade-campos">
+              <div class="comercial-meta-unidade-campo comercial-meta-unidade-campo-ranking">
+                <label class="form-label" for="cm-criterio-ranking">
+                  Critério de ranking
+                </label>
+                @if (editandoUnidade) {
+                  <select
+                    id="cm-criterio-ranking"
+                    class="form-control"
+                    [(ngModel)]="draftCriterioRanking"
+                    [disabled]="salvandoUnidade">
+                    <option [ngValue]="ComercialCriterioRanking.PERCENTUAL">
+                      % da meta
+                    </option>
+                    <option [ngValue]="ComercialCriterioRanking.VALOR">
+                      Valor (R$)
+                    </option>
+                  </select>
+                } @else {
+                  <div class="comercial-meta-unidade-valor">
+                    {{ rotuloCriterioRanking(criterioRanking) }}
+                  </div>
+                }
+              </div>
               <div class="comercial-meta-unidade-campo">
                 <label class="form-label" for="cm-meta-loja-req">Manipulados</label>
                 @if (editandoUnidade) {

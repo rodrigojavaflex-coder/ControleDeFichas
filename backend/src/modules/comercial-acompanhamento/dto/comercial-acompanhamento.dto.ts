@@ -231,6 +231,131 @@ export class ComercialAcompanhamentoItemDto extends ComercialDesempenhoBaseDto {
 
   @ApiPropertyOptional({ nullable: true })
   percentualComissaoFaixaProjetadoMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Menor percentualMetaDe das faixas de Manipulados do vendedor (base da 1ª faixa).',
+  })
+  percentualMetaPrimeiraFaixaRequisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Menor percentualMetaDe das faixas de Marca própria do vendedor (base da 1ª faixa).',
+  })
+  percentualMetaPrimeiraFaixaMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Maior percentualMetaDe das faixas (topo). Loja usa 105 fixo.',
+  })
+  percentualMetaTopoFaixaRequisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Maior percentualMetaDe das faixas de Marca própria (topo). Loja usa 105 fixo.',
+  })
+  percentualMetaTopoFaixaMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Posição no ranking de Manipulados (1 = 1º lugar).',
+  })
+  rankingManipulados?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Posição no ranking de Marca própria (1 = 1º lugar).',
+  })
+  rankingMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Quanto falta (R$) para 100% da meta de Manipulados.',
+  })
+  faltaMeta100Requisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Quanto falta (R$) para o topo da faixa de Manipulados.',
+  })
+  faltaMetaTopoRequisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Venda/dia restante para 100% (Manipulados). diasRestantes = DU mês − realizados.',
+  })
+  vendaDiaMeta100Requisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Venda/dia restante para o topo da faixa (Manipulados).',
+  })
+  vendaDiaMetaTopoRequisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Quanto falta (R$) para 100% da meta de Marca própria.',
+  })
+  faltaMeta100MarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Quanto falta (R$) para o topo da faixa de Marca própria.',
+  })
+  faltaMetaTopoMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Venda/dia restante para 100% (Marca própria).',
+  })
+  vendaDiaMeta100MarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Venda/dia restante para o topo da faixa (Marca própria).',
+  })
+  vendaDiaMetaTopoMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Recebido de Manipulados no dia de hoje (America/Sao_Paulo).',
+  })
+  valorRecebidoHojeRequisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Recebido de Marca própria no dia de hoje (America/Sao_Paulo).',
+  })
+  valorRecebidoHojeMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Falta no dia para a meta do dia (100%): max(0, metaDia − vendidoHoje).',
+  })
+  faltaMetaHoje100Requisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Falta no dia para a meta do dia (topo da faixa).',
+  })
+  faltaMetaHojeTopoRequisicao?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Falta no dia para 100% (Marca própria).',
+  })
+  faltaMetaHoje100MarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Falta no dia para o topo (Marca própria).',
+  })
+  faltaMetaHojeTopoMarcaPropria?: number | null;
 }
 
 export class ComercialAcompanhamentoTotaisDto extends ComercialDesempenhoBaseDto {
@@ -350,6 +475,54 @@ export class ComercialAcompanhamentoTotaisDto extends ComercialDesempenhoBaseDto
 
   @ApiPropertyOptional({ nullable: true })
   percentualProjecaoMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Topo fixo 105% na loja.' })
+  percentualMetaTopoFaixaRequisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true, description: 'Topo fixo 105% na loja.' })
+  percentualMetaTopoFaixaMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  faltaMeta100Requisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  faltaMetaTopoRequisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vendaDiaMeta100Requisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vendaDiaMetaTopoRequisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  faltaMeta100MarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  faltaMetaTopoMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vendaDiaMeta100MarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  vendaDiaMetaTopoMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  valorRecebidoHojeRequisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  valorRecebidoHojeMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  faltaMetaHoje100Requisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  faltaMetaHojeTopoRequisicao?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  faltaMetaHoje100MarcaPropria?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  faltaMetaHojeTopoMarcaPropria?: number | null;
 }
 
 export class ComercialAcompanhamentoListResponseDto {

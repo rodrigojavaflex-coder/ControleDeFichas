@@ -59,6 +59,26 @@ interface CardResumo {
   valorBonusProjetadoMarcaPropria?: number | null;
   percentualComissaoFaixaMarcaPropria?: number | null;
   percentualComissaoFaixaProjetadoMarcaPropria?: number | null;
+  percentualMetaPrimeiraFaixaRequisicao?: number | null;
+  percentualMetaPrimeiraFaixaMarcaPropria?: number | null;
+  percentualMetaTopoFaixaRequisicao?: number | null;
+  percentualMetaTopoFaixaMarcaPropria?: number | null;
+  rankingManipulados?: number | null;
+  rankingMarcaPropria?: number | null;
+  faltaMeta100Requisicao?: number | null;
+  faltaMetaTopoRequisicao?: number | null;
+  vendaDiaMeta100Requisicao?: number | null;
+  vendaDiaMetaTopoRequisicao?: number | null;
+  faltaMeta100MarcaPropria?: number | null;
+  faltaMetaTopoMarcaPropria?: number | null;
+  vendaDiaMeta100MarcaPropria?: number | null;
+  vendaDiaMetaTopoMarcaPropria?: number | null;
+  valorRecebidoHojeRequisicao?: number | null;
+  valorRecebidoHojeMarcaPropria?: number | null;
+  faltaMetaHoje100Requisicao?: number | null;
+  faltaMetaHojeTopoRequisicao?: number | null;
+  faltaMetaHoje100MarcaPropria?: number | null;
+  faltaMetaHojeTopoMarcaPropria?: number | null;
   codigosSetorMarcaPropria?: number[];
 }
 
@@ -146,6 +166,11 @@ export class ComercialAcompanhamentoPage implements OnInit {
   infoProjecaoAberto = false;
   infoProjecaoCard: CardResumo | null = null;
   infoProjecaoBase: ComercialProjecaoBase | null = null;
+  infoCorAnelAberto = false;
+  infoCorAnelPercentual: number | null = null;
+  infoCorAnelTitulo = '';
+  infoCorAnelIsTotal = false;
+  infoCorAnelBasePrimeiraFaixa: number | null = null;
 
   ngOnInit(): void {
     if (!this.podeLer()) {
@@ -217,6 +242,33 @@ export class ComercialAcompanhamentoPage implements OnInit {
         percentualMetaMarcaPropria: this.totais.percentualMetaMarcaPropria,
         valorProjetadoMarcaPropria: this.totais.valorProjetadoMarcaPropria,
         percentualProjecaoMarcaPropria: this.totais.percentualProjecaoMarcaPropria,
+        percentualMetaTopoFaixaRequisicao:
+          this.totais.percentualMetaTopoFaixaRequisicao ?? null,
+        percentualMetaTopoFaixaMarcaPropria:
+          this.totais.percentualMetaTopoFaixaMarcaPropria ?? null,
+        faltaMeta100Requisicao: this.totais.faltaMeta100Requisicao ?? null,
+        faltaMetaTopoRequisicao: this.totais.faltaMetaTopoRequisicao ?? null,
+        vendaDiaMeta100Requisicao: this.totais.vendaDiaMeta100Requisicao ?? null,
+        vendaDiaMetaTopoRequisicao:
+          this.totais.vendaDiaMetaTopoRequisicao ?? null,
+        faltaMeta100MarcaPropria: this.totais.faltaMeta100MarcaPropria ?? null,
+        faltaMetaTopoMarcaPropria: this.totais.faltaMetaTopoMarcaPropria ?? null,
+        vendaDiaMeta100MarcaPropria:
+          this.totais.vendaDiaMeta100MarcaPropria ?? null,
+        vendaDiaMetaTopoMarcaPropria:
+          this.totais.vendaDiaMetaTopoMarcaPropria ?? null,
+        valorRecebidoHojeRequisicao:
+          this.totais.valorRecebidoHojeRequisicao ?? null,
+        valorRecebidoHojeMarcaPropria:
+          this.totais.valorRecebidoHojeMarcaPropria ?? null,
+        faltaMetaHoje100Requisicao:
+          this.totais.faltaMetaHoje100Requisicao ?? null,
+        faltaMetaHojeTopoRequisicao:
+          this.totais.faltaMetaHojeTopoRequisicao ?? null,
+        faltaMetaHoje100MarcaPropria:
+          this.totais.faltaMetaHoje100MarcaPropria ?? null,
+        faltaMetaHojeTopoMarcaPropria:
+          this.totais.faltaMetaHojeTopoMarcaPropria ?? null,
         codigosSetorMarcaPropria: this.totais.codigosSetorMarcaPropria ?? [],
       },
     ];
@@ -274,9 +326,46 @@ export class ComercialAcompanhamentoPage implements OnInit {
         percentualComissaoFaixaMarcaPropria: item.percentualComissaoFaixaMarcaPropria,
         percentualComissaoFaixaProjetadoMarcaPropria:
           item.percentualComissaoFaixaProjetadoMarcaPropria,
+        percentualMetaPrimeiraFaixaRequisicao:
+          item.percentualMetaPrimeiraFaixaRequisicao ?? null,
+        percentualMetaPrimeiraFaixaMarcaPropria:
+          item.percentualMetaPrimeiraFaixaMarcaPropria ?? null,
+        percentualMetaTopoFaixaRequisicao:
+          item.percentualMetaTopoFaixaRequisicao ?? null,
+        percentualMetaTopoFaixaMarcaPropria:
+          item.percentualMetaTopoFaixaMarcaPropria ?? null,
+        rankingManipulados: item.rankingManipulados ?? null,
+        rankingMarcaPropria: item.rankingMarcaPropria ?? null,
+        faltaMeta100Requisicao: item.faltaMeta100Requisicao ?? null,
+        faltaMetaTopoRequisicao: item.faltaMetaTopoRequisicao ?? null,
+        vendaDiaMeta100Requisicao: item.vendaDiaMeta100Requisicao ?? null,
+        vendaDiaMetaTopoRequisicao: item.vendaDiaMetaTopoRequisicao ?? null,
+        faltaMeta100MarcaPropria: item.faltaMeta100MarcaPropria ?? null,
+        faltaMetaTopoMarcaPropria: item.faltaMetaTopoMarcaPropria ?? null,
+        vendaDiaMeta100MarcaPropria: item.vendaDiaMeta100MarcaPropria ?? null,
+        vendaDiaMetaTopoMarcaPropria: item.vendaDiaMetaTopoMarcaPropria ?? null,
+        valorRecebidoHojeRequisicao: item.valorRecebidoHojeRequisicao ?? null,
+        valorRecebidoHojeMarcaPropria: item.valorRecebidoHojeMarcaPropria ?? null,
+        faltaMetaHoje100Requisicao: item.faltaMetaHoje100Requisicao ?? null,
+        faltaMetaHojeTopoRequisicao: item.faltaMetaHojeTopoRequisicao ?? null,
+        faltaMetaHoje100MarcaPropria: item.faltaMetaHoje100MarcaPropria ?? null,
+        faltaMetaHojeTopoMarcaPropria: item.faltaMetaHojeTopoMarcaPropria ?? null,
       });
     }
     return cards;
+  }
+
+  temAnaliseDoDia(card: CardResumo): boolean {
+    return (
+      card.mesAberto === true &&
+      (card.valorRecebidoHojeRequisicao != null ||
+        card.valorRecebidoHojeMarcaPropria != null)
+    );
+  }
+
+  destacarFaltaHoje(valor: number | null | undefined): boolean {
+    const n = Number(valor);
+    return Number.isFinite(n) && n > 0;
   }
 
   podeLer(): boolean {
@@ -296,6 +385,41 @@ export class ComercialAcompanhamentoPage implements OnInit {
       card.isTotal &&
       (card.codigosSetorMarcaPropria ?? []).length > 0
     );
+  }
+
+  temAnaliseDesempenho(card: CardResumo): boolean {
+    return (
+      this.temMetaCadastrada(card.valorMetaRequisicao) ||
+      this.temMetaCadastrada(card.valorMetaMarcaPropria)
+    );
+  }
+
+  numeroLugar(posicao: number | null | undefined): number {
+    const n = Number(posicao);
+    if (!Number.isFinite(n) || n < 1) return 0;
+    return Math.trunc(n);
+  }
+
+  rotuloLugar(posicao: number | null | undefined): string {
+    const n = this.numeroLugar(posicao);
+    if (n < 1) return '';
+    return `${n}º Lugar`;
+  }
+
+  classeRankingBadge(posicao: number | null | undefined): string {
+    const n = Number(posicao);
+    if (!Number.isFinite(n) || n < 1) return '';
+    if (n === 1) return 'is-ouro';
+    if (n === 2) return 'is-prata';
+    if (n === 3) return 'is-bronze';
+    return 'is-demais';
+  }
+
+  formatarPercentualTopo(valor: number | null | undefined): string {
+    if (valor == null || !Number.isFinite(Number(valor))) return '—';
+    return `${Number(valor).toLocaleString('pt-BR', {
+      maximumFractionDigits: 2,
+    })}%`;
   }
 
   valorTotalRecebido(card: {
@@ -411,6 +535,109 @@ export class ComercialAcompanhamentoPage implements OnInit {
     const pct = this.larguraBarraMeta(valor) / 100;
     const preenchido = circunferencia * pct;
     return `${preenchido.toFixed(2)} ${(circunferencia - preenchido).toFixed(2)}`;
+  }
+
+  /**
+   * Cor do gráfico de bola.
+   * Loja: &lt;80 vermelho, 80–99,99 azul, ≥100 verde.
+   * Vendedor: vermelho abaixo da 1ª faixa (piso 80%), azul até 99,99%, ≥100 verde.
+   */
+  limiarVermelhoAnelMeta(
+    isTotal: boolean,
+    basePrimeiraFaixa?: number | null,
+  ): number {
+    if (isTotal) return 80;
+    const base = Number(basePrimeiraFaixa);
+    if (!Number.isFinite(base)) return 80;
+    return Math.max(80, base);
+  }
+
+  classeCorAnelMeta(
+    valor: number | null | undefined,
+    isTotal = false,
+    basePrimeiraFaixa?: number | null,
+  ): string {
+    const pct = Number(valor);
+    if (!Number.isFinite(pct)) return 'is-vermelho';
+    if (pct >= 100) return 'is-verde';
+    const limiar = this.limiarVermelhoAnelMeta(isTotal, basePrimeiraFaixa);
+    if (pct < limiar) return 'is-vermelho';
+    return 'is-azul';
+  }
+
+  basePrimeiraFaixaDoCard(
+    card: CardResumo | null | undefined,
+    baseTipo: ComercialProjecaoBase | null | undefined,
+  ): number | null {
+    if (!card || card.isTotal) return null;
+    if (baseTipo === 'marcaPropria') {
+      return card.percentualMetaPrimeiraFaixaMarcaPropria ?? null;
+    }
+    return card.percentualMetaPrimeiraFaixaRequisicao ?? null;
+  }
+
+  rotuloCorAnelMeta(
+    valor: number | null | undefined,
+    isTotal = false,
+    basePrimeiraFaixa?: number | null,
+  ): string {
+    switch (this.classeCorAnelMeta(valor, isTotal, basePrimeiraFaixa)) {
+      case 'is-vermelho':
+        return 'Vermelho';
+      case 'is-azul':
+        return 'Azul';
+      default:
+        return 'Verde';
+    }
+  }
+
+  motivoCorAnelMeta(
+    valor: number | null | undefined,
+    isTotal = false,
+    basePrimeiraFaixa?: number | null,
+  ): string {
+    const pct = Number(valor);
+    const limiar = this.limiarVermelhoAnelMeta(isTotal, basePrimeiraFaixa);
+    if (!Number.isFinite(pct) || pct < limiar) {
+      if (isTotal) {
+        return 'Abaixo de 80% da meta da loja.';
+      }
+      return `Abaixo da base da 1ª faixa (${this.formatarPercentualMeta(limiar)}).`;
+    }
+    if (pct < 100) {
+      return `Entre ${this.formatarPercentualMeta(limiar)} e 99,9% da meta.`;
+    }
+    return '100% ou mais da meta.';
+  }
+
+  abrirInfoCorAnel(
+    event: Event,
+    percentual: number | null | undefined,
+    titulo: string,
+    card: CardResumo | null | undefined,
+    baseTipo: ComercialProjecaoBase | null | undefined,
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.infoCorAnelPercentual =
+      percentual == null || !Number.isFinite(Number(percentual))
+        ? null
+        : Number(percentual);
+    this.infoCorAnelTitulo = titulo;
+    this.infoCorAnelIsTotal = card?.isTotal === true;
+    this.infoCorAnelBasePrimeiraFaixa = this.basePrimeiraFaixaDoCard(
+      card,
+      baseTipo,
+    );
+    this.infoCorAnelAberto = true;
+  }
+
+  fecharInfoCorAnel(): void {
+    this.infoCorAnelAberto = false;
+    this.infoCorAnelPercentual = null;
+    this.infoCorAnelTitulo = '';
+    this.infoCorAnelIsTotal = false;
+    this.infoCorAnelBasePrimeiraFaixa = null;
   }
 
   temMetaCadastrada(valor: number | null | undefined): boolean {

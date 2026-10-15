@@ -125,14 +125,46 @@
                   class="comercial-acomp-card"
                   [class.is-total]="card.isTotal">
                   <header class="comercial-acomp-card-head">
-                    <h3>
-                      {{ card.titulo }}
-                      @if (card.isTotal) {
-                        <i class="fas fa-building comercial-acomp-card-tipo-icon" aria-hidden="true" title="Unidade"></i>
-                      } @else {
-                        <i class="fas fa-user comercial-acomp-card-tipo-icon" aria-hidden="true" title="Vendedor"></i>
+                    <div class="comercial-acomp-card-head-start">
+                      <h3>
+                        {{ card.titulo }}
+                        @if (card.isTotal) {
+                          <i class="fas fa-building comercial-acomp-card-tipo-icon" aria-hidden="true" title="Unidade"></i>
+                        } @else {
+                          <i class="fas fa-user comercial-acomp-card-tipo-icon" aria-hidden="true" title="Vendedor"></i>
+                        }
+                      </h3>
+                      @if (!card.isTotal && (card.rankingManipulados != null || card.rankingMarcaPropria != null)) {
+                        <div class="comercial-acomp-ranking-badges" aria-label="Ranking na unidade">
+                          @if (card.rankingManipulados != null) {
+                            <span
+                              class="comercial-acomp-ranking-badge is-manip"
+                              [ngClass]="classeRankingBadge(card.rankingManipulados)">
+                              <span class="comercial-acomp-ranking-badge-body">
+                                <span class="cat">Manipulados</span>
+                                <strong>{{ rotuloLugar(card.rankingManipulados) }}</strong>
+                              </span>
+                              <span class="comercial-acomp-ranking-badge-medal" aria-hidden="true">
+                                {{ numeroLugar(card.rankingManipulados) }}º
+                              </span>
+                            </span>
+                          }
+                          @if (card.rankingMarcaPropria != null) {
+                            <span
+                              class="comercial-acomp-ranking-badge is-marca"
+                              [ngClass]="classeRankingBadge(card.rankingMarcaPropria)">
+                              <span class="comercial-acomp-ranking-badge-body">
+                                <span class="cat">Marca própria</span>
+                                <strong>{{ rotuloLugar(card.rankingMarcaPropria) }}</strong>
+                              </span>
+                              <span class="comercial-acomp-ranking-badge-medal" aria-hidden="true">
+                                {{ numeroLugar(card.rankingMarcaPropria) }}º
+                              </span>
+                            </span>
+                          }
+                        </div>
                       }
-                    </h3>
+                    </div>
                     <div class="comercial-acomp-card-head-end">
                       <div class="comercial-acomp-card-head-total">
                         <span class="label">Total vendido</span>
@@ -172,14 +204,6 @@
                       <span class="label">
                         Manipulado
                         <small>(terceiros)</small>
-                        <button
-                          type="button"
-                          class="comercial-acomp-info-btn"
-                          title="Baixas de vendas de terceiro. Entram na meta e na faixa; não entram no valor da comissão."
-                          aria-label="Informação sobre manipulados de terceiros"
-                          (click)="abrirInfoManipulados($event, card)">
-                          <i class="fas fa-info-circle" aria-hidden="true"></i>
-                        </button>
                       </span>
                       <span class="sub">{{ rotuloQtdTerceiros(card.quantidadeTerceirosManipulados) }}</span>
                       <span class="value">{{ formatarMoeda(card.valorTerceirosManipulados) }}</span>
@@ -201,47 +225,39 @@
                       <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
                     </div>
                   </div>
-                  <div class="comercial-acomp-mp-grid">
-                    <div class="comercial-acomp-metric is-primary">
-                      <span class="label">
-                        Marca própria
-                        <small>({{ rotuloMarcaPropriaSetor(card) }})</small>
-                        @if (card.isTotal) {
-                          <button
-                            type="button"
-                            class="comercial-acomp-info-btn"
-                            title="Como a marca própria da loja é calculada"
-                            aria-label="Informação sobre marca própria da loja"
-                            (click)="abrirInfoMarcaPropria($event)">
-                            <i class="fas fa-info-circle" aria-hidden="true"></i>
-                          </button>
-                        }
-                      </span>
-                      <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
-                      <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaSetores) }}</span>
+                  <div class="comercial-acomp-mp-rejeitado-row">
+                    <div class="comercial-acomp-mp-grid">
+                      <div class="comercial-acomp-metric is-primary">
+                        <span class="label">
+                          Marca própria
+                          <small>({{ rotuloMarcaPropriaSetor(card) }})</small>
+                        </span>
+                        <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
+                        <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaSetores) }}</span>
+                      </div>
+                      <div class="comercial-acomp-metric is-primary">
+                        <span class="label">
+                          Marca própria
+                          <small>(outros)</small>
+                        </span>
+                        <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
+                        <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaOutros) }}</span>
+                      </div>
+                      <div class="comercial-acomp-metric is-primary is-total-mp">
+                        <span class="label">
+                          Marca própria
+                          <small>(total)</small>
+                        </span>
+                        <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+                        <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
+                      </div>
                     </div>
-                    <div class="comercial-acomp-metric is-primary">
-                      <span class="label">
-                        Marca própria
-                        <small>(outros)</small>
-                      </span>
-                      <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
-                      <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaOutros) }}</span>
-                    </div>
-                    <div class="comercial-acomp-metric is-primary is-total-mp">
-                      <span class="label">
-                        Marca própria
-                        <small>(total)</small>
-                      </span>
-                      <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
-                      <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
-                    </div>
-                  </div>
-                  <div class="comercial-acomp-card-metrics comercial-acomp-card-metrics-rejeitado">
-                    <div class="comercial-acomp-metric is-rejeitado">
-                      <span class="label">Rejeitado</span>
-                      <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
-                      <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
+                    <div class="comercial-acomp-rejeitado-box">
+                      <div class="comercial-acomp-metric is-rejeitado">
+                        <span class="label">Rejeitado</span>
+                        <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
+                        <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
+                      </div>
                     </div>
                   </div>
                   </div>
@@ -344,7 +360,8 @@
               faixa: card.percentualComissaoFaixaRequisicao,
               mostrarComissao: podeVerComissao() && !card.isTotal,
               projetado: false,
-              barraVerde: true
+              card: card,
+              baseTipo: 'requisicao'
             }"></ng-container>
           @if (card.mesAberto) {
             <ng-container
@@ -358,7 +375,6 @@
                 faixa: card.percentualComissaoFaixaProjetadoRequisicao,
                 mostrarComissao: podeVerComissao() && !card.isTotal,
                 projetado: true,
-                barraVerde: true,
                 card: card,
                 baseTipo: 'requisicao'
               }"></ng-container>
@@ -391,7 +407,9 @@
               bonus: card.valorBonusMarcaPropria,
               faixa: card.percentualComissaoFaixaMarcaPropria,
               mostrarComissao: podeVerComissao() && !card.isTotal,
-              projetado: false
+              projetado: false,
+              card: card,
+              baseTipo: 'marcaPropria'
             }"></ng-container>
           @if (card.mesAberto) {
             <ng-container
@@ -413,6 +431,127 @@
       </section>
     </div>
   </div>
+  @if (temAnaliseDesempenho(card)) {
+    <div class="comercial-acomp-bloco comercial-acomp-bloco-analise">
+      <h4 class="comercial-acomp-bloco-titulo is-analise">Análise e desempenho</h4>
+      <div class="comercial-acomp-bases">
+        @if (temMetaCadastrada(card.valorMetaRequisicao)) {
+          <section class="comercial-acomp-base is-manip">
+            <header class="comercial-acomp-base-head">
+              <h4>
+                <span class="comercial-acomp-base-mark is-verde" aria-hidden="true"></span>
+                Manipulados
+              </h4>
+              <p class="comercial-acomp-base-meta">
+                Meta
+                <strong>{{ formatarMoeda(card.valorMetaRequisicao) }}</strong>
+              </p>
+            </header>
+            <div
+              class="comercial-acomp-analise-grid"
+              [class.is-foco-dia]="temAnaliseDoDia(card)">
+              <div class="comercial-acomp-analise-metric">
+                <span class="label">Meta do dia p/ 100%</span>
+                <span class="value">{{ formatarMoeda(card.vendaDiaMeta100Requisicao) }}</span>
+              </div>
+              @if (temAnaliseDoDia(card)) {
+                <div class="comercial-acomp-analise-metric">
+                  <span class="label">Vendido hoje</span>
+                  <span class="value">{{ formatarMoeda(card.valorRecebidoHojeRequisicao) }}</span>
+                </div>
+                <div class="comercial-acomp-analise-metric is-destaque">
+                  <span class="label">Falta hoje p/ 100%</span>
+                  <span
+                    class="value"
+                    [class.is-falta-hoje]="destacarFaltaHoje(card.faltaMetaHoje100Requisicao)">
+                    {{ formatarMoeda(card.faltaMetaHoje100Requisicao) }}
+                  </span>
+                </div>
+              }
+              @if (card.percentualMetaTopoFaixaRequisicao != null) {
+                <div class="comercial-acomp-analise-metric">
+                  <span class="label">
+                    Meta do dia p/ {{ formatarPercentualTopo(card.percentualMetaTopoFaixaRequisicao) }}
+                  </span>
+                  <span class="value">{{ formatarMoeda(card.vendaDiaMetaTopoRequisicao) }}</span>
+                </div>
+                @if (temAnaliseDoDia(card)) {
+                  <div class="comercial-acomp-analise-metric comercial-acomp-analise-metric-spacer" aria-hidden="true"></div>
+                  <div class="comercial-acomp-analise-metric is-destaque">
+                    <span class="label">
+                      Falta hoje p/ {{ formatarPercentualTopo(card.percentualMetaTopoFaixaRequisicao) }}
+                    </span>
+                    <span
+                      class="value"
+                      [class.is-falta-hoje]="destacarFaltaHoje(card.faltaMetaHojeTopoRequisicao)">
+                      {{ formatarMoeda(card.faltaMetaHojeTopoRequisicao) }}
+                    </span>
+                  </div>
+                }
+              }
+            </div>
+          </section>
+        }
+        @if (temMetaCadastrada(card.valorMetaMarcaPropria)) {
+          <section class="comercial-acomp-base is-marca">
+            <header class="comercial-acomp-base-head">
+              <h4>
+                <span class="comercial-acomp-base-mark is-azul" aria-hidden="true"></span>
+                Marca própria
+              </h4>
+              <p class="comercial-acomp-base-meta">
+                Meta
+                <strong>{{ formatarMoeda(card.valorMetaMarcaPropria) }}</strong>
+              </p>
+            </header>
+            <div
+              class="comercial-acomp-analise-grid"
+              [class.is-foco-dia]="temAnaliseDoDia(card)">
+              <div class="comercial-acomp-analise-metric">
+                <span class="label">Meta do dia p/ 100%</span>
+                <span class="value">{{ formatarMoeda(card.vendaDiaMeta100MarcaPropria) }}</span>
+              </div>
+              @if (temAnaliseDoDia(card)) {
+                <div class="comercial-acomp-analise-metric">
+                  <span class="label">Vendido hoje</span>
+                  <span class="value">{{ formatarMoeda(card.valorRecebidoHojeMarcaPropria) }}</span>
+                </div>
+                <div class="comercial-acomp-analise-metric is-destaque">
+                  <span class="label">Falta hoje p/ 100%</span>
+                  <span
+                    class="value"
+                    [class.is-falta-hoje]="destacarFaltaHoje(card.faltaMetaHoje100MarcaPropria)">
+                    {{ formatarMoeda(card.faltaMetaHoje100MarcaPropria) }}
+                  </span>
+                </div>
+              }
+              @if (card.percentualMetaTopoFaixaMarcaPropria != null) {
+                <div class="comercial-acomp-analise-metric">
+                  <span class="label">
+                    Meta do dia p/ {{ formatarPercentualTopo(card.percentualMetaTopoFaixaMarcaPropria) }}
+                  </span>
+                  <span class="value">{{ formatarMoeda(card.vendaDiaMetaTopoMarcaPropria) }}</span>
+                </div>
+                @if (temAnaliseDoDia(card)) {
+                  <div class="comercial-acomp-analise-metric comercial-acomp-analise-metric-spacer" aria-hidden="true"></div>
+                  <div class="comercial-acomp-analise-metric is-destaque">
+                    <span class="label">
+                      Falta hoje p/ {{ formatarPercentualTopo(card.percentualMetaTopoFaixaMarcaPropria) }}
+                    </span>
+                    <span
+                      class="value"
+                      [class.is-falta-hoje]="destacarFaltaHoje(card.faltaMetaHojeTopoMarcaPropria)">
+                      {{ formatarMoeda(card.faltaMetaHojeTopoMarcaPropria) }}
+                    </span>
+                  </div>
+                }
+              }
+            </div>
+          </section>
+        }
+      </div>
+    </div>
+  }
 </ng-template>
 
 <ng-template
@@ -426,13 +565,11 @@
   let-faixa="faixa"
   let-mostrarComissao="mostrarComissao"
   let-projetado="projetado"
-  let-barraVerde="barraVerde"
   let-card="card"
   let-baseTipo="baseTipo">
   <article
     class="comercial-acomp-meta-col"
-    [class.is-projetado]="projetado"
-    [class.is-verde]="barraVerde">
+    [class.is-projetado]="projetado">
     <h5>
       {{ titulo }}
       @if (mostrarComissao && faixa != null) {
@@ -459,24 +596,37 @@
         }
       </div>
       @if (temMetaCadastrada(meta)) {
-        <div
-          class="comercial-acomp-meta-ring-wrap"
-          role="progressbar"
-          [attr.aria-valuenow]="percentual"
-          [attr.aria-label]="titulo + ' da meta'"
-          aria-valuemin="0"
-          aria-valuemax="100">
-          <svg class="comercial-acomp-meta-ring" viewBox="0 0 36 36" aria-hidden="true">
-            <circle class="comercial-acomp-meta-ring-bg" cx="18" cy="18" r="15.5"></circle>
-            <circle
-              class="comercial-acomp-meta-ring-fg"
-              cx="18"
-              cy="18"
-              r="15.5"
-              [attr.stroke-dasharray]="arcoMetaRing(percentual)"
-              stroke-dashoffset="0"></circle>
-          </svg>
-          <span class="comercial-acomp-meta-ring-pct">{{ formatarPercentualMeta(percentual) }}</span>
+        <div class="comercial-acomp-meta-ring-group">
+          <div
+            class="comercial-acomp-meta-ring-wrap"
+            [class.is-vermelho]="classeCorAnelMeta(percentual, card?.isTotal === true, basePrimeiraFaixaDoCard(card, baseTipo)) === 'is-vermelho'"
+            [class.is-azul]="classeCorAnelMeta(percentual, card?.isTotal === true, basePrimeiraFaixaDoCard(card, baseTipo)) === 'is-azul'"
+            [class.is-verde]="classeCorAnelMeta(percentual, card?.isTotal === true, basePrimeiraFaixaDoCard(card, baseTipo)) === 'is-verde'"
+            role="progressbar"
+            [attr.aria-valuenow]="percentual"
+            [attr.aria-label]="titulo + ' da meta'"
+            aria-valuemin="0"
+            aria-valuemax="100">
+            <svg class="comercial-acomp-meta-ring" viewBox="0 0 36 36" aria-hidden="true">
+              <circle class="comercial-acomp-meta-ring-bg" cx="18" cy="18" r="15.5"></circle>
+              <circle
+                class="comercial-acomp-meta-ring-fg"
+                cx="18"
+                cy="18"
+                r="15.5"
+                [attr.stroke-dasharray]="arcoMetaRing(percentual)"
+                stroke-dashoffset="0"></circle>
+            </svg>
+            <span class="comercial-acomp-meta-ring-pct">{{ formatarPercentualMeta(percentual) }}</span>
+          </div>
+          <button
+            type="button"
+            class="comercial-acomp-info-btn"
+            title="Motivo da cor do gráfico"
+            aria-label="Informação sobre a cor do gráfico de meta"
+            (click)="abrirInfoCorAnel($event, percentual, titulo, card, baseTipo)">
+            <i class="fas fa-info-circle" aria-hidden="true"></i>
+          </button>
         </div>
       }
     </div>
@@ -490,7 +640,9 @@
         aria-valuemax="100">
         <span
           class="comercial-acomp-meta-bar-fill"
-          [class.is-verde]="barraVerde"
+          [class.is-vermelho]="classeCorAnelMeta(percentual, card?.isTotal === true, basePrimeiraFaixaDoCard(card, baseTipo)) === 'is-vermelho'"
+          [class.is-azul]="classeCorAnelMeta(percentual, card?.isTotal === true, basePrimeiraFaixaDoCard(card, baseTipo)) === 'is-azul'"
+          [class.is-verde]="classeCorAnelMeta(percentual, card?.isTotal === true, basePrimeiraFaixaDoCard(card, baseTipo)) === 'is-verde'"
           [style.width.%]="larguraBarraMeta(percentual)"></span>
       </span>
     }
@@ -593,37 +745,39 @@
                 <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
               </div>
             </div>
-            <div class="comercial-acomp-mp-grid">
-              <div class="comercial-acomp-metric is-primary">
-                <span class="label">
-                  Marca própria
-                  <small>({{ rotuloMarcaPropriaSetor(card) }})</small>
-                </span>
-                <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
-                <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaSetores) }}</span>
+            <div class="comercial-acomp-mp-rejeitado-row">
+              <div class="comercial-acomp-mp-grid">
+                <div class="comercial-acomp-metric is-primary">
+                  <span class="label">
+                    Marca própria
+                    <small>({{ rotuloMarcaPropriaSetor(card) }})</small>
+                  </span>
+                  <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
+                  <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaSetores) }}</span>
+                </div>
+                <div class="comercial-acomp-metric is-primary">
+                  <span class="label">
+                    Marca própria
+                    <small>(outros)</small>
+                  </span>
+                  <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
+                  <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaOutros) }}</span>
+                </div>
+                <div class="comercial-acomp-metric is-primary is-total-mp">
+                  <span class="label">
+                    Marca própria
+                    <small>(total)</small>
+                  </span>
+                  <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
+                  <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
+                </div>
               </div>
-              <div class="comercial-acomp-metric is-primary">
-                <span class="label">
-                  Marca própria
-                  <small>(outros)</small>
-                </span>
-                <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
-                <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaOutros) }}</span>
-              </div>
-              <div class="comercial-acomp-metric is-primary is-total-mp">
-                <span class="label">
-                  Marca própria
-                  <small>(total)</small>
-                </span>
-                <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
-                <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
-              </div>
-            </div>
-            <div class="comercial-acomp-card-metrics comercial-acomp-card-metrics-rejeitado">
-              <div class="comercial-acomp-metric is-rejeitado">
-                <span class="label">Rejeitado</span>
-                <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
-                <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
+              <div class="comercial-acomp-rejeitado-box">
+                <div class="comercial-acomp-metric is-rejeitado">
+                  <span class="label">Rejeitado</span>
+                  <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
+                  <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
+                </div>
               </div>
             </div>
             </div>
@@ -1288,6 +1442,101 @@
             </dd>
           </div>
         </dl>
+      </div>
+    </div>
+  </div>
+}
+
+@if (infoCorAnelAberto) {
+  <div class="modal-overlay nao-clicavel">
+    <div
+      class="modal-conteudo comercial-acomp-modal-info"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ca-cor-anel-titulo">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo" id="ca-cor-anel-titulo">
+          Cor do gráfico — {{ infoCorAnelTitulo }}
+        </h3>
+        <button
+          type="button"
+          class="modal-fechar"
+          (click)="fecharInfoCorAnel()"
+          aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p class="comercial-acomp-info-lead">
+          @if (infoCorAnelIsTotal) {
+            Na loja (sem faixas de comissão): abaixo de 80% vermelho, de 80% a 99,9% azul e 100% ou mais verde.
+          } @else {
+            No vendedor: abaixo da base da 1ª faixa (mínimo 80%) vermelho, até 99,9% azul e 100% ou mais verde.
+          }
+        </p>
+        <dl class="comercial-acomp-info-linhas">
+          <div class="comercial-acomp-info-linha is-total">
+            <dt>% atual</dt>
+            <dd>
+              <span class="valor">{{ formatarPercentualMeta(infoCorAnelPercentual) }}</span>
+            </dd>
+          </div>
+          @if (!infoCorAnelIsTotal) {
+            <div class="comercial-acomp-info-linha">
+              <dt>Base da 1ª faixa</dt>
+              <dd>
+                <span class="valor">
+                  {{ infoCorAnelBasePrimeiraFaixa != null
+                    ? formatarPercentualMeta(infoCorAnelBasePrimeiraFaixa)
+                    : 'Sem faixa (usa 80%)' }}
+                </span>
+              </dd>
+            </div>
+          }
+          <div
+            class="comercial-acomp-info-linha"
+            [class.is-total]="classeCorAnelMeta(infoCorAnelPercentual, infoCorAnelIsTotal, infoCorAnelBasePrimeiraFaixa) === 'is-vermelho'">
+            <dt>
+              <span class="comercial-acomp-cor-dot is-vermelho" aria-hidden="true"></span>
+              Vermelho
+            </dt>
+            <dd>
+              <span class="valor">
+                abaixo de {{ formatarPercentualMeta(limiarVermelhoAnelMeta(infoCorAnelIsTotal, infoCorAnelBasePrimeiraFaixa)) }}
+              </span>
+            </dd>
+          </div>
+          <div
+            class="comercial-acomp-info-linha"
+            [class.is-total]="classeCorAnelMeta(infoCorAnelPercentual, infoCorAnelIsTotal, infoCorAnelBasePrimeiraFaixa) === 'is-azul'">
+            <dt>
+              <span class="comercial-acomp-cor-dot is-azul" aria-hidden="true"></span>
+              Azul
+            </dt>
+            <dd>
+              <span class="valor">
+                de {{ formatarPercentualMeta(limiarVermelhoAnelMeta(infoCorAnelIsTotal, infoCorAnelBasePrimeiraFaixa)) }} a 99,9%
+              </span>
+            </dd>
+          </div>
+          <div
+            class="comercial-acomp-info-linha"
+            [class.is-total]="classeCorAnelMeta(infoCorAnelPercentual, infoCorAnelIsTotal, infoCorAnelBasePrimeiraFaixa) === 'is-verde'">
+            <dt>
+              <span class="comercial-acomp-cor-dot is-verde" aria-hidden="true"></span>
+              Verde
+            </dt>
+            <dd>
+              <span class="valor">100% ou mais</span>
+            </dd>
+          </div>
+        </dl>
+        <p class="comercial-acomp-info-nota">
+          Neste card a cor é
+          <strong>{{ rotuloCorAnelMeta(infoCorAnelPercentual, infoCorAnelIsTotal, infoCorAnelBasePrimeiraFaixa) }}</strong>:
+          {{ motivoCorAnelMeta(infoCorAnelPercentual, infoCorAnelIsTotal, infoCorAnelBasePrimeiraFaixa) }}
+        </p>
       </div>
     </div>
   </div>

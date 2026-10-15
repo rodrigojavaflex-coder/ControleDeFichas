@@ -6,6 +6,7 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { ComercialTipoBase } from '../../common/enums/comercial-tipo-base.enum';
 import { ComercialIncidenciaComissao } from '../../common/enums/comercial-incidencia-comissao.enum';
+import { ComercialCriterioRanking } from '../../common/enums/comercial-criterio-ranking.enum';
 import { assertUnidadeFolha } from '../folha/utils/folha-unidade-scope.util';
 import { ComercialMetaVendedor } from '../comercial-meta/entities/comercial-meta-vendedor.entity';
 import { ComercialMetaUnidade } from '../comercial-meta/entities/comercial-meta-unidade.entity';
@@ -37,6 +38,8 @@ import {
 const NOME_SEM_VINCULO = 'Sem vínculo';
 /** Agrupa movimento sem `codigo_vendedor` na paga; não gera card (RN-COM-004). */
 const CODIGO_SEM_VINCULO = -1;
+/** Topo fixo da análise de desempenho no card TOTAL da loja. */
+const TOPO_META_LOJA_PCT = 105;
 
 type MovimentoRow = {
   codigo_vendedor: number | null;
@@ -289,6 +292,85 @@ export class ComercialAcompanhamentoService {
     totais.valorComissaoBaseMarcaPropria = lojaComissaoMp;
     totais.valorRejeitado = lojaRejeitado.valor;
     totais.quantidadeRejeitado = lojaRejeitado.qtd;
+
+    const mapaVazio = () => new Map() as MapaMovimento;
+    const tercVazio = () =>
+      new Map() as Map<number, { valor: number; qtd: number }>;
+    let reqHoje = mapaVazio();
+    let mpHoje = mapaVazio();
+    let revendaHoje = mapaVazio();
+    let tercPorCodigoHoje = tercVazio();
+    let lojaRecebidoHojeReq = 0;
+    let lojaRecebidoHojeMp = 0;
+    const incluirHoje = tetoLoja != null && tetoLoja === hoje;
+    if (incluirHoje) {
+      const [
+        reqHojeMap,
+        mpHojeMap,
+        revendaHojeMap,
+        volumeLojaHoje,
+        tercLojaHoje,
+        tercPorCodHoje,
+      ] = await Promise.all([
+        this.buscarRecebidoRequisicao(dto.unidade, hoje, hoje),
+        this.buscarRecebidoMarcaPropria(dto.unidade, hoje, hoje),
+        this.buscarRecebidoRevendaManipulados(dto.unidade, hoje, hoje),
+        this.buscarVolumeLoja(
+          dto.unidade,
+          hoje,
+          hoje,
+          setoresUnidade,
+          setoresUnidadeRevenda,
+        ),
+        this.buscarRecebidoTerceiros(dto.unidade, hoje, hoje),
+        this.buscarRecebidoTerceirosPorVendedor(dto.unidade, hoje, hoje),
+      ]);
+      reqHoje = reqHojeMap;
+      mpHoje = mpHojeMap;
+      revendaHoje = revendaHojeMap;
+      tercPorCodigoHoje = tercPorCodHoje;
+      const puraHoje = this.round2(
+        todosItens.reduce((s, i) => {
+          const codigo = i.codigoVendedorErp;
+          if (codigo == null || codigo <= 0) return s;
+          return s + (reqHojeMap.get(codigo)?.valor ?? 0);
+        }, 0),
+      );
+      lojaRecebidoHojeReq = this.round2(
+        puraHoje +
+          volumeLojaHoje.revendaManipulados.valor +
+          tercLojaHoje.valor,
+      );
+      lojaRecebidoHojeMp = this.round2(volumeLojaHoje.marcaPropria.valor);
+      totais.valorRecebidoHojeRequisicao = lojaRecebidoHojeReq;
+      totais.valorRecebidoHojeMarcaPropria = lojaRecebidoHojeMp;
+    } else {
+      totais.valorRecebidoHojeRequisicao = null;
+      totais.valorRecebidoHojeMarcaPropria = null;
+    }
+
+    for (const item of todosItens) {
+      const codigo = item.codigoVendedorErp;
+      if (!incluirHoje || codigo == null || codigo <= 0) {
+        item.valorRecebidoHojeRequisicao = incluirHoje ? 0 : null;
+        item.valorRecebidoHojeMarcaPropria = incluirHoje ? 0 : null;
+        continue;
+      }
+      const hojeItem = this.montarItem(
+        item.funcionarioId,
+        item.nomeVendedor,
+        codigo,
+        reqHoje,
+        mpHoje,
+        mapaVazio(),
+        revendaHoje,
+        item.codigosSetorRevendaManipulados ?? [],
+        item.codigosSetorMarcaPropria ?? [],
+        tercPorCodigoHoje,
+      );
+      item.valorRecebidoHojeRequisicao = hojeItem.valorRecebidoRequisicao;
+      item.valorRecebidoHojeMarcaPropria = hojeItem.valorRecebidoMarcaPropria;
+    }
 
     await this.anexarDesempenho(
       todosItens,
@@ -1483,42 +1565,52 @@ export class ComercialAcompanhamentoService {
       periodo.dataFinal,
     );
 
-    const [metas, metasUnidade, faixas, politicas, calendario, feriados] =
-      await Promise.all([
-        ids.length
-          ? this.metaRepo.find({
-              where: {
-                anoMes: periodo.anoMes,
-                funcionario: { id: In(ids) },
-              },
-              relations: ['funcionario'],
-            })
-          : Promise.resolve([]),
-        this.metaUnidadeRepo.find({
-          where: { unidade, anoMes: periodo.anoMes },
-        }),
-        ids.length && exporComissao
-          ? this.faixaRepo.find({
-              where: { funcionario: { id: In(ids) } },
-              relations: ['funcionario'],
-            })
-          : Promise.resolve([]),
-        ids.length && exporComissao
-          ? this.politicaRepo.find({
-              where: { funcionario: { id: In(ids) } },
-              relations: ['funcionario'],
-            })
-          : Promise.resolve([]),
-        this.calendarioRepo.findOne({ where: { unidade } }),
-        this.feriadoRepo
-          .createQueryBuilder('f')
-          .where('f.unidade = :unidade', { unidade })
-          .andWhere('f.data >= :ini AND f.data <= :fim', {
-            ini: periodo.dataInicial,
-            fim: periodo.dataFinal,
+    const [
+      metas,
+      metasUnidade,
+      faixas,
+      politicas,
+      politicaUnidade,
+      calendario,
+      feriados,
+    ] = await Promise.all([
+      ids.length
+        ? this.metaRepo.find({
+            where: {
+              anoMes: periodo.anoMes,
+              funcionario: { id: In(ids) },
+            },
+            relations: ['funcionario'],
           })
-          .getMany(),
-      ]);
+        : Promise.resolve([]),
+      this.metaUnidadeRepo.find({
+        where: { unidade, anoMes: periodo.anoMes },
+      }),
+      ids.length
+        ? this.faixaRepo.find({
+            where: { funcionario: { id: In(ids) } },
+            relations: ['funcionario'],
+          })
+        : Promise.resolve([]),
+      ids.length && exporComissao
+        ? this.politicaRepo.find({
+            where: { funcionario: { id: In(ids) } },
+            relations: ['funcionario'],
+          })
+        : Promise.resolve([]),
+      this.politicaUnidadeRepo.findOne({ where: { unidade } }),
+      this.calendarioRepo.findOne({ where: { unidade } }),
+      this.feriadoRepo
+        .createQueryBuilder('f')
+        .where('f.unidade = :unidade', { unidade })
+        .andWhere('f.data >= :ini AND f.data <= :fim', {
+          ini: periodo.dataInicial,
+          fim: periodo.dataFinal,
+        })
+        .getMany(),
+    ]);
+    const criterioRanking =
+      politicaUnidade?.criterioRanking ?? ComercialCriterioRanking.PERCENTUAL;
 
     const metaReq = new Map<string, number>();
     const metaMp = new Map<string, number>();
@@ -1540,6 +1632,23 @@ export class ComercialAcompanhamentoService {
       const lista = faixasPorFuncTipo.get(chave) ?? [];
       lista.push(fx);
       faixasPorFuncTipo.set(chave, lista);
+    }
+
+    for (const item of itens) {
+      const fid = item.funcionarioId;
+      if (!fid) continue;
+      const faixasReq =
+        faixasPorFuncTipo.get(`${fid}|${ComercialTipoBase.REQUISICAO}`) ?? [];
+      const faixasMp =
+        faixasPorFuncTipo.get(`${fid}|${ComercialTipoBase.MARCA_PROPRIA}`) ?? [];
+      item.percentualMetaPrimeiraFaixaRequisicao =
+        this.percentualMetaPrimeiraFaixa(faixasReq);
+      item.percentualMetaPrimeiraFaixaMarcaPropria =
+        this.percentualMetaPrimeiraFaixa(faixasMp);
+      item.percentualMetaTopoFaixaRequisicao =
+        this.percentualMetaTopoFaixa(faixasReq);
+      item.percentualMetaTopoFaixaMarcaPropria =
+        this.percentualMetaTopoFaixa(faixasMp);
     }
 
     const politicaPorFuncTipo = new Map<string, ComercialComissaoPolitica>();
@@ -1664,6 +1773,37 @@ export class ComercialAcompanhamentoService {
     totais.percentualProjecaoRequisicao = pctLojaProjReq;
     totais.valorProjetadoMarcaPropria = lojaProjetadoMp;
     totais.percentualProjecaoMarcaPropria = pctLojaProjMp;
+
+    const diasRestantes = Math.max(0, duMes - realizados);
+    for (const item of itens) {
+      this.anexarAnaliseDesempenho(
+        item,
+        item.valorRecebidoRequisicao,
+        item.valorMetaRequisicao,
+        item.percentualMetaTopoFaixaRequisicao,
+        item.valorRecebidoMarcaPropria,
+        item.valorMetaMarcaPropria,
+        item.percentualMetaTopoFaixaMarcaPropria,
+        diasRestantes,
+        item.valorRecebidoHojeRequisicao,
+        item.valorRecebidoHojeMarcaPropria,
+      );
+    }
+    totais.percentualMetaTopoFaixaRequisicao = TOPO_META_LOJA_PCT;
+    totais.percentualMetaTopoFaixaMarcaPropria = TOPO_META_LOJA_PCT;
+    this.anexarAnaliseDesempenho(
+      totais,
+      lojaRecebidoReq,
+      totais.valorMetaRequisicao,
+      TOPO_META_LOJA_PCT,
+      lojaRecebidoMp,
+      totais.valorMetaMarcaPropria,
+      TOPO_META_LOJA_PCT,
+      diasRestantes,
+      totais.valorRecebidoHojeRequisicao,
+      totais.valorRecebidoHojeMarcaPropria,
+    );
+    this.anexarRankings(itens, criterioRanking);
 
     if (!exporComissao) return;
 
@@ -1825,6 +1965,202 @@ export class ComercialAcompanhamentoService {
       qtd += item.qtd;
     }
     return { valor, qtd };
+  }
+
+  private percentualMetaPrimeiraFaixa(
+    faixas: ComercialComissaoFaixa[],
+  ): number | null {
+    if (!faixas.length) return null;
+    let menor: number | null = null;
+    for (const faixa of faixas) {
+      const de = Number(faixa.percentualMetaDe);
+      if (!Number.isFinite(de)) continue;
+      if (menor == null || de < menor) menor = de;
+    }
+    return menor;
+  }
+
+  private percentualMetaTopoFaixa(
+    faixas: ComercialComissaoFaixa[],
+  ): number | null {
+    if (!faixas.length) return null;
+    let maior: number | null = null;
+    for (const faixa of faixas) {
+      const de = Number(faixa.percentualMetaDe);
+      if (!Number.isFinite(de)) continue;
+      if (maior == null || de > maior) maior = de;
+    }
+    return maior;
+  }
+
+  private anexarAnaliseDesempenho(
+    alvo: {
+      faltaMeta100Requisicao?: number | null;
+      faltaMetaTopoRequisicao?: number | null;
+      vendaDiaMeta100Requisicao?: number | null;
+      vendaDiaMetaTopoRequisicao?: number | null;
+      faltaMeta100MarcaPropria?: number | null;
+      faltaMetaTopoMarcaPropria?: number | null;
+      vendaDiaMeta100MarcaPropria?: number | null;
+      vendaDiaMetaTopoMarcaPropria?: number | null;
+      faltaMetaHoje100Requisicao?: number | null;
+      faltaMetaHojeTopoRequisicao?: number | null;
+      faltaMetaHoje100MarcaPropria?: number | null;
+      faltaMetaHojeTopoMarcaPropria?: number | null;
+    },
+    realizadoReq: number,
+    metaReq: number | null | undefined,
+    topoReqPct: number | null | undefined,
+    realizadoMp: number,
+    metaMp: number | null | undefined,
+    topoMpPct: number | null | undefined,
+    diasRestantes: number,
+    vendidoHojeReq?: number | null,
+    vendidoHojeMp?: number | null,
+  ): void {
+    const ritmo = (
+      realizado: number,
+      meta: number | null | undefined,
+      topoPct: number | null | undefined,
+    ): {
+      falta100: number | null;
+      faltaTopo: number | null;
+      dia100: number | null;
+      diaTopo: number | null;
+    } => {
+      if (meta == null || !(meta > 0)) {
+        return { falta100: null, faltaTopo: null, dia100: null, diaTopo: null };
+      }
+      const falta100 = this.round2(Math.max(0, meta - realizado));
+      const topo =
+        topoPct != null && Number.isFinite(Number(topoPct))
+          ? Number(topoPct)
+          : null;
+      const metaTopo =
+        topo != null && topo > 0 ? this.round2(meta * (topo / 100)) : null;
+      const faltaTopo =
+        metaTopo != null
+          ? this.round2(Math.max(0, metaTopo - realizado))
+          : null;
+      const dia100 =
+        diasRestantes > 0 ? this.round2(falta100 / diasRestantes) : 0;
+      const diaTopo =
+        faltaTopo != null
+          ? diasRestantes > 0
+            ? this.round2(faltaTopo / diasRestantes)
+            : 0
+          : null;
+      return { falta100, faltaTopo, dia100, diaTopo };
+    };
+
+    const faltaHoje = (
+      metaDia: number | null,
+      vendidoHoje: number | null | undefined,
+    ): number | null => {
+      if (metaDia == null) return null;
+      if (vendidoHoje == null || !Number.isFinite(Number(vendidoHoje))) {
+        return null;
+      }
+      return this.round2(Math.max(0, metaDia - Number(vendidoHoje)));
+    };
+
+    const req = ritmo(realizadoReq, metaReq, topoReqPct);
+    alvo.faltaMeta100Requisicao = req.falta100;
+    alvo.faltaMetaTopoRequisicao = req.faltaTopo;
+    alvo.vendaDiaMeta100Requisicao = req.dia100;
+    alvo.vendaDiaMetaTopoRequisicao = req.diaTopo;
+    alvo.faltaMetaHoje100Requisicao = faltaHoje(req.dia100, vendidoHojeReq);
+    alvo.faltaMetaHojeTopoRequisicao = faltaHoje(req.diaTopo, vendidoHojeReq);
+
+    const mp = ritmo(realizadoMp, metaMp, topoMpPct);
+    alvo.faltaMeta100MarcaPropria = mp.falta100;
+    alvo.faltaMetaTopoMarcaPropria = mp.faltaTopo;
+    alvo.vendaDiaMeta100MarcaPropria = mp.dia100;
+    alvo.vendaDiaMetaTopoMarcaPropria = mp.diaTopo;
+    alvo.faltaMetaHoje100MarcaPropria = faltaHoje(mp.dia100, vendidoHojeMp);
+    alvo.faltaMetaHojeTopoMarcaPropria = faltaHoje(mp.diaTopo, vendidoHojeMp);
+  }
+
+  private anexarRankings(
+    itens: ComercialAcompanhamentoItemDto[],
+    criterio: ComercialCriterioRanking,
+  ): void {
+    const ranquear = (
+      scoreOf: (item: ComercialAcompanhamentoItemDto) => number | null,
+      setRank: (item: ComercialAcompanhamentoItemDto, rank: number | null) => void,
+    ): void => {
+      const elegiveis = itens
+        .filter((i) => i.funcionarioId)
+        .map((item) => ({ item, score: scoreOf(item) }))
+        .filter(
+          (row): row is { item: ComercialAcompanhamentoItemDto; score: number } =>
+            row.score != null && Number.isFinite(row.score),
+        )
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return (a.item.nomeVendedor ?? '').localeCompare(
+            b.item.nomeVendedor ?? '',
+            'pt-BR',
+          );
+        });
+      let pos = 0;
+      let prevScore: number | null = null;
+      for (let i = 0; i < elegiveis.length; i += 1) {
+        const { item, score } = elegiveis[i];
+        if (prevScore == null || score < prevScore - 1e-9) {
+          pos = i + 1;
+          prevScore = score;
+        }
+        setRank(item, pos);
+      }
+      for (const item of itens) {
+        if (item.funcionarioId && scoreOf(item) == null) {
+          setRank(item, null);
+        }
+      }
+    };
+
+    if (criterio === ComercialCriterioRanking.VALOR) {
+      ranquear(
+        (i) =>
+          i.valorMetaRequisicao != null && i.valorMetaRequisicao > 0
+            ? Number(i.valorRecebidoRequisicao)
+            : null,
+        (i, r) => {
+          i.rankingManipulados = r;
+        },
+      );
+      ranquear(
+        (i) =>
+          i.valorMetaMarcaPropria != null && i.valorMetaMarcaPropria > 0
+            ? Number(i.valorRecebidoMarcaPropria)
+            : null,
+        (i, r) => {
+          i.rankingMarcaPropria = r;
+        },
+      );
+    } else {
+      ranquear(
+        (i) =>
+          i.percentualMetaRequisicao != null &&
+          Number.isFinite(Number(i.percentualMetaRequisicao))
+            ? Number(i.percentualMetaRequisicao)
+            : null,
+        (i, r) => {
+          i.rankingManipulados = r;
+        },
+      );
+      ranquear(
+        (i) =>
+          i.percentualMetaMarcaPropria != null &&
+          Number.isFinite(Number(i.percentualMetaMarcaPropria))
+            ? Number(i.percentualMetaMarcaPropria)
+            : null,
+        (i, r) => {
+          i.rankingMarcaPropria = r;
+        },
+      );
+    }
   }
 
   private resolverFaixaComissao(

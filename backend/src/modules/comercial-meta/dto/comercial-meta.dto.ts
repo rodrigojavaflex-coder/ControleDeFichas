@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 import { Unidade } from '../../../common/enums/unidade.enum';
 import { ComercialTipoBase } from '../../../common/enums/comercial-tipo-base.enum';
+import { ComercialCriterioRanking } from '../../../common/enums/comercial-criterio-ranking.enum';
 
 export class FindComercialMetaDto {
   @ApiProperty({ enum: Unidade })
@@ -121,6 +122,43 @@ export class SalvarComercialMetaUnidadeDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   valorMetaMarcaPropria: number;
+
+  @ApiPropertyOptional({
+    enum: ComercialCriterioRanking,
+    description: 'Critério de ranking dos vendedores (opcional nesta gravação).',
+  })
+  @IsOptional()
+  @IsEnum(ComercialCriterioRanking)
+  criterioRanking?: ComercialCriterioRanking;
+}
+
+export class SalvarComercialCriterioRankingDto {
+  @ApiProperty({ enum: Unidade })
+  @IsEnum(Unidade)
+  unidade: Unidade;
+
+  @ApiProperty({
+    enum: ComercialCriterioRanking,
+    description: 'Critério de ranking dos vendedores no acompanhamento.',
+  })
+  @IsEnum(ComercialCriterioRanking)
+  criterioRanking: ComercialCriterioRanking;
+
+  @ApiPropertyOptional({ example: 2026, description: 'Para remontar a lista.' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  ano?: number;
+
+  @ApiPropertyOptional({ example: 10, description: 'Para remontar a lista.' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  mes?: number;
 }
 
 export class ComercialMetaItemDto {
@@ -170,6 +208,14 @@ export class ComercialMetaListResponseDto {
     description: 'Meta da loja (Marca própria) da competência filtrada.',
   })
   metaUnidadeMarcaPropria: number | null;
+
+  @ApiProperty({
+    enum: ComercialCriterioRanking,
+    description:
+      'Critério de ranking dos vendedores no acompanhamento (unidade).',
+    default: ComercialCriterioRanking.PERCENTUAL,
+  })
+  criterioRanking: ComercialCriterioRanking;
 
   @ApiProperty({ type: [ComercialMetaItemDto] })
   itens: ComercialMetaItemDto[];

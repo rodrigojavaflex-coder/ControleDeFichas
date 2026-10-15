@@ -105,6 +105,11 @@
   min-width: 8rem;
 }
 
+.comercial-meta-unidade-campo-ranking .form-control {
+  width: 10.5rem;
+  min-width: 8rem;
+}
+
 .comercial-meta-unidade-valor {
   min-height: 2.375rem;
   display: flex;

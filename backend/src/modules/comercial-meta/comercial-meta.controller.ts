@@ -22,6 +22,7 @@ import {
   FindComercialMetaDto,
   SalvarComercialMetaDto,
   SalvarComercialMetaUnidadeDto,
+  SalvarComercialCriterioRankingDto,
   ComercialMetaListResponseDto,
 } from './dto/comercial-meta.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -56,6 +57,20 @@ export class ComercialMetaController {
     @Body() dto: SalvarComercialMetaUnidadeDto,
   ): Promise<ComercialMetaListResponseDto> {
     return this.service.salvarMetaUnidade(req.user, dto);
+  }
+
+  @Put('criterio-ranking')
+  @Permissions(Permission.COMERCIAL_META_UPDATE)
+  @ApiOperation({
+    summary:
+      'Define o critério de ranking dos vendedores (% da meta ou valor R$)',
+  })
+  @ApiResponse({ status: 200, type: ComercialMetaListResponseDto })
+  salvarCriterioRanking(
+    @Req() req: { user: Usuario },
+    @Body() dto: SalvarComercialCriterioRankingDto,
+  ): Promise<ComercialMetaListResponseDto> {
+    return this.service.salvarCriterioRanking(req.user, dto);
   }
 
   @Put()

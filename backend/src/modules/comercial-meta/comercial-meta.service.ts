@@ -15,6 +15,7 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { ComercialTipoBase } from '../../common/enums/comercial-tipo-base.enum';
 import { ComercialIncidenciaComissao } from '../../common/enums/comercial-incidencia-comissao.enum';
+import { ComercialCriterioRanking } from '../../common/enums/comercial-criterio-ranking.enum';
 import {
   assertUnidadeFolha,
   unidadeEscopoUsuarioFolha,
@@ -25,6 +26,7 @@ import {
   FindComercialMetaDto,
   SalvarComercialMetaDto,
   SalvarComercialMetaUnidadeDto,
+  SalvarComercialCriterioRankingDto,
   ComercialMetaListResponseDto,
 } from './dto/comercial-meta.dto';
 import {
@@ -174,8 +176,43 @@ export class ComercialMetaService {
       ComercialTipoBase.MARCA_PROPRIA,
       dto.valorMetaMarcaPropria,
     );
+    if (dto.criterioRanking != null) {
+      await this.gravarCriterioRanking(dto.unidade, dto.criterioRanking);
+    }
     const [ano, mes] = dto.anoMes.split('-').map((n) => Number(n));
     return this.montarLista(dto.unidade, ano, mes);
+  }
+
+  async salvarCriterioRanking(
+    usuario: Usuario,
+    dto: SalvarComercialCriterioRankingDto,
+  ): Promise<ComercialMetaListResponseDto> {
+    assertUnidadeFolha(usuario, dto.unidade);
+    await this.gravarCriterioRanking(dto.unidade, dto.criterioRanking);
+    const agora = new Date();
+    const ano = dto.ano ?? agora.getFullYear();
+    const mes = dto.mes ?? agora.getMonth() + 1;
+    return this.montarLista(dto.unidade, ano, mes);
+  }
+
+  private async gravarCriterioRanking(
+    unidade: Unidade,
+    criterioRanking: ComercialCriterioRanking,
+  ): Promise<void> {
+    let row = await this.politicaUnidadeRepo.findOne({
+      where: { unidade },
+    });
+    if (!row) {
+      row = this.politicaUnidadeRepo.create({
+        unidade,
+        codigosSetor: [],
+        codigosSetorRevendaManipulados: [],
+        criterioRanking,
+      });
+    } else {
+      row.criterioRanking = criterioRanking;
+    }
+    await this.politicaUnidadeRepo.save(row);
   }
 
   async copiarMesAnterior(
@@ -435,6 +472,8 @@ export class ComercialMetaService {
       codigosSetorRevendaManipulados: (row?.codigosSetorRevendaManipulados ?? [])
         .map(Number)
         .filter((n) => Number.isInteger(n) && n > 0),
+      criterioRanking:
+        row?.criterioRanking ?? ComercialCriterioRanking.PERCENTUAL,
     };
   }
 
@@ -459,6 +498,9 @@ export class ComercialMetaService {
     } else {
       row.codigosSetor = codigosSetor;
       row.codigosSetorRevendaManipulados = codigosSetorRevendaManipulados;
+    }
+    if (!row.criterioRanking) {
+      row.criterioRanking = ComercialCriterioRanking.PERCENTUAL;
     }
     await this.politicaUnidadeRepo.save(row);
     return this.listarPoliticaUnidade(usuario, dto.unidade);
@@ -496,11 +538,15 @@ export class ComercialMetaService {
           unidade: dto.unidade,
           codigosSetor,
           codigosSetorRevendaManipulados,
+          criterioRanking: ComercialCriterioRanking.PERCENTUAL,
         });
       } else {
         unidadeRow.codigosSetor = codigosSetor;
         unidadeRow.codigosSetorRevendaManipulados =
           codigosSetorRevendaManipulados;
+        if (!unidadeRow.criterioRanking) {
+          unidadeRow.criterioRanking = ComercialCriterioRanking.PERCENTUAL;
+        }
       }
       await unidadeRepo.save(unidadeRow);
 
@@ -767,12 +813,18 @@ export class ComercialMetaService {
         metaUnidadeMarcaPropria = Number(m.valorMeta);
       }
     }
+    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
+      where: { unidade },
+    });
+    const criterioRanking =
+      politicaUnidade?.criterioRanking ?? ComercialCriterioRanking.PERCENTUAL;
     return {
       unidade,
       ano,
       mes: mes ?? null,
       metaUnidadeRequisicao,
       metaUnidadeMarcaPropria,
+      criterioRanking,
       itens,
     };
   }
