@@ -542,6 +542,23 @@ export class ComercialAcompanhamentoListResponseDto {
   dataFinal: string;
 }
 
+export class ComercialAcompanhamentoMeuCardDto {
+  @ApiProperty({ type: ComercialAcompanhamentoItemDto })
+  item: ComercialAcompanhamentoItemDto;
+
+  @ApiProperty({ enum: Unidade })
+  unidade: Unidade;
+
+  @ApiProperty()
+  anoMes: string;
+
+  @ApiProperty()
+  dataInicial: string;
+
+  @ApiProperty()
+  dataFinal: string;
+}
+
 export class ComercialAcompanhamentoVendedorOpcaoDto {
   @ApiProperty()
   funcionarioId: string;

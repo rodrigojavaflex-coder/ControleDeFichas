@@ -1,0 +1,62 @@
+:host {
+  display: block;
+}
+
+.comercial-vendedor-card-home {
+  height: auto;
+}
+
+.comercial-vendedor-card-home .comercial-acomp-card-head-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.comercial-acomp-modal-detalhe .loading-message {
+  margin: 0.75rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  border: 1px dashed var(--border-color, #cbd5e1);
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-acomp-modal-detalhe .comercial-acomp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.comercial-acomp-modal-detalhe .comercial-acomp-table th,
+.comercial-acomp-modal-detalhe .comercial-acomp-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  color: var(--text-primary, #1e293b);
+  text-align: left;
+}
+
+.comercial-acomp-modal-detalhe .comercial-acomp-table th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.comercial-acomp-modal-detalhe .comercial-acomp-table tfoot td {
+  border-bottom: none;
+}
+
+.comercial-acomp-modal-detalhe .comercial-acomp-table tr.no-data td {
+  text-align: center;
+  color: var(--text-secondary, #64748b);
+}
+
+body.theme-dark .comercial-acomp-modal-detalhe .comercial-acomp-table th,
+body.theme-dark .comercial-acomp-modal-detalhe .comercial-acomp-table td,
+[data-theme='dark'] .comercial-acomp-modal-detalhe .comercial-acomp-table th,
+[data-theme='dark'] .comercial-acomp-modal-detalhe .comercial-acomp-table td {
+  border-bottom-color: var(--border-color, #334155);
+}

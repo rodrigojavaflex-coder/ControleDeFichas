@@ -6,6 +6,13 @@ export enum Unidade {
   UBERABA = 'UBERABA',
 }
 
+export interface FuncionarioComercialVinculo {
+  id: string;
+  nome: string;
+  unidade: Unidade;
+  codigoVendedorErp?: number | null;
+}
+
 export enum Permission {
   CONFIGURACAO_ACCESS = 'configuracao:access',
   // Usuários
@@ -170,6 +177,7 @@ export enum Permission {
 
   COMERCIAL_ACOMPANHAMENTO_READ = 'comercial-acompanhamento:read',
   COMERCIAL_ACOMPANHAMENTO_COMISSAO = 'comercial-acompanhamento:comissao',
+  COMERCIAL_ACOMPANHAMENTO_HOME = 'comercial-acompanhamento:home',
   COMERCIAL_META_READ = 'comercial-meta:read',
   COMERCIAL_META_UPDATE = 'comercial-meta:update',
   COMERCIAL_COMISSAO_READ = 'comercial-comissao:read',
@@ -238,6 +246,7 @@ export interface Usuario {
   /** Unidades consultáveis na produtividade (`null`/vazio = só `unidade`). */
   unidadesProdutividade?: Unidade[] | null;
   vendedor?: Vendedor | null; // Vendedor associado ao usuário
+  funcionario?: FuncionarioComercialVinculo | null;
   criadoEm: Date;
   atualizadoEm: Date;
 }
@@ -258,6 +267,7 @@ export interface CreateUsuarioDto {
   unidadesProdutividade?: Unidade[] | null;
   perfilIds: string[];
   vendedorId?: string | null; // ID do vendedor associado ao usuário
+  funcionarioId?: string | null;
 }
 
 export interface UpdateUsuarioDto {
@@ -270,6 +280,7 @@ export interface UpdateUsuarioDto {
   unidadesProdutividade?: Unidade[] | null;
   perfilIds?: string[];
   vendedorId?: string | null; // Atualizar vendedor associado ao usuário (null para remover)
+  funcionarioId?: string | null;
 }
 
 export interface FindUsuariosDto {

@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Perfil } from '../perfil/entities/perfil.entity';
 import { Vendedor } from '../vendedores/entities/vendedor.entity';
+import { Funcionario } from '../folha/entities/funcionario.entity';
 import * as bcrypt from 'bcrypt';
 import { Usuario } from './entities/usuario.entity';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
@@ -37,6 +38,8 @@ export class UsuariosService {
     private readonly perfilRepository: Repository<Perfil>,
     @InjectRepository(Vendedor)
     private readonly vendedorRepository: Repository<Vendedor>,
+    @InjectRepository(Funcionario)
+    private readonly funcionarioRepository: Repository<Funcionario>,
   ) {}
 
   async create(createUsuarioDto: CreateUsuarioDto): Promise<Usuario> {
@@ -97,6 +100,11 @@ export class UsuariosService {
         ),
         perfis,
         vendedor: vendedor || undefined,
+        funcionario:
+          (await this.resolverFuncionarioComercial(
+            createUsuarioDto.funcionarioId,
+            createUsuarioDto.unidade,
+          )) ?? undefined,
       };
 
       const user = this.usuarioRepository.create(userData);
@@ -181,7 +189,7 @@ export class UsuariosService {
     // Carregar usuário incluindo a relação com Perfil e Vendedor
     const user = await this.usuarioRepository.findOne({
       where: { id },
-      relations: ['perfis', 'vendedor'],
+      relations: ['perfis', 'vendedor', 'funcionario'],
     });
 
     if (!user) {
@@ -280,6 +288,23 @@ export class UsuariosService {
         }
         user.vendedor = vendedor;
       }
+    }
+
+    if (updateUsuarioDto.funcionarioId !== undefined) {
+      user.funcionario = await this.resolverFuncionarioComercial(
+        updateUsuarioDto.funcionarioId,
+        updateUsuarioDto.unidade !== undefined
+          ? updateUsuarioDto.unidade
+          : user.unidade,
+      );
+    } else if (
+      updateUsuarioDto.unidade !== undefined &&
+      user.funcionario?.id
+    ) {
+      user.funcionario = await this.resolverFuncionarioComercial(
+        user.funcionario.id,
+        updateUsuarioDto.unidade,
+      );
     }
 
     try {
@@ -454,6 +479,59 @@ export class UsuariosService {
    */
   async getProfiles(): Promise<Perfil[]> {
     return this.perfilRepository.find();
+  }
+
+  async listarFuncionariosComerciais(
+    unidade?: Unidade,
+  ): Promise<
+    { id: string; nome: string; unidade: Unidade; codigoVendedorErp: number }[]
+  > {
+    const qb = this.funcionarioRepository
+      .createQueryBuilder('f')
+      .where('f.codigoVendedorErp IS NOT NULL')
+      .andWhere('f.codigoVendedorErp > 0')
+      .orderBy('f.nome', 'ASC');
+    if (unidade) {
+      qb.andWhere('f.unidade = :unidade', { unidade });
+    }
+    const rows = await qb.getMany();
+    return rows.map((f) => ({
+      id: f.id,
+      nome: f.nome,
+      unidade: f.unidade,
+      codigoVendedorErp: f.codigoVendedorErp!,
+    }));
+  }
+
+  private async resolverFuncionarioComercial(
+    funcionarioId: string | null | undefined,
+    unidadeUsuario?: Unidade | null,
+  ): Promise<Funcionario | null> {
+    if (!funcionarioId) {
+      return null;
+    }
+    const funcionario = await this.funcionarioRepository.findOne({
+      where: { id: funcionarioId },
+    });
+    if (!funcionario) {
+      throw new NotFoundException(
+        `Funcionário com ID ${funcionarioId} não encontrado`,
+      );
+    }
+    if (
+      funcionario.codigoVendedorErp == null ||
+      funcionario.codigoVendedorErp <= 0
+    ) {
+      throw new BadRequestException(
+        'Funcionário sem código de vendedor ERP — não gera card comercial.',
+      );
+    }
+    if (unidadeUsuario && funcionario.unidade !== unidadeUsuario) {
+      throw new BadRequestException(
+        'Funcionário deve ser da mesma unidade do usuário.',
+      );
+    }
+    return funcionario;
   }
 
   private sanitizeUnidadesProdutividade(

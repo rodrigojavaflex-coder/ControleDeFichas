@@ -10,6 +10,7 @@ import { ComercialAcompanhamentoService } from './comercial-acompanhamento.servi
 import {
   ComercialAcompanhamentoDetalheDto,
   ComercialAcompanhamentoListResponseDto,
+  ComercialAcompanhamentoMeuCardDto,
   ComercialAcompanhamentoVendedorOpcaoDto,
   FindComercialAcompanhamentoDetalheDto,
   FindComercialAcompanhamentoDto,
@@ -44,6 +45,31 @@ export class ComercialAcompanhamentoController {
     @Query() query: FindComercialAcompanhamentoDto,
   ): Promise<ComercialAcompanhamentoListResponseDto> {
     return this.service.findAll(req.user, query);
+  }
+
+  @Get('meu')
+  @Permissions(Permission.COMERCIAL_ACOMPANHAMENTO_HOME)
+  @ApiOperation({
+    summary: 'Card comercial do vendedor logado na competência atual',
+  })
+  @ApiResponse({ status: 200, type: ComercialAcompanhamentoMeuCardDto })
+  findMeu(
+    @Req() req: { user: Usuario },
+  ): Promise<ComercialAcompanhamentoMeuCardDto> {
+    return this.service.findMeuCard(req.user);
+  }
+
+  @Get('meu/detalhe')
+  @Permissions(Permission.COMERCIAL_ACOMPANHAMENTO_HOME)
+  @ApiOperation({
+    summary:
+      'Movimentos do vendedor logado na competência atual (card da tela inicial)',
+  })
+  @ApiResponse({ status: 200, type: ComercialAcompanhamentoDetalheDto })
+  findMeuDetalhe(
+    @Req() req: { user: Usuario },
+  ): Promise<ComercialAcompanhamentoDetalheDto> {
+    return this.service.findMeuDetalhe(req.user);
   }
 
   @Get('vendedores')

@@ -1,46 +1,75 @@
-<div class="home-page">
-  <header class="home-header">
-    <div class="home-welcome">
-      @if (userInitial) {
-        <div class="user-avatar user-avatar--static" aria-hidden="true">
-          <span>{{ userInitial }}</span>
+<div class="home-page" [class.has-dashboard]="podeVerCardHome">
+  <div class="home-col home-col-nav">
+    <header class="home-header">
+      <div class="home-welcome">
+        @if (userInitial) {
+          <div class="user-avatar user-avatar--static" aria-hidden="true">
+            <span>{{ userInitial }}</span>
+          </div>
+        }
+        <div class="home-header-text">
+          @if (userName) {
+            <h1 class="home-user-name">{{ userName }}</h1>
+            <p class="home-greeting">Bem-vindo!</p>
+          } @else {
+            <h1 class="home-user-name">Bem-vindo!</h1>
+          }
         </div>
+        <button type="button" class="btn btn-secondary home-personalize-btn" (click)="openPersonalize()">
+          <span class="home-personalize-icon" aria-hidden="true">⚙</span>
+          Personalizar atalhos
+        </button>
+      </div>
+    </header>
+
+    <section class="home-shortcuts" aria-label="Atalhos">
+      <h2 class="home-section-title">Atalhos</h2>
+      @if (shortcuts.length === 0) {
+        <div class="home-empty" aria-live="polite">
+          <p>Nenhum atalho disponível com suas permissões atuais.</p>
+          <button type="button" class="btn btn-primary" (click)="openPersonalize()">
+            Configurar atalhos
+          </button>
+        </div>
+      } @else {
+        <nav class="home-shortcuts-grid" aria-label="Atalhos rápidos">
+          @for (s of shortcuts; track s.id) {
+            <a
+              class="home-shortcut-card"
+              [routerLink]="s.route"
+              (click)="onShortcutNavigate()"
+            >
+              <span class="home-shortcut-icon" [innerHTML]="iconHtml(s.icon)"></span>
+              <span class="home-shortcut-label">{{ s.label }}</span>
+            </a>
+          }
+        </nav>
       }
-      <div class="home-header-text">
-        @if (userName) {
-          <h1 class="home-user-name">{{ userName }}</h1>
-          <p class="home-greeting">Bem-vindo!</p>
-        } @else {
-          <h1 class="home-user-name">Bem-vindo!</h1>
+    </section>
+  </div>
+
+  @if (podeVerCardHome) {
+    <section class="home-col home-col-card" aria-label="Meu desempenho">
+      <div class="home-dashboard-head">
+        <h2 class="home-section-title">Meu desempenho</h2>
+        @if (cardCompetencia) {
+          <p class="home-dashboard-competencia">{{ cardCompetencia }}</p>
         }
       </div>
-    </div>
-    <button type="button" class="btn btn-secondary home-personalize-btn" (click)="openPersonalize()">
-      <span class="home-personalize-icon" aria-hidden="true">⚙</span>
-      Personalizar atalhos
-    </button>
-  </header>
-
-  @if (shortcuts.length === 0) {
-    <section class="home-empty" aria-live="polite">
-      <p>Nenhum atalho disponível com suas permissões atuais.</p>
-      <button type="button" class="btn btn-primary" (click)="openPersonalize()">
-        Configurar atalhos
-      </button>
-    </section>
-  } @else {
-    <nav class="home-shortcuts-grid" aria-label="Atalhos rápidos">
-      @for (s of shortcuts; track s.id) {
-        <a
-          class="home-shortcut-card"
-          [routerLink]="s.route"
-          (click)="onShortcutNavigate()"
-        >
-          <span class="home-shortcut-icon" [innerHTML]="iconHtml(s.icon)"></span>
-          <span class="home-shortcut-label">{{ s.label }}</span>
-        </a>
+      @if (cardCarregando) {
+        <p class="home-dashboard-status">Carregando seu card comercial…</p>
+      } @else if (cardErro) {
+        <p class="home-dashboard-status is-aviso">{{ cardErro }}</p>
+      } @else if (cardItem) {
+        <app-comercial-vendedor-card
+          [item]="cardItem"
+          [podeVerComissao]="podeVerComissao"
+          [mostrarAcompanhamento]="podeAbrirAcompanhamento"
+          [competencia]="cardCompetencia"
+          [unidade]="cardUnidade"
+        />
       }
-    </nav>
+    </section>
   }
 </div>
 

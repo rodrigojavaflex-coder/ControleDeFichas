@@ -97,6 +97,14 @@ export class AuthService {
         criadoEm: authUser.vendedor.criadoEm || new Date(),
         atualizadoEm: authUser.vendedor.atualizadoEm || new Date(),
       } : null,
+      funcionario: authUser.funcionario
+        ? {
+            id: authUser.funcionario.id,
+            nome: authUser.funcionario.nome,
+            unidade: authUser.funcionario.unidade,
+            codigoVendedorErp: authUser.funcionario.codigoVendedorErp ?? null,
+          }
+        : null,
       unidade: authUser.unidade ?? undefined,
       unidadesProdutividade: authUser.unidadesProdutividade ?? null,
       criadoEm: authUser.criadoEm,

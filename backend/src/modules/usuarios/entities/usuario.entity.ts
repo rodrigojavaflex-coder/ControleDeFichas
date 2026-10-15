@@ -10,6 +10,7 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { Perfil } from '../../perfil/entities/perfil.entity';
 import { Vendedor } from '../../vendedores/entities/vendedor.entity';
+import { Funcionario } from '../../folha/entities/funcionario.entity';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
@@ -110,4 +111,14 @@ export class Usuario extends BaseEntity {
   @ManyToOne(() => Vendedor, { nullable: true, eager: false })
   @JoinColumn({ name: 'vendedorId' })
   vendedor?: Vendedor;
+
+  @ApiProperty({
+    description:
+      'Funcionário comercial associado ao usuário (card de acompanhamento).',
+    type: () => Funcionario,
+    required: false,
+  })
+  @ManyToOne(() => Funcionario, { nullable: true, eager: false })
+  @JoinColumn({ name: 'funcionarioId' })
+  funcionario?: Funcionario | null;
 }

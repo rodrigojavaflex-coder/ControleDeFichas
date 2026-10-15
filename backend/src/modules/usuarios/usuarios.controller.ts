@@ -31,6 +31,7 @@ import { UpdateAtalhosHomeDto } from './dto/update-atalhos-home.dto';
 import { Usuario } from './entities/usuario.entity';
 import type { Request } from 'express';
 import { Permission } from '../../common/enums/permission.enum';
+import { Unidade } from '../../common/enums/unidade.enum';
 import { buildPermissionCatalog } from '../../common/utils/permission-catalog.util';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -84,6 +85,22 @@ export class UsuariosController {
   })
   getProfiles(): Promise<Perfil[]> {
     return this.usuariosService.getProfiles();
+  }
+
+  @Get('funcionarios-comerciais')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(
+    Permission.USER_CREATE,
+    Permission.USER_UPDATE,
+    Permission.USER_READ,
+  )
+  @ApiOperation({
+    summary:
+      'Funcionários com código de vendedor ERP para vínculo no cadastro de usuário',
+  })
+  @ApiQuery({ name: 'unidade', required: false, enum: Unidade })
+  listarFuncionariosComerciais(@Query('unidade') unidade?: Unidade) {
+    return this.usuariosService.listarFuncionariosComerciais(unidade);
   }
 
   @Get()

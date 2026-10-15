@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
-import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil, Unidade } from '../../models/usuario.model';
+import { CreateUsuarioDto, UpdateUsuarioDto, Usuario, Perfil, Unidade, FuncionarioComercialVinculo } from '../../models/usuario.model';
 import { PageContextService } from '../../services/page-context.service';
 import { AutocompleteComponent } from '../autocomplete/autocomplete';
 import { VendedoresService } from '../../services/vendedores.service';
@@ -43,6 +43,7 @@ export class UserFormComponent implements OnInit {
   error: string | null = null;
   isSubmitting = false;
   temUnidadePrincipal = false;
+  funcionariosComerciais: FuncionarioComercialVinculo[] = [];
 
   availableProfiles: Perfil[] = [];
 
@@ -68,6 +69,7 @@ export class UserFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadProfiles();
+    this.carregarFuncionariosComerciais(this.userForm.get('unidade')?.value);
     this.userForm.get('unidade')?.valueChanges.subscribe((unidade) => {
       this.onUnidadeChange(unidade);
     });
@@ -83,6 +85,26 @@ export class UserFormComponent implements OnInit {
     if (!this.temUnidadePrincipal) {
       this.userForm.patchValue({ unidadesProdutividade: [] }, { emitEvent: false });
     }
+    this.carregarFuncionariosComerciais(unidade);
+  }
+
+  private carregarFuncionariosComerciais(
+    unidade: Unidade | string | null | undefined,
+  ): void {
+    const unidadeFiltro =
+      unidade && String(unidade).trim() !== '' ? (unidade as Unidade) : undefined;
+    this.userService.listarFuncionariosComerciais(unidadeFiltro).subscribe({
+      next: (rows) => {
+        this.funcionariosComerciais = rows;
+        const atual = this.userForm.get('funcionarioId')?.value as string;
+        if (atual && !rows.some((f) => f.id === atual)) {
+          this.userForm.patchValue({ funcionarioId: '' }, { emitEvent: false });
+        }
+      },
+      error: () => {
+        this.funcionariosComerciais = [];
+      },
+    });
   }
 
   private createForm(): FormGroup {
@@ -94,7 +116,8 @@ export class UserFormComponent implements OnInit {
       perfilIds: [[], Validators.required],
       unidade: [''], // Campo opcional para unidade
       unidadesProdutividade: [[] as Unidade[]],
-      vendedorId: [''] // Campo opcional para vendedor
+      vendedorId: [''],
+      funcionarioId: [''],
     });
   }
 
@@ -158,7 +181,8 @@ export class UserFormComponent implements OnInit {
             (user.perfil?.id ? [user.perfil.id] : []),
           unidade: user.unidade || '',
           unidadesProdutividade: user.unidadesProdutividade ?? [],
-          vendedorId: user.vendedor?.id || ''
+          vendedorId: user.vendedor?.id || '',
+          funcionarioId: user.funcionario?.id || '',
         });
         this.onUnidadeChange(user.unidade || '');
 
@@ -229,6 +253,9 @@ export class UserFormComponent implements OnInit {
         formValue.unidade,
         formValue.unidadesProdutividade,
       ),
+      vendedorId:
+        this.vendedorAutocomplete?.selectedItem?.id || formValue.vendedorId || null,
+      funcionarioId: formValue.funcionarioId || null,
     };
 
     this.userService.createUser(createUsuarioDto).subscribe({
@@ -257,6 +284,7 @@ export class UserFormComponent implements OnInit {
         formValue.unidadesProdutividade,
       ),
       vendedorId: vendedorId,
+      funcionarioId: formValue.funcionarioId || null,
     };
 
     // Adiciona senha apenas se foi informada

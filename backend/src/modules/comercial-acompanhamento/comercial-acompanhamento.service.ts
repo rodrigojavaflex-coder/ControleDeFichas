@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { Funcionario } from '../folha/entities/funcionario.entity';
@@ -29,6 +29,7 @@ import {
   ComercialAcompanhamentoDetalheDto,
   ComercialAcompanhamentoItemDto,
   ComercialAcompanhamentoListResponseDto,
+  ComercialAcompanhamentoMeuCardDto,
   ComercialAcompanhamentoTotaisDto,
   ComercialAcompanhamentoVendedorOpcaoDto,
   FindComercialAcompanhamentoDetalheDto,
@@ -84,6 +85,81 @@ export class ComercialAcompanhamentoService {
     @InjectRepository(ProducaoFeriado)
     private readonly feriadoRepo: Repository<ProducaoFeriado>,
   ) {}
+
+  async findMeuCard(usuario: Usuario): Promise<ComercialAcompanhamentoMeuCardDto> {
+    const { usuarioCompleto, funcionario, ano, mes } =
+      await this.resolverMeuFuncionario(usuario);
+    const lista = await this.findAll(usuarioCompleto, {
+      unidade: funcionario.unidade,
+      ano,
+      mes,
+      funcionarioId: funcionario.id,
+    });
+    const item = lista.itens.find((i) => i.funcionarioId === funcionario.id);
+    if (!item) {
+      throw new NotFoundException(
+        'Card do vendedor não encontrado na competência atual.',
+      );
+    }
+    return {
+      item,
+      unidade: funcionario.unidade,
+      anoMes: lista.anoMes,
+      dataInicial: lista.dataInicial,
+      dataFinal: lista.dataFinal,
+    };
+  }
+
+  async findMeuDetalhe(
+    usuario: Usuario,
+  ): Promise<ComercialAcompanhamentoDetalheDto> {
+    const { usuarioCompleto, funcionario, ano, mes } =
+      await this.resolverMeuFuncionario(usuario);
+    return this.detalhe(usuarioCompleto, {
+      unidade: funcionario.unidade,
+      ano,
+      mes,
+      funcionarioId: funcionario.id,
+    });
+  }
+
+  private async resolverMeuFuncionario(usuario: Usuario): Promise<{
+    usuarioCompleto: Usuario;
+    funcionario: Funcionario;
+    ano: number;
+    mes: number;
+  }> {
+    const usuarioCompleto = await this.dataSource.getRepository(Usuario).findOne({
+      where: { id: usuario.id },
+      relations: ['funcionario', 'vendedor'],
+    });
+    const funcionarioId = usuarioCompleto?.funcionario?.id;
+    if (!funcionarioId) {
+      throw new ForbiddenException(
+        'Usuário sem funcionário comercial vinculado.',
+      );
+    }
+    const funcionario = await this.funcionarioRepo.findOne({
+      where: { id: funcionarioId },
+    });
+    if (
+      !funcionario ||
+      funcionario.codigoVendedorErp == null ||
+      funcionario.codigoVendedorErp <= 0
+    ) {
+      throw new NotFoundException(
+        'Funcionário comercial não gera card de acompanhamento.',
+      );
+    }
+    const hoje = ymdHojeSp();
+    const [anoStr, mesStr] = hoje.split('-');
+    return {
+      usuarioCompleto: usuarioCompleto ?? usuario,
+      funcionario,
+      ano: Number(anoStr),
+      mes: Number(mesStr),
+    };
+  }
 
   async listarVendedoresOpcoes(
     usuario: Usuario,

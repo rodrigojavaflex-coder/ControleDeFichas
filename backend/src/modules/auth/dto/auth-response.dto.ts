@@ -54,5 +54,11 @@ export class AuthResponseDto {
       criadoEm: Date;
       atualizadoEm: Date;
     } | null;
+    funcionario?: {
+      id: string;
+      nome: string;
+      unidade: Unidade;
+      codigoVendedorErp: number | null;
+    } | null;
   };
 }

@@ -6,6 +6,7 @@ import { Unidade } from '../models/usuario.model';
 import {
   ComercialAcompanhamentoDetalhe,
   ComercialAcompanhamentoListResponse,
+  ComercialAcompanhamentoMeuCard,
   ComercialAcompanhamentoVendedorOpcao,
   FindComercialAcompanhamentoDto,
 } from '../models/comercial-acompanhamento.model';
@@ -27,6 +28,14 @@ export class ComercialAcompanhamentoService {
       params = params.set('funcionarioId', dto.funcionarioId);
     }
     return this.http.get<ComercialAcompanhamentoListResponse>(base, { params });
+  }
+
+  meuCard(): Observable<ComercialAcompanhamentoMeuCard> {
+    return this.http.get<ComercialAcompanhamentoMeuCard>(`${base}/meu`);
+  }
+
+  meuDetalhe(): Observable<ComercialAcompanhamentoDetalhe> {
+    return this.http.get<ComercialAcompanhamentoDetalhe>(`${base}/meu/detalhe`);
   }
 
   listarVendedores(

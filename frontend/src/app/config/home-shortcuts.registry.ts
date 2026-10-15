@@ -10,7 +10,7 @@ export interface HomeShortcutDef {
 }
 
 /** Máximo de atalhos na tela inicial. */
-export const HOME_SHORTCUTS_MAX = 8;
+export const HOME_SHORTCUTS_MAX = 10;
 
 /** Atalhos sugeridos quando o usuário ainda não personalizou. */
 export const DEFAULT_HOME_SHORTCUT_IDS: readonly string[] = [

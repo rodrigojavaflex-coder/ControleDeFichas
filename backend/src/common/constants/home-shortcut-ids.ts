@@ -40,6 +40,6 @@ export const HOME_SHORTCUT_IDS = [
 
 export type HomeShortcutId = (typeof HOME_SHORTCUT_IDS)[number];
 
-export const HOME_SHORTCUTS_MAX = 8;
+export const HOME_SHORTCUTS_MAX = 10;
 
 export const HOME_SHORTCUT_ID_SET = new Set<string>(HOME_SHORTCUT_IDS);

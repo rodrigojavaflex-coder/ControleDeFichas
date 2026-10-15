@@ -156,7 +156,22 @@
         [required]="false">
       </app-autocomplete>
       <div class="form-help">
-        Selecione o vendedor associado ao usuário (opcional)
+        Selecione o vendedor associado ao usuário (opcional). Usado em vendas.
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="funcionarioId" class="form-label">Funcionário comercial</label>
+      <select id="funcionarioId" class="form-control" formControlName="funcionarioId">
+        <option value="">Nenhum</option>
+        @for (f of funcionariosComerciais; track f.id) {
+          <option [value]="f.id">
+            {{ f.nome }} ({{ f.codigoVendedorErp }})
+          </option>
+        }
+      </select>
+      <div class="form-help">
+        Vínculo do card de acompanhamento na tela inicial. Somente funcionários com código de vendedor ERP.
       </div>
     </div>
 

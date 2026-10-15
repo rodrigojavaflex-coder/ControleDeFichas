@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
@@ -12,6 +13,7 @@ import {
   IsEnum,
   IsIn,
   IsUUID,
+  ValidateIf,
 } from 'class-validator';
 import { Unidade } from '../../../common/enums/unidade.enum';
 
@@ -113,4 +115,17 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsUUID(4, { message: 'vendedorId deve ser um UUID válido' })
   vendedorId?: string;
+
+  @ApiProperty({
+    description:
+      'ID do funcionário comercial associado ao usuário (card na home)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  @ValidateIf((_, value) => value != null)
+  @IsUUID(4, { message: 'funcionarioId deve ser um UUID válido' })
+  funcionarioId?: string | null;
 }

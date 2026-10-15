@@ -135,6 +135,14 @@ export interface ComercialAcompanhamentoListResponse {
   dataFinal: string;
 }
 
+export interface ComercialAcompanhamentoMeuCard {
+  item: ComercialAcompanhamentoItem;
+  unidade: Unidade;
+  anoMes: string;
+  dataInicial: string;
+  dataFinal: string;
+}
+
 export interface ComercialAcompanhamentoVendedorOpcao {
   funcionarioId: string;
   nome: string;

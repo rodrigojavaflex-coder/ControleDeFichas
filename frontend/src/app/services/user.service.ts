@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, FindUsuariosDto, PaginatedResponse, PermissionCatalog, ChangePasswordDto, Perfil } from '../models/usuario.model';
+import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, FindUsuariosDto, PaginatedResponse, PermissionCatalog, ChangePasswordDto, Perfil, Unidade, FuncionarioComercialVinculo } from '../models/usuario.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -48,6 +48,19 @@ export class UserService {
    */
   getUserById(id: string): Observable<Usuario> {
     return this.http.get<Usuario>(`${this.apiUrl}/${id}`);
+  }
+
+  listarFuncionariosComerciais(
+    unidade?: Unidade | string | null,
+  ): Observable<FuncionarioComercialVinculo[]> {
+    let params = new HttpParams();
+    if (unidade) {
+      params = params.set('unidade', String(unidade));
+    }
+    return this.http.get<FuncionarioComercialVinculo[]>(
+      `${this.apiUrl}/funcionarios-comerciais`,
+      { params },
+    );
   }
 
   /**
