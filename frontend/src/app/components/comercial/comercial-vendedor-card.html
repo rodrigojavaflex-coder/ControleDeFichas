@@ -64,8 +64,21 @@
     </div>
   </header>
 
-  <div class="comercial-acomp-bloco comercial-acomp-bloco-resultados">
-    <h4 class="comercial-acomp-bloco-titulo">Resultados</h4>
+  <div
+    class="comercial-acomp-bloco comercial-acomp-bloco-resultados"
+    [class.is-collapsed]="!cardBlocoAberto('resultados')">
+    <button
+      type="button"
+      class="comercial-acomp-bloco-toggle"
+      (click)="toggleCardBloco('resultados')"
+      [attr.aria-expanded]="cardBlocoAberto('resultados')">
+      <h4 class="comercial-acomp-bloco-titulo">
+        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        Resultados
+      </h4>
+    </button>
+    @if (cardBlocoAberto('resultados')) {
+    <div class="comercial-acomp-bloco-corpo">
     <div class="comercial-acomp-manip-grid has-terceiros">
       <div class="comercial-acomp-metric is-success">
         <span class="label">Manipulado <small>(requisições)</small></span>
@@ -125,10 +138,25 @@
         </div>
       </div>
     </div>
+    </div>
+    }
   </div>
 
-  <div class="comercial-acomp-bloco comercial-acomp-bloco-metas">
-    <h4 class="comercial-acomp-bloco-titulo">Metas</h4>
+  <div
+    class="comercial-acomp-bloco comercial-acomp-bloco-metas"
+    [class.is-collapsed]="!cardBlocoAberto('metas')">
+    <button
+      type="button"
+      class="comercial-acomp-bloco-toggle"
+      (click)="toggleCardBloco('metas')"
+      [attr.aria-expanded]="cardBlocoAberto('metas')">
+      <h4 class="comercial-acomp-bloco-titulo">
+        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        Metas
+      </h4>
+    </button>
+    @if (cardBlocoAberto('metas')) {
+    <div class="comercial-acomp-bloco-corpo">
     <div class="comercial-acomp-bases">
       <section class="comercial-acomp-base is-manip">
         <header class="comercial-acomp-base-head">
@@ -223,11 +251,26 @@
         </div>
       </section>
     </div>
+    </div>
+    }
   </div>
 
   @if (temAnaliseDesempenho()) {
-    <div class="comercial-acomp-bloco comercial-acomp-bloco-analise">
-      <h4 class="comercial-acomp-bloco-titulo">Análise e desempenho</h4>
+    <div
+      class="comercial-acomp-bloco comercial-acomp-bloco-analise"
+      [class.is-collapsed]="!cardBlocoAberto('analise')">
+      <button
+        type="button"
+        class="comercial-acomp-bloco-toggle"
+        (click)="toggleCardBloco('analise')"
+        [attr.aria-expanded]="cardBlocoAberto('analise')">
+        <h4 class="comercial-acomp-bloco-titulo">
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          Análise e desempenho
+        </h4>
+      </button>
+      @if (cardBlocoAberto('analise')) {
+      <div class="comercial-acomp-bloco-corpo">
       <div class="comercial-acomp-bases">
         @if (temMetaCadastrada(item.valorMetaRequisicao)) {
           <section class="comercial-acomp-base is-manip">
@@ -336,6 +379,8 @@
           </section>
         }
       </div>
+      </div>
+      }
     </div>
   }
 </article>

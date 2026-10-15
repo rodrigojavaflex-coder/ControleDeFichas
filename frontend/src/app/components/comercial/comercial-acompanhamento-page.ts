@@ -109,10 +109,11 @@ type ComercialDetalheSecao =
   | 'marcaPropriaSetor'
   | 'marcaPropriaOutros'
   | 'orcamentos';
+type ComercialCardBloco = 'resultados' | 'metas' | 'analise';
 type ComercialProjecaoBase = 'requisicao' | 'marcaPropria';
 type ComercialPrintForma = 'resumido' | 'detalhado';
 
-const DETALHE_SECOES_FECHADAS: Record<ComercialDetalheSecao, boolean> = {
+const DETALHE_SECOES_PADRAO: Record<ComercialDetalheSecao, boolean> = {
   requisicoes: false,
   setor: false,
   terceiros: false,
@@ -120,6 +121,15 @@ const DETALHE_SECOES_FECHADAS: Record<ComercialDetalheSecao, boolean> = {
   marcaPropriaOutros: false,
   orcamentos: false,
 };
+
+const CARD_BLOCO_DEFAULT: Record<ComercialCardBloco, boolean> = {
+  resultados: true,
+  metas: true,
+  analise: true,
+};
+
+/** Valor do combo Vendedor para exibir só o card TOTAL da unidade. */
+const FILTRO_CARD_UNIDADE = '__unidade__';
 
 @Component({
   selector: 'app-comercial-acompanhamento-page',
@@ -136,11 +146,13 @@ export class ComercialAcompanhamentoPage implements OnInit {
   private service = inject(ComercialAcompanhamentoService);
 
   MESES_PT = MESES_PT;
+  readonly FILTRO_CARD_UNIDADE = FILTRO_CARD_UNIDADE;
 
   unidadeFiltro: Unidade | '' = '';
   unidadeDisabled = false;
   anoFiltro = 2026;
   mesFiltro = new Date().getMonth() + 1;
+  /** '' = todos; `__unidade__` = só total; uuid = só aquele vendedor. */
   funcionarioIdFiltro = '';
   anosDisponiveis: number[] = [];
 
@@ -156,7 +168,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
   itemDetalhe: ComercialAcompanhamentoItem | null = null;
   detalhe: ComercialAcompanhamentoDetalhe | null = null;
   detalheSecoesAbertas: Record<ComercialDetalheSecao, boolean> = {
-    ...DETALHE_SECOES_FECHADAS,
+    ...DETALHE_SECOES_PADRAO,
   };
   printDetalheAberto = false;
   printFormaDetalhe: ComercialPrintForma = 'resumido';
@@ -171,6 +183,51 @@ export class ComercialAcompanhamentoPage implements OnInit {
   infoCorAnelTitulo = '';
   infoCorAnelIsTotal = false;
   infoCorAnelBasePrimeiraFaixa: number | null = null;
+
+  private cardBlocosAbertos: Record<
+    string,
+    Partial<Record<ComercialCardBloco, boolean>>
+  > = {};
+
+  chaveCardBloco(card: {
+    isTotal?: boolean;
+    funcionarioId?: string | null;
+    titulo?: string;
+  }): string {
+    if (card.isTotal) return 'total';
+    return card.funcionarioId || card.titulo || 'card';
+  }
+
+  cardBlocoAberto(
+    card: {
+      isTotal?: boolean;
+      funcionarioId?: string | null;
+      titulo?: string;
+    },
+    bloco: ComercialCardBloco,
+  ): boolean {
+    const override = this.cardBlocosAbertos[this.chaveCardBloco(card)]?.[bloco];
+    return override ?? CARD_BLOCO_DEFAULT[bloco];
+  }
+
+  toggleCardBloco(
+    card: {
+      isTotal?: boolean;
+      funcionarioId?: string | null;
+      titulo?: string;
+    },
+    bloco: ComercialCardBloco,
+  ): void {
+    const key = this.chaveCardBloco(card);
+    const aberto = this.cardBlocoAberto(card, bloco);
+    this.cardBlocosAbertos = {
+      ...this.cardBlocosAbertos,
+      [key]: {
+        ...this.cardBlocosAbertos[key],
+        [bloco]: !aberto,
+      },
+    };
+  }
 
   ngOnInit(): void {
     if (!this.podeLer()) {
@@ -272,8 +329,17 @@ export class ComercialAcompanhamentoPage implements OnInit {
         codigosSetorMarcaPropria: this.totais.codigosSetorMarcaPropria ?? [],
       },
     ];
+    if (this.funcionarioIdFiltro === FILTRO_CARD_UNIDADE) {
+      return cards;
+    }
     for (const item of this.itens) {
       if (!item.funcionarioId) continue;
+      if (
+        this.funcionarioIdFiltro &&
+        item.funcionarioId !== this.funcionarioIdFiltro
+      ) {
+        continue;
+      }
       cards.push({
         titulo: this.rotuloVendedor(item),
         isTotal: false,
@@ -351,6 +417,9 @@ export class ComercialAcompanhamentoPage implements OnInit {
         faltaMetaHoje100MarcaPropria: item.faltaMetaHoje100MarcaPropria ?? null,
         faltaMetaHojeTopoMarcaPropria: item.faltaMetaHojeTopoMarcaPropria ?? null,
       });
+    }
+    if (this.funcionarioIdFiltro && this.funcionarioIdFiltro !== FILTRO_CARD_UNIDADE) {
+      return cards.filter((c) => !c.isTotal);
     }
     return cards;
   }
@@ -862,7 +931,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
     this.detalheAberto = true;
     this.carregandoDetalhe = true;
     this.detalhe = null;
-    this.detalheSecoesAbertas = { ...DETALHE_SECOES_FECHADAS };
+    this.detalheSecoesAbertas = { ...DETALHE_SECOES_PADRAO };
     this.printDetalheAberto = false;
     this.service
       .detalhe({
@@ -892,7 +961,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
     this.carregandoDetalhe = false;
     this.itemDetalhe = null;
     this.detalhe = null;
-    this.detalheSecoesAbertas = { ...DETALHE_SECOES_FECHADAS };
+    this.detalheSecoesAbertas = { ...DETALHE_SECOES_PADRAO };
   }
 
   toggleDetalheSecao(secao: ComercialDetalheSecao): void {
@@ -1586,6 +1655,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
         this.vendedores = rows;
         if (
           this.funcionarioIdFiltro &&
+          this.funcionarioIdFiltro !== FILTRO_CARD_UNIDADE &&
           !rows.some((v) => v.funcionarioId === this.funcionarioIdFiltro)
         ) {
           this.funcionarioIdFiltro = '';
@@ -1607,7 +1677,11 @@ export class ComercialAcompanhamentoPage implements OnInit {
         unidade: this.unidadeFiltro,
         ano: this.anoFiltro,
         mes: this.mesFiltro,
-        funcionarioId: this.funcionarioIdFiltro || undefined,
+        funcionarioId:
+          this.funcionarioIdFiltro &&
+          this.funcionarioIdFiltro !== FILTRO_CARD_UNIDADE
+            ? this.funcionarioIdFiltro
+            : undefined,
       })
       .subscribe({
         next: (res) => {

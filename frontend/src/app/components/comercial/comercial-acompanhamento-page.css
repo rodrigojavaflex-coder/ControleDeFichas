@@ -1,3 +1,14 @@
+/* Paleta sóbria do acompanhamento (tons mais escuros / menos vivos) */
+.comercial-acompanhamento-page,
+.comercial-vendedor-card-home {
+  --cor-sucesso: #166534;
+  --cor-primaria: #1e3a8a;
+  --cor-perigo: #991b1b;
+  --color-success: #166534;
+  --color-primary: #1e3a8a;
+  --color-danger: #991b1b;
+}
+
 .comercial-acompanhamento-page.vendas-page {
   height: auto;
   max-height: none;
@@ -166,9 +177,11 @@
 
 .comercial-acomp-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.85rem;
   align-items: stretch;
+  max-width: 1080px;
+  margin: 0 auto;
 }
 
 .comercial-acomp-card {
@@ -306,21 +319,21 @@
 .comercial-acomp-ranking-badge.is-manip.is-demais {
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--cor-sucesso, #16a34a) 16%, #fff) 0%,
-    color-mix(in srgb, var(--cor-sucesso, #16a34a) 8%, #fff) 100%
+    color-mix(in srgb, var(--cor-sucesso, #166534) 12%, #fff) 0%,
+    color-mix(in srgb, var(--cor-sucesso, #166534) 6%, #fff) 100%
   );
-  border-color: color-mix(in srgb, var(--cor-sucesso, #16a34a) 28%, transparent);
-  color: var(--cor-sucesso, #166534);
+  border-color: color-mix(in srgb, var(--cor-sucesso, #166534) 22%, transparent);
+  color: var(--cor-sucesso, #14532d);
 }
 
 .comercial-acomp-ranking-badge.is-marca.is-demais {
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--cor-primaria, #2563eb) 16%, #fff) 0%,
-    color-mix(in srgb, var(--cor-primaria, #2563eb) 8%, #fff) 100%
+    color-mix(in srgb, var(--cor-primaria, #1e3a8a) 12%, #fff) 0%,
+    color-mix(in srgb, var(--cor-primaria, #1e3a8a) 6%, #fff) 100%
   );
-  border-color: color-mix(in srgb, var(--cor-primaria, #2563eb) 28%, transparent);
-  color: var(--cor-primaria, #1d4ed8);
+  border-color: color-mix(in srgb, var(--cor-primaria, #1e3a8a) 22%, transparent);
+  color: var(--cor-primaria, #1e3a8a);
 }
 
 .comercial-acomp-card-tipo-icon {
@@ -403,7 +416,7 @@
   max-width: 100%;
   padding: 0.12rem 0.45rem;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--cor-perigo, #dc2626) 14%, transparent);
+  background: color-mix(in srgb, var(--cor-perigo, #991b1b) 10%, transparent);
   color: var(--text-primary, #0f172a);
 }
 
@@ -423,7 +436,13 @@
 }
 
 .comercial-acomp-manip-grid.has-terceiros {
-  grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .comercial-acomp-manip-grid.has-terceiros {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .comercial-acomp-manip-grid .comercial-acomp-metric {
@@ -436,7 +455,7 @@
   max-width: 100%;
   padding: 0.12rem 0.45rem;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--cor-sucesso, #16a34a) 16%, transparent);
+  background: color-mix(in srgb, var(--cor-sucesso, #166534) 10%, transparent);
   color: var(--text-primary, #0f172a);
 }
 
@@ -510,7 +529,7 @@
   max-width: 100%;
   padding: 0.12rem 0.45rem;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--cor-primaria, #2563eb) 16%, transparent);
+  background: color-mix(in srgb, var(--cor-primaria, #1e3a8a) 10%, transparent);
   color: var(--text-primary, #0f172a);
 }
 
@@ -539,6 +558,29 @@
   border-left: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
 }
 
+.comercial-acomp-bloco-toggle {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+}
+
+.comercial-acomp-bloco-toggle:hover .comercial-acomp-bloco-titulo {
+  color: var(--text-primary, #0f172a);
+}
+
+.comercial-acomp-bloco-toggle:focus-visible {
+  outline: 2px solid var(--cor-primaria, #1e3a8a);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .comercial-acomp-bloco-titulo {
   display: flex;
   align-items: center;
@@ -551,13 +593,36 @@
   color: var(--text-secondary, #64748b);
 }
 
+.comercial-acomp-bloco-toggle .comercial-acomp-bloco-titulo {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.comercial-acomp-bloco:not(.is-collapsed) .comercial-acomp-bloco-toggle .comercial-acomp-bloco-titulo {
+  margin-bottom: 0.5rem;
+}
+
+.comercial-acomp-bloco-titulo .fa-chevron-right {
+  font-size: 0.65rem;
+  color: var(--text-secondary, #64748b);
+  transition: transform 0.15s ease;
+}
+
+.comercial-acomp-bloco:not(.is-collapsed) .comercial-acomp-bloco-titulo .fa-chevron-right {
+  transform: rotate(90deg);
+}
+
 .comercial-acomp-bloco-titulo::before {
   content: '';
   width: 0.28rem;
   height: 0.85rem;
   border-radius: 999px;
-  background: var(--cor-sucesso, var(--color-success, #16a34a));
+  background: var(--cor-sucesso, var(--color-success, #166534));
   flex: 0 0 auto;
+}
+
+.comercial-acomp-bloco-toggle .comercial-acomp-bloco-titulo::before {
+  display: none;
 }
 
 .comercial-acomp-bloco-resultados .comercial-acomp-mp-rejeitado-row {
@@ -570,6 +635,15 @@
   padding: 0.7rem 0.75rem 0.75rem;
   border-top: 2px solid var(--cor-borda, var(--border-color, #cbd5e1));
   background: transparent;
+}
+
+.comercial-acomp-bloco.is-collapsed {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.comercial-acomp-bloco.is-collapsed .comercial-acomp-bloco-toggle .comercial-acomp-bloco-titulo {
+  margin-bottom: 0;
 }
 
 .comercial-acomp-card > .comercial-acomp-bloco-metas {
@@ -622,7 +696,7 @@
 .comercial-acomp-analise-metric.is-destaque {
   padding: 0.25rem 0.35rem;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--cor-perigo, #dc2626) 8%, transparent);
+  background: color-mix(in srgb, var(--cor-perigo, #991b1b) 6%, transparent);
 }
 
 .comercial-acomp-analise-metric-spacer {

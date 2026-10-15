@@ -19,15 +19,22 @@ type ComercialDetalheSecao =
   | 'marcaPropriaSetor'
   | 'marcaPropriaOutros'
   | 'orcamentos';
+type ComercialCardBloco = 'resultados' | 'metas' | 'analise';
 type ComercialProjecaoBase = 'requisicao' | 'marcaPropria';
 
-const DETALHE_SECOES_FECHADAS: Record<ComercialDetalheSecao, boolean> = {
+const DETALHE_SECOES_PADRAO: Record<ComercialDetalheSecao, boolean> = {
   requisicoes: false,
   setor: false,
   terceiros: false,
   marcaPropriaSetor: false,
   marcaPropriaOutros: false,
   orcamentos: false,
+};
+
+const CARD_BLOCO_DEFAULT: Record<ComercialCardBloco, boolean> = {
+  resultados: true,
+  metas: true,
+  analise: true,
 };
 
 @Component({
@@ -62,8 +69,21 @@ export class ComercialVendedorCardComponent {
   carregandoDetalhe = false;
   detalhe: ComercialAcompanhamentoDetalhe | null = null;
   detalheSecoesAbertas: Record<ComercialDetalheSecao, boolean> = {
-    ...DETALHE_SECOES_FECHADAS,
+    ...DETALHE_SECOES_PADRAO,
   };
+
+  private cardBlocosAbertos: Partial<Record<ComercialCardBloco, boolean>> = {};
+
+  cardBlocoAberto(bloco: ComercialCardBloco): boolean {
+    return this.cardBlocosAbertos[bloco] ?? CARD_BLOCO_DEFAULT[bloco];
+  }
+
+  toggleCardBloco(bloco: ComercialCardBloco): void {
+    this.cardBlocosAbertos = {
+      ...this.cardBlocosAbertos,
+      [bloco]: !this.cardBlocoAberto(bloco),
+    };
+  }
 
   get titulo(): string {
     return this.rotuloVendedor(this.item);
@@ -371,7 +391,7 @@ export class ComercialVendedorCardComponent {
     this.detalheAberto = true;
     this.carregandoDetalhe = true;
     this.detalhe = null;
-    this.detalheSecoesAbertas = { ...DETALHE_SECOES_FECHADAS };
+    this.detalheSecoesAbertas = { ...DETALHE_SECOES_PADRAO };
     this.detalheReq$.next();
     this.service
       .meuDetalhe()
@@ -396,7 +416,7 @@ export class ComercialVendedorCardComponent {
     this.detalheAberto = false;
     this.carregandoDetalhe = false;
     this.detalhe = null;
-    this.detalheSecoesAbertas = { ...DETALHE_SECOES_FECHADAS };
+    this.detalheSecoesAbertas = { ...DETALHE_SECOES_PADRAO };
   }
 
   toggleDetalheSecao(secao: ComercialDetalheSecao): void {

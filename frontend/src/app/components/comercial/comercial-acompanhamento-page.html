@@ -79,6 +79,9 @@
             [disabled]="!unidadeFiltro || carregandoVendedores"
             (ngModelChange)="onFiltroChange()">
             <option [ngValue]="''">Todos</option>
+            <option [ngValue]="FILTRO_CARD_UNIDADE">
+              {{ unidadeFiltro ? 'TOTAL ' + unidadeFiltro : 'Unidade' }}
+            </option>
             @for (v of vendedores; track v.funcionarioId) {
               <option [ngValue]="v.funcionarioId">
                 {{ v.nome }} ({{ v.codigoVendedorErp }})
@@ -181,8 +184,21 @@
                       </button>
                     </div>
                   </header>
-                  <div class="comercial-acomp-bloco comercial-acomp-bloco-resultados">
-                    <h4 class="comercial-acomp-bloco-titulo">Resultados</h4>
+                  <div
+                    class="comercial-acomp-bloco comercial-acomp-bloco-resultados"
+                    [class.is-collapsed]="!cardBlocoAberto(card, 'resultados')">
+                    <button
+                      type="button"
+                      class="comercial-acomp-bloco-toggle"
+                      (click)="toggleCardBloco(card, 'resultados')"
+                      [attr.aria-expanded]="cardBlocoAberto(card, 'resultados')">
+                      <h4 class="comercial-acomp-bloco-titulo">
+                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                        Resultados
+                      </h4>
+                    </button>
+                  @if (cardBlocoAberto(card, 'resultados')) {
+                  <div class="comercial-acomp-bloco-corpo">
                   <div class="comercial-acomp-manip-grid has-terceiros">
                     <div class="comercial-acomp-metric is-success">
                       <span class="label">
@@ -261,6 +277,8 @@
                     </div>
                   </div>
                   </div>
+                  }
+                  </div>
                   <ng-container *ngTemplateOutlet="blocoBases; context: { $implicit: card }"></ng-container>
                 </article>
               }
@@ -330,8 +348,21 @@
 </div>
 
 <ng-template #blocoBases let-card>
-  <div class="comercial-acomp-bloco comercial-acomp-bloco-metas">
-    <h4 class="comercial-acomp-bloco-titulo">Metas</h4>
+  <div
+    class="comercial-acomp-bloco comercial-acomp-bloco-metas"
+    [class.is-collapsed]="!cardBlocoAberto(card, 'metas')">
+    <button
+      type="button"
+      class="comercial-acomp-bloco-toggle"
+      (click)="toggleCardBloco(card, 'metas')"
+      [attr.aria-expanded]="cardBlocoAberto(card, 'metas')">
+      <h4 class="comercial-acomp-bloco-titulo">
+        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        Metas
+      </h4>
+    </button>
+    @if (cardBlocoAberto(card, 'metas')) {
+    <div class="comercial-acomp-bloco-corpo">
     <div class="comercial-acomp-bases">
       <section class="comercial-acomp-base is-manip">
         <header class="comercial-acomp-base-head">
@@ -430,10 +461,25 @@
         </div>
       </section>
     </div>
+    </div>
+    }
   </div>
   @if (temAnaliseDesempenho(card)) {
-    <div class="comercial-acomp-bloco comercial-acomp-bloco-analise">
-      <h4 class="comercial-acomp-bloco-titulo is-analise">Análise e desempenho</h4>
+    <div
+      class="comercial-acomp-bloco comercial-acomp-bloco-analise"
+      [class.is-collapsed]="!cardBlocoAberto(card, 'analise')">
+      <button
+        type="button"
+        class="comercial-acomp-bloco-toggle"
+        (click)="toggleCardBloco(card, 'analise')"
+        [attr.aria-expanded]="cardBlocoAberto(card, 'analise')">
+        <h4 class="comercial-acomp-bloco-titulo is-analise">
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          Análise e desempenho
+        </h4>
+      </button>
+      @if (cardBlocoAberto(card, 'analise')) {
+      <div class="comercial-acomp-bloco-corpo">
       <div class="comercial-acomp-bases">
         @if (temMetaCadastrada(card.valorMetaRequisicao)) {
           <section class="comercial-acomp-base is-manip">
@@ -550,6 +596,8 @@
           </section>
         }
       </div>
+      </div>
+      }
     </div>
   }
 </ng-template>
@@ -707,84 +755,6 @@
         </div>
       </div>
       <div class="modal-corpo">
-        @if (cardItemDetalhe; as card) {
-          <div class="comercial-acomp-detalhe-resumo">
-            <div class="comercial-acomp-bloco comercial-acomp-bloco-resultados">
-              <h4 class="comercial-acomp-bloco-titulo">Resultados</h4>
-            <div class="comercial-acomp-manip-grid has-terceiros">
-              <div class="comercial-acomp-metric is-success">
-                <span class="label">
-                  Manipulado
-                  <small>(requisições)</small>
-                </span>
-                <span class="sub">{{ rotuloQtdManipulados(card.quantidadeRecebidoRequisicao, card.quantidadeFormulasRequisicao) }}</span>
-                <span class="value">{{ formatarMoeda(card.valorRequisicaoPura) }}</span>
-              </div>
-              <div class="comercial-acomp-metric is-success">
-                <span class="label">
-                  Manipulado
-                  <small>({{ rotuloManipuladoSetor(card) }})</small>
-                </span>
-                <span class="sub">{{ rotuloQtdSetorManipulado(card.quantidadeRevendaManipulados) }}</span>
-                <span class="value">{{ formatarMoeda(card.valorRevendaManipulados) }}</span>
-              </div>
-              <div class="comercial-acomp-metric is-success is-terceiros">
-                <span class="label">
-                  Manipulado
-                  <small>(terceiros)</small>
-                </span>
-                <span class="sub">{{ rotuloQtdTerceiros(card.quantidadeTerceirosManipulados) }}</span>
-                <span class="value">{{ formatarMoeda(card.valorTerceirosManipulados) }}</span>
-              </div>
-              <div class="comercial-acomp-metric is-success is-total-manip">
-                <span class="label">
-                  Manipulado
-                  <small>(total)</small>
-                </span>
-                <span class="sub">{{ rotuloQtdManipulados(card.quantidadeRecebidoRequisicao, card.quantidadeFormulasRequisicao) }}</span>
-                <span class="value">{{ formatarMoeda(card.valorRecebidoRequisicao) }}</span>
-              </div>
-            </div>
-            <div class="comercial-acomp-mp-rejeitado-row">
-              <div class="comercial-acomp-mp-grid">
-                <div class="comercial-acomp-metric is-primary">
-                  <span class="label">
-                    Marca própria
-                    <small>({{ rotuloMarcaPropriaSetor(card) }})</small>
-                  </span>
-                  <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
-                  <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaSetores) }}</span>
-                </div>
-                <div class="comercial-acomp-metric is-primary">
-                  <span class="label">
-                    Marca própria
-                    <small>(outros)</small>
-                  </span>
-                  <span class="sub">{{ card.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
-                  <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropriaOutros) }}</span>
-                </div>
-                <div class="comercial-acomp-metric is-primary is-total-mp">
-                  <span class="label">
-                    Marca própria
-                    <small>(total)</small>
-                  </span>
-                  <span class="sub">{{ card.quantidadeRecebidoMarcaPropria }} item(ns)</span>
-                  <span class="value">{{ formatarMoeda(card.valorRecebidoMarcaPropria) }}</span>
-                </div>
-              </div>
-              <div class="comercial-acomp-rejeitado-box">
-                <div class="comercial-acomp-metric is-rejeitado">
-                  <span class="label">Rejeitado</span>
-                  <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
-                  <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
-                </div>
-              </div>
-            </div>
-            </div>
-            <ng-container *ngTemplateOutlet="blocoBases; context: { $implicit: card }"></ng-container>
-          </div>
-        }
-
         @if (carregandoDetalhe) {
           <div class="loading-message">Carregando movimentos…</div>
         } @else if (detalhe && itemDetalhe) {
