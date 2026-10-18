@@ -356,6 +356,14 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     requiredPermissions: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
   },
   {
+    id: 'visitacao-analise',
+    label: 'Análise de Visitação',
+    route: '/visitacao/analise',
+    icon: 'feather-bar-chart-2',
+    category: 'Visitação',
+    requiredPermissions: [Permission.VISITACAO_ANALISE_READ],
+  },
+  {
     id: 'visitacao-metas',
     label: 'Configuração Metas',
     route: '/visitacao/configuracao-metas',

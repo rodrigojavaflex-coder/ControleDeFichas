@@ -44,6 +44,7 @@ export const PERMISSION_GROUP_ICON_KEYS: Record<string, string> = {
   Feriados: 'feather-calendar',
   'Visitação — Painel Médico': 'feather-user-plus',
   'Visitação — Acompanhamento': 'feather-activity',
+  'Visitação — Análise': 'feather-bar-chart-2',
   'Visitação — Configuração Metas': 'feather-target',
   'Visitação — Configuração Comissões': 'feather-dollar-sign',
 };

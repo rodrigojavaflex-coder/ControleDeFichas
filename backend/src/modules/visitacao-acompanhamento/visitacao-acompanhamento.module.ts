@@ -19,6 +19,8 @@ import { VisitacaoFechamentoRepresentanteUnidade } from './entities/visitacao-fe
 import { PainelMedicoRepresentante } from '../painel-medicos/entities/painel-medico-representante.entity';
 import { VisitacaoAcompanhamentoController } from './visitacao-acompanhamento.controller';
 import { VisitacaoAcompanhamentoService } from './visitacao-acompanhamento.service';
+import { VisitacaoAnaliseController } from './visitacao-analise.controller';
+import { VisitacaoAnaliseService } from './visitacao-analise.service';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 
 @Module({
@@ -43,7 +45,11 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
     JwtModule,
     ConfigModule,
   ],
-  controllers: [VisitacaoAcompanhamentoController],
-  providers: [VisitacaoAcompanhamentoService, PermissionsGuard],
+  controllers: [VisitacaoAcompanhamentoController, VisitacaoAnaliseController],
+  providers: [
+    VisitacaoAcompanhamentoService,
+    VisitacaoAnaliseService,
+    PermissionsGuard,
+  ],
 })
 export class VisitacaoAcompanhamentoModule {}

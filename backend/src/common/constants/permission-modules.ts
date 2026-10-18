@@ -68,6 +68,7 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
     groupKeys: [
       'Visitação — Painel Médico',
       'Visitação — Acompanhamento',
+      'Visitação — Análise',
       'Visitação — Configuração Metas',
       'Visitação — Configuração Comissões',
     ],

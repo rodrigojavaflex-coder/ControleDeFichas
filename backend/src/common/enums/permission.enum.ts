@@ -184,6 +184,8 @@ export enum Permission {
   VISITACAO_FECHAMENTO_FECHAR = 'visitacao-fechamento:fechar',
   /** Visitação — reabrir competência fechada. */
   VISITACAO_FECHAMENTO_REABRIR = 'visitacao-fechamento:reabrir',
+  /** Visitação — análise (evolução fechados + mês corrente). */
+  VISITACAO_ANALISE_READ = 'visitacao-analise:read',
   /** Visitação — configuração de metas mensais. */
   VISITACAO_META_READ = 'visitacao-meta:read',
   VISITACAO_META_UPDATE = 'visitacao-meta:update',
@@ -576,6 +578,12 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.VISITACAO_FECHAMENTO_REABRIR,
       label: 'Reabrir competência da visitação',
+    },
+  ],
+  'Visitação — Análise': [
+    {
+      key: Permission.VISITACAO_ANALISE_READ,
+      label: 'Visualizar análise de visitação (evolução e indicadores)',
     },
   ],
   'Visitação — Configuração Metas': [

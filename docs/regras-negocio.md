@@ -426,6 +426,40 @@
 - **Reabrir:** apaga o retrato da competência; volta ao cálculo ao vivo; exige **`visitacao-fechamento:reabrir`**. Trilha de auditoria HTTP. Fechar exige **`visitacao-fechamento:fechar`**. Ver o status na tela usa **`visitacao-acompanhamento:read`**. Novas permissões só no catálogo; atribuição **manual** em Perfis.
 - Persistência: `visitacao_fechamento` (unique `unidade + ano + mes`), `visitacao_fechamento_carteira`, `visitacao_fechamento_representante`, `visitacao_fechamento_representante_unidade`, `visitacao_fechamento_outra_unidade`, `visitacao_fechamento_medico`.
 
+### RN-VIS-014 — Análise de Visitação (valor total + rejeitados)
+
+- Tela **`/visitacao/analise`** (menu **Visitação → Análise**); permissão **`visitacao-analise:read`**. Nova permissão só no catálogo; atribuição **manual** em Perfis. Distinta do Acompanhamento (mês operacional / PDF — RN-VIS-007 a RN-VIS-013).
+- **Fonte:** carteira e valores vêm do **retrato** (RN-VIS-013) — **não** usam o painel atual nem o mês corrente aberto.
+- **Universo de competências:** todas as competências **fechadas** da unidade (**qualquer ano**). Chave `YYYY-MM` (ex. `2025-12`). Mês aberto **não** entra nas opções nem no filtro.
+- **Filtro Ano (UI):** multi-select dos anos que possuem fechamento; **padrão = ano corrente** (se não houver fechamento no ano corrente, usa o ano mais recente disponível). Restringe as opções de Competência 1/2 e do multi-select de ranking — a API continua recebendo competências `YYYY-MM` explícitas.
+- **Agregação por médico (todos os modos):** se o mesmo CRM+UF aparecer em **mais de uma unidade** no retrato (ex. INHUMAS + NERÓPOLIS), **soma** recebido e rejeitado de todas as linhas da competência — **não** sobrescreve unidade a unidade. Dimensão fixa desta tela = **médico** (CRM+UF).
+- **Filtros comuns:** Unidade (escopo RN-VIS-003), Ano (multi), Representante (`funcionarioId`), Médico (nome parcial), No Painel (`todos` / `sim` / `nao`).
+- **Modo de análise** (campo explícito — o layout **não** é inferido só pela quantidade de competências):
+  - **`comparar`** — evolução entre **duas competências** (podem ser de anos diferentes).
+  - **`ranking`** — ranking absoluto no **período selecionado** (1 ou N competências fechadas, qualquer ano; **total** e **média** = total ÷ N).
+- **Endpoints:** `GET /visitacao/analise/opcoes` (competências fechadas de todos os anos + representantes — resposta **leve**; `comAnalise=true` opcional e desaconselhado no bootstrap da tela) e `GET /visitacao/analise?modo=comparar|ranking&…` (grades). A tela carrega **opções primeiro** (Ano/Competência) e a análise em chamada separada.
+- **Fora de escopo nesta versão:** modo “evolução em série” (coluna por competência / sparkline), comparar período×período (N competências de cada lado), presets de trimestre/semestre, meta, comissão/faixa, motivos de rejeição, check-in/roteiro, cards de KPI e gráficos.
+
+#### Modo `comparar`
+
+- **Objetivo:** evolução do **valor total recebido** e dos **rejeitados (orçamentos)** entre **duas competências fechadas**.
+- **Seleção:** **Competência 1** (base) e **Competência 2** (referência); `c1` ≠ `c2` (formato `YYYY-MM`); ambas fechadas → senão **400**. Query: `modo=comparar&c1=2025-12&c2=2026-01` (modo omitido = comparar). Labels na UI: `Dezembro/2025`, `Janeiro/2026`.
+- **Valor total (recebido):** `SUM(valorRecebido)` por médico em cada competência. Médico entra se tiver recebido em **pelo menos uma** das duas (ausente = 0 no Δ; ambos 0/ausentes → fora). **Δ** = valor(c2) − valor(c1); **%** = Δ ÷ valor(c1) × 100 (null se c1 = 0 ou null).
+- **Rejeitados:** mesmo padrão sobre `SUM(valorRejeitado)`; ordenado pelo rejeitado de **c2** desc. Colunas: nome, valor c1, valor c2, Diferença e %. **Sem** representatividade. **Menos é melhor:** Diferença negativa = faixas de “crescimento” (bom); positiva = faixas de “queda” (ruim). Legenda única por |Diferença|.
+- **UI:** filtros em **container** com botão **Atualizar** (refaz a busca; a análise também dispara ao mudar filtros, como antes). **Três grades na mesma linha** — maior crescimento, maior queda e **Rejeitados** (cabeçalho vermelho). Cabeçalhos de competência **abreviados** (ex. `Ago/2026`). Listas **completas** (`top` opcional). Legenda (**Todos** + chips). **Excel** por grade = lista **visível**.
+
+#### Modo `ranking`
+
+- **Objetivo:** ver **quem mais vendeu** e **quem mais rejeitou** no período escolhido — sem Δ entre competências.
+- **Seleção:** multi-select de **1 a N** competências fechadas (qualquer ano). Query: `modo=ranking&competencias=2025-11,2025-12,2026-01` (lista não vazia; todas fechadas → senão **400**).
+- **Agregação do período:** **total** = soma das competências selecionadas e **média** = total ÷ quantidade. Resposta: `agregacao: 'soma'`, `competencias: [{key,ano,mes,label}]`, por médico `valorPeriodo` (total) e `valorMedia`.
+- **Entrada no ranking:** médico com recebido **ou** rejeitado &gt; 0 em **pelo menos uma** das competências (após agregação CRM+UF).
+- **UI — duas grades na mesma linha:**
+  - **Maiores vendas** — ordenado por total desc; colunas: nome, **Total**, **Média**. Sem Diferença/%, legenda ou cores de faixa.
+  - **Mais rejeitados** — ordenado por total desc; colunas: nome, **Total**, **Média**. Cabeçalho vermelho.
+- **Excel** por grade = lista visível (nome, CRM, UF, representante, Total, Média).
+- Abertura / troca de unidade: carrega **opções** leves e em seguida a análise automaticamente; **Atualizar** refaz a busca com os filtros atuais.
+
 ---
 
 ## Comercial — Acompanhamento por vendedor

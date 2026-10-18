@@ -135,6 +135,7 @@ const PERMS = {
   producaoPainel: [Permission.PRODUCAO_PAINEL_READ],
   visitacaoPainelMedico: [Permission.VISITACAO_PAINEL_MEDICO_READ],
   visitacaoAcompanhamento: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
+  visitacaoAnalise: [Permission.VISITACAO_ANALISE_READ],
   visitacaoMetas: [Permission.VISITACAO_META_READ],
   visitacaoComissoes: [Permission.VISITACAO_COMISSAO_READ],
   comercialAcompanhamento: [Permission.COMERCIAL_ACOMPANHAMENTO_READ],
@@ -565,6 +566,15 @@ export const routes: Routes = [
       ),
     canActivate: guarded,
     data: { permissions: [...PERMS.visitacaoAcompanhamento] },
+  },
+  {
+    path: 'visitacao/analise',
+    loadComponent: () =>
+      import('./components/visitacao/visitacao-analise-page').then(
+        (m) => m.VisitacaoAnalisePageComponent,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.visitacaoAnalise] },
   },
   {
     path: 'visitacao/configuracao-metas',

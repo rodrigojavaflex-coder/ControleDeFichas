@@ -1,0 +1,456 @@
+/*
+  Altura útil sob o header, compensando --app-zoom-factor (0.80 em styles.css).
+  Sem a divisão, a página fica ~20% menor e sobra espaço vazio.
+*/
+.visitacao-analise-page.vendas-page {
+  height: calc((100vh - 64px) / var(--app-zoom-factor, 1) - 1.5rem);
+  max-height: calc((100vh - 64px) / var(--app-zoom-factor, 1) - 1.5rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 0;
+}
+
+.layout-content.menu-collapsed .visitacao-analise-page.vendas-page {
+  height: calc((100vh - 64px) / var(--app-zoom-factor, 1) - 1.5rem);
+  max-height: calc((100vh - 64px) / var(--app-zoom-factor, 1) - 1.5rem);
+}
+
+.visitacao-analise-page .results-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.visitacao-analise-page .visitacao-analise-filters {
+  flex: 0 0 auto;
+  margin: 0.65rem 0.75rem 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.visitacao-analise-page .visitacao-analise-filters .filters-panel-top {
+  cursor: default;
+  align-items: flex-end;
+  padding: 0.65rem 0.85rem;
+  min-height: 0;
+}
+
+.visitacao-analise-page .visitacao-analise-filters .filters-panel-top::after {
+  display: none;
+}
+
+.visitacao-analise-page .visitacao-analise-toolbar .filters-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.75rem;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.visitacao-analise-page .visitacao-analise-toolbar .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.visitacao-analise-page .visitacao-analise-toolbar .form-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.visitacao-analise-page .visitacao-analise-toolbar .form-control {
+  min-height: 2.375rem;
+  width: 100%;
+}
+
+.visitacao-analise-page .visitacao-analise-acoes {
+  flex: 0 0 auto;
+}
+
+.visitacao-analise-page .visitacao-analise-acoes .btn-atualizar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.375rem;
+  padding: 0.4rem 0.9rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.visitacao-analise-page .visitacao-analise-acoes .btn-atualizar:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.visitacao-analise-page .visitacao-analise-acoes .btn-atualizar:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+body.theme-dark .visitacao-analise-page .visitacao-analise-acoes .btn-atualizar {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* Campos curtos — largura fixa, sem esticar */
+.visitacao-analise-page .visitacao-analise-unidade {
+  width: 8.5rem;
+}
+
+.visitacao-analise-page .visitacao-analise-anos {
+  width: 6.75rem;
+}
+
+.visitacao-analise-page .visitacao-analise-modo {
+  width: 7.5rem;
+}
+
+.visitacao-analise-page .visitacao-analise-painel {
+  width: 6.5rem;
+}
+
+/* Competência (comparar): cabe "Setembro/2026" sem ocupar a barra toda */
+.visitacao-analise-page .visitacao-analise-competencia {
+  width: 9.75rem;
+}
+
+/* Multi-select de competências no ranking */
+.visitacao-analise-page .visitacao-analise-meses-rank {
+  width: 14rem;
+  max-width: 100%;
+}
+
+/* Campos longos — podem crescer um pouco */
+.visitacao-analise-page .visitacao-analise-rep {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+  max-width: 22rem;
+}
+
+.visitacao-analise-page .visitacao-analise-medico {
+  flex: 1 1 11rem;
+  min-width: 9rem;
+  max-width: 16rem;
+}
+
+.visitacao-analise-page .visitacao-analise-anos .multi-select-dropdown,
+.visitacao-analise-page .visitacao-analise-meses-rank .multi-select-dropdown {
+  width: 100%;
+}
+
+.visitacao-analise-page .visitacao-analise-anos .multi-select-trigger,
+.visitacao-analise-page .visitacao-analise-meses-rank .multi-select-trigger {
+  min-height: 2.375rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 900px) {
+  .visitacao-analise-page .visitacao-analise-unidade,
+  .visitacao-analise-page .visitacao-analise-anos,
+  .visitacao-analise-page .visitacao-analise-modo,
+  .visitacao-analise-page .visitacao-analise-painel,
+  .visitacao-analise-page .visitacao-analise-competencia,
+  .visitacao-analise-page .visitacao-analise-meses-rank,
+  .visitacao-analise-page .visitacao-analise-rep,
+  .visitacao-analise-page .visitacao-analise-medico {
+    flex: 1 1 calc(50% - 0.5rem);
+    width: auto;
+    min-width: calc(50% - 0.5rem);
+    max-width: none;
+  }
+}
+
+.visitacao-analise-hint {
+  margin: 0.5rem 1rem;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  flex: 0 0 auto;
+}
+
+.visitacao-analise-grid-3,
+.visitacao-analise-grid-2 {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem 0.75rem;
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.visitacao-analise-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.visitacao-analise-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1200px) {
+  .visitacao-analise-grid-3,
+  .visitacao-analise-grid-2 {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+}
+
+.visitacao-analise-tabela-card {
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  background: var(--cor-superficie, #fff);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.visitacao-analise-tabela-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  flex: 0 0 auto;
+}
+
+.visitacao-analise-tabela-card > header .btn-exportar-card {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  border: none;
+  border-radius: 0.35rem;
+  background: #059669;
+  color: #fff;
+  cursor: pointer;
+}
+
+.visitacao-analise-tabela-card > header .btn-exportar-card:hover:not(:disabled) {
+  background: #047857;
+}
+
+.visitacao-analise-tabela-card > header .btn-exportar-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+body.theme-dark .visitacao-analise-tabela-card > header .btn-exportar-card {
+  background: #059669;
+  color: #fff;
+}
+
+.visitacao-analise-tabela-card.is-crescimento > header {
+  background: color-mix(in srgb, #2563eb 14%, transparent);
+}
+
+.visitacao-analise-tabela-card.is-queda > header {
+  background: color-mix(in srgb, #f97316 16%, transparent);
+}
+
+.visitacao-analise-tabela-card.is-rejeitado > header {
+  background: color-mix(in srgb, #dc2626 28%, transparent);
+  border-bottom-color: color-mix(in srgb, #dc2626 45%, transparent);
+}
+
+.visitacao-analise-tabela-card.is-rejeitado > header h3 {
+  color: #991b1b;
+}
+
+body.theme-dark .visitacao-analise-tabela-card.is-rejeitado > header h3 {
+  color: #fecaca;
+}
+
+.visitacao-analise-tabela-card > header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.visitacao-analise-tabela-card .table-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+}
+
+.visitacao-analise-table {
+  font-size: 0.82rem;
+}
+
+.visitacao-analise-table th.text-end,
+.visitacao-analise-table td.text-end {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Cabeçalhos de competência abreviados (Ago/2026) — evita scroll horizontal */
+.visitacao-analise-table thead th {
+  white-space: nowrap;
+}
+
+.medico-nome {
+  font-weight: 600;
+}
+
+.medico-sub {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.visitacao-analise-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+  font-size: 0.72rem;
+  flex: 0 0 auto;
+}
+
+.visitacao-analise-legenda .legenda-titulo {
+  font-weight: 600;
+  margin-right: 0.2rem;
+}
+
+.visitacao-analise-legenda .legenda-chip {
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.visitacao-analise-legenda .legenda-chip.is-active {
+  outline: 2px solid var(--bs-primary, #0d6efd);
+  outline-offset: 1px;
+  font-weight: 700;
+}
+
+.visitacao-analise-legenda .legenda-chip.legenda-todos {
+  background: var(--cor-superficie-2, color-mix(in srgb, var(--cor-texto, #0f172a) 8%, transparent));
+  color: var(--cor-texto, #0f172a);
+  border-color: var(--border-color, #e2e8f0);
+}
+
+.visitacao-analise-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.visitacao-analise-table th.sortable .sort-icon {
+  margin-left: 0.25rem;
+  opacity: 0.85;
+}
+
+.faixa-cresc-1 {
+  background: #fef08a;
+  color: #713f12;
+}
+
+.faixa-cresc-2 {
+  background: #93c5fd;
+  color: #1e3a8a;
+}
+
+.faixa-cresc-3 {
+  background: #86efac;
+  color: #14532d;
+}
+
+.faixa-cresc-4 {
+  background: #d8b4fe;
+  color: #581c87;
+}
+
+.faixa-queda-1 {
+  background: #d1d5db;
+  color: #1f2937;
+}
+
+.faixa-queda-2 {
+  background: #fde68a;
+  color: #78350f;
+}
+
+.faixa-queda-3 {
+  background: #fdba74;
+  color: #7c2d12;
+}
+
+.faixa-queda-4 {
+  background: #fca5a5;
+  color: #7f1d1d;
+}
+
+/*
+  Legenda |Diferença| rejeitados: mesmas cores das faixas de variação
+  (célula continua invertida: caiu = bom / subiu = ruim).
+*/
+.faixa-abs-1 {
+  background: #fef08a;
+  color: #713f12;
+}
+
+.faixa-abs-2 {
+  background: #93c5fd;
+  color: #1e3a8a;
+}
+
+.faixa-abs-3 {
+  background: #86efac;
+  color: #14532d;
+}
+
+.faixa-abs-4 {
+  background: #d8b4fe;
+  color: #581c87;
+}
+
+.visitacao-analise-empty {
+  margin: 1.5rem 1rem;
+  text-align: center;
+  opacity: 0.8;
+  flex: 1 1 auto;
+}
+
+body.theme-dark .visitacao-analise-tabela-card {
+  background: var(--cor-superficie, #1e293b);
+}
+
+body.theme-dark .faixa-cresc-1,
+body.theme-dark .faixa-cresc-2,
+body.theme-dark .faixa-cresc-3,
+body.theme-dark .faixa-cresc-4,
+body.theme-dark .faixa-queda-1,
+body.theme-dark .faixa-queda-2,
+body.theme-dark .faixa-queda-3,
+body.theme-dark .faixa-queda-4,
+body.theme-dark .faixa-abs-1,
+body.theme-dark .faixa-abs-2,
+body.theme-dark .faixa-abs-3,
+body.theme-dark .faixa-abs-4 {
+  color: #0f172a;
+}

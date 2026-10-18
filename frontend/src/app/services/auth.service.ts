@@ -270,9 +270,9 @@ export class AuthService {
     }
 
     try {
-      // Tenta buscar o perfil para validar o token
-      const user = await this.getProfile();
-      this.currentUserSubject.next(user);
+      // Mesmo fluxo de refreshCurrentUserProfile: mapear + persistir
+      // (evita estado inconsistente no permissionGuard após F5).
+      await this.refreshCurrentUserProfile();
       this.isAuthenticatedSubject.next(true);
       return true;
     } catch (error) {
@@ -281,8 +281,7 @@ export class AuthService {
       
       if (newToken) {
         try {
-          const user = await this.getProfile();
-          this.currentUserSubject.next(user);
+          await this.refreshCurrentUserProfile();
           this.isAuthenticatedSubject.next(true);
           return true;
         } catch (refreshError) {

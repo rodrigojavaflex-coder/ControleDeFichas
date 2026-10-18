@@ -1,0 +1,746 @@
+<div class="vendas-page visitacao-analise-page">
+  <section *ngIf="error" class="state-card error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+  </section>
+
+  <section class="results-card" *ngIf="!error || dados">
+    <div class="inline-loading" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Atualizando análise...</span>
+    </div>
+
+    <div class="filters-inline visitacao-analise-filters">
+      <section class="filters-panel-top visitacao-analise-toolbar" aria-label="Filtros da análise">
+        <div class="filters-controls">
+          <div class="filter-group visitacao-analise-unidade">
+            <label class="form-label" for="va-analise-unidade">Unidade</label>
+            <select
+              id="va-analise-unidade"
+              class="form-control"
+              [(ngModel)]="unidadeFilter"
+              [disabled]="unidadeDisabled"
+              (ngModelChange)="onUnidadeChange()">
+              <option *ngIf="!unidadeDisabled" [ngValue]="''">Selecione…</option>
+              <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group visitacao-analise-anos">
+            <label class="form-label">Ano</label>
+            <app-multi-select-dropdown
+              [options]="anosOptions"
+              [disabled]="!unidadeFilter || loadingOpcoes || !anosOptions.length"
+              placeholder="Anos…"
+              [ngModel]="anosFiltro"
+              (ngModelChange)="onAnosChange($event)">
+            </app-multi-select-dropdown>
+          </div>
+
+          <div class="filter-group visitacao-analise-modo">
+            <label class="form-label" for="va-analise-modo">Modo</label>
+            <select
+              id="va-analise-modo"
+              class="form-control"
+              [(ngModel)]="modo"
+              [disabled]="!unidadeFilter || loadingOpcoes"
+              (ngModelChange)="onModoChange()">
+              <option value="comparar">Comparar</option>
+              <option value="ranking">Ranking</option>
+            </select>
+          </div>
+
+          <ng-container *ngIf="isComparar">
+            <div class="filter-group visitacao-analise-competencia">
+              <label class="form-label" for="va-analise-c1">Competência 1</label>
+              <select
+                id="va-analise-c1"
+                class="form-control"
+                [(ngModel)]="c1"
+                [disabled]="!unidadeFilter || loadingOpcoes || !competenciasFiltradas.length"
+                (change)="onFiltroChange()">
+                <option [ngValue]="null">Selecione…</option>
+                <option *ngFor="let c of competenciasFiltradas" [ngValue]="c.key">
+                  {{ c.label }}
+                </option>
+              </select>
+            </div>
+
+            <div class="filter-group visitacao-analise-competencia">
+              <label class="form-label" for="va-analise-c2">Competência 2</label>
+              <select
+                id="va-analise-c2"
+                class="form-control"
+                [(ngModel)]="c2"
+                [disabled]="!unidadeFilter || loadingOpcoes || !competenciasFiltradas.length"
+                (change)="onFiltroChange()">
+                <option [ngValue]="null">Selecione…</option>
+                <option *ngFor="let c of competenciasFiltradas" [ngValue]="c.key">
+                  {{ c.label }}
+                </option>
+              </select>
+            </div>
+          </ng-container>
+
+          <div class="filter-group visitacao-analise-meses-rank" *ngIf="isRanking">
+            <label class="form-label">Competências</label>
+            <app-multi-select-dropdown
+              [options]="competenciasOptions"
+              [disabled]="!unidadeFilter || loadingOpcoes || !competenciasFiltradas.length"
+              placeholder="Competências…"
+              [ngModel]="competenciasRanking"
+              (ngModelChange)="onCompetenciasRankingChange($event)">
+            </app-multi-select-dropdown>
+          </div>
+
+          <div class="filter-group visitacao-analise-rep">
+            <label class="form-label" for="va-analise-rep">Representante</label>
+            <select
+              id="va-analise-rep"
+              class="form-control"
+              [(ngModel)]="funcionarioIdFilter"
+              [disabled]="!unidadeFilter || loadingOpcoes"
+              (change)="onFiltroChange()">
+              <option value="">Todos</option>
+              <option *ngFor="let rep of representantes" [value]="rep.id">
+                {{ rep.nome }} ({{ rep.painelContratoRepresentante }}/{{ rep.painelCodigoRepresentante }})
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group visitacao-analise-medico">
+            <label class="form-label" for="va-analise-medico">Médico</label>
+            <input
+              id="va-analise-medico"
+              type="text"
+              class="form-control"
+              [(ngModel)]="nomeMedicoFilter"
+              [disabled]="!unidadeFilter || loadingOpcoes"
+              placeholder="Filtrar por nome"
+              autocomplete="off"
+              (keyup.enter)="onFiltroChange()"
+              (change)="onFiltroChange()" />
+          </div>
+
+          <div class="filter-group visitacao-analise-painel">
+            <label class="form-label" for="va-analise-painel">No Painel</label>
+            <select
+              id="va-analise-painel"
+              class="form-control"
+              [(ngModel)]="naCarteiraFilter"
+              [disabled]="!unidadeFilter || loadingOpcoes"
+              (change)="onFiltroChange()">
+              <option value="todos">Todos</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </div>
+
+          <div class="filter-group visitacao-analise-acoes">
+            <label class="form-label">&nbsp;</label>
+            <button
+              type="button"
+              class="btn btn-atualizar"
+              (click)="atualizarAnalise()"
+              [disabled]="!podeAtualizar || loading || loadingOpcoes"
+              title="Atualizar análise com os filtros atuais">
+              <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+              Atualizar
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <p
+      class="visitacao-analise-hint"
+      *ngIf="unidadeFilter && !competenciasDisponiveis.length && !loadingOpcoes">
+      Nenhuma competência fechada disponível. Feche a visitação no Acompanhamento para analisar.
+    </p>
+    <p
+      class="visitacao-analise-hint"
+      *ngIf="unidadeFilter && competenciasDisponiveis.length && !anosFiltro.length && !loadingOpcoes">
+      Selecione ao menos um ano para listar as competências.
+    </p>
+    <p
+      class="visitacao-analise-hint"
+      *ngIf="unidadeFilter && anosFiltro.length && !competenciasFiltradas.length && !loadingOpcoes">
+      Nenhuma competência fechada nos anos selecionados.
+    </p>
+    <p
+      class="visitacao-analise-hint"
+      *ngIf="isComparar && unidadeFilter && c1 != null && c2 != null && c1 === c2">
+      Selecione duas competências diferentes (Competência 1 e Competência 2).
+    </p>
+    <!-- Modo comparar: 3 grades -->
+    <ng-container *ngIf="dados as d">
+      <div class="visitacao-analise-grid-3" *ngIf="d.modo === 'comparar'">
+        <section class="visitacao-analise-tabela-card is-crescimento">
+          <header>
+            <h3>Maior crescimento</h3>
+            <button
+              type="button"
+              class="btn btn-exportar btn-exportar-card"
+              (click)="exportarExcel('crescimento')"
+              [disabled]="!crescimentoVisivel.length || loading"
+              title="Exportar crescimento para Excel">
+              <i class="fas fa-file-excel"></i>
+              Excel
+            </button>
+          </header>
+          <div class="table-wrapper">
+            <table class="vendas-table visitacao-analise-table">
+              <thead>
+                <tr>
+                  <th
+                    class="sortable"
+                    [class.sorted]="sortCrescField === 'nome'"
+                    (click)="onSortCresc('nome')">
+                    Nome do médico
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortCrescField === 'nome'"
+                      [ngClass]="sortCrescDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortCrescField === 'valorMes1'"
+                    (click)="onSortCresc('valorMes1')">
+                    {{ labelCompetencia1 }}
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortCrescField === 'valorMes1'"
+                      [ngClass]="sortCrescDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortCrescField === 'valorMes2'"
+                    (click)="onSortCresc('valorMes2')">
+                    {{ labelCompetencia2 }}
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortCrescField === 'valorMes2'"
+                      [ngClass]="sortCrescDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortCrescField === 'delta'"
+                    (click)="onSortCresc('delta')">
+                    Aumento
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortCrescField === 'delta'"
+                      [ngClass]="sortCrescDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortCrescField === 'percentual'"
+                    (click)="onSortCresc('percentual')">
+                    %
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortCrescField === 'percentual'"
+                      [ngClass]="sortCrescDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!crescimentoVisivel.length" class="no-data">
+                  <td colspan="5">
+                    <i class="fas fa-inbox"></i>
+                    {{ filtroFaixaCresc ? 'Nenhum médico nesta faixa' : 'Nenhum crescimento' }}
+                  </td>
+                </tr>
+                <tr *ngFor="let item of crescimentoVisivel; trackBy: trackByMedico">
+                  <td>
+                    <div class="medico-nome">{{ item.nomeMedico }}</div>
+                    <div class="medico-sub">
+                      CRM {{ item.crmMedico }}/{{ item.ufCrmMedico }}
+                      <span *ngIf="item.nomeRepresentante"> · {{ item.nomeRepresentante }}</span>
+                    </div>
+                  </td>
+                  <td class="text-end">{{ formatarValor(item.valorMes1) }}</td>
+                  <td class="text-end">{{ formatarValor(item.valorMes2) }}</td>
+                  <td class="text-end" [ngClass]="faixaDelta(item.delta)">
+                    {{ formatarDelta(item.delta) }}
+                  </td>
+                  <td class="text-end">{{ formatarPercentual(item.percentual) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="visitacao-analise-legenda" role="group" aria-label="Filtrar por faixa de crescimento">
+            <span class="legenda-titulo">Legenda</span>
+            <button
+              type="button"
+              class="legenda-chip legenda-todos"
+              [class.is-active]="filtroFaixaCresc === null"
+              (click)="limparFaixaCresc()">
+              Todos
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-cresc-1"
+              [class.is-active]="filtroFaixaCresc === 'faixa-cresc-1'"
+              (click)="toggleFaixaCresc('faixa-cresc-1')">
+              R$ 10–50
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-cresc-2"
+              [class.is-active]="filtroFaixaCresc === 'faixa-cresc-2'"
+              (click)="toggleFaixaCresc('faixa-cresc-2')">
+              R$ 50–100
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-cresc-3"
+              [class.is-active]="filtroFaixaCresc === 'faixa-cresc-3'"
+              (click)="toggleFaixaCresc('faixa-cresc-3')">
+              R$ 100–500
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-cresc-4"
+              [class.is-active]="filtroFaixaCresc === 'faixa-cresc-4'"
+              (click)="toggleFaixaCresc('faixa-cresc-4')">
+              &gt; R$ 500
+            </button>
+          </div>
+        </section>
+
+        <section class="visitacao-analise-tabela-card is-queda">
+          <header>
+            <h3>Maior queda</h3>
+            <button
+              type="button"
+              class="btn btn-exportar btn-exportar-card"
+              (click)="exportarExcel('queda')"
+              [disabled]="!quedaVisivel.length || loading"
+              title="Exportar queda para Excel">
+              <i class="fas fa-file-excel"></i>
+              Excel
+            </button>
+          </header>
+          <div class="table-wrapper">
+            <table class="vendas-table visitacao-analise-table">
+              <thead>
+                <tr>
+                  <th
+                    class="sortable"
+                    [class.sorted]="sortQuedaField === 'nome'"
+                    (click)="onSortQueda('nome')">
+                    Nome do médico
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortQuedaField === 'nome'"
+                      [ngClass]="sortQuedaDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortQuedaField === 'valorMes1'"
+                    (click)="onSortQueda('valorMes1')">
+                    {{ labelCompetencia1 }}
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortQuedaField === 'valorMes1'"
+                      [ngClass]="sortQuedaDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortQuedaField === 'valorMes2'"
+                    (click)="onSortQueda('valorMes2')">
+                    {{ labelCompetencia2 }}
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortQuedaField === 'valorMes2'"
+                      [ngClass]="sortQuedaDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortQuedaField === 'delta'"
+                    (click)="onSortQueda('delta')">
+                    Queda
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortQuedaField === 'delta'"
+                      [ngClass]="sortQuedaDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortQuedaField === 'percentual'"
+                    (click)="onSortQueda('percentual')">
+                    %
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortQuedaField === 'percentual'"
+                      [ngClass]="sortQuedaDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!quedaVisivel.length" class="no-data">
+                  <td colspan="5">
+                    <i class="fas fa-inbox"></i>
+                    {{ filtroFaixaQueda ? 'Nenhum médico nesta faixa' : 'Nenhuma queda' }}
+                  </td>
+                </tr>
+                <tr *ngFor="let item of quedaVisivel; trackBy: trackByMedico">
+                  <td>
+                    <div class="medico-nome">{{ item.nomeMedico }}</div>
+                    <div class="medico-sub">
+                      CRM {{ item.crmMedico }}/{{ item.ufCrmMedico }}
+                      <span *ngIf="item.nomeRepresentante"> · {{ item.nomeRepresentante }}</span>
+                    </div>
+                  </td>
+                  <td class="text-end">{{ formatarValor(item.valorMes1) }}</td>
+                  <td class="text-end">{{ formatarValor(item.valorMes2) }}</td>
+                  <td class="text-end" [ngClass]="faixaDelta(item.delta)">
+                    {{ formatarDelta(item.delta) }}
+                  </td>
+                  <td class="text-end">{{ formatarPercentual(item.percentual) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="visitacao-analise-legenda" role="group" aria-label="Filtrar por faixa de queda">
+            <span class="legenda-titulo">Legenda</span>
+            <button
+              type="button"
+              class="legenda-chip legenda-todos"
+              [class.is-active]="filtroFaixaQueda === null"
+              (click)="limparFaixaQueda()">
+              Todos
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-queda-1"
+              [class.is-active]="filtroFaixaQueda === 'faixa-queda-1'"
+              (click)="toggleFaixaQueda('faixa-queda-1')">
+              R$ −10 a −50
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-queda-2"
+              [class.is-active]="filtroFaixaQueda === 'faixa-queda-2'"
+              (click)="toggleFaixaQueda('faixa-queda-2')">
+              R$ −50 a −100
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-queda-3"
+              [class.is-active]="filtroFaixaQueda === 'faixa-queda-3'"
+              (click)="toggleFaixaQueda('faixa-queda-3')">
+              R$ −100 a −500
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-queda-4"
+              [class.is-active]="filtroFaixaQueda === 'faixa-queda-4'"
+              (click)="toggleFaixaQueda('faixa-queda-4')">
+              &lt; R$ −500
+            </button>
+          </div>
+        </section>
+
+        <section class="visitacao-analise-tabela-card is-rejeitado">
+          <header>
+            <h3>Rejeitados</h3>
+            <button
+              type="button"
+              class="btn btn-exportar btn-exportar-card"
+              (click)="exportarExcel('rejeitados')"
+              [disabled]="!rejeitadosVisivel.length || loading"
+              title="Exportar rejeitados para Excel">
+              <i class="fas fa-file-excel"></i>
+              Excel
+            </button>
+          </header>
+          <div class="table-wrapper">
+            <table class="vendas-table visitacao-analise-table">
+              <thead>
+                <tr>
+                  <th
+                    class="sortable"
+                    [class.sorted]="sortRejField === 'nome'"
+                    (click)="onSortRej('nome')">
+                    Nome do médico
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejField === 'nome'"
+                      [ngClass]="sortRejDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortRejField === 'valorMes1'"
+                    (click)="onSortRej('valorMes1')">
+                    {{ labelCompetencia1 }}
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejField === 'valorMes1'"
+                      [ngClass]="sortRejDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortRejField === 'valorMes2'"
+                    (click)="onSortRej('valorMes2')">
+                    {{ labelCompetencia2 }}
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejField === 'valorMes2'"
+                      [ngClass]="sortRejDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortRejField === 'delta'"
+                    (click)="onSortRej('delta')">
+                    Diferença
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejField === 'delta'"
+                      [ngClass]="sortRejDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortRejField === 'percentual'"
+                    (click)="onSortRej('percentual')">
+                    %
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejField === 'percentual'"
+                      [ngClass]="sortRejDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!rejeitadosVisivel.length" class="no-data">
+                  <td colspan="5">
+                    <i class="fas fa-inbox"></i>
+                    {{ filtroFaixaRej ? 'Nenhum médico nesta faixa' : 'Nenhum rejeitado' }}
+                  </td>
+                </tr>
+                <tr *ngFor="let item of rejeitadosVisivel; trackBy: trackByMedico">
+                  <td>
+                    <div class="medico-nome">{{ item.nomeMedico }}</div>
+                    <div class="medico-sub">
+                      CRM {{ item.crmMedico }}/{{ item.ufCrmMedico }}
+                      <span *ngIf="item.nomeRepresentante"> · {{ item.nomeRepresentante }}</span>
+                    </div>
+                  </td>
+                  <td class="text-end">{{ formatarValor(item.valorMes1) }}</td>
+                  <td class="text-end">{{ formatarValor(item.valorMes2) }}</td>
+                  <td class="text-end" [ngClass]="faixaDeltaRejeitado(item.delta)">
+                    {{ formatarDelta(item.delta) }}
+                  </td>
+                  <td class="text-end">{{ formatarPercentual(item.percentual) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="visitacao-analise-legenda" role="group" aria-label="Filtrar por |Diferença| de rejeitado">
+            <span class="legenda-titulo">Legenda (|Diferença|)</span>
+            <button
+              type="button"
+              class="legenda-chip legenda-todos"
+              [class.is-active]="filtroFaixaRej === null"
+              (click)="limparFaixaRej()">
+              Todos
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-abs-1"
+              [class.is-active]="filtroFaixaRej === 'faixa-abs-1'"
+              (click)="toggleFaixaRej('faixa-abs-1')"
+              title="Caiu = bom (verde); subiu = ruim (vermelho)">
+              R$ 10–50
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-abs-2"
+              [class.is-active]="filtroFaixaRej === 'faixa-abs-2'"
+              (click)="toggleFaixaRej('faixa-abs-2')"
+              title="Caiu = bom (verde); subiu = ruim (vermelho)">
+              R$ 50–100
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-abs-3"
+              [class.is-active]="filtroFaixaRej === 'faixa-abs-3'"
+              (click)="toggleFaixaRej('faixa-abs-3')"
+              title="Caiu = bom (verde); subiu = ruim (vermelho)">
+              R$ 100–500
+            </button>
+            <button
+              type="button"
+              class="legenda-chip faixa-abs-4"
+              [class.is-active]="filtroFaixaRej === 'faixa-abs-4'"
+              (click)="toggleFaixaRej('faixa-abs-4')"
+              title="Caiu = bom (verde); subiu = ruim (vermelho)">
+              &gt; R$ 500
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Modo ranking: 2 grades (sem legenda/cores) -->
+      <div class="visitacao-analise-grid-2" *ngIf="d.modo === 'ranking'">
+        <section class="visitacao-analise-tabela-card is-crescimento">
+          <header>
+            <h3>Maiores vendas</h3>
+            <button
+              type="button"
+              class="btn btn-exportar btn-exportar-card"
+              (click)="exportarExcel('vendas')"
+              [disabled]="!vendasVisivel.length || loading"
+              title="Exportar maiores vendas para Excel">
+              <i class="fas fa-file-excel"></i>
+              Excel
+            </button>
+          </header>
+          <div class="table-wrapper">
+            <table class="vendas-table visitacao-analise-table">
+              <thead>
+                <tr>
+                  <th
+                    class="sortable"
+                    [class.sorted]="sortVendasField === 'nome'"
+                    (click)="onSortVendas('nome')">
+                    Nome do médico
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortVendasField === 'nome'"
+                      [ngClass]="sortVendasDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortVendasField === 'valorPeriodo'"
+                    (click)="onSortVendas('valorPeriodo')">
+                    Total
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortVendasField === 'valorPeriodo'"
+                      [ngClass]="sortVendasDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortVendasField === 'valorMedia'"
+                    (click)="onSortVendas('valorMedia')">
+                    Média
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortVendasField === 'valorMedia'"
+                      [ngClass]="sortVendasDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!vendasVisivel.length" class="no-data">
+                  <td colspan="3">
+                    <i class="fas fa-inbox"></i>
+                    Nenhuma venda no período
+                  </td>
+                </tr>
+                <tr *ngFor="let item of vendasVisivel; trackBy: trackByMedico">
+                  <td>
+                    <div class="medico-nome">{{ item.nomeMedico }}</div>
+                    <div class="medico-sub">
+                      CRM {{ item.crmMedico }}/{{ item.ufCrmMedico }}
+                      <span *ngIf="item.nomeRepresentante"> · {{ item.nomeRepresentante }}</span>
+                    </div>
+                  </td>
+                  <td class="text-end">{{ formatarValor(item.valorPeriodo) }}</td>
+                  <td class="text-end">{{ formatarValor(item.valorMedia) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="visitacao-analise-tabela-card is-rejeitado">
+          <header>
+            <h3>Mais rejeitados</h3>
+            <button
+              type="button"
+              class="btn btn-exportar btn-exportar-card"
+              (click)="exportarExcel('rejeitadosRanking')"
+              [disabled]="!rejeitadosRankingVisivel.length || loading"
+              title="Exportar mais rejeitados para Excel">
+              <i class="fas fa-file-excel"></i>
+              Excel
+            </button>
+          </header>
+          <div class="table-wrapper">
+            <table class="vendas-table visitacao-analise-table">
+              <thead>
+                <tr>
+                  <th
+                    class="sortable"
+                    [class.sorted]="sortRejRankField === 'nome'"
+                    (click)="onSortRejRank('nome')">
+                    Nome do médico
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejRankField === 'nome'"
+                      [ngClass]="sortRejRankDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortRejRankField === 'valorPeriodo'"
+                    (click)="onSortRejRank('valorPeriodo')">
+                    Total
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejRankField === 'valorPeriodo'"
+                      [ngClass]="sortRejRankDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortRejRankField === 'valorMedia'"
+                    (click)="onSortRejRank('valorMedia')">
+                    Média
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejRankField === 'valorMedia'"
+                      [ngClass]="sortRejRankDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!rejeitadosRankingVisivel.length" class="no-data">
+                  <td colspan="3">
+                    <i class="fas fa-inbox"></i>
+                    Nenhum rejeitado no período
+                  </td>
+                </tr>
+                <tr *ngFor="let item of rejeitadosRankingVisivel; trackBy: trackByMedico">
+                  <td>
+                    <div class="medico-nome">{{ item.nomeMedico }}</div>
+                    <div class="medico-sub">
+                      CRM {{ item.crmMedico }}/{{ item.ufCrmMedico }}
+                      <span *ngIf="item.nomeRepresentante"> · {{ item.nomeRepresentante }}</span>
+                    </div>
+                  </td>
+                  <td class="text-end">{{ formatarValor(item.valorPeriodo) }}</td>
+                  <td class="text-end">{{ formatarValor(item.valorMedia) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </ng-container>
+
+    <p
+      class="chart-placeholder visitacao-analise-empty"
+      *ngIf="unidadeFilter && !loading && !loadingOpcoes && !dados && isComparar && (c1 == null || c2 == null)">
+      <i class="fas fa-calendar-alt"></i>
+      Selecione Competência 1 e Competência 2 (fechadas) para comparar.
+    </p>
+    <p
+      class="chart-placeholder visitacao-analise-empty"
+      *ngIf="unidadeFilter && !loading && !loadingOpcoes && !dados && isRanking && !competenciasRanking.length">
+      <i class="fas fa-calendar-alt"></i>
+      Selecione uma ou mais competências fechadas para o ranking.
+    </p>
+  </section>
+</div>

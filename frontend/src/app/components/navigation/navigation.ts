@@ -349,6 +349,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
           requiredPermissions: [Permission.VISITACAO_ACOMPANHAMENTO_READ],
         },
         {
+          label: 'Análise',
+          route: '/visitacao/analise',
+          icon: 'feather-bar-chart-2',
+          requiredPermissions: [Permission.VISITACAO_ANALISE_READ],
+        },
+        {
           label: 'Configuração Metas',
           route: '/visitacao/configuracao-metas',
           icon: 'feather-target',

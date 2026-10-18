@@ -168,6 +168,7 @@ export enum Permission {
   VISITACAO_ACOMPANHAMENTO_COMISSAO = 'visitacao-acompanhamento:comissao',
   VISITACAO_FECHAMENTO_FECHAR = 'visitacao-fechamento:fechar',
   VISITACAO_FECHAMENTO_REABRIR = 'visitacao-fechamento:reabrir',
+  VISITACAO_ANALISE_READ = 'visitacao-analise:read',
   VISITACAO_META_READ = 'visitacao-meta:read',
   VISITACAO_META_UPDATE = 'visitacao-meta:update',
   VISITACAO_COMISSAO_READ = 'visitacao-comissao:read',
