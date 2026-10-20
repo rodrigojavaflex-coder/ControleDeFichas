@@ -47,6 +47,38 @@
               (ngModelChange)="onModoChange()">
               <option value="comparar">Comparar</option>
               <option value="ranking">Ranking</option>
+              <option value="evolucao">Evolução</option>
+            </select>
+          </div>
+
+          <div class="filter-group visitacao-analise-exibicao">
+            <label class="form-label" for="va-analise-exibicao">Exibição</label>
+            <select
+              id="va-analise-exibicao"
+              class="form-control"
+              [(ngModel)]="exibicao"
+              [disabled]="!unidadeFilter || loadingOpcoes"
+              (change)="onExibicaoChange()">
+              <option value="dados">Dados</option>
+              <option value="graficos">Gráficos</option>
+            </select>
+          </div>
+
+          <div class="filter-group visitacao-analise-qnt">
+            <label class="form-label" for="va-analise-qnt">Qnt</label>
+            <select
+              id="va-analise-qnt"
+              class="form-control"
+              [(ngModel)]="qnt"
+              [disabled]="!unidadeFilter || loadingOpcoes"
+              (change)="onQntChange()"
+              [title]="isGraficos ? 'Em Gráficos o máximo é 50' : 'Quantidade por grade'">
+              <option
+                *ngFor="let op of qntOpcoes"
+                [ngValue]="op.value"
+                [disabled]="isGraficos && op.value === null">
+                {{ op.label }}
+              </option>
             </select>
           </div>
 
@@ -82,7 +114,7 @@
             </div>
           </ng-container>
 
-          <div class="filter-group visitacao-analise-meses-rank" *ngIf="isRanking">
+          <div class="filter-group visitacao-analise-meses-rank" *ngIf="isMultiCompetencias">
             <label class="form-label">Competências</label>
             <app-multi-select-dropdown
               [options]="competenciasOptions"
@@ -181,6 +213,7 @@
             <button
               type="button"
               class="btn btn-exportar btn-exportar-card"
+              *ngIf="isDados"
               (click)="exportarExcel('crescimento')"
               [disabled]="!crescimentoVisivel.length || loading"
               title="Exportar crescimento para Excel">
@@ -188,7 +221,7 @@
               Excel
             </button>
           </header>
-          <div class="table-wrapper">
+          <div class="table-wrapper" *ngIf="isDados">
             <table class="vendas-table visitacao-analise-table">
               <thead>
                 <tr>
@@ -269,7 +302,28 @@
               </tbody>
             </table>
           </div>
-          <div class="visitacao-analise-legenda" role="group" aria-label="Filtrar por faixa de crescimento">
+          <div class="visitacao-analise-chart" *ngIf="isGraficos">
+            <p class="visitacao-analise-chart-empty" *ngIf="!crescimentoVisivel.length">
+              <i class="fas fa-inbox"></i>
+              {{ filtroFaixaCresc ? 'Nenhum médico nesta faixa' : 'Nenhum crescimento' }}
+            </p>
+            <div class="bar-list" *ngIf="crescimentoVisivel.length">
+              <div
+                class="bar-item"
+                *ngFor="let item of crescimentoVisivel; trackBy: trackByMedico">
+                <div class="bar-header">
+                  <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
+                  <span class="bar-value">{{ formatarDelta(item.delta) }}</span>
+                </div>
+                <div class="bar-track">
+                  <div
+                    class="bar-fill bar-fill-crescimento"
+                    [style.width.%]="percentualBarra(item.delta, maxCrescimentoBar)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="visitacao-analise-legenda" *ngIf="isDados" role="group" aria-label="Filtrar por faixa de crescimento">
             <span class="legenda-titulo">Legenda</span>
             <button
               type="button"
@@ -315,6 +369,7 @@
             <button
               type="button"
               class="btn btn-exportar btn-exportar-card"
+              *ngIf="isDados"
               (click)="exportarExcel('queda')"
               [disabled]="!quedaVisivel.length || loading"
               title="Exportar queda para Excel">
@@ -322,7 +377,7 @@
               Excel
             </button>
           </header>
-          <div class="table-wrapper">
+          <div class="table-wrapper" *ngIf="isDados">
             <table class="vendas-table visitacao-analise-table">
               <thead>
                 <tr>
@@ -403,7 +458,28 @@
               </tbody>
             </table>
           </div>
-          <div class="visitacao-analise-legenda" role="group" aria-label="Filtrar por faixa de queda">
+          <div class="visitacao-analise-chart" *ngIf="isGraficos">
+            <p class="visitacao-analise-chart-empty" *ngIf="!quedaVisivel.length">
+              <i class="fas fa-inbox"></i>
+              {{ filtroFaixaQueda ? 'Nenhum médico nesta faixa' : 'Nenhuma queda' }}
+            </p>
+            <div class="bar-list" *ngIf="quedaVisivel.length">
+              <div
+                class="bar-item"
+                *ngFor="let item of quedaVisivel; trackBy: trackByMedico">
+                <div class="bar-header">
+                  <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
+                  <span class="bar-value">{{ formatarDelta(item.delta) }}</span>
+                </div>
+                <div class="bar-track">
+                  <div
+                    class="bar-fill bar-fill-queda"
+                    [style.width.%]="percentualBarra(item.delta, maxQuedaBar)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="visitacao-analise-legenda" *ngIf="isDados" role="group" aria-label="Filtrar por faixa de queda">
             <span class="legenda-titulo">Legenda</span>
             <button
               type="button"
@@ -449,6 +525,7 @@
             <button
               type="button"
               class="btn btn-exportar btn-exportar-card"
+              *ngIf="isDados"
               (click)="exportarExcel('rejeitados')"
               [disabled]="!rejeitadosVisivel.length || loading"
               title="Exportar rejeitados para Excel">
@@ -456,7 +533,7 @@
               Excel
             </button>
           </header>
-          <div class="table-wrapper">
+          <div class="table-wrapper" *ngIf="isDados">
             <table class="vendas-table visitacao-analise-table">
               <thead>
                 <tr>
@@ -537,7 +614,28 @@
               </tbody>
             </table>
           </div>
-          <div class="visitacao-analise-legenda" role="group" aria-label="Filtrar por |Diferença| de rejeitado">
+          <div class="visitacao-analise-chart" *ngIf="isGraficos">
+            <p class="visitacao-analise-chart-empty" *ngIf="!rejeitadosVisivel.length">
+              <i class="fas fa-inbox"></i>
+              {{ filtroFaixaRej ? 'Nenhum médico nesta faixa' : 'Nenhum rejeitado' }}
+            </p>
+            <div class="bar-list" *ngIf="rejeitadosVisivel.length">
+              <div
+                class="bar-item"
+                *ngFor="let item of rejeitadosVisivel; trackBy: trackByMedico">
+                <div class="bar-header">
+                  <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
+                  <span class="bar-value">{{ formatarDelta(item.delta) }}</span>
+                </div>
+                <div class="bar-track">
+                  <div
+                    class="bar-fill bar-fill-rejeitado"
+                    [style.width.%]="percentualBarra(item.delta, maxRejeitadosBar)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="visitacao-analise-legenda" *ngIf="isDados" role="group" aria-label="Filtrar por |Diferença| de rejeitado">
             <span class="legenda-titulo">Legenda (|Diferença|)</span>
             <button
               type="button"
@@ -590,6 +688,7 @@
             <button
               type="button"
               class="btn btn-exportar btn-exportar-card"
+              *ngIf="isDados"
               (click)="exportarExcel('vendas')"
               [disabled]="!vendasVisivel.length || loading"
               title="Exportar maiores vendas para Excel">
@@ -597,7 +696,7 @@
               Excel
             </button>
           </header>
-          <div class="table-wrapper">
+          <div class="table-wrapper" *ngIf="isDados">
             <table class="vendas-table visitacao-analise-table">
               <thead>
                 <tr>
@@ -654,6 +753,27 @@
               </tbody>
             </table>
           </div>
+          <div class="visitacao-analise-chart" *ngIf="isGraficos">
+            <p class="visitacao-analise-chart-empty" *ngIf="!vendasVisivel.length">
+              <i class="fas fa-inbox"></i>
+              Nenhuma venda no período
+            </p>
+            <div class="bar-list" *ngIf="vendasVisivel.length">
+              <div
+                class="bar-item"
+                *ngFor="let item of vendasVisivel; trackBy: trackByMedico">
+                <div class="bar-header">
+                  <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
+                  <span class="bar-value">{{ formatarValor(item.valorPeriodo) }}</span>
+                </div>
+                <div class="bar-track">
+                  <div
+                    class="bar-fill bar-fill-crescimento"
+                    [style.width.%]="percentualBarra(item.valorPeriodo, maxVendasBar)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="visitacao-analise-tabela-card is-rejeitado">
@@ -662,6 +782,7 @@
             <button
               type="button"
               class="btn btn-exportar btn-exportar-card"
+              *ngIf="isDados"
               (click)="exportarExcel('rejeitadosRanking')"
               [disabled]="!rejeitadosRankingVisivel.length || loading"
               title="Exportar mais rejeitados para Excel">
@@ -669,7 +790,7 @@
               Excel
             </button>
           </header>
-          <div class="table-wrapper">
+          <div class="table-wrapper" *ngIf="isDados">
             <table class="vendas-table visitacao-analise-table">
               <thead>
                 <tr>
@@ -726,6 +847,276 @@
               </tbody>
             </table>
           </div>
+          <div class="visitacao-analise-chart" *ngIf="isGraficos">
+            <p class="visitacao-analise-chart-empty" *ngIf="!rejeitadosRankingVisivel.length">
+              <i class="fas fa-inbox"></i>
+              Nenhum rejeitado no período
+            </p>
+            <div class="bar-list" *ngIf="rejeitadosRankingVisivel.length">
+              <div
+                class="bar-item"
+                *ngFor="let item of rejeitadosRankingVisivel; trackBy: trackByMedico">
+                <div class="bar-header">
+                  <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
+                  <span class="bar-value">{{ formatarValor(item.valorPeriodo) }}</span>
+                </div>
+                <div class="bar-track">
+                  <div
+                    class="bar-fill bar-fill-rejeitado"
+                    [style.width.%]="percentualBarra(item.valorPeriodo, maxRejeitadosRankingBar)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Modo evolução: 2 cards (Recebido / Rejeitados) com série por competência -->
+      <div class="visitacao-analise-grid-2" *ngIf="d.modo === 'evolucao'">
+        <section class="visitacao-analise-tabela-card is-crescimento">
+          <header>
+            <h3>Recebido</h3>
+            <button
+              type="button"
+              class="btn btn-exportar btn-exportar-card"
+              *ngIf="isDados"
+              (click)="exportarExcel('vendas')"
+              [disabled]="!vendasVisivel.length || loading"
+              title="Exportar recebido (evolução) para Excel">
+              <i class="fas fa-file-excel"></i>
+              Excel
+            </button>
+          </header>
+          <div class="table-wrapper" *ngIf="isDados">
+            <table class="vendas-table visitacao-analise-table">
+              <thead>
+                <tr>
+                  <th
+                    class="sortable"
+                    [class.sorted]="sortVendasField === 'nome'"
+                    (click)="onSortVendas('nome')">
+                    Nome do médico
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortVendasField === 'nome'"
+                      [ngClass]="sortVendasDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="text-end"
+                    *ngFor="let label of labelsCompetenciasSerie">
+                    {{ label }}
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortVendasField === 'valorPeriodo'"
+                    (click)="onSortVendas('valorPeriodo')">
+                    Total
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortVendasField === 'valorPeriodo'"
+                      [ngClass]="sortVendasDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!vendasVisivel.length" class="no-data">
+                  <td [attr.colspan]="2 + labelsCompetenciasSerie.length">
+                    <i class="fas fa-inbox"></i>
+                    Nenhum recebido no período
+                  </td>
+                </tr>
+                <tr *ngFor="let item of vendasVisivel; trackBy: trackByMedico">
+                  <td>
+                    <div class="medico-nome">{{ item.nomeMedico }}</div>
+                    <div class="medico-sub">
+                      CRM {{ item.crmMedico }}/{{ item.ufCrmMedico }}
+                      <span *ngIf="item.nomeRepresentante"> · {{ item.nomeRepresentante }}</span>
+                    </div>
+                  </td>
+                  <td
+                    class="text-end"
+                    *ngFor="let _ of labelsCompetenciasSerie; let i = index">
+                    {{ formatarValor(valorSerie(item, i)) }}
+                  </td>
+                  <td class="text-end">{{ formatarValor(item.valorPeriodo) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="visitacao-analise-chart" *ngIf="isGraficos">
+            <p class="visitacao-analise-chart-empty" *ngIf="!vendasVisivel.length">
+              <i class="fas fa-inbox"></i>
+              Nenhum recebido no período
+            </p>
+            <div class="bar-list evolucao-bar-list" *ngIf="vendasVisivel.length">
+              <div
+                class="bar-item evolucao-bar-item"
+                *ngFor="let item of vendasVisivel; trackBy: trackByMedico">
+                <div class="bar-header">
+                  <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
+                  <span class="bar-value">{{ formatarValor(item.valorPeriodo) }}</span>
+                </div>
+                <div class="evolucao-serie evolucao-serie-h">
+                  <div class="evolucao-valores-row">
+                    <span
+                      class="evolucao-mes-valor"
+                      *ngFor="let label of labelsCompetenciasSerie; let i = index">
+                      {{ formatarValor(valorSerie(item, i)) }}
+                    </span>
+                  </div>
+                  <div class="evolucao-tracks-wrap">
+                    <svg
+                      class="evolucao-line-svg"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-hidden="true">
+                      <polyline
+                        class="evolucao-line evolucao-line-recebido"
+                        fill="none"
+                        [attr.points]="pontosLinhaSerie(item.serie, maxSerieVendasBar)" />
+                    </svg>
+                    <div
+                      class="evolucao-col"
+                      *ngFor="let label of labelsCompetenciasSerie; let i = index">
+                      <div class="bar-track bar-track-v">
+                        <div
+                          class="bar-fill bar-fill-crescimento"
+                          [style.height.%]="percentualBarra(valorSerie(item, i), maxSerieVendasBar)"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="evolucao-labels-row">
+                    <span
+                      class="evolucao-mes-label"
+                      *ngFor="let label of labelsCompetenciasSerie">{{ label }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="visitacao-analise-tabela-card is-rejeitado">
+          <header>
+            <h3>Rejeitados</h3>
+            <button
+              type="button"
+              class="btn btn-exportar btn-exportar-card"
+              *ngIf="isDados"
+              (click)="exportarExcel('rejeitadosRanking')"
+              [disabled]="!rejeitadosRankingVisivel.length || loading"
+              title="Exportar rejeitados (evolução) para Excel">
+              <i class="fas fa-file-excel"></i>
+              Excel
+            </button>
+          </header>
+          <div class="table-wrapper" *ngIf="isDados">
+            <table class="vendas-table visitacao-analise-table">
+              <thead>
+                <tr>
+                  <th
+                    class="sortable"
+                    [class.sorted]="sortRejRankField === 'nome'"
+                    (click)="onSortRejRank('nome')">
+                    Nome do médico
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejRankField === 'nome'"
+                      [ngClass]="sortRejRankDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                  <th
+                    class="text-end"
+                    *ngFor="let label of labelsCompetenciasSerie">
+                    {{ label }}
+                  </th>
+                  <th
+                    class="sortable text-end"
+                    [class.sorted]="sortRejRankField === 'valorPeriodo'"
+                    (click)="onSortRejRank('valorPeriodo')">
+                    Total
+                    <i
+                      class="fas sort-icon"
+                      *ngIf="sortRejRankField === 'valorPeriodo'"
+                      [ngClass]="sortRejRankDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="!rejeitadosRankingVisivel.length" class="no-data">
+                  <td [attr.colspan]="2 + labelsCompetenciasSerie.length">
+                    <i class="fas fa-inbox"></i>
+                    Nenhum rejeitado no período
+                  </td>
+                </tr>
+                <tr *ngFor="let item of rejeitadosRankingVisivel; trackBy: trackByMedico">
+                  <td>
+                    <div class="medico-nome">{{ item.nomeMedico }}</div>
+                    <div class="medico-sub">
+                      CRM {{ item.crmMedico }}/{{ item.ufCrmMedico }}
+                      <span *ngIf="item.nomeRepresentante"> · {{ item.nomeRepresentante }}</span>
+                    </div>
+                  </td>
+                  <td
+                    class="text-end"
+                    *ngFor="let _ of labelsCompetenciasSerie; let i = index">
+                    {{ formatarValor(valorSerie(item, i)) }}
+                  </td>
+                  <td class="text-end">{{ formatarValor(item.valorPeriodo) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="visitacao-analise-chart" *ngIf="isGraficos">
+            <p class="visitacao-analise-chart-empty" *ngIf="!rejeitadosRankingVisivel.length">
+              <i class="fas fa-inbox"></i>
+              Nenhum rejeitado no período
+            </p>
+            <div class="bar-list evolucao-bar-list" *ngIf="rejeitadosRankingVisivel.length">
+              <div
+                class="bar-item evolucao-bar-item"
+                *ngFor="let item of rejeitadosRankingVisivel; trackBy: trackByMedico">
+                <div class="bar-header">
+                  <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
+                  <span class="bar-value">{{ formatarValor(item.valorPeriodo) }}</span>
+                </div>
+                <div class="evolucao-serie evolucao-serie-h">
+                  <div class="evolucao-valores-row">
+                    <span
+                      class="evolucao-mes-valor"
+                      *ngFor="let label of labelsCompetenciasSerie; let i = index">
+                      {{ formatarValor(valorSerie(item, i)) }}
+                    </span>
+                  </div>
+                  <div class="evolucao-tracks-wrap">
+                    <svg
+                      class="evolucao-line-svg"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-hidden="true">
+                      <polyline
+                        class="evolucao-line evolucao-line-rejeitado"
+                        fill="none"
+                        [attr.points]="pontosLinhaSerie(item.serie, maxSerieRejeitadosBar)" />
+                    </svg>
+                    <div
+                      class="evolucao-col"
+                      *ngFor="let label of labelsCompetenciasSerie; let i = index">
+                      <div class="bar-track bar-track-v">
+                        <div
+                          class="bar-fill bar-fill-rejeitado"
+                          [style.height.%]="percentualBarra(valorSerie(item, i), maxSerieRejeitadosBar)"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="evolucao-labels-row">
+                    <span
+                      class="evolucao-mes-label"
+                      *ngFor="let label of labelsCompetenciasSerie">{{ label }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     </ng-container>
@@ -741,6 +1132,12 @@
       *ngIf="unidadeFilter && !loading && !loadingOpcoes && !dados && isRanking && !competenciasRanking.length">
       <i class="fas fa-calendar-alt"></i>
       Selecione uma ou mais competências fechadas para o ranking.
+    </p>
+    <p
+      class="chart-placeholder visitacao-analise-empty"
+      *ngIf="unidadeFilter && !loading && !loadingOpcoes && !dados && isEvolucao && competenciasRanking.length < 2">
+      <i class="fas fa-calendar-alt"></i>
+      Selecione ao menos duas competências fechadas para a evolução.
     </p>
   </section>
 </div>

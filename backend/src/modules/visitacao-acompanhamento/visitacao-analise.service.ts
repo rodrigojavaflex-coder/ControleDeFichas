@@ -57,6 +57,17 @@ type AgregadoRankingRow = {
   rejeitado_periodo: string | number;
 };
 
+type AgregadoEvolucaoRow = {
+  crm_medico: string;
+  uf_crm_medico: string;
+  nome_medico: string;
+  nome_representante: string | null;
+  ano: number;
+  mes: number;
+  recebido: string | number;
+  rejeitado: string | number;
+};
+
 type MedicoValores = {
   crmMedico: string;
   ufCrmMedico: string;
@@ -145,6 +156,17 @@ export class VisitacaoAnaliseService {
       }
       await this.assertCompetenciasFechadas(unidade, refs);
       return this.analisarRankingInterno(unidade, refs, dto);
+    }
+
+    if (modo === 'evolucao') {
+      const refs = this.normalizarCompetenciasKeys(dto.competencias ?? []);
+      if (refs.length < 2) {
+        throw new BadRequestException(
+          'Informe ao menos duas competências fechadas para a evolução.',
+        );
+      }
+      await this.assertCompetenciasFechadas(unidade, refs);
+      return this.analisarEvolucaoInterno(unidade, refs, dto);
     }
 
     const c1 = parseCompetenciaKey(dto.c1);
@@ -286,6 +308,115 @@ export class VisitacaoAnaliseService {
     return {
       unidade,
       modo: 'ranking',
+      competencias,
+      competencia1: null,
+      competencia2: null,
+      agregacao: 'soma',
+      filtrosAplicados: {
+        funcionarioId: dto.funcionarioId ?? null,
+        nomeMedico: dto.nomeMedico?.trim() || null,
+        naCarteira: dto.naCarteira ?? 'todos',
+      },
+      crescimento: [],
+      queda: [],
+      maioresVendas,
+      maioresRejeitados,
+    };
+  }
+
+  private async analisarEvolucaoInterno(
+    unidade: Unidade,
+    refs: VisitacaoAnaliseCompetenciaRef[],
+    dto: FiltrosAnalise,
+  ): Promise<VisitacaoAnaliseResponseDto> {
+    const iniciouEm = Date.now();
+    const top = dto.top ?? null;
+    const competencias = refs.map((r) => this.toCompetenciaDto(r));
+    const agregados = await this.carregarAgregadoEvolucao(unidade, refs, dto);
+
+    type Acc = {
+      crmMedico: string;
+      ufCrmMedico: string;
+      nomeMedico: string;
+      nomeRepresentante: string | null;
+      recebido: number[];
+      rejeitado: number[];
+    };
+    const mapa = new Map<string, Acc>();
+    const idxPorKey = new Map(refs.map((r, i) => [r.key, i]));
+
+    for (const row of agregados) {
+      const key = this.chaveMedico(row.crm_medico, row.uf_crm_medico);
+      let acc = mapa.get(key);
+      if (!acc) {
+        acc = {
+          crmMedico: String(row.crm_medico).trim(),
+          ufCrmMedico: String(row.uf_crm_medico).trim().toUpperCase(),
+          nomeMedico: row.nome_medico,
+          nomeRepresentante: row.nome_representante,
+          recebido: refs.map(() => 0),
+          rejeitado: refs.map(() => 0),
+        };
+        mapa.set(key, acc);
+      }
+      const refKey = `${Number(row.ano)}-${String(Number(row.mes)).padStart(2, '0')}`;
+      const idx = idxPorKey.get(refKey);
+      if (idx == null) {
+        continue;
+      }
+      acc.recebido[idx] += Number(row.recebido) || 0;
+      acc.rejeitado[idx] += Number(row.rejeitado) || 0;
+    }
+
+    const vendas: VisitacaoAnaliseMedicoDto[] = [];
+    const rejeitados: VisitacaoAnaliseMedicoDto[] = [];
+
+    for (const acc of mapa.values()) {
+      const totalRec = acc.recebido.reduce((s, v) => s + v, 0);
+      const totalRej = acc.rejeitado.reduce((s, v) => s + v, 0);
+      if (totalRec <= 0 && totalRej <= 0) {
+        continue;
+      }
+      const base = {
+        crmMedico: acc.crmMedico,
+        ufCrmMedico: acc.ufCrmMedico,
+        nomeMedico: acc.nomeMedico,
+        nomeRepresentante: acc.nomeRepresentante,
+        valorMes1: null as number | null,
+        valorMes2: null as number | null,
+        valorMedia: null as number | null,
+        delta: 0,
+        percentual: null as number | null,
+      };
+      if (totalRec > 0) {
+        vendas.push({
+          ...base,
+          valorPeriodo: totalRec,
+          serie: [...acc.recebido],
+        });
+      }
+      if (totalRej > 0) {
+        rejeitados.push({
+          ...base,
+          valorPeriodo: totalRej,
+          serie: [...acc.rejeitado],
+        });
+      }
+    }
+
+    vendas.sort((a, b) => (b.valorPeriodo ?? 0) - (a.valorPeriodo ?? 0));
+    rejeitados.sort((a, b) => (b.valorPeriodo ?? 0) - (a.valorPeriodo ?? 0));
+
+    const maioresVendas = this.limitar(vendas, top);
+    const maioresRejeitados = this.limitar(rejeitados, top);
+
+    this.logger.log(
+      `Análise evolução ${unidade} competencias=[${refs.map((r) => r.key).join(',')}] vendas=${maioresVendas.length} rej=${maioresRejeitados.length} em ${Date.now() - iniciouEm}ms`,
+    );
+
+    return {
+      unidade,
+      modo: 'evolucao',
       competencias,
       competencia1: null,
       competencia2: null,
@@ -528,6 +659,33 @@ export class VisitacaoAnaliseService {
     return qb.getRawMany<AgregadoRankingRow>();
   }
 
+  private async carregarAgregadoEvolucao(
+    unidade: Unidade,
+    refs: VisitacaoAnaliseCompetenciaRef[],
+    dto: FiltrosAnalise,
+  ): Promise<AgregadoEvolucaoRow[]> {
+    const qb = this.fechamentoMedicoRepository
+      .createQueryBuilder('m')
+      .innerJoin('m.fechamento', 'f')
+      .select('UPPER(BTRIM(m.crm_medico))', 'crm_medico')
+      .addSelect('UPPER(BTRIM(m.uf_crm_medico))', 'uf_crm_medico')
+      .addSelect('MAX(m.nome_medico)', 'nome_medico')
+      .addSelect('MAX(m.nome_representante)', 'nome_representante')
+      .addSelect('f.ano', 'ano')
+      .addSelect('f.mes', 'mes')
+      .addSelect('COALESCE(SUM(m.recebido_loja), 0)', 'recebido')
+      .addSelect('COALESCE(SUM(m.rejeitado_loja), 0)', 'rejeitado')
+      .where('f.unidade = :unidade', { unidade })
+      .groupBy('UPPER(BTRIM(m.crm_medico))')
+      .addGroupBy('UPPER(BTRIM(m.uf_crm_medico))')
+      .addGroupBy('f.ano')
+      .addGroupBy('f.mes');
+
+    this.aplicarFiltroCompetencias(qb, refs);
+    this.aplicarFiltrosMedico(qb, dto);
+    return qb.getRawMany<AgregadoEvolucaoRow>();
+  }
+
   private chaveMedico(crm: string, uf: string): string {
     return `${String(crm).trim().toUpperCase()}|${String(uf).trim().toUpperCase()}`;
   }
@@ -621,13 +779,12 @@ export class VisitacaoAnaliseService {
       [...mapa.values()]
         .filter((item) => item.valorMes1 != null || item.valorMes2 != null)
         .map((item) => this.toLinha(item))
+        // Δ desc: aumentos de rejeitado (+) primeiro; depois empate por c2.
         .sort((a, b) => {
-          const va = a.valorMes2 ?? 0;
-          const vb = b.valorMes2 ?? 0;
-          if (vb !== va) {
-            return vb - va;
+          if (b.delta !== a.delta) {
+            return b.delta - a.delta;
           }
-          return (b.valorMes1 ?? 0) - (a.valorMes1 ?? 0);
+          return (b.valorMes2 ?? 0) - (a.valorMes2 ?? 0);
         }),
       top,
     );

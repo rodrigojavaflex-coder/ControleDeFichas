@@ -35,7 +35,7 @@ export class VisitacaoAnaliseService {
     const modo = filters.modo ?? 'comparar';
     let params = new HttpParams().set('modo', modo);
 
-    if (modo === 'ranking') {
+    if (modo === 'ranking' || modo === 'evolucao') {
       const competencias = (filters.competencias ?? [])
         .map((c) => String(c).trim())
         .filter(Boolean);

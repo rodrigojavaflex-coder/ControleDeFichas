@@ -2,7 +2,7 @@ import { Unidade } from './usuario.model';
 import { VisitacaoPainelMedicoRepresentante } from './visitacao-painel-medico.model';
 
 export type VisitacaoAnaliseNaCarteira = 'todos' | 'sim' | 'nao';
-export type VisitacaoAnaliseModo = 'comparar' | 'ranking';
+export type VisitacaoAnaliseModo = 'comparar' | 'ranking' | 'evolucao';
 
 export interface VisitacaoAnaliseCompetencia {
   key: string;
@@ -49,6 +49,8 @@ export interface VisitacaoAnaliseMedico {
   valorMes2: number | null;
   valorPeriodo: number | null;
   valorMedia: number | null;
+  /** Série por competência (modo evolucao), alinhada a `competencias`. */
+  serie?: number[];
   delta: number;
   percentual: number | null;
 }

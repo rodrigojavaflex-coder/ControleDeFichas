@@ -82,16 +82,23 @@ export class VisitacaoAnaliseMedicoDto {
   })
   valorMedia: number | null;
 
+  @ApiPropertyOptional({
+    type: [Number],
+    description:
+      'Série por competência (modo evolucao), na mesma ordem de `competencias`. Ausente nos demais modos.',
+  })
+  serie?: number[];
+
   @ApiProperty({
     description:
-      'Modo comparar: valorMes2 − valorMes1. Modo ranking: 0 (não aplicável).',
+      'Modo comparar: valorMes2 − valorMes1. Ranking/evolução: 0 (não aplicável).',
   })
   delta: number;
 
   @ApiPropertyOptional({
     nullable: true,
     description:
-      'Modo comparar: delta / valorMes1 * 100. Modo ranking: null.',
+      'Modo comparar: delta / valorMes1 * 100. Ranking/evolução: null.',
   })
   percentual: number | null;
 }
@@ -117,7 +124,7 @@ export class VisitacaoAnaliseResponseDto {
   @ApiProperty({
     type: [VisitacaoAnaliseCompetenciaDto],
     description:
-      'Competências do recorte. Comparar: [c1, c2]. Ranking: selecionadas.',
+      'Competências do recorte. Comparar: [c1, c2]. Ranking/evolução: selecionadas.',
   })
   competencias: VisitacaoAnaliseCompetenciaDto[];
 
@@ -138,7 +145,8 @@ export class VisitacaoAnaliseResponseDto {
   @ApiPropertyOptional({
     enum: ['soma'],
     nullable: true,
-    description: 'Agregação do período no ranking (soma/total). Null no comparar.',
+    description:
+      'Agregação do período (ranking/evolução = soma/total). Null no comparar.',
   })
   agregacao: 'soma' | null;
 
@@ -147,26 +155,27 @@ export class VisitacaoAnaliseResponseDto {
 
   @ApiProperty({
     type: [VisitacaoAnaliseMedicoDto],
-    description: 'Maior crescimento (modo comparar). Vazio no ranking.',
+    description: 'Maior crescimento (modo comparar). Vazio nos demais.',
   })
   crescimento: VisitacaoAnaliseMedicoDto[];
 
   @ApiProperty({
     type: [VisitacaoAnaliseMedicoDto],
-    description: 'Maior queda (modo comparar). Vazio no ranking.',
+    description: 'Maior queda (modo comparar). Vazio nos demais.',
   })
   queda: VisitacaoAnaliseMedicoDto[];
 
   @ApiProperty({
     type: [VisitacaoAnaliseMedicoDto],
-    description: 'Maiores vendas do período (modo ranking). Vazio no comparar.',
+    description:
+      'Recebido: ranking = total; evolução = série + total. Vazio no comparar.',
   })
   maioresVendas: VisitacaoAnaliseMedicoDto[];
 
   @ApiProperty({
     type: [VisitacaoAnaliseMedicoDto],
     description:
-      'Rejeitados: comparar = Δ c1→c2; ranking = total do período desc.',
+      'Rejeitados: comparar = Δ; ranking = total; evolução = série + total.',
   })
   maioresRejeitados: VisitacaoAnaliseMedicoDto[];
 }

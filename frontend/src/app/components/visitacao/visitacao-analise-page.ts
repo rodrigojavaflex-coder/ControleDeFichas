@@ -41,6 +41,7 @@ type ExportCard =
   | 'vendas'
   | 'rejeitadosRanking';
 
+type VisitacaoAnaliseExibicao = 'dados' | 'graficos';
 type SortField =
   | 'nome'
   | 'valorMes1'
@@ -57,6 +58,16 @@ type FaixaAbs =
   | 'faixa-abs-2'
   | 'faixa-abs-3'
   | 'faixa-abs-4';
+
+const QNT_OPCOES: ReadonlyArray<{ value: number | null; label: string }> = [
+  { value: 5, label: '5' },
+  { value: 10, label: '10' },
+  { value: 15, label: '15' },
+  { value: 20, label: '20' },
+  { value: 50, label: '50' },
+  { value: null, label: 'Todos' },
+];
+const TOP_GRAFICO_MAX = 50;
 
 @Component({
   selector: 'app-visitacao-analise-page',
@@ -86,6 +97,11 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
   unidadeDisabled = false;
 
   modo: VisitacaoAnaliseModo = 'comparar';
+  /** Dados = grades; Gráficos = barras CSS (top forçado ≤ 50). */
+  exibicao: VisitacaoAnaliseExibicao = 'dados';
+  /** Limite por grade; `null` = Todos (omitido na API, exceto em Gráficos). */
+  qnt: number | null = 10;
+  readonly qntOpcoes = QNT_OPCOES;
   /** Todas as competências fechadas da unidade (todos os anos). */
   competenciasDisponiveis: VisitacaoAnaliseCompetencia[] = [];
   /** Anos selecionados no filtro (multi-check); padrão = ano corrente. */
@@ -99,6 +115,9 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
   nomeMedicoFilter = '';
   naCarteiraFilter: VisitacaoAnaliseNaCarteira = 'todos';
 
+  /** Último `top` enviado à API (para evitar reload ao só trocar Dados↔Gráficos). */
+  private ultimoTopEnviado: number | null = null;
+
   filtroFaixaCresc: FaixaCresc | null = null;
   filtroFaixaQueda: FaixaQueda | null = null;
   filtroFaixaRej: FaixaAbs | null = null;
@@ -107,7 +126,7 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
   sortCrescDir: SortDir = 'desc';
   sortQuedaField: SortField = 'delta';
   sortQuedaDir: SortDir = 'asc';
-  sortRejField: SortField = 'valorMes2';
+  sortRejField: SortField = 'delta';
   sortRejDir: SortDir = 'desc';
   sortVendasField: SortField = 'valorPeriodo';
   sortVendasDir: SortDir = 'desc';
@@ -199,6 +218,39 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
 
   get isRanking(): boolean {
     return this.modo === 'ranking';
+  }
+
+  get isEvolucao(): boolean {
+    return this.modo === 'evolucao';
+  }
+
+  /** Ranking e Evolução compartilham o multi-select de competências. */
+  get isMultiCompetencias(): boolean {
+    return this.modo === 'ranking' || this.modo === 'evolucao';
+  }
+
+  get isDados(): boolean {
+    return this.exibicao === 'dados';
+  }
+
+  get isGraficos(): boolean {
+    return this.exibicao === 'graficos';
+  }
+
+  /** Labels abreviados das competências do recorte (evolução / ranking). */
+  get labelsCompetenciasSerie(): string[] {
+    return (this.dados?.competencias ?? []).map(
+      (c) => this.labelCompetenciaAbreviada(c) ?? c.label,
+    );
+  }
+
+  /** Top enviado à API: em Gráficos força no máximo 50 (Todos → 50). */
+  get topEfetivo(): number | undefined {
+    if (this.exibicao === 'graficos') {
+      const n = this.qnt == null ? TOP_GRAFICO_MAX : this.qnt;
+      return Math.min(Math.max(1, n), TOP_GRAFICO_MAX);
+    }
+    return this.qnt ?? undefined;
   }
 
   get anosOptions(): MultiSelectOption[] {
@@ -310,6 +362,35 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     );
   }
 
+  get maxCrescimentoBar(): number {
+    return this.maxAbsDelta(this.crescimentoVisivel);
+  }
+
+  get maxQuedaBar(): number {
+    return this.maxAbsDelta(this.quedaVisivel);
+  }
+
+  get maxRejeitadosBar(): number {
+    return this.maxAbsDelta(this.rejeitadosVisivel);
+  }
+
+  get maxVendasBar(): number {
+    return this.maxValorPeriodo(this.vendasVisivel);
+  }
+
+  get maxRejeitadosRankingBar(): number {
+    return this.maxValorPeriodo(this.rejeitadosRankingVisivel);
+  }
+
+  /** Máximo entre todos os pontos da série (para barras/linha da evolução). */
+  get maxSerieVendasBar(): number {
+    return this.maxSerie(this.vendasVisivel);
+  }
+
+  get maxSerieRejeitadosBar(): number {
+    return this.maxSerie(this.rejeitadosRankingVisivel);
+  }
+
   get podeAtualizar(): boolean {
     return this.podeAnalisar() && !this.loadingOpcoes;
   }
@@ -334,6 +415,8 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
       this.podarSelecaoCompetencias();
       if (this.isComparar) {
         this.aplicarSelecaoPadraoCompararSeVazio();
+      } else if (this.isEvolucao) {
+        this.aplicarSelecaoPadraoEvolucaoSeVazio();
       } else {
         this.aplicarSelecaoPadraoRankingSeVazio();
       }
@@ -350,13 +433,30 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     this.silenciarFiltroChange = true;
     try {
       if (this.modo === 'ranking') {
-        this.aplicarSelecaoPadraoRankingSeVazio();
+        this.aplicarSelecaoPadraoRankingSeVazio(true);
+      } else if (this.modo === 'evolucao') {
+        this.aplicarSelecaoPadraoEvolucaoSeVazio(true);
       } else {
         this.aplicarSelecaoPadraoCompararSeVazio();
       }
     } finally {
       this.silenciarFiltroChange = false;
     }
+    this.onFiltroChange();
+  }
+
+  onExibicaoChange(): void {
+    this.garantirQntParaGraficos();
+    const next = this.topEfetivo ?? null;
+    if (next !== this.ultimoTopEnviado) {
+      this.onFiltroChange();
+    } else {
+      this.cdr.markForCheck();
+    }
+  }
+
+  onQntChange(): void {
+    this.garantirQntParaGraficos();
     this.onFiltroChange();
   }
 
@@ -538,7 +638,11 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     }
 
     if (card === 'vendas' || card === 'rejeitadosRanking') {
-      await this.exportarExcelRanking(card);
+      if (this.dados.modo === 'evolucao') {
+        await this.exportarExcelEvolucao(card);
+      } else {
+        await this.exportarExcelRanking(card);
+      }
       return;
     }
 
@@ -654,6 +758,58 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     );
   }
 
+  private async exportarExcelEvolucao(
+    card: 'vendas' | 'rejeitadosRanking',
+  ): Promise<void> {
+    if (!this.dados) return;
+
+    const lista =
+      card === 'vendas' ? this.vendasVisivel : this.rejeitadosRankingVisivel;
+    const titulo = card === 'vendas' ? 'Recebido (evolução)' : 'Rejeitados (evolução)';
+    const nomeArquivo =
+      card === 'vendas'
+        ? 'visitacao_analise_evolucao_recebido'
+        : 'visitacao_analise_evolucao_rejeitados';
+
+    if (!lista.length) return;
+
+    const labels = this.labelsCompetenciasSerie;
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet(titulo.slice(0, 31));
+    const cols: Partial<ExcelJS.Column>[] = [
+      { header: 'Nome do médico', key: 'nome', width: 40 },
+      { header: 'CRM', key: 'crm', width: 12 },
+      { header: 'UF', key: 'uf', width: 6 },
+      { header: 'Representante', key: 'rep', width: 32 },
+    ];
+    labels.forEach((label, i) => {
+      cols.push({ header: label, key: `c${i}`, width: 14 });
+    });
+    cols.push({ header: 'Total', key: 'total', width: 14 });
+    sheet.columns = cols;
+
+    for (const item of lista) {
+      const row: Record<string, string | number | null> = {
+        nome: item.nomeMedico,
+        crm: item.crmMedico,
+        uf: item.ufCrmMedico,
+        rep: item.nomeRepresentante ?? '',
+        total: item.valorPeriodo,
+      };
+      labels.forEach((_, i) => {
+        row[`c${i}`] = this.valorSerie(item, i);
+      });
+      sheet.addRow(row);
+    }
+
+    sheet.getRow(1).font = { bold: true };
+    const slug = (this.dados.competencias ?? []).map((c) => c.key).join('_');
+    await this.baixarWorkbook(
+      workbook,
+      `${nomeArquivo}_${this.dados.unidade}_${slug}`,
+    );
+  }
+
   private async baixarWorkbook(
     workbook: ExcelJS.Workbook,
     baseName: string,
@@ -722,20 +878,33 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     if (this.modo === 'ranking') {
       return this.competenciasRanking.length > 0;
     }
+    if (this.modo === 'evolucao') {
+      return this.competenciasRanking.length >= 2;
+    }
     return !!this.c1 && !!this.c2 && this.c1 !== this.c2;
   }
 
   private montarFiltrosAnalise() {
+    const top = this.topEfetivo;
+    this.ultimoTopEnviado = top ?? null;
     const base = {
       unidade: this.unidadeFilter as Unidade,
       funcionarioId: this.funcionarioIdFilter || undefined,
       nomeMedico: this.nomeMedicoFilter || undefined,
       naCarteira: this.naCarteiraFilter,
+      top,
     };
     if (this.modo === 'ranking') {
       return {
         ...base,
         modo: 'ranking' as const,
+        competencias: [...this.competenciasRanking],
+      };
+    }
+    if (this.modo === 'evolucao') {
+      return {
+        ...base,
+        modo: 'evolucao' as const,
         competencias: [...this.competenciasRanking],
       };
     }
@@ -747,6 +916,78 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     };
   }
 
+  /** Em Gráficos, Qnt Todos ou > 50 vira 50. */
+  private garantirQntParaGraficos(): void {
+    if (this.exibicao !== 'graficos') {
+      return;
+    }
+    if (this.qnt == null || this.qnt > TOP_GRAFICO_MAX) {
+      this.qnt = TOP_GRAFICO_MAX;
+    }
+  }
+
+  maxAbsDelta(lista: VisitacaoAnaliseMedico[]): number {
+    let max = 0;
+    for (const item of lista) {
+      const abs = Math.abs(Number(item.delta) || 0);
+      if (abs > max) max = abs;
+    }
+    return max;
+  }
+
+  maxValorPeriodo(lista: VisitacaoAnaliseMedico[]): number {
+    let max = 0;
+    for (const item of lista) {
+      const v = Number(item.valorPeriodo) || 0;
+      if (v > max) max = v;
+    }
+    return max;
+  }
+
+  maxSerie(lista: VisitacaoAnaliseMedico[]): number {
+    let max = 0;
+    for (const item of lista) {
+      for (const v of item.serie ?? []) {
+        const n = Number(v) || 0;
+        if (n > max) max = n;
+      }
+    }
+    return max;
+  }
+
+  percentualBarra(
+    valor: number | null | undefined,
+    max: number,
+  ): number {
+    if (!max || valor == null || !Number.isFinite(Number(valor))) {
+      return 0;
+    }
+    return Math.min(100, (Math.abs(Number(valor)) / max) * 100);
+  }
+
+  /**
+   * Pontos SVG (viewBox 0–100) da linha que liga os meses.
+   * Meses no eixo X (esquerda→direita); valor no eixo Y (barra vertical).
+   */
+  pontosLinhaSerie(serie: number[] | undefined, max: number): string {
+    if (!serie?.length || !max) {
+      return '';
+    }
+    const n = serie.length;
+    return serie
+      .map((v, i) => {
+        const x = ((i + 0.5) / n) * 100;
+        // SVG: y=0 no topo — topo da barra = 100 − % do valor.
+        const y = 100 - this.percentualBarra(v, max);
+        return `${x},${y}`;
+      })
+      .join(' ');
+  }
+
+  valorSerie(item: VisitacaoAnaliseMedico, index: number): number {
+    return Number(item.serie?.[index]) || 0;
+  }
+
   private resetFiltrosFaixa(): void {
     this.filtroFaixaCresc = null;
     this.filtroFaixaQueda = null;
@@ -754,12 +995,15 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
   }
 
   private atualizarPageContext(): void {
+    const description =
+      this.modo === 'ranking'
+        ? 'Ranking de valor total e rejeitados no período (competências fechadas, qualquer ano).'
+        : this.modo === 'evolucao'
+          ? 'Série mensal de recebido e rejeitados nas competências selecionadas (mín. 2).'
+          : 'Evolução do valor total e dos rejeitados entre duas competências fechadas (podem ser de anos diferentes).';
     this.pageContextService.setContext({
       title: 'Análise de Visitação',
-      description:
-        this.modo === 'ranking'
-          ? 'Ranking de valor total e rejeitados no período (competências fechadas, qualquer ano).'
-          : 'Evolução do valor total e dos rejeitados entre duas competências fechadas (podem ser de anos diferentes).',
+      description,
     });
   }
 
@@ -811,6 +1055,7 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
             this.aplicarAnosPadrao();
             this.aplicarSelecaoPadraoComparar();
             this.aplicarSelecaoPadraoRanking();
+            this.aplicarSelecaoPadraoEvolucao();
           } else {
             this.sincronizarAnosComDisponiveis();
             this.podarSelecaoCompetencias();
@@ -886,6 +1131,28 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     }
     if (disponiveis.length >= 1) {
       this.competenciasRanking = [disponiveis[disponiveis.length - 1].key];
+    } else {
+      this.competenciasRanking = [];
+    }
+  }
+
+  private aplicarSelecaoPadraoEvolucao(): void {
+    this.aplicarSelecaoPadraoEvolucaoSeVazio(true);
+  }
+
+  /** Padrão evolução: duas últimas competências fechadas nos anos filtrados. */
+  private aplicarSelecaoPadraoEvolucaoSeVazio(forcar = false): void {
+    const disponiveis = [...this.competenciasFiltradas];
+    if (!forcar && this.competenciasRanking.length >= 2) {
+      return;
+    }
+    if (disponiveis.length >= 2) {
+      this.competenciasRanking = [
+        disponiveis[disponiveis.length - 2].key,
+        disponiveis[disponiveis.length - 1].key,
+      ];
+    } else if (disponiveis.length === 1) {
+      this.competenciasRanking = [disponiveis[0].key];
     } else {
       this.competenciasRanking = [];
     }

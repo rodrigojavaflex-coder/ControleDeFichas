@@ -18,7 +18,11 @@ import {
 import { Unidade } from '../../../common/enums/unidade.enum';
 import { NA_CARTEIRA_FILTRO } from './find-visitacao-acompanhamento.dto';
 
-export const VISITACAO_ANALISE_MODOS = ['comparar', 'ranking'] as const;
+export const VISITACAO_ANALISE_MODOS = [
+  'comparar',
+  'ranking',
+  'evolucao',
+] as const;
 export type VisitacaoAnaliseModo = (typeof VISITACAO_ANALISE_MODOS)[number];
 
 /** Chave de competência YYYY-MM (ex.: 2025-12). */
@@ -94,7 +98,7 @@ export class FindVisitacaoAnaliseDto {
     enum: VISITACAO_ANALISE_MODOS,
     default: 'comparar',
     description:
-      'comparar = evolução entre duas competências; ranking = total/média no período.',
+      'comparar = Δ entre duas competências; ranking = total/média; evolucao = série por competência (mín. 2).',
   })
   @IsOptional()
   @IsIn(VISITACAO_ANALISE_MODOS)
@@ -132,16 +136,19 @@ export class FindVisitacaoAnaliseDto {
     type: [String],
     example: ['2025-11', '2025-12', '2026-01'],
     description:
-      'Competências do período (YYYY-MM). Obrigatório no ranking; aceita lista ou `a,b,c`.',
+      'Competências (YYYY-MM). Ranking: ≥1; Evolução: ≥2. Aceita lista ou `a,b,c`.',
   })
-  @ValidateIf((o: FindVisitacaoAnaliseDto) => o.modo === 'ranking')
+  @ValidateIf(
+    (o: FindVisitacaoAnaliseDto) =>
+      o.modo === 'ranking' || o.modo === 'evolucao',
+  )
   @Transform(({ value }) => {
     const list = toCompetenciasArray(value);
     return list?.map((c) => c.key);
   })
   @IsArray()
   @ArrayMinSize(1, {
-    message: 'Informe ao menos uma competência fechada para o ranking.',
+    message: 'Informe ao menos uma competência fechada.',
   })
   @IsString({ each: true })
   @Matches(COMPETENCIA_KEY_REGEX, {
