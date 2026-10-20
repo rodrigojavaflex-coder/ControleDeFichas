@@ -516,6 +516,10 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.filtersPanelOpen = !this.filtersPanelOpen;
   }
 
+  closeFiltersModal(): void {
+    this.filtersPanelOpen = false;
+  }
+
   onContainerClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
     if (!target) {
@@ -791,7 +795,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.currentPage = 1;
     this.selectedVendas.clear();
     this.saveFiltersToStorage();
-    this.filtersPanelOpen = false;
+    // Mantém o modal aberto ao limpar; fecha só no X ou ao aplicar
     this.updateAppliedFiltersSnapshot();
     this.loadItems();
   }

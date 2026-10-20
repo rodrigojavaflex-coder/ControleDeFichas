@@ -485,12 +485,12 @@
   </div>
 </div>
 
-<!-- Modal de Filtros -->
-<div class="modal-overlay" *ngIf="filtersPanelOpen" (click)="toggleFiltersVisibility()">
-  <div class="modal-conteudo modal-filtros" (click)="$event.stopPropagation()">
+<!-- Modal de Filtros (fecha só no X ou ao aplicar filtros) -->
+<div class="modal-overlay" *ngIf="filtersPanelOpen">
+  <div class="modal-conteudo modal-filtros">
     <div class="modal-cabecalho">
       <h3 class="modal-titulo">Filtros de Vendas</h3>
-      <button type="button" class="modal-fechar" (click)="toggleFiltersVisibility()">
+      <button type="button" class="modal-fechar" (click)="closeFiltersModal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -535,13 +535,14 @@
 
         <!-- Segunda linha: Protocolo, Cliente, Vendedor, Prescritor -->
         <div class="filter-group">
-          <label for="protocoloFilterModal" class="label-campo">Protocolo</label>
+          <label for="protocoloFilterModal" class="label-campo">Protocolo(s)</label>
           <input
             id="protocoloFilterModal"
             type="text"
             [(ngModel)]="protocoloFilter"
-            placeholder="Buscar por protocolo..."
+            placeholder="Um ou vários (vírgula ou espaço)"
             class="campo"
+            title="Informe um protocolo ou vários separados por vírgula, ponto e vírgula ou espaço"
             (keyup.enter)="applyFilters()">
         </div>
 

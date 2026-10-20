@@ -304,9 +304,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
   private montarFiltrosConsulta(): FindVendasDto {
     const filters: FindVendasDto = { page: this.currentPage, limit: this.pageSize };
 
-    if (this.protocoloFilter.trim()) {
-      filters.protocolo = this.protocoloFilter.trim();
-    }
+    this.applyProtocoloFilters(filters);
     if (this.clienteFilter.trim()) {
       filters.cliente = this.clienteFilter.trim();
     }
@@ -416,6 +414,37 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
 
   toggleFiltersVisibility(): void {
     this.filtersPanelOpen = !this.filtersPanelOpen;
+  }
+
+  closeFiltersModal(): void {
+    this.filtersPanelOpen = false;
+  }
+
+  private parseProtocolosFilter(raw: string): string[] {
+    if (!raw?.trim()) {
+      return [];
+    }
+    return [
+      ...new Set(
+        raw
+          .split(/[,;\s\n\r]+/)
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0)
+      )
+    ];
+  }
+
+  private applyProtocoloFilters(filters: FindVendasDto): void {
+    const protocolos = this.parseProtocolosFilter(this.protocoloFilter);
+    if (protocolos.length === 0) {
+      return;
+    }
+    const todosNumericos = protocolos.every((p) => /^\d+$/.test(p));
+    if (protocolos.length > 1 || todosNumericos) {
+      filters.protocolos = protocolos;
+      return;
+    }
+    filters.protocolo = protocolos[0];
   }
 
   onContainerClick(event: MouseEvent): void {
@@ -668,7 +697,7 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     this.currentPage = 1;
     this.selectedVendas.clear();
     this.saveFiltersToStorage();
-    this.filtersPanelOpen = false; // Fechar modal ao limpar
+    // Mantém o modal aberto ao limpar; fecha só no X ou ao aplicar
     this.updateAppliedFiltersSnapshot();
     this.loadItems();
   }
@@ -677,7 +706,16 @@ export class VendasListComponent extends BaseListComponent<Venda> implements OnD
     const filters: AppliedFilter[] = [];
     const snapshot = this.appliedFiltersSnapshot;
     if (snapshot.protocolo.trim()) {
-      filters.push({ key: 'protocolo', label: 'Protocolo', value: snapshot.protocolo.trim() });
+      const protocolos = this.parseProtocolosFilter(snapshot.protocolo);
+      const value =
+        protocolos.length > 3
+          ? `${protocolos.slice(0, 3).join(', ')}… (+${protocolos.length - 3})`
+          : snapshot.protocolo.trim();
+      filters.push({
+        key: 'protocolo',
+        label: protocolos.length > 1 ? 'Protocolos' : 'Protocolo',
+        value
+      });
     }
     if (snapshot.cliente.trim()) {
       filters.push({ key: 'cliente', label: 'Cliente', value: snapshot.cliente.trim() });

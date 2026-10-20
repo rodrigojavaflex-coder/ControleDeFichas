@@ -307,7 +307,8 @@
 ### RN-VND-008 — Filtro multi-protocolo
 
 - API `GET /vendas` e `GET /vendas/acompanhar` aceitam **`protocolos`** (lista de strings exatas, OR via `IN`). Quando informado, tem precedência sobre o filtro parcial **`protocolo`**.
-- Na tela de fechamento, o campo Protocolo aceita **vários** valores separados por vírgula, ponto e vírgula ou espaço.
+- Nas telas de **Fechamento de Vendas** e **Vendas**, o campo Protocolo aceita **vários** valores separados por vírgula, ponto e vírgula ou espaço.
+- Os modais de filtro dessas telas **não** fecham ao clicar fora: só no **X** do topo ou ao **Aplicar Filtros**.
 
 ---
 
