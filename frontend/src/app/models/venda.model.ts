@@ -23,6 +23,8 @@ export enum Unidade {
 export enum TipoAtualizacao {
   FORMULA_CERTA_AGENTE = 'FORMULA_CERTA_AGENTE',
   VALOR_CLIENTE = 'VALOR_CLIENTE',
+  MANUAL = 'MANUAL',
+  RPS = 'RPS',
 }
 
 import { Cliente } from './cliente.model';
@@ -74,10 +76,41 @@ export interface CreateVendaDto {
 
 export interface UpdateVendaDto extends Partial<CreateVendaDto> {}
 
+export type ImportacaoRpsStatus =
+  | 'PRONTO'
+  | 'NAO_ENCONTRADO'
+  | 'JA_FECHADA'
+  | 'AMBIGUO';
+
+export interface ImportacaoRpsPreviewItem {
+  protocolo: string;
+  valorPagoRps: number;
+  arquivoOrigem: string;
+  status: ImportacaoRpsStatus;
+  motivo?: string;
+  vendaId?: string;
+  origem?: VendaOrigem;
+  valorPagoAtual?: number | null;
+  dataFechamento?: string | null;
+}
+
+export interface ImportacaoRpsPreviewResult {
+  itens: ImportacaoRpsPreviewItem[];
+  resumo: {
+    totalExtraidos: number;
+    prontos: number;
+    naoEncontrados: number;
+    jaFechadas: number;
+    ambiguos: number;
+  };
+}
+
 export interface FindVendasDto {
   page?: number;
   limit?: number;
   protocolo?: string;
+  /** Protocolos exatos (OR). Tem precedência sobre protocolo parcial. */
+  protocolos?: string[];
   cliente?: string;
   origem?: VendaOrigem | VendaOrigem[];
   vendedor?: string;

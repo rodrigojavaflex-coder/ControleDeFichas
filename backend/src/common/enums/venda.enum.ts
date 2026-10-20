@@ -17,4 +17,6 @@ export enum VendaStatus {
 export enum TipoAtualizacao {
   FORMULA_CERTA_AGENTE = 'FORMULA_CERTA_AGENTE',
   VALOR_CLIENTE = 'VALOR_CLIENTE',
+  MANUAL = 'MANUAL',
+  RPS = 'RPS',
 }

@@ -285,6 +285,28 @@
 - Critério: a venda **entra** se existir **ao menos uma** linha em `baixas` com `dataBaixa` no intervalo (`EXISTS`). Não altera o valor exibido na grade (`valorPago` da venda).
 - Combina com os demais filtros (vendedor, status, unidade, data da venda, etc.). Para conferir o card de terceiros do acompanhamento (RN-COM-003), usar este eixo e **não** Data da Venda.
 
+### RN-VND-006 — Edição manual de V. Compra / V. Fechamento (grade)
+
+- Tela **`/fechamento-vendas`**: com permissão **`venda:editar-valor-compra`** (e visualização **`venda:view-valor-compra`**), o usuário pode editar **inline** as colunas **V. Compra** (`valorCompra`) e **V. Fechamento** (`valorPago`) em vendas **sem** `dataFechamento`.
+- Persistência: **`PATCH …/vendas/:id/valores-fechamento`**. Grava `tipoAtualizacao = MANUAL`. Não altera `status`.
+- Venda com fechamento registrado permanece bloqueada (RN-VND-002); a UI não oferece edição nessas linhas.
+- Os dois campos são independentes (não recalcula 65% automaticamente).
+
+### RN-VND-007 — Importação de RPS para V. Fechamento
+
+- Tela **`/fechamento-vendas`**: botão **Importar RPS** exige permissão **`venda:importar-rps-fechamento`**. Aceita **um ou mais** PDFs textuais de RPS.
+- Fluxo: upload → **preview obrigatório** (Gravar / Cancelar) → gravação.
+- Extração: protocolo no padrão `…/NNNNNN-D` da discriminação + **Valor Total** do item → atualiza somente **`valorPago`** (V. Fechamento). **Não** altera `valorCompra`.
+- Status do preview: **Pronto**, **Não encontrado**, **Já fechada**, **Ambíguo**. Só **Pronto** é gravado. Escopo por origem do usuário (quando houver unidade vinculada).
+- Endpoints: **`POST …/vendas/importar-rps/preview`** (multipart) e **`POST …/vendas/importar-rps/confirmar`**. Grava `tipoAtualizacao = RPS`.
+- Em cada venda atualizada, concatena na **`observacao`** o trecho `RPS: {nomeDoArquivo}` (se já existir observação, usa ` | ` como separador; não duplica o mesmo trecho).
+- Após gravar com sucesso, a UI pergunta (modal) se deseja **visualizar os protocolos atualizados**; se sim, limpa os filtros da tela e aplica filtro multi-protocolo apenas nesses protocolos.
+
+### RN-VND-008 — Filtro multi-protocolo
+
+- API `GET /vendas` e `GET /vendas/acompanhar` aceitam **`protocolos`** (lista de strings exatas, OR via `IN`). Quando informado, tem precedência sobre o filtro parcial **`protocolo`**.
+- Na tela de fechamento, o campo Protocolo aceita **vários** valores separados por vírgula, ponto e vírgula ou espaço.
+
 ---
 
 ## Painel médicos × representantes

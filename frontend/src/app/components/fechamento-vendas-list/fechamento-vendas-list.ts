@@ -6,7 +6,18 @@ import { VendaService } from '../../services/vendas.service';
 import { BaixasService } from '../../services/baixas.service';
 import { AuthService } from '../../services/auth.service';
 import { ConfiguracaoService } from '../../services/configuracao.service';
-import { Venda, VendaPaginatedResponse, FindVendasDto, VendaOrigem, VendaStatus, Unidade, TipoAtualizacao, CreateVendaDto } from '../../models/venda.model';
+import {
+  Venda,
+  VendaPaginatedResponse,
+  FindVendasDto,
+  VendaOrigem,
+  VendaStatus,
+  Unidade,
+  TipoAtualizacao,
+  CreateVendaDto,
+  ImportacaoRpsPreviewItem,
+  ImportacaoRpsPreviewResult
+} from '../../models/venda.model';
 import { Baixa, TipoDaBaixa, ProcessarBaixasEmMassaResultado } from '../../models/baixa.model';
 import ExcelJS from 'exceljs';
 import { Permission, Usuario } from '../../models/usuario.model';
@@ -168,6 +179,21 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
   contextMenuVenda: Venda | null = null;
   private destroy$ = new Subject<void>();
 
+  /** Edição planilha (V. Compra / V. Fechamento) */
+  editingValorCell: { vendaId: string; field: 'valorCompra' | 'valorPago' } | null = null;
+  editingValorDraft = '';
+  editingValorSaving = false;
+
+  /** Importação RPS */
+  showImportarRpsModal = false;
+  importarRpsLoading = false;
+  importarRpsConfirmLoading = false;
+  importarRpsPreview: ImportacaoRpsPreviewResult | null = null;
+  showVisualizarProtocolosRpsModal = false;
+  visualizarProtocolosRpsMessage = '';
+  private protocolosRpsAtualizados: string[] = [];
+  private rpsFileInput: HTMLInputElement | null = null;
+
   // Enums para template
   VendaOrigem = VendaOrigem;
   VendaStatus = VendaStatus;
@@ -216,6 +242,10 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.destroy$.complete();
     this.pageContextService.resetContext();
     this.closeContextMenu();
+    if (this.rpsFileInput?.parentNode) {
+      this.rpsFileInput.parentNode.removeChild(this.rpsFileInput);
+      this.rpsFileInput = null;
+    }
   }
 
   @HostListener('window:scroll')
@@ -374,9 +404,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
 
     const filters: FindVendasDto = { page: this.currentPage, limit: this.pageSize };
 
-    if (this.protocoloFilter.trim()) {
-      filters.protocolo = this.protocoloFilter.trim();
-    }
+    this.applyProtocoloFilters(filters);
 
     if (this.clienteFilter.trim()) {
       filters.cliente = this.clienteFilter.trim();
@@ -772,7 +800,16 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     const filters: AppliedFilter[] = [];
     const snapshot = this.appliedFiltersSnapshot;
     if (snapshot.protocolo.trim()) {
-      filters.push({ key: 'protocolo', label: 'Protocolo', value: snapshot.protocolo.trim() });
+      const protocolos = this.parseProtocolosFilter(snapshot.protocolo);
+      const value =
+        protocolos.length > 3
+          ? `${protocolos.slice(0, 3).join(', ')}… (+${protocolos.length - 3})`
+          : snapshot.protocolo.trim();
+      filters.push({
+        key: 'protocolo',
+        label: protocolos.length > 1 ? 'Protocolos' : 'Protocolo',
+        value
+      });
     }
     if (snapshot.cliente.trim()) {
       filters.push({ key: 'cliente', label: 'Cliente', value: snapshot.cliente.trim() });
@@ -1228,6 +1265,361 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
 
   canViewValorCompra(): boolean {
     return this.authService.hasPermission(Permission.VENDA_VIEW_VALOR_COMPRA);
+  }
+
+  canEditarValorCompra(): boolean {
+    return (
+      this.canViewValorCompra() &&
+      this.authService.hasPermission(Permission.VENDA_EDITAR_VALOR_COMPRA)
+    );
+  }
+
+  canImportarRps(): boolean {
+    return this.authService.hasPermission(Permission.VENDA_IMPORTAR_RPS_FECHAMENTO);
+  }
+
+  private parseProtocolosFilter(raw: string): string[] {
+    if (!raw?.trim()) {
+      return [];
+    }
+    return [
+      ...new Set(
+        raw
+          .split(/[,;\s\n\r]+/)
+          .map((p) => p.trim())
+          .filter((p) => p.length > 0)
+      )
+    ];
+  }
+
+  private applyProtocoloFilters(filters: FindVendasDto): void {
+    const protocolos = this.parseProtocolosFilter(this.protocoloFilter);
+    if (protocolos.length === 0) {
+      return;
+    }
+    // Vários protocolos ou só dígitos → match exato (IN). Texto livre único → ILIKE parcial.
+    const todosNumericos = protocolos.every((p) => /^\d+$/.test(p));
+    if (protocolos.length > 1 || todosNumericos) {
+      filters.protocolos = protocolos;
+      return;
+    }
+    filters.protocolo = protocolos[0];
+  }
+
+  podeEditarValoresNaLinha(venda: Venda): boolean {
+    return this.canEditarValorCompra() && !venda.dataFechamento;
+  }
+
+  isEditingValorCell(vendaId: string, field: 'valorCompra' | 'valorPago'): boolean {
+    return (
+      !!this.editingValorCell &&
+      this.editingValorCell.vendaId === vendaId &&
+      this.editingValorCell.field === field
+    );
+  }
+
+  startEditValorCell(venda: Venda, field: 'valorCompra' | 'valorPago', event: Event): void {
+    event.stopPropagation();
+    if (!this.podeEditarValoresNaLinha(venda) || this.atualizarValorCompraLoading || this.editingValorSaving) {
+      return;
+    }
+    const atual = field === 'valorCompra' ? venda.valorCompra : venda.valorPago;
+    this.editingValorCell = { vendaId: venda.id, field };
+    this.editingValorDraft =
+      atual != null && !Number.isNaN(Number(atual))
+        ? Number(atual).toFixed(2).replace('.', ',')
+        : '';
+    setTimeout(() => {
+      const input = document.querySelector(
+        `input.valor-cell-input[data-venda-id="${venda.id}"][data-field="${field}"]`
+      ) as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    }, 0);
+  }
+
+  cancelEditValorCell(): void {
+    if (this.editingValorSaving) {
+      return;
+    }
+    this.editingValorCell = null;
+    this.editingValorDraft = '';
+  }
+
+  onEditValorKeydown(event: KeyboardEvent, venda: Venda): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.cancelEditValorCell();
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.commitEditValorCell(venda, true);
+    }
+  }
+
+  commitEditValorCell(venda: Venda, moveNext = false): void {
+    if (!this.editingValorCell || this.editingValorCell.vendaId !== venda.id) {
+      return;
+    }
+    if (this.editingValorSaving) {
+      return;
+    }
+
+    const field = this.editingValorCell.field;
+    const parsed = this.parseCurrencyDraft(this.editingValorDraft);
+    if (parsed === null) {
+      this.errorModalService.show('Informe um valor numérico válido.', 'Validação');
+      return;
+    }
+    if (parsed < 0) {
+      this.errorModalService.show('O valor não pode ser negativo.', 'Validação');
+      return;
+    }
+
+    const atual = field === 'valorCompra' ? Number(venda.valorCompra ?? 0) : Number(venda.valorPago ?? 0);
+    if (Math.abs(atual - parsed) < 0.001) {
+      const cell = this.editingValorCell;
+      this.cancelEditValorCell();
+      if (moveNext) {
+        this.focusNextEditableValorCell(venda.id, cell.field);
+      }
+      return;
+    }
+
+    const payload =
+      field === 'valorCompra' ? { valorCompra: parsed } : { valorPago: parsed };
+
+    this.editingValorSaving = true;
+    this.vendaService.editarValoresFechamento(venda.id, payload).subscribe({
+      next: (atualizada) => {
+        this.editingValorSaving = false;
+        const idx = this.items.findIndex((v) => v.id === venda.id);
+        if (idx >= 0) {
+          this.items[idx] = { ...this.items[idx], ...atualizada };
+        }
+        const cell = this.editingValorCell;
+        this.cancelEditValorCell();
+        this.cdr.detectChanges();
+        if (moveNext && cell) {
+          this.focusNextEditableValorCell(venda.id, cell.field);
+        }
+      },
+      error: (error) => {
+        this.editingValorSaving = false;
+        const message =
+          error?.error?.message || 'Erro ao atualizar valor. Tente novamente.';
+        this.errorModalService.show(message, 'Erro');
+      }
+    });
+  }
+
+  private parseCurrencyDraft(raw: string): number | null {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) {
+      return 0;
+    }
+    // Aceita "82,61" ou "82.61"
+    const normalized = trimmed.includes(',')
+      ? trimmed.replace(/\./g, '').replace(',', '.')
+      : trimmed;
+    const n = Number(normalized);
+    if (Number.isNaN(n)) {
+      return null;
+    }
+    return Math.round(n * 100) / 100;
+  }
+
+  private focusNextEditableValorCell(
+    currentVendaId: string,
+    field: 'valorCompra' | 'valorPago'
+  ): void {
+    const editaveis = this.items.filter((v) => this.podeEditarValoresNaLinha(v));
+    const idx = editaveis.findIndex((v) => v.id === currentVendaId);
+    if (idx < 0 || idx >= editaveis.length - 1) {
+      return;
+    }
+    const next = editaveis[idx + 1];
+    const fakeEvent = { stopPropagation: () => undefined } as Event;
+    this.startEditValorCell(next, field, fakeEvent);
+    setTimeout(() => {
+      const input = document.querySelector(
+        `input.valor-cell-input[data-venda-id="${next.id}"][data-field="${field}"]`
+      ) as HTMLInputElement | null;
+      input?.focus();
+      input?.select();
+    }, 0);
+  }
+
+  openImportarRpsPicker(): void {
+    if (!this.canImportarRps() || this.atualizarValorCompraLoading || this.importarRpsLoading) {
+      return;
+    }
+    if (!this.rpsFileInput) {
+      this.rpsFileInput = document.createElement('input');
+      this.rpsFileInput.type = 'file';
+      this.rpsFileInput.accept = 'application/pdf,.pdf';
+      this.rpsFileInput.multiple = true;
+      this.rpsFileInput.style.display = 'none';
+      this.rpsFileInput.addEventListener('change', () => this.onRpsFilesSelected());
+      document.body.appendChild(this.rpsFileInput);
+    }
+    this.rpsFileInput.value = '';
+    this.rpsFileInput.click();
+  }
+
+  private onRpsFilesSelected(): void {
+    const files = Array.from(this.rpsFileInput?.files || []);
+    if (!files.length) {
+      return;
+    }
+    this.importarRpsLoading = true;
+    this.importarRpsPreview = null;
+    this.vendaService.previewImportacaoRps(files).subscribe({
+      next: (preview) => {
+        this.importarRpsLoading = false;
+        this.importarRpsPreview = preview;
+        this.showImportarRpsModal = true;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        this.importarRpsLoading = false;
+        const message =
+          error?.error?.message || 'Erro ao processar os PDFs de RPS.';
+        this.errorModalService.show(message, 'Erro');
+      }
+    });
+  }
+
+  closeImportarRpsModal(): void {
+    if (this.importarRpsConfirmLoading) {
+      return;
+    }
+    this.showImportarRpsModal = false;
+    this.importarRpsPreview = null;
+  }
+
+  get importarRpsItensProntos(): ImportacaoRpsPreviewItem[] {
+    return (this.importarRpsPreview?.itens || []).filter((i) => i.status === 'PRONTO' && i.vendaId);
+  }
+
+  get totalValorFechamentoNovoRps(): number {
+    return (this.importarRpsPreview?.itens || []).reduce(
+      (total, item) => total + (Number(item.valorPagoRps) || 0),
+      0
+    );
+  }
+
+  confirmarImportacaoRps(): void {
+    const prontos = this.importarRpsItensProntos;
+    if (!prontos.length) {
+      this.errorModalService.show(
+        'Nenhum item pronto para gravar. Verifique os protocolos no preview.',
+        'Atenção'
+      );
+      return;
+    }
+
+    const itens = prontos.map((i) => ({
+      vendaId: i.vendaId as string,
+      valorPago: i.valorPagoRps,
+      arquivoOrigem: i.arquivoOrigem
+    }));
+
+    this.importarRpsConfirmLoading = true;
+    this.vendaService.confirmarImportacaoRps(itens).subscribe({
+      next: (resultado) => {
+        this.importarRpsConfirmLoading = false;
+        this.showImportarRpsModal = false;
+        this.importarRpsPreview = null;
+
+        const protocolosOk = (resultado.sucesso || [])
+          .map((v) => v.protocolo)
+          .filter((p): p is string => !!p);
+
+        const falhas = resultado.falhas?.length || 0;
+        let msgBase = `${protocolosOk.length} valor(es) de fechamento atualizado(s) via RPS.`;
+        if (falhas) {
+          msgBase += `\n${falhas} item(ns) não puderam ser gravados.`;
+        }
+
+        if (protocolosOk.length > 0) {
+          this.protocolosRpsAtualizados = protocolosOk;
+          this.visualizarProtocolosRpsMessage =
+            `${msgBase}\n\nDeseja visualizar os protocolos atualizados?`;
+          this.showVisualizarProtocolosRpsModal = true;
+          return;
+        }
+
+        if (falhas) {
+          this.errorModalService.show(msgBase, 'Aviso');
+        }
+        this.loadItems();
+      },
+      error: (error) => {
+        this.importarRpsConfirmLoading = false;
+        const message =
+          error?.error?.message || 'Erro ao gravar valores do RPS.';
+        this.errorModalService.show(message, 'Erro');
+      }
+    });
+  }
+
+  confirmarVisualizarProtocolosRps(): void {
+    const protocolos = [...this.protocolosRpsAtualizados];
+    this.closeVisualizarProtocolosRpsModal();
+    this.aplicarFiltroProtocolosAtualizados(protocolos);
+  }
+
+  cancelarVisualizarProtocolosRps(): void {
+    this.closeVisualizarProtocolosRpsModal();
+    this.loadItems();
+  }
+
+  private closeVisualizarProtocolosRpsModal(): void {
+    this.showVisualizarProtocolosRpsModal = false;
+    this.visualizarProtocolosRpsMessage = '';
+    this.protocolosRpsAtualizados = [];
+  }
+
+  private aplicarFiltroProtocolosAtualizados(protocolos: string[]): void {
+    this.protocoloFilter = protocolos.join(', ');
+    this.clienteFilter = '';
+    this.vendedorFilter = '';
+    this.prescritorFilter = '';
+    this.statusFilter = [];
+    this.ativoFilter = '';
+    this.dataInicialFilter = '';
+    this.dataFinalFilter = '';
+    this.dataInicialFechamentoFilter = '';
+    this.dataFinalFechamentoFilter = '';
+    this.semDataFechamentoFilter = false;
+    this.comDataFechamentoFilter = false;
+    this.configureOrigemFilter();
+    if (!this.unidadeDisabled) {
+      this.unidadeFilter = [];
+    }
+    this.currentPage = 1;
+    this.selectedVendas.clear();
+    this.filtersPanelOpen = false;
+    this.saveFiltersToStorage();
+    this.updateAppliedFiltersSnapshot();
+    this.loadItems();
+  }
+
+  getImportacaoRpsStatusLabel(status: string): string {
+    switch (status) {
+      case 'PRONTO':
+        return 'Pronto';
+      case 'NAO_ENCONTRADO':
+        return 'Não encontrado';
+      case 'JA_FECHADA':
+        return 'Já fechada';
+      case 'AMBIGUO':
+        return 'Ambíguo';
+      default:
+        return status;
+    }
   }
 
   private ensureContextSelection(): void {
@@ -1937,9 +2329,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.loading = true;
     const filters: FindVendasDto = { page: this.currentPage, limit: this.pageSize };
 
-    if (this.protocoloFilter.trim()) {
-      filters.protocolo = this.protocoloFilter.trim();
-    }
+    this.applyProtocoloFilters(filters);
     if (this.clienteFilter.trim()) {
       filters.cliente = this.clienteFilter.trim();
     }
@@ -2009,9 +2399,7 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     this.loading = true;
     const filters: FindVendasDto = { page: this.currentPage, limit: this.pageSize };
 
-    if (this.protocoloFilter.trim()) {
-      filters.protocolo = this.protocoloFilter.trim();
-    }
+    this.applyProtocoloFilters(filters);
     if (this.clienteFilter.trim()) {
       filters.cliente = this.clienteFilter.trim();
     }
@@ -2171,9 +2559,11 @@ export class FechamentoVendasListComponent extends BaseListComponent<Venda> impl
     if (!tipoAtualizacao) {
       return '-';
     }
-    const labels = {
+    const labels: Record<TipoAtualizacao, string> = {
       [TipoAtualizacao.FORMULA_CERTA_AGENTE]: 'Formula Certa',
       [TipoAtualizacao.VALOR_CLIENTE]: 'Valor Cliente',
+      [TipoAtualizacao.MANUAL]: 'Manual',
+      [TipoAtualizacao.RPS]: 'RPS',
     };
     return labels[tipoAtualizacao] || tipoAtualizacao;
   }

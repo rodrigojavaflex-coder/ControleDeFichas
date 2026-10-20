@@ -587,6 +587,10 @@
   background: #7c3aed;
 }
 
+:host-context(body.theme-dark) .btn.btn-importar-rps {
+  background: #b91c1c;
+}
+
 .loading .spinner,
 .state-card .spinner {
   width: 36px;
@@ -1380,4 +1384,168 @@ body.theme-dark .confirmation-modal.fechamento-modal .btn-confirmar-fechamento-m
 :host-context(body.theme-dark) .btn-clear-all:hover {
   background: #7f1d1d;
   border-color: #ef4444;
+}
+
+/* Edição planilha — V. Compra / V. Fechamento */
+.valor-cell {
+  white-space: nowrap;
+  position: relative;
+}
+
+.valor-cell-editable {
+  cursor: text;
+}
+
+.valor-cell-editable:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.valor-cell-icon {
+  margin-left: 0.35rem;
+  font-size: 0.7rem;
+  opacity: 0.45;
+}
+
+.valor-cell-input {
+  width: 6.5rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 6px;
+  background: var(--surface-color, #fff);
+  color: var(--text-color, #0f172a);
+  font: inherit;
+}
+
+.valor-cell-input:focus {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+:host-context(body.theme-dark) .valor-cell-editable:hover {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+:host-context(body.theme-dark) .valor-cell-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.mensagem-pre-line {
+  white-space: pre-line;
+  margin: 0;
+  color: var(--text-color, #1f2937);
+}
+
+:host-context(body.theme-dark) .mensagem-pre-line {
+  color: #e2e8f0;
+}
+
+/* Modal Importar RPS */
+.importar-rps-modal {
+  max-width: min(960px, 96vw);
+  width: 100%;
+}
+
+.importar-rps-resumo {
+  margin: 0 0 0.5rem;
+  color: var(--text-color, #1f2937);
+}
+
+.importar-rps-table-wrap {
+  max-height: min(50vh, 420px);
+  overflow: auto;
+  margin-top: 0.75rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+}
+
+.importar-rps-table {
+  margin: 0;
+}
+
+.importar-rps-table tfoot .importar-rps-total-row td {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface-color, #f8fafc);
+  border-top: 2px solid var(--border-color, #cbd5e1);
+  padding: 0.55rem 0.5rem;
+  font-weight: 700;
+}
+
+.importar-rps-table .text-right {
+  text-align: right;
+}
+
+:host-context(body.theme-dark) .importar-rps-table tfoot .importar-rps-total-row td {
+  background: #1e293b;
+  border-top-color: #475569;
+  color: #e2e8f0;
+}
+
+.importar-rps-table .arquivo-cell,
+.importar-rps-table .motivo-cell {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.rps-status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.rps-status-badge[data-status='PRONTO'] {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.rps-status-badge[data-status='NAO_ENCONTRADO'] {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.rps-status-badge[data-status='JA_FECHADA'] {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.rps-status-badge[data-status='AMBIGUO'] {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+:host-context(body.theme-dark) .importar-rps-resumo {
+  color: #e2e8f0;
+}
+
+:host-context(body.theme-dark) .importar-rps-table-wrap {
+  border-color: #475569;
+}
+
+:host-context(body.theme-dark) .rps-status-badge[data-status='PRONTO'] {
+  background: #14532d;
+  color: #bbf7d0;
+}
+
+:host-context(body.theme-dark) .rps-status-badge[data-status='NAO_ENCONTRADO'] {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+
+:host-context(body.theme-dark) .rps-status-badge[data-status='JA_FECHADA'] {
+  background: #7c2d12;
+  color: #fed7aa;
+}
+
+:host-context(body.theme-dark) .rps-status-badge[data-status='AMBIGUO'] {
+  background: #713f12;
+  color: #fef08a;
 }

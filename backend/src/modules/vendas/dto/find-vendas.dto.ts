@@ -7,6 +7,7 @@ import {
   IsBoolean,
   IsNumber,
   IsPositive,
+  IsArray,
   Min,
   Max,
 } from 'class-validator';
@@ -32,12 +33,38 @@ export class FindVendasDto extends PaginationDto {
   limit?: number = 10;
 
   @ApiPropertyOptional({
-    description: 'Protocolo da venda',
+    description: 'Protocolo da venda (busca parcial; ignorado se protocolos for informado)',
     example: 'VND-2025-001',
   })
   @IsOptional()
   @IsString({ message: 'Protocolo deve ser uma string' })
   protocolo?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Lista de protocolos exatos (OR). Preferível para pós-importação de RPS.',
+    example: ['236022', '236017'],
+    type: [String],
+    isArray: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (Array.isArray(value)) {
+      return value
+        .map((v) => String(v).trim())
+        .filter((v) => v.length > 0);
+    }
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value
+        .split(/[,;\s]+/)
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0);
+    }
+    return value;
+  })
+  @IsArray({ message: 'protocolos deve ser uma lista' })
+  @IsString({ each: true, message: 'Cada protocolo deve ser uma string' })
+  protocolos?: string[];
 
   @ApiPropertyOptional({
     description: 'Nome do cliente',

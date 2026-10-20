@@ -11,6 +11,9 @@ import {
   HttpStatus,
   UseGuards,
   Req,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,8 +21,12 @@ import {
   ApiResponse,
   ApiQuery,
   ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { VendasService } from './vendas.service';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
@@ -34,6 +41,8 @@ import { FecharVendasEmMassaDto } from './dto/fechar-vendas-em-massa.dto';
 import { CancelarFechamentosEmMassaDto } from './dto/cancelar-fechamentos-em-massa.dto';
 import { RegistrarEnvioDto } from './dto/registrar-envio.dto';
 import { AtualizarValorCompraDto } from './dto/atualizar-valor-compra.dto';
+import { EditarValoresFechamentoDto } from './dto/editar-valores-fechamento.dto';
+import { ConfirmarImportacaoRpsDto } from './dto/confirmar-importacao-rps.dto';
 import { AuditLog } from '../../common/interceptors/auditoria.interceptor';
 import { AuditAction } from '../../common/enums/auditoria.enum';
 
@@ -122,6 +131,73 @@ export class VendasController {
     @Body() registrarEnvioDto: RegistrarEnvioDto,
   ): Promise<{ sucesso: Venda[]; falhas: { id: string; motivo: string }[] }> {
     return this.vendasService.registrarEnvioEmMassa(registrarEnvioDto);
+  }
+
+  @Post('importar-rps/preview')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.VENDA_IMPORTAR_RPS_FECHAMENTO)
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Preview da importação de RPS (atualiza V. Fechamento / valorPago)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Preview gerado' })
+  @UseInterceptors(
+    FilesInterceptor('files', 20, {
+      storage: memoryStorage(),
+      limits: { fileSize: 15 * 1024 * 1024 },
+    }),
+  )
+  previewImportacaoRps(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: { user: Usuario },
+  ) {
+    if (!files?.length) {
+      throw new BadRequestException('Envie ao menos um arquivo PDF de RPS');
+    }
+    return this.vendasService.previewImportacaoRps(files, req.user);
+  }
+
+  @Post('importar-rps/confirmar')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.VENDA_IMPORTAR_RPS_FECHAMENTO)
+  @AuditLog(AuditAction.UPDATE, 'vendas')
+  @ApiOperation({
+    summary: 'Confirmar importação de RPS (grava valorPago nas vendas abertas)',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Processamento concluído' })
+  confirmarImportacaoRps(
+    @Body() dto: ConfirmarImportacaoRpsDto,
+    @Req() req: { user: Usuario },
+  ): Promise<{ sucesso: Venda[]; falhas: { id: string; motivo: string }[] }> {
+    return this.vendasService.confirmarImportacaoRps(dto, req.user);
+  }
+
+  @Patch(':id/valores-fechamento')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.VENDA_EDITAR_VALOR_COMPRA)
+  @AuditLog(AuditAction.UPDATE, 'vendas')
+  @ApiOperation({
+    summary:
+      'Editar V. Compra e/ou V. Fechamento de venda sem data de fechamento',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Valores atualizados' })
+  editarValoresFechamento(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: EditarValoresFechamentoDto,
+    @Req() req: { user: Usuario },
+  ): Promise<Venda> {
+    return this.vendasService.editarValoresFechamento(id, dto, req.user);
   }
 
   @Get()

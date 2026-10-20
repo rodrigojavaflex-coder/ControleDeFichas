@@ -36,6 +36,10 @@ import {
   formatarErroRespostaAgente,
   mensagemErroChamadaAgente,
 } from '../../common/utils/formatar-erro-agente.util';
+import { EditarValoresFechamentoDto } from './dto/editar-valores-fechamento.dto';
+import { ConfirmarImportacaoRpsDto } from './dto/confirmar-importacao-rps.dto';
+import { parseRpsText, RpsItemExtraido } from './utils/rps-pdf.parser';
+import { PDFParse } from 'pdf-parse';
 
 interface FecharVendaFalha {
   id: string;
@@ -46,6 +50,35 @@ interface FecharVendaFalha {
 interface ProcessamentoVendasEmMassaResult {
   sucesso: Venda[];
   falhas: FecharVendaFalha[];
+}
+
+export type ImportacaoRpsStatus =
+  | 'PRONTO'
+  | 'NAO_ENCONTRADO'
+  | 'JA_FECHADA'
+  | 'AMBIGUO';
+
+export interface ImportacaoRpsPreviewItem {
+  protocolo: string;
+  valorPagoRps: number;
+  arquivoOrigem: string;
+  status: ImportacaoRpsStatus;
+  motivo?: string;
+  vendaId?: string;
+  origem?: VendaOrigem;
+  valorPagoAtual?: number | null;
+  dataFechamento?: string | null;
+}
+
+export interface ImportacaoRpsPreviewResult {
+  itens: ImportacaoRpsPreviewItem[];
+  resumo: {
+    totalExtraidos: number;
+    prontos: number;
+    naoEncontrados: number;
+    jaFechadas: number;
+    ambiguos: number;
+  };
 }
 
 @Injectable()
@@ -535,7 +568,11 @@ export class VendasService {
     queryBuilder: SelectQueryBuilder<Venda>,
     filters: FindVendasDto,
   ): void {
-    if (filters.protocolo) {
+    if (filters.protocolos && filters.protocolos.length > 0) {
+      queryBuilder.andWhere('venda.protocolo IN (:...protocolos)', {
+        protocolos: filters.protocolos,
+      });
+    } else if (filters.protocolo) {
       queryBuilder.andWhere('venda.protocolo ILIKE :protocolo', {
         protocolo: `%${filters.protocolo}%`,
       });
@@ -1096,6 +1133,291 @@ export class VendasService {
     }
 
     return { sucesso, falhas };
+  }
+
+  async editarValoresFechamento(
+    id: string,
+    dto: EditarValoresFechamentoDto,
+    usuario?: Usuario | null,
+  ): Promise<Venda> {
+    if (dto.valorCompra === undefined && dto.valorPago === undefined) {
+      throw new BadRequestException('Informe valorCompra e/ou valorPago');
+    }
+
+    const venda = await this.vendaRepository.findOne({ where: { id } });
+    if (!venda) {
+      throw new NotFoundException(`Venda com ID ${id} não encontrada`);
+    }
+
+    if (venda.dataFechamento) {
+      throw new BadRequestException(
+        `Venda com fechamento registrado em ${venda.dataFechamento}. Cancele o fechamento antes de alterar os valores.`,
+      );
+    }
+
+    const updateData: Partial<Venda> = {
+      tipoAtualizacao: TipoAtualizacao.MANUAL,
+    };
+
+    if (dto.valorCompra !== undefined) {
+      updateData.valorCompra = Math.round(Number(dto.valorCompra) * 100) / 100;
+    }
+    if (dto.valorPago !== undefined) {
+      updateData.valorPago = Math.round(Number(dto.valorPago) * 100) / 100;
+    }
+
+    if (
+      updateData.valorCompra != null &&
+      venda.valorCliente != null &&
+      Number(updateData.valorCompra) > Number(venda.valorCliente)
+    ) {
+      throw new BadRequestException(
+        'O valor da compra não pode ser maior que o valor do cliente.',
+      );
+    }
+
+    await this.vendaRepository.update(id, updateData);
+    return this.findOne(id, usuario);
+  }
+
+  async previewImportacaoRps(
+    files: Express.Multer.File[],
+    usuario?: Usuario | null,
+  ): Promise<ImportacaoRpsPreviewResult> {
+    if (!files?.length) {
+      throw new BadRequestException('Envie ao menos um arquivo PDF de RPS');
+    }
+
+    const extraidos: RpsItemExtraido[] = [];
+    for (const file of files) {
+      if (!file?.buffer?.length) {
+        continue;
+      }
+      const mimeOk =
+        file.mimetype === 'application/pdf' ||
+        file.originalname?.toLowerCase().endsWith('.pdf');
+      if (!mimeOk) {
+        throw new BadRequestException(
+          `Arquivo inválido: ${file.originalname || 'sem nome'}. Envie apenas PDF.`,
+        );
+      }
+
+      let text = '';
+      let parser: PDFParse | null = null;
+      try {
+        parser = new PDFParse({ data: file.buffer });
+        const parsed = await parser.getText();
+        text = parsed?.text || '';
+      } catch (error) {
+        this.logger.error(
+          `[previewImportacaoRps] Falha ao ler PDF ${file.originalname}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+        throw new BadRequestException(
+          `Não foi possível ler o PDF ${file.originalname || ''}. Verifique se o arquivo é textual (não digitalizado).`,
+        );
+      } finally {
+        try {
+          await parser?.destroy();
+        } catch {
+          // ignore destroy errors
+        }
+      }
+
+      const itensArquivo = parseRpsText(
+        text,
+        file.originalname || 'rps.pdf',
+      );
+      if (itensArquivo.length === 0) {
+        this.logger.warn(
+          `[previewImportacaoRps] Nenhum item extraído de ${file.originalname}`,
+        );
+      }
+      extraidos.push(...itensArquivo);
+    }
+
+    if (extraidos.length === 0) {
+      throw new BadRequestException(
+        'Nenhum protocolo/valor foi encontrado nos PDFs enviados.',
+      );
+    }
+
+    const origemUsuario = this.mapUnidadeParaOrigem(usuario?.unidade);
+    const protocolos = [...new Set(extraidos.map((i) => i.protocolo))];
+
+    const qb = this.vendaRepository
+      .createQueryBuilder('venda')
+      .where('venda.protocolo IN (:...protocolos)', { protocolos });
+
+    if (origemUsuario) {
+      qb.andWhere('venda.origem = :origem', { origem: origemUsuario });
+    }
+
+    const vendas = await qb.getMany();
+    const porProtocolo = new Map<string, Venda[]>();
+    for (const venda of vendas) {
+      const lista = porProtocolo.get(venda.protocolo) || [];
+      lista.push(venda);
+      porProtocolo.set(venda.protocolo, lista);
+    }
+
+    const itens: ImportacaoRpsPreviewItem[] = extraidos.map((item) => {
+      const candidatas = porProtocolo.get(item.protocolo) || [];
+
+      if (candidatas.length === 0) {
+        return {
+          protocolo: item.protocolo,
+          valorPagoRps: item.valorTotal,
+          arquivoOrigem: item.arquivoOrigem,
+          status: 'NAO_ENCONTRADO',
+          motivo: 'Protocolo não encontrado nas vendas',
+        };
+      }
+
+      if (candidatas.length > 1) {
+        return {
+          protocolo: item.protocolo,
+          valorPagoRps: item.valorTotal,
+          arquivoOrigem: item.arquivoOrigem,
+          status: 'AMBIGUO',
+          motivo: `Encontradas ${candidatas.length} vendas com o mesmo protocolo`,
+        };
+      }
+
+      const venda = candidatas[0];
+      if (venda.dataFechamento) {
+        return {
+          protocolo: item.protocolo,
+          valorPagoRps: item.valorTotal,
+          arquivoOrigem: item.arquivoOrigem,
+          status: 'JA_FECHADA',
+          motivo: `Venda já possui fechamento em ${venda.dataFechamento}`,
+          vendaId: venda.id,
+          origem: venda.origem,
+          valorPagoAtual: venda.valorPago ?? null,
+          dataFechamento:
+            typeof venda.dataFechamento === 'string'
+              ? venda.dataFechamento
+              : String(venda.dataFechamento),
+        };
+      }
+
+      return {
+        protocolo: item.protocolo,
+        valorPagoRps: item.valorTotal,
+        arquivoOrigem: item.arquivoOrigem,
+        status: 'PRONTO',
+        vendaId: venda.id,
+        origem: venda.origem,
+        valorPagoAtual: venda.valorPago ?? null,
+        dataFechamento: null,
+      };
+    });
+
+    const resumo = {
+      totalExtraidos: itens.length,
+      prontos: itens.filter((i) => i.status === 'PRONTO').length,
+      naoEncontrados: itens.filter((i) => i.status === 'NAO_ENCONTRADO').length,
+      jaFechadas: itens.filter((i) => i.status === 'JA_FECHADA').length,
+      ambiguos: itens.filter((i) => i.status === 'AMBIGUO').length,
+    };
+
+    this.logger.log(
+      `[previewImportacaoRps] Extraídos=${resumo.totalExtraidos} prontos=${resumo.prontos} naoEncontrados=${resumo.naoEncontrados} jaFechadas=${resumo.jaFechadas} ambiguos=${resumo.ambiguos}`,
+    );
+
+    return { itens, resumo };
+  }
+
+  async confirmarImportacaoRps(
+    dto: ConfirmarImportacaoRpsDto,
+    usuario?: Usuario | null,
+  ): Promise<ProcessamentoVendasEmMassaResult> {
+    const sucesso: Venda[] = [];
+    const falhas: FecharVendaFalha[] = [];
+    const origemUsuario = this.mapUnidadeParaOrigem(usuario?.unidade);
+
+    for (const item of dto.itens) {
+      const venda = await this.vendaRepository.findOne({
+        where: { id: item.vendaId },
+      });
+
+      if (!venda) {
+        falhas.push({
+          id: item.vendaId,
+          motivo: 'Venda não encontrada',
+        });
+        continue;
+      }
+
+      if (origemUsuario && venda.origem !== origemUsuario) {
+        falhas.push({
+          id: venda.id,
+          protocolo: venda.protocolo,
+          motivo: 'Venda fora do escopo de origem do usuário',
+        });
+        continue;
+      }
+
+      if (venda.dataFechamento) {
+        falhas.push({
+          id: venda.id,
+          protocolo: venda.protocolo,
+          motivo: `Venda com fechamento registrado em ${venda.dataFechamento}`,
+        });
+        continue;
+      }
+
+      const valorPago = Math.round(Number(item.valorPago) * 100) / 100;
+      if (!valorPago || valorPago <= 0) {
+        falhas.push({
+          id: venda.id,
+          protocolo: venda.protocolo,
+          motivo: 'valorPago inválido',
+        });
+        continue;
+      }
+
+      const observacao = this.concatenarObservacaoArquivoRps(
+        venda.observacao,
+        item.arquivoOrigem,
+      );
+
+      await this.vendaRepository.update(venda.id, {
+        valorPago,
+        tipoAtualizacao: TipoAtualizacao.RPS,
+        ...(observacao !== undefined ? { observacao } : {}),
+      });
+
+      sucesso.push(await this.findOne(venda.id, usuario));
+    }
+
+    this.logger.log(
+      `[confirmarImportacaoRps] sucesso=${sucesso.length} falhas=${falhas.length}`,
+    );
+
+    return { sucesso, falhas };
+  }
+
+  private concatenarObservacaoArquivoRps(
+    observacaoAtual?: string | null,
+    arquivoOrigem?: string | null,
+  ): string | undefined {
+    const arquivo = (arquivoOrigem || '').trim();
+    if (!arquivo) {
+      return undefined;
+    }
+
+    const trecho = `RPS: ${arquivo}`;
+    const atual = (observacaoAtual || '').trim();
+    const maxLen = 500;
+    if (!atual) {
+      return trecho.slice(0, maxLen);
+    }
+    if (atual.includes(trecho)) {
+      return atual.slice(0, maxLen);
+    }
+    return `${atual} | ${trecho}`.slice(0, maxLen);
   }
 
   private getNomeUnidadePorOrigem(origem: VendaOrigem): string {

@@ -35,6 +35,15 @@
           Atualizar Valor Compra
         </button>
         <button
+          *ngIf="canImportarRps()"
+          class="btn btn-importar-rps"
+          (click)="openImportarRpsPicker()"
+          [attr.disabled]="atualizarValorCompraLoading || importarRpsLoading || importarRpsConfirmLoading ? 'disabled' : null"
+          title="Atualizar Valor Fechamento a partir de um ou mais PDFs de RPS">
+          <i class="fas fa-file-pdf" [class.fa-spin]="importarRpsLoading"></i>
+          {{ importarRpsLoading ? 'Lendo RPS...' : 'Atualizar Valor - RPS' }}
+        </button>
+        <button
           *ngIf="canReadVenda()"
           class="btn btn-imprimir"
           (click)="imprimirFechamentoAtual()"
@@ -266,8 +275,52 @@
             <td>{{ getVendedorNome(venda) }}</td>
             <td>{{ getPrescritorNome(venda) || '-' }}</td>
             <td>{{ venda.ativo || '-' }}</td>
-            <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorCompra || 0) }}</td>
-            <td *ngIf="canViewValorCompra()">{{ formatCurrency(venda.valorPago || 0) }}</td>
+            <td
+              *ngIf="canViewValorCompra()"
+              class="valor-cell"
+              [class.valor-cell-editable]="podeEditarValoresNaLinha(venda)"
+              (click)="podeEditarValoresNaLinha(venda) ? startEditValorCell(venda, 'valorCompra', $event) : null">
+              <ng-container *ngIf="isEditingValorCell(venda.id, 'valorCompra'); else valorCompraView">
+                <input
+                  type="text"
+                  class="valor-cell-input"
+                  [attr.data-venda-id]="venda.id"
+                  data-field="valorCompra"
+                  [(ngModel)]="editingValorDraft"
+                  (click)="$event.stopPropagation()"
+                  (keydown)="onEditValorKeydown($event, venda)"
+                  (blur)="commitEditValorCell(venda, false)"
+                  [disabled]="editingValorSaving"
+                  autofocus />
+              </ng-container>
+              <ng-template #valorCompraView>
+                {{ formatCurrency(venda.valorCompra || 0) }}
+                <i *ngIf="podeEditarValoresNaLinha(venda)" class="fas fa-pen valor-cell-icon" aria-hidden="true"></i>
+              </ng-template>
+            </td>
+            <td
+              *ngIf="canViewValorCompra()"
+              class="valor-cell"
+              [class.valor-cell-editable]="podeEditarValoresNaLinha(venda)"
+              (click)="podeEditarValoresNaLinha(venda) ? startEditValorCell(venda, 'valorPago', $event) : null">
+              <ng-container *ngIf="isEditingValorCell(venda.id, 'valorPago'); else valorPagoView">
+                <input
+                  type="text"
+                  class="valor-cell-input"
+                  [attr.data-venda-id]="venda.id"
+                  data-field="valorPago"
+                  [(ngModel)]="editingValorDraft"
+                  (click)="$event.stopPropagation()"
+                  (keydown)="onEditValorKeydown($event, venda)"
+                  (blur)="commitEditValorCell(venda, false)"
+                  [disabled]="editingValorSaving"
+                  autofocus />
+              </ng-container>
+              <ng-template #valorPagoView>
+                {{ formatCurrency(venda.valorPago || 0) }}
+                <i *ngIf="podeEditarValoresNaLinha(venda)" class="fas fa-pen valor-cell-icon" aria-hidden="true"></i>
+              </ng-template>
+            </td>
             <td>
               <span class="status-badge {{ getStatusClass(venda.status) }}">
                 {{ getStatusLabel(venda.status) }}
@@ -364,13 +417,14 @@
 
         <!-- Segunda linha: Protocolo, Cliente, Vendedor, Prescritor -->
         <div class="filter-group">
-          <label for="protocoloFilterModal" class="label-campo">Protocolo</label>
+          <label for="protocoloFilterModal" class="label-campo">Protocolo(s)</label>
           <input
             id="protocoloFilterModal"
             type="text"
             [(ngModel)]="protocoloFilter"
-            placeholder="Buscar por protocolo..."
+            placeholder="Um ou vários (vírgula ou espaço)"
             class="campo"
+            title="Informe um protocolo ou vários separados por vírgula, ponto e vírgula ou espaço"
             (keyup.enter)="applyFilters()">
         </div>
 
@@ -745,13 +799,121 @@
   </div>
 </div>
 
-<!-- Overlay de Loading durante processamento de atualização de valor de compra -->
-<div class="processing-overlay" *ngIf="atualizarValorCompraLoading">
+<!-- Modal Preview Importação RPS (fecha só no Cancelar ou no X) -->
+<div class="confirmation-modal-overlay" *ngIf="showImportarRpsModal">
+  <div class="confirmation-modal importar-rps-modal">
+    <div class="modal-header">
+      <h3>Conferencia de Valores RPS</h3>
+      <button
+        type="button"
+        class="close-btn"
+        (click)="closeImportarRpsModal()"
+        [attr.disabled]="importarRpsConfirmLoading ? 'disabled' : null">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body" *ngIf="importarRpsPreview as preview">
+      <p class="importar-rps-resumo">
+        Extraídos: <strong>{{ preview.resumo.totalExtraidos }}</strong>
+        · Prontos: <strong>{{ preview.resumo.prontos }}</strong>
+        · Não encontrados: <strong>{{ preview.resumo.naoEncontrados }}</strong>
+        · Já fechadas: <strong>{{ preview.resumo.jaFechadas }}</strong>
+        · Ambíguos: <strong>{{ preview.resumo.ambiguos }}</strong>
+      </p>
+      <p class="text-muted small">
+        Ao gravar, o V. Fechamento das vendas com status Pronto será atualizado.
+      </p>
+      <div class="importar-rps-table-wrap">
+        <table class="vendas-table importar-rps-table">
+          <thead>
+            <tr>
+              <th>Protocolo</th>
+              <th>Arquivo</th>
+              <th>V. Fechamento</th>
+              <th>V. Fechamento Novo</th>
+              <th>Status</th>
+              <th>Obs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of preview.itens" [attr.data-status]="item.status">
+              <td>{{ item.protocolo }}</td>
+              <td class="arquivo-cell">{{ item.arquivoOrigem }}</td>
+              <td>{{ item.valorPagoAtual != null ? formatCurrency(item.valorPagoAtual) : '-' }}</td>
+              <td>{{ formatCurrency(item.valorPagoRps) }}</td>
+              <td>
+                <span class="rps-status-badge" [attr.data-status]="item.status">
+                  {{ getImportacaoRpsStatusLabel(item.status) }}
+                </span>
+              </td>
+              <td class="motivo-cell">{{ item.motivo || '-' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="importar-rps-total-row">
+              <td colspan="3" class="text-right"><strong>Total V. Fechamento Novo</strong></td>
+              <td><strong>{{ formatCurrency(totalValorFechamentoNovoRps) }}</strong></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn btn-cancelar"
+        (click)="closeImportarRpsModal()"
+        [attr.disabled]="importarRpsConfirmLoading ? 'disabled' : null">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="confirmarImportacaoRps()"
+        [attr.disabled]="importarRpsConfirmLoading || importarRpsItensProntos.length === 0 ? 'disabled' : null">
+        <i class="fas fa-save"></i>
+        {{ importarRpsConfirmLoading ? 'Gravando...' : ('Gravar (' + importarRpsItensProntos.length + ')') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: visualizar protocolos atualizados via RPS -->
+<div
+  class="confirmation-modal-overlay"
+  *ngIf="showVisualizarProtocolosRpsModal"
+  (click)="cancelarVisualizarProtocolosRps()">
+  <div class="confirmation-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Importação RPS concluída</h3>
+      <button type="button" class="close-btn" (click)="cancelarVisualizarProtocolosRps()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="mensagem-pre-line">{{ visualizarProtocolosRpsMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-cancelar" (click)="cancelarVisualizarProtocolosRps()">
+        Não
+      </button>
+      <button type="button" class="btn btn-primary" (click)="confirmarVisualizarProtocolosRps()">
+        <i class="fas fa-eye"></i>
+        Sim, visualizar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay de Loading durante processamento -->
+<div class="processing-overlay" *ngIf="atualizarValorCompraLoading || importarRpsLoading">
   <div class="processing-modal">
     <div class="processing-content">
       <div class="spinner-large"></div>
-      <h3>Processando Atualização de Valor de Compra</h3>
-      <p>Por favor, aguarde enquanto os valores são atualizados...</p>
+      <h3 *ngIf="atualizarValorCompraLoading">Processando Atualização de Valor de Compra</h3>
+      <h3 *ngIf="importarRpsLoading && !atualizarValorCompraLoading">Lendo PDFs de RPS</h3>
+      <p>Por favor, aguarde...</p>
       <p class="processing-note">Esta operação pode levar alguns segundos.</p>
     </div>
   </div>

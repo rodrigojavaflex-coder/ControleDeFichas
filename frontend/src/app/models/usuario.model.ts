@@ -59,6 +59,8 @@ export enum Permission {
   VENDA_FECHAR = 'venda:fechar',
   VENDA_CANCELAR_FECHAMENTO = 'venda:cancelar-fechamento',
   VENDA_VIEW_VALOR_COMPRA = 'venda:view-valor-compra',
+  VENDA_EDITAR_VALOR_COMPRA = 'venda:editar-valor-compra',
+  VENDA_IMPORTAR_RPS_FECHAMENTO = 'venda:importar-rps-fechamento',
   VENDA_ACOMPANHAR = 'venda:acompanhar',
   VENDA_ACESSAR_FECHAMENTO = 'venda:acessar-fechamento',
   VENDA_FECHAR_CAIXA = 'venda:fechar-caixa',

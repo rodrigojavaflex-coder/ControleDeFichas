@@ -690,6 +690,8 @@ export class AnaliseValoresListComponent implements OnInit, OnDestroy {
     const labels: Record<string, string> = {
       [TipoAtualizacao.FORMULA_CERTA_AGENTE]: 'Formula Certa',
       [TipoAtualizacao.VALOR_CLIENTE]: 'Valor Cliente',
+      [TipoAtualizacao.MANUAL]: 'Manual',
+      [TipoAtualizacao.RPS]: 'RPS',
     };
     return labels[tipo] ?? tipo;
   }

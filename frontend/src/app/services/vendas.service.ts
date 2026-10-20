@@ -7,7 +7,8 @@ import {
   UpdateVendaDto,
   FindVendasDto,
   VendaPaginatedResponse,
-  FecharVendasEmMassaResponse
+  FecharVendasEmMassaResponse,
+  ImportacaoRpsPreviewResult
 } from '../models/venda.model';
 import { environment } from '../../environments/environment';
 
@@ -107,6 +108,42 @@ export class VendaService {
       vendaIds,
       atualizarComValorCliente
     });
+  }
+
+  /**
+   * Editar V. Compra e/ou V. Fechamento (venda sem fechamento)
+   */
+  editarValoresFechamento(
+    id: string,
+    payload: { valorCompra?: number; valorPago?: number }
+  ): Observable<Venda> {
+    return this.http.patch<Venda>(`${this.apiUrl}/${id}/valores-fechamento`, payload);
+  }
+
+  /**
+   * Preview da importação de um ou mais PDFs de RPS
+   */
+  previewImportacaoRps(files: File[]): Observable<ImportacaoRpsPreviewResult> {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file, file.name);
+    }
+    return this.http.post<ImportacaoRpsPreviewResult>(
+      `${this.apiUrl}/importar-rps/preview`,
+      formData
+    );
+  }
+
+  /**
+   * Confirma gravação do valorPago a partir do RPS
+   */
+  confirmarImportacaoRps(
+    itens: Array<{ vendaId: string; valorPago: number; arquivoOrigem?: string }>
+  ): Observable<FecharVendasEmMassaResponse> {
+    return this.http.post<FecharVendasEmMassaResponse>(
+      `${this.apiUrl}/importar-rps/confirmar`,
+      { itens }
+    );
   }
 
   private buildQueryParams(findVendasDto?: FindVendasDto): HttpParams {
