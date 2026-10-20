@@ -23,15 +23,17 @@
     </div>
     <div
       class="selected-names-list"
-      *ngIf="opcoes.length && medicosSelecionadosLista.length; else medicoTodosHint">
+      *ngIf="exibirNomesSelecionados && opcoes.length && medicosSelecionadosLista.length; else medicoResumoHint">
       <span
         class="selected-name-chip"
         *ngFor="let nome of medicosSelecionadosLista; trackBy: trackByNome">
         {{ nome }}
       </span>
     </div>
-    <ng-template #medicoTodosHint>
-      <span class="filter-empty-hint" *ngIf="opcoes.length">{{ hintTodos }}</span>
+    <ng-template #medicoResumoHint>
+      <span class="filter-empty-hint" *ngIf="opcoes.length && selectedMedicos.size === 0">
+        {{ hintTodos }}
+      </span>
     </ng-template>
     <span class="filter-empty-hint" *ngIf="loading && !opcoes.length">
       Carregando opções...

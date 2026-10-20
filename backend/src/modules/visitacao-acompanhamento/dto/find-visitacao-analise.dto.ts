@@ -73,6 +73,21 @@ function toCompetenciasArray(
   return list;
 }
 
+function toNomesMedicoArray(value: unknown): string[] | undefined {
+  if (value == null || value === '') {
+    return undefined;
+  }
+  const raw = Array.isArray(value) ? value : String(value).split(',');
+  const nomes = [
+    ...new Set(
+      raw
+        .map((item) => String(item ?? '').trim())
+        .filter((item) => item.length > 0),
+    ),
+  ];
+  return nomes.length ? nomes : undefined;
+}
+
 export class FindVisitacaoAnaliseOpcoesDto {
   @ApiPropertyOptional({
     enum: Unidade,
@@ -172,10 +187,24 @@ export class FindVisitacaoAnaliseDto {
   @IsUUID()
   funcionarioId?: string;
 
-  @ApiPropertyOptional({ description: 'Nome do médico (parcial)' })
+  @ApiPropertyOptional({
+    description:
+      'Nome do médico (parcial / legado). Preferir `nomesMedico` (seleção exata).',
+  })
   @IsOptional()
   @IsString()
   nomeMedico?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Nomes exatos de médicos (multi-select). Aceita lista ou `a,b,c`.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => toNomesMedicoArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  nomesMedico?: string[];
 
   @ApiPropertyOptional({
     enum: NA_CARTEIRA_FILTRO,

@@ -18,9 +18,9 @@
             <select
               id="va-analise-unidade"
               class="form-control"
-              [(ngModel)]="unidadeFilter"
+              [ngModel]="unidadeFilter"
               [disabled]="unidadeDisabled"
-              (ngModelChange)="onUnidadeChange()">
+              (ngModelChange)="onUnidadeChange($event)">
               <option *ngIf="!unidadeDisabled" [ngValue]="''">Selecione…</option>
               <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
             </select>
@@ -42,9 +42,9 @@
             <select
               id="va-analise-modo"
               class="form-control"
-              [(ngModel)]="modo"
+              [ngModel]="modo"
               [disabled]="!unidadeFilter || loadingOpcoes"
-              (ngModelChange)="onModoChange()">
+              (ngModelChange)="onModoChange($event)">
               <option value="comparar">Comparar</option>
               <option value="ranking">Ranking</option>
               <option value="evolucao">Evolução</option>
@@ -56,9 +56,9 @@
             <select
               id="va-analise-exibicao"
               class="form-control"
-              [(ngModel)]="exibicao"
+              [ngModel]="exibicao"
               [disabled]="!unidadeFilter || loadingOpcoes"
-              (change)="onExibicaoChange()">
+              (ngModelChange)="onExibicaoChange($event)">
               <option value="dados">Dados</option>
               <option value="graficos">Gráficos</option>
             </select>
@@ -69,9 +69,9 @@
             <select
               id="va-analise-qnt"
               class="form-control"
-              [(ngModel)]="qnt"
+              [ngModel]="qnt"
               [disabled]="!unidadeFilter || loadingOpcoes"
-              (change)="onQntChange()"
+              (ngModelChange)="onQntChange($event)"
               [title]="isGraficos ? 'Em Gráficos o máximo é 50' : 'Quantidade por grade'">
               <option
                 *ngFor="let op of qntOpcoes"
@@ -88,9 +88,9 @@
               <select
                 id="va-analise-c1"
                 class="form-control"
-                [(ngModel)]="c1"
+                [ngModel]="c1"
                 [disabled]="!unidadeFilter || loadingOpcoes || !competenciasFiltradas.length"
-                (change)="onFiltroChange()">
+                (ngModelChange)="onC1Change($event)">
                 <option [ngValue]="null">Selecione…</option>
                 <option *ngFor="let c of competenciasFiltradas" [ngValue]="c.key">
                   {{ c.label }}
@@ -103,9 +103,9 @@
               <select
                 id="va-analise-c2"
                 class="form-control"
-                [(ngModel)]="c2"
+                [ngModel]="c2"
                 [disabled]="!unidadeFilter || loadingOpcoes || !competenciasFiltradas.length"
-                (change)="onFiltroChange()">
+                (ngModelChange)="onC2Change($event)">
                 <option [ngValue]="null">Selecione…</option>
                 <option *ngFor="let c of competenciasFiltradas" [ngValue]="c.key">
                   {{ c.label }}
@@ -130,9 +130,9 @@
             <select
               id="va-analise-rep"
               class="form-control"
-              [(ngModel)]="funcionarioIdFilter"
+              [ngModel]="funcionarioIdFilter"
               [disabled]="!unidadeFilter || loadingOpcoes"
-              (change)="onFiltroChange()">
+              (ngModelChange)="onRepresentanteChange($event)">
               <option value="">Todos</option>
               <option *ngFor="let rep of representantes" [value]="rep.id">
                 {{ rep.nome }} ({{ rep.painelContratoRepresentante }}/{{ rep.painelCodigoRepresentante }})
@@ -141,17 +141,30 @@
           </div>
 
           <div class="filter-group visitacao-analise-medico">
-            <label class="form-label" for="va-analise-medico">Médico</label>
-            <input
-              id="va-analise-medico"
-              type="text"
-              class="form-control"
-              [(ngModel)]="nomeMedicoFilter"
-              [disabled]="!unidadeFilter || loadingOpcoes"
-              placeholder="Filtrar por nome"
-              autocomplete="off"
-              (keyup.enter)="onFiltroChange()"
-              (change)="onFiltroChange()" />
+            <app-medico-filter-picker
+              *ngIf="unidadeFilter"
+              [opcoes]="opcoesMedico"
+              [loading]="loadingOpcoes"
+              [selectedMedicos]="selectedMedicos"
+              [ordenacaoOpcoes]="medicoOrdenacaoOpcoes"
+              [exibirNomesSelecionados]="false"
+              defaultOrdenacao="alfabetica"
+              resumoVazio="Todos"
+              hintTodos="Todos os médicos"
+              (selectedMedicosChange)="onMedicosSelected($event)"
+              (confirmed)="onMedicosConfirmados()"
+              (cleared)="onMedicosLimpos()">
+            </app-medico-filter-picker>
+            <div
+              class="filter-entity-card visitacao-analise-medico-placeholder"
+              *ngIf="!unidadeFilter"
+              aria-disabled="true">
+              <label class="filter-entity-title">
+                <i class="fas fa-user-md filter-title-icon"></i>
+                Médico
+              </label>
+              <span class="filter-empty-hint">Selecione a unidade</span>
+            </div>
           </div>
 
           <div class="filter-group visitacao-analise-painel">
@@ -159,9 +172,9 @@
             <select
               id="va-analise-painel"
               class="form-control"
-              [(ngModel)]="naCarteiraFilter"
+              [ngModel]="naCarteiraFilter"
               [disabled]="!unidadeFilter || loadingOpcoes"
-              (change)="onFiltroChange()">
+              (ngModelChange)="onNaCarteiraChange($event)">
               <option value="todos">Todos</option>
               <option value="sim">Sim</option>
               <option value="nao">Não</option>
@@ -307,18 +320,76 @@
               <i class="fas fa-inbox"></i>
               {{ filtroFaixaCresc ? 'Nenhum médico nesta faixa' : 'Nenhum crescimento' }}
             </p>
+            <div class="comparar-chart-legend" *ngIf="crescimentoVisivel.length">
+              <span class="comparar-legend-item">
+                <i class="comparar-swatch swatch-c2-cresc"></i>
+                {{ labelCompetencia1 }} / {{ labelCompetencia2 }}
+              </span>
+              <span class="comparar-legend-item is-delta">
+                <i class="fas fa-arrow-up comparar-legend-arrow is-pos"></i>Δ crescimento
+              </span>
+            </div>
+            <svg width="0" height="0" aria-hidden="true" *ngIf="crescimentoVisivel.length">
+              <defs>
+                <marker
+                  id="va-arrow-cresc"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="5"
+                  markerHeight="5"
+                  orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" class="comparar-arrow-fill is-cresc" />
+                </marker>
+              </defs>
+            </svg>
             <div class="bar-list" *ngIf="crescimentoVisivel.length">
               <div
-                class="bar-item"
+                class="bar-item comparar-chart-item"
                 *ngFor="let item of crescimentoVisivel; trackBy: trackByMedico">
                 <div class="bar-header">
                   <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
-                  <span class="bar-value">{{ formatarDelta(item.delta) }}</span>
+                  <span class="bar-value comparar-delta is-pos">
+                    <i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    {{ formatarDelta(item.delta) }}
+                  </span>
                 </div>
-                <div class="bar-track">
-                  <div
-                    class="bar-fill bar-fill-crescimento"
-                    [style.width.%]="percentualBarra(item.delta, maxCrescimentoBar)"></div>
+                <div class="comparar-pair">
+                  <div class="comparar-valores-row">
+                    <span class="comparar-col-valor">{{ formatarValor(item.valorMes1) }}</span>
+                    <span class="comparar-col-valor">{{ formatarValor(item.valorMes2) }}</span>
+                  </div>
+                  <div class="comparar-tracks-wrap">
+                    <svg
+                      class="comparar-trend-svg"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-hidden="true">
+                      <polyline
+                        class="comparar-trend-line is-cresc"
+                        fill="none"
+                        marker-end="url(#va-arrow-cresc)"
+                        [attr.points]="pontosSetaComparar(item.valorMes1, item.valorMes2, maxMesesCrescimento)" />
+                    </svg>
+                    <div class="comparar-col">
+                      <div class="bar-track bar-track-v">
+                        <div
+                          class="bar-fill bar-fill-crescimento"
+                          [style.height.%]="percentualBarra(item.valorMes1, maxMesesCrescimento)"></div>
+                      </div>
+                    </div>
+                    <div class="comparar-col">
+                      <div class="bar-track bar-track-v">
+                        <div
+                          class="bar-fill bar-fill-crescimento"
+                          [style.height.%]="percentualBarra(item.valorMes2, maxMesesCrescimento)"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comparar-labels-row">
+                    <span class="comparar-col-label">{{ labelCompetencia1 }}</span>
+                    <span class="comparar-col-label">{{ labelCompetencia2 }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -463,18 +534,76 @@
               <i class="fas fa-inbox"></i>
               {{ filtroFaixaQueda ? 'Nenhum médico nesta faixa' : 'Nenhuma queda' }}
             </p>
+            <div class="comparar-chart-legend" *ngIf="quedaVisivel.length">
+              <span class="comparar-legend-item">
+                <i class="comparar-swatch swatch-c2-queda"></i>
+                {{ labelCompetencia1 }} / {{ labelCompetencia2 }}
+              </span>
+              <span class="comparar-legend-item is-delta">
+                <i class="fas fa-arrow-down comparar-legend-arrow is-neg"></i>Δ queda
+              </span>
+            </div>
+            <svg width="0" height="0" aria-hidden="true" *ngIf="quedaVisivel.length">
+              <defs>
+                <marker
+                  id="va-arrow-queda"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="5"
+                  markerHeight="5"
+                  orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" class="comparar-arrow-fill is-queda" />
+                </marker>
+              </defs>
+            </svg>
             <div class="bar-list" *ngIf="quedaVisivel.length">
               <div
-                class="bar-item"
+                class="bar-item comparar-chart-item"
                 *ngFor="let item of quedaVisivel; trackBy: trackByMedico">
                 <div class="bar-header">
                   <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
-                  <span class="bar-value">{{ formatarDelta(item.delta) }}</span>
+                  <span class="bar-value comparar-delta is-neg">
+                    <i class="fas fa-arrow-down" aria-hidden="true"></i>
+                    {{ formatarDelta(item.delta) }}
+                  </span>
                 </div>
-                <div class="bar-track">
-                  <div
-                    class="bar-fill bar-fill-queda"
-                    [style.width.%]="percentualBarra(item.delta, maxQuedaBar)"></div>
+                <div class="comparar-pair">
+                  <div class="comparar-valores-row">
+                    <span class="comparar-col-valor">{{ formatarValor(item.valorMes1) }}</span>
+                    <span class="comparar-col-valor">{{ formatarValor(item.valorMes2) }}</span>
+                  </div>
+                  <div class="comparar-tracks-wrap">
+                    <svg
+                      class="comparar-trend-svg"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-hidden="true">
+                      <polyline
+                        class="comparar-trend-line is-queda"
+                        fill="none"
+                        marker-end="url(#va-arrow-queda)"
+                        [attr.points]="pontosSetaComparar(item.valorMes1, item.valorMes2, maxMesesQueda)" />
+                    </svg>
+                    <div class="comparar-col">
+                      <div class="bar-track bar-track-v">
+                        <div
+                          class="bar-fill bar-fill-queda"
+                          [style.height.%]="percentualBarra(item.valorMes1, maxMesesQueda)"></div>
+                      </div>
+                    </div>
+                    <div class="comparar-col">
+                      <div class="bar-track bar-track-v">
+                        <div
+                          class="bar-fill bar-fill-queda"
+                          [style.height.%]="percentualBarra(item.valorMes2, maxMesesQueda)"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comparar-labels-row">
+                    <span class="comparar-col-label">{{ labelCompetencia1 }}</span>
+                    <span class="comparar-col-label">{{ labelCompetencia2 }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -619,18 +748,83 @@
               <i class="fas fa-inbox"></i>
               {{ filtroFaixaRej ? 'Nenhum médico nesta faixa' : 'Nenhum rejeitado' }}
             </p>
+            <div class="comparar-chart-legend" *ngIf="rejeitadosVisivel.length">
+              <span class="comparar-legend-item">
+                <i class="comparar-swatch swatch-c2-rej"></i>
+                {{ labelCompetencia1 }} / {{ labelCompetencia2 }}
+              </span>
+              <span class="comparar-legend-item is-delta">
+                <i class="fas fa-arrow-up comparar-legend-arrow is-neg"></i>Δ rejeição
+              </span>
+            </div>
+            <svg width="0" height="0" aria-hidden="true" *ngIf="rejeitadosVisivel.length">
+              <defs>
+                <marker
+                  id="va-arrow-rej"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="5"
+                  markerHeight="5"
+                  orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" class="comparar-arrow-fill is-rej" />
+                </marker>
+              </defs>
+            </svg>
             <div class="bar-list" *ngIf="rejeitadosVisivel.length">
               <div
-                class="bar-item"
+                class="bar-item comparar-chart-item"
                 *ngFor="let item of rejeitadosVisivel; trackBy: trackByMedico">
                 <div class="bar-header">
                   <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
-                  <span class="bar-value">{{ formatarDelta(item.delta) }}</span>
+                  <span
+                    class="bar-value comparar-delta"
+                    [class.is-pos]="item.delta < 0"
+                    [class.is-neg]="item.delta > 0">
+                    <i
+                      class="fas"
+                      [class.fa-arrow-up]="item.delta >= 0"
+                      [class.fa-arrow-down]="item.delta < 0"
+                      aria-hidden="true"></i>
+                    {{ formatarDelta(item.delta) }}
+                  </span>
                 </div>
-                <div class="bar-track">
-                  <div
-                    class="bar-fill bar-fill-rejeitado"
-                    [style.width.%]="percentualBarra(item.delta, maxRejeitadosBar)"></div>
+                <div class="comparar-pair">
+                  <div class="comparar-valores-row">
+                    <span class="comparar-col-valor">{{ formatarValor(item.valorMes1) }}</span>
+                    <span class="comparar-col-valor">{{ formatarValor(item.valorMes2) }}</span>
+                  </div>
+                  <div class="comparar-tracks-wrap">
+                    <svg
+                      class="comparar-trend-svg"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-hidden="true">
+                      <polyline
+                        class="comparar-trend-line is-rej"
+                        fill="none"
+                        marker-end="url(#va-arrow-rej)"
+                        [attr.points]="pontosSetaComparar(item.valorMes1, item.valorMes2, maxMesesRejeitados)" />
+                    </svg>
+                    <div class="comparar-col">
+                      <div class="bar-track bar-track-v">
+                        <div
+                          class="bar-fill bar-fill-rejeitado"
+                          [style.height.%]="percentualBarra(item.valorMes1, maxMesesRejeitados)"></div>
+                      </div>
+                    </div>
+                    <div class="comparar-col">
+                      <div class="bar-track bar-track-v">
+                        <div
+                          class="bar-fill bar-fill-rejeitado"
+                          [style.height.%]="percentualBarra(item.valorMes2, maxMesesRejeitados)"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comparar-labels-row">
+                    <span class="comparar-col-label">{{ labelCompetencia1 }}</span>
+                    <span class="comparar-col-label">{{ labelCompetencia2 }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -948,35 +1142,67 @@
               <i class="fas fa-inbox"></i>
               Nenhum recebido no período
             </p>
-            <div class="bar-list evolucao-bar-list" *ngIf="vendasVisivel.length">
+            <div class="comparar-chart-legend" *ngIf="vendasVisivel.length">
+              <span class="comparar-legend-item">
+                <i class="comparar-swatch swatch-c2-cresc"></i>
+                {{ labelsCompetenciasSerie.join(' / ') || 'Competências' }}
+              </span>
+              <span class="comparar-legend-item is-delta">Total · tendência 1ª→última</span>
+            </div>
+            <svg width="0" height="0" aria-hidden="true" *ngIf="vendasVisivel.length">
+              <defs>
+                <marker
+                  id="va-arrow-evol-rec"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="5"
+                  markerHeight="5"
+                  orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" class="comparar-arrow-fill is-cresc" />
+                </marker>
+              </defs>
+            </svg>
+            <div class="bar-list" *ngIf="vendasVisivel.length">
               <div
-                class="bar-item evolucao-bar-item"
+                class="bar-item comparar-chart-item"
                 *ngFor="let item of vendasVisivel; trackBy: trackByMedico">
                 <div class="bar-header">
                   <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
-                  <span class="bar-value">{{ formatarValor(item.valorPeriodo) }}</span>
+                  <span
+                    class="bar-value comparar-delta"
+                    [class.is-pos]="deltaSerie(item) >= 0"
+                    [class.is-neg]="deltaSerie(item) < 0">
+                    <i
+                      class="fas"
+                      [class.fa-arrow-up]="deltaSerie(item) >= 0"
+                      [class.fa-arrow-down]="deltaSerie(item) < 0"
+                      aria-hidden="true"></i>
+                    {{ formatarValor(item.valorPeriodo) }}
+                  </span>
                 </div>
-                <div class="evolucao-serie evolucao-serie-h">
-                  <div class="evolucao-valores-row">
+                <div class="comparar-pair">
+                  <div class="comparar-valores-row">
                     <span
-                      class="evolucao-mes-valor"
+                      class="comparar-col-valor"
                       *ngFor="let label of labelsCompetenciasSerie; let i = index">
                       {{ formatarValor(valorSerie(item, i)) }}
                     </span>
                   </div>
-                  <div class="evolucao-tracks-wrap">
+                  <div class="comparar-tracks-wrap">
                     <svg
-                      class="evolucao-line-svg"
+                      class="comparar-trend-svg"
                       viewBox="0 0 100 100"
                       preserveAspectRatio="none"
                       aria-hidden="true">
                       <polyline
-                        class="evolucao-line evolucao-line-recebido"
+                        class="comparar-trend-line is-cresc"
                         fill="none"
+                        marker-end="url(#va-arrow-evol-rec)"
                         [attr.points]="pontosLinhaSerie(item.serie, maxSerieVendasBar)" />
                     </svg>
                     <div
-                      class="evolucao-col"
+                      class="comparar-col"
                       *ngFor="let label of labelsCompetenciasSerie; let i = index">
                       <div class="bar-track bar-track-v">
                         <div
@@ -985,9 +1211,9 @@
                       </div>
                     </div>
                   </div>
-                  <div class="evolucao-labels-row">
+                  <div class="comparar-labels-row">
                     <span
-                      class="evolucao-mes-label"
+                      class="comparar-col-label"
                       *ngFor="let label of labelsCompetenciasSerie">{{ label }}</span>
                   </div>
                 </div>
@@ -1071,35 +1297,67 @@
               <i class="fas fa-inbox"></i>
               Nenhum rejeitado no período
             </p>
-            <div class="bar-list evolucao-bar-list" *ngIf="rejeitadosRankingVisivel.length">
+            <div class="comparar-chart-legend" *ngIf="rejeitadosRankingVisivel.length">
+              <span class="comparar-legend-item">
+                <i class="comparar-swatch swatch-c2-rej"></i>
+                {{ labelsCompetenciasSerie.join(' / ') || 'Competências' }}
+              </span>
+              <span class="comparar-legend-item is-delta">Total · tendência 1ª→última</span>
+            </div>
+            <svg width="0" height="0" aria-hidden="true" *ngIf="rejeitadosRankingVisivel.length">
+              <defs>
+                <marker
+                  id="va-arrow-evol-rej"
+                  viewBox="0 0 10 10"
+                  refX="8"
+                  refY="5"
+                  markerWidth="5"
+                  markerHeight="5"
+                  orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" class="comparar-arrow-fill is-rej" />
+                </marker>
+              </defs>
+            </svg>
+            <div class="bar-list" *ngIf="rejeitadosRankingVisivel.length">
               <div
-                class="bar-item evolucao-bar-item"
+                class="bar-item comparar-chart-item"
                 *ngFor="let item of rejeitadosRankingVisivel; trackBy: trackByMedico">
                 <div class="bar-header">
                   <span class="bar-label" [title]="item.nomeMedico">{{ item.nomeMedico }}</span>
-                  <span class="bar-value">{{ formatarValor(item.valorPeriodo) }}</span>
+                  <span
+                    class="bar-value comparar-delta"
+                    [class.is-pos]="deltaSerie(item) < 0"
+                    [class.is-neg]="deltaSerie(item) >= 0">
+                    <i
+                      class="fas"
+                      [class.fa-arrow-up]="deltaSerie(item) >= 0"
+                      [class.fa-arrow-down]="deltaSerie(item) < 0"
+                      aria-hidden="true"></i>
+                    {{ formatarValor(item.valorPeriodo) }}
+                  </span>
                 </div>
-                <div class="evolucao-serie evolucao-serie-h">
-                  <div class="evolucao-valores-row">
+                <div class="comparar-pair">
+                  <div class="comparar-valores-row">
                     <span
-                      class="evolucao-mes-valor"
+                      class="comparar-col-valor"
                       *ngFor="let label of labelsCompetenciasSerie; let i = index">
                       {{ formatarValor(valorSerie(item, i)) }}
                     </span>
                   </div>
-                  <div class="evolucao-tracks-wrap">
+                  <div class="comparar-tracks-wrap">
                     <svg
-                      class="evolucao-line-svg"
+                      class="comparar-trend-svg"
                       viewBox="0 0 100 100"
                       preserveAspectRatio="none"
                       aria-hidden="true">
                       <polyline
-                        class="evolucao-line evolucao-line-rejeitado"
+                        class="comparar-trend-line is-rej"
                         fill="none"
+                        marker-end="url(#va-arrow-evol-rej)"
                         [attr.points]="pontosLinhaSerie(item.serie, maxSerieRejeitadosBar)" />
                     </svg>
                     <div
-                      class="evolucao-col"
+                      class="comparar-col"
                       *ngFor="let label of labelsCompetenciasSerie; let i = index">
                       <div class="bar-track bar-track-v">
                         <div
@@ -1108,9 +1366,9 @@
                       </div>
                     </div>
                   </div>
-                  <div class="evolucao-labels-row">
+                  <div class="comparar-labels-row">
                     <span
-                      class="evolucao-mes-label"
+                      class="comparar-col-label"
                       *ngFor="let label of labelsCompetenciasSerie">{{ label }}</span>
                   </div>
                 </div>

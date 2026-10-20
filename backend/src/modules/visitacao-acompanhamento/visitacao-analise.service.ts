@@ -17,6 +17,7 @@ import {
 import {
   VisitacaoAnaliseCompetenciaDto,
   VisitacaoAnaliseMedicoDto,
+  VisitacaoAnaliseMedicoOpcaoDto,
   VisitacaoAnaliseOpcoesResponseDto,
   VisitacaoAnaliseResponseDto,
 } from './dto/visitacao-analise-response.dto';
@@ -79,7 +80,7 @@ type MedicoValores = {
 
 type FiltrosAnalise = Pick<
   FindVisitacaoAnaliseDto,
-  'funcionarioId' | 'nomeMedico' | 'naCarteira' | 'top'
+  'funcionarioId' | 'nomeMedico' | 'nomesMedico' | 'naCarteira' | 'top'
 >;
 
 @Injectable()
@@ -102,11 +103,13 @@ export class VisitacaoAnaliseService {
     const iniciouEm = Date.now();
     const unidade = this.resolverUnidadeObrigatoria(usuario, dto.unidade);
 
-    // Competências + representantes em paralelo (rápido para popular Ano/Competência na UI).
-    const [competenciasDisponiveis, representantes] = await Promise.all([
-      this.listarCompetenciasFechadas(unidade),
-      this.listarRepresentantesRapido(usuario, unidade),
-    ]);
+    // Competências + representantes + médicos em paralelo (rápido para popular filtros).
+    const [competenciasDisponiveis, representantes, medicos] =
+      await Promise.all([
+        this.listarCompetenciasFechadas(unidade),
+        this.listarRepresentantesRapido(usuario, unidade),
+        this.listarMedicosOpcoes(unidade),
+      ]);
 
     // Análise embutida é opcional e cara — a tela prefere carregar opções primeiro
     // e chamar GET /analise em seguida (evita "Carregando…" nos filtros).
@@ -123,6 +126,7 @@ export class VisitacaoAnaliseService {
           nomeMedico: undefined,
           naCarteira: 'todos',
           top: undefined,
+          nomesMedico: undefined,
         },
       );
       this.logger.log(
@@ -136,6 +140,7 @@ export class VisitacaoAnaliseService {
       unidade,
       competenciasDisponiveis,
       representantes,
+      medicos,
       analise,
     };
   }
@@ -237,11 +242,7 @@ export class VisitacaoAnaliseService {
       competencia1,
       competencia2,
       agregacao: null,
-      filtrosAplicados: {
-        funcionarioId: dto.funcionarioId ?? null,
-        nomeMedico: dto.nomeMedico?.trim() || null,
-        naCarteira: dto.naCarteira ?? 'todos',
-      },
+      filtrosAplicados: this.montarFiltrosAplicados(dto),
       crescimento,
       queda,
       maioresVendas: [],
@@ -312,11 +313,7 @@ export class VisitacaoAnaliseService {
       competencia1: null,
       competencia2: null,
       agregacao: 'soma',
-      filtrosAplicados: {
-        funcionarioId: dto.funcionarioId ?? null,
-        nomeMedico: dto.nomeMedico?.trim() || null,
-        naCarteira: dto.naCarteira ?? 'todos',
-      },
+      filtrosAplicados: this.montarFiltrosAplicados(dto),
       crescimento: [],
       queda: [],
       maioresVendas,
@@ -421,15 +418,30 @@ export class VisitacaoAnaliseService {
       competencia1: null,
       competencia2: null,
       agregacao: 'soma',
-      filtrosAplicados: {
-        funcionarioId: dto.funcionarioId ?? null,
-        nomeMedico: dto.nomeMedico?.trim() || null,
-        naCarteira: dto.naCarteira ?? 'todos',
-      },
+      filtrosAplicados: this.montarFiltrosAplicados(dto),
       crescimento: [],
       queda: [],
       maioresVendas,
       maioresRejeitados,
+    };
+  }
+
+  private montarFiltrosAplicados(dto: FiltrosAnalise): {
+    funcionarioId: string | null;
+    nomeMedico: string | null;
+    nomesMedico: string[];
+    naCarteira: 'sim' | 'nao' | 'todos';
+  } {
+    const nomes =
+      dto.nomesMedico
+        ?.map((n) => String(n).trim())
+        .filter((n) => n.length > 0)
+        .map((n) => n.toLocaleUpperCase('pt-BR')) ?? [];
+    return {
+      funcionarioId: dto.funcionarioId ?? null,
+      nomeMedico: dto.nomeMedico?.trim() || null,
+      nomesMedico: [...new Set(nomes)],
+      naCarteira: dto.naCarteira ?? 'todos',
     };
   }
 
@@ -551,11 +563,41 @@ export class VisitacaoAnaliseService {
     }));
   }
 
+  /** Médicos distintos nos fechamentos da unidade (rótulo = nome; total=0 p/ picker). */
+  private async listarMedicosOpcoes(
+    unidade: Unidade,
+  ): Promise<VisitacaoAnaliseMedicoOpcaoDto[]> {
+    const rows = await this.fechamentoMedicoRepository
+      .createQueryBuilder('m')
+      .innerJoin('m.fechamento', 'f')
+      .select('UPPER(BTRIM(m.nome_medico))', 'nome')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere(`BTRIM(COALESCE(m.nome_medico, '')) <> ''`)
+      .groupBy('UPPER(BTRIM(m.nome_medico))')
+      .orderBy('UPPER(BTRIM(m.nome_medico))', 'ASC')
+      .getRawMany<{ nome: string }>();
+
+    return rows.map((r) => ({
+      nome: r.nome,
+      total: 0,
+      aprovados: 0,
+      rejeitados: 0,
+    }));
+  }
+
   private aplicarFiltrosMedico(
     qb: ReturnType<Repository<VisitacaoFechamentoMedico>['createQueryBuilder']>,
     dto: FiltrosAnalise,
   ): void {
-    if (dto.nomeMedico?.trim()) {
+    const nomes =
+      dto.nomesMedico
+        ?.map((n) => String(n).trim())
+        .filter((n) => n.length > 0) ?? [];
+    if (nomes.length > 0) {
+      qb.andWhere('UPPER(BTRIM(m.nome_medico)) IN (:...nomesMedico)', {
+        nomesMedico: [...new Set(nomes.map((n) => n.toLocaleUpperCase('pt-BR')))],
+      });
+    } else if (dto.nomeMedico?.trim()) {
       qb.andWhere('m.nome_medico ILIKE :nomeMedico', {
         nomeMedico: `%${dto.nomeMedico.trim()}%`,
       });

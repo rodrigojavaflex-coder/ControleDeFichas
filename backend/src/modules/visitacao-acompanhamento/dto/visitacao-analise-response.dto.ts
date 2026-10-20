@@ -22,6 +22,23 @@ export class VisitacaoAnaliseCompetenciaDto {
   label: string;
 }
 
+export class VisitacaoAnaliseMedicoOpcaoDto {
+  @ApiProperty({ example: 'JOÃO DA SILVA' })
+  nome: string;
+
+  @ApiProperty({
+    example: 0,
+    description: 'Reservado para compatibilidade com o picker (sempre 0 na análise).',
+  })
+  total: number;
+
+  @ApiProperty({ example: 0 })
+  aprovados: number;
+
+  @ApiProperty({ example: 0 })
+  rejeitados: number;
+}
+
 export class VisitacaoAnaliseOpcoesResponseDto {
   @ApiProperty({ enum: Unidade })
   unidade: Unidade;
@@ -34,6 +51,13 @@ export class VisitacaoAnaliseOpcoesResponseDto {
 
   @ApiProperty({ type: [VisitacaoPainelMedicoRepresentanteDto] })
   representantes: VisitacaoPainelMedicoRepresentanteDto[];
+
+  @ApiProperty({
+    type: [VisitacaoAnaliseMedicoOpcaoDto],
+    description:
+      'Médicos distintos nos fechamentos da unidade (ordem alfabética) para o picker.',
+  })
+  medicos: VisitacaoAnaliseMedicoOpcaoDto[];
 
   @ApiPropertyOptional({
     type: () => VisitacaoAnaliseResponseDto,
@@ -109,6 +133,12 @@ export class VisitacaoAnaliseFiltrosAplicadosDto {
 
   @ApiPropertyOptional({ nullable: true })
   nomeMedico: string | null;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Nomes exatos selecionados no picker (vazio = todos).',
+  })
+  nomesMedico: string[];
 
   @ApiProperty({ enum: ['todos', 'sim', 'nao'] })
   naCarteira: (typeof NA_CARTEIRA_FILTRO)[number];

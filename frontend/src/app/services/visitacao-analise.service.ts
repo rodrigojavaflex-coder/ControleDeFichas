@@ -60,6 +60,14 @@ export class VisitacaoAnaliseService {
     if (filters.nomeMedico?.trim()) {
       params = params.set('nomeMedico', filters.nomeMedico.trim());
     }
+    if (filters.nomesMedico?.length) {
+      for (const nome of filters.nomesMedico) {
+        const trimmed = String(nome).trim();
+        if (trimmed) {
+          params = params.append('nomesMedico', trimmed);
+        }
+      }
+    }
     if (filters.naCarteira) {
       params = params.set('naCarteira', filters.naCarteira);
     }

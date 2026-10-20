@@ -24,15 +24,18 @@ import { Permission, Unidade } from '../../models/usuario.model';
 import {
   VisitacaoAnaliseCompetencia,
   VisitacaoAnaliseMedico,
+  VisitacaoAnaliseMedicoOpcao,
   VisitacaoAnaliseModo,
   VisitacaoAnaliseNaCarteira,
   VisitacaoAnaliseResponse,
 } from '../../models/visitacao-analise.model';
+import { MedicoOrdenacaoFiltro } from '../../models/orcamento.model';
 import { VisitacaoPainelMedicoRepresentante } from '../../models/visitacao-painel-medico.model';
 import {
   MultiSelectDropdownComponent,
   MultiSelectOption,
 } from '../multi-select-dropdown/multi-select-dropdown';
+import { MedicoFilterPickerComponent } from '../medico-filter-picker/medico-filter-picker';
 
 type ExportCard =
   | 'crescimento'
@@ -72,7 +75,12 @@ const TOP_GRAFICO_MAX = 50;
 @Component({
   selector: 'app-visitacao-analise-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MultiSelectDropdownComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MultiSelectDropdownComponent,
+    MedicoFilterPickerComponent,
+  ],
   templateUrl: './visitacao-analise-page.html',
   styleUrls: [
     '../vendas-list/vendas-list.css',
@@ -112,7 +120,13 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
 
   representantes: VisitacaoPainelMedicoRepresentante[] = [];
   funcionarioIdFilter = '';
-  nomeMedicoFilter = '';
+  opcoesMedico: VisitacaoAnaliseMedicoOpcao[] = [];
+  selectedMedicos = new Set<string>();
+  /** Picker de médico: apenas ordem alfabética (sem ranking por volume). */
+  readonly medicoOrdenacaoOpcoes: Array<{
+    value: MedicoOrdenacaoFiltro;
+    label: string;
+  }> = [{ value: 'alfabetica', label: 'Ordem alfabética' }];
   naCarteiraFilter: VisitacaoAnaliseNaCarteira = 'todos';
 
   /** Último `top` enviado à API (para evitar reload ao só trocar Dados↔Gráficos). */
@@ -155,12 +169,7 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const user = this.authService.getCurrentUser();
-    if (user?.unidade?.trim()) {
-      this.unidadeFilter = user.unidade as Unidade;
-      this.unidadeDisabled = true;
-    }
-
+    this.initializeUnidadeFilter();
     this.atualizarPageContext();
 
     this.reloadSub = this.reload$
@@ -200,6 +209,23 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
 
     if (this.unidadeFilter) {
       this.carregarOpcoes(true);
+    }
+  }
+
+  /**
+   * Só fixa/bloqueia o filtro quando `usuario.unidade` está preenchida
+   * (RN-VIS-003). Admin sem vínculo escolhe a unidade livremente.
+   */
+  private initializeUnidadeFilter(): void {
+    const user = this.authService.getCurrentUser();
+    const raw = String(user?.unidade ?? '').trim();
+    const unidadesValidas = new Set(Object.values(Unidade) as string[]);
+    if (raw && unidadesValidas.has(raw)) {
+      this.unidadeFilter = raw as Unidade;
+      this.unidadeDisabled = true;
+    } else {
+      this.unidadeFilter = '';
+      this.unidadeDisabled = false;
     }
   }
 
@@ -362,16 +388,17 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     );
   }
 
-  get maxCrescimentoBar(): number {
-    return this.maxAbsDelta(this.crescimentoVisivel);
+  /** Escala das barras c1/c2 no gráfico Comparar. */
+  get maxMesesCrescimento(): number {
+    return this.maxMeses(this.crescimentoVisivel);
   }
 
-  get maxQuedaBar(): number {
-    return this.maxAbsDelta(this.quedaVisivel);
+  get maxMesesQueda(): number {
+    return this.maxMeses(this.quedaVisivel);
   }
 
-  get maxRejeitadosBar(): number {
-    return this.maxAbsDelta(this.rejeitadosVisivel);
+  get maxMesesRejeitados(): number {
+    return this.maxMeses(this.rejeitadosVisivel);
   }
 
   get maxVendasBar(): number {
@@ -395,12 +422,14 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     return this.podeAnalisar() && !this.loadingOpcoes;
   }
 
-  onUnidadeChange(): void {
+  onUnidadeChange(unidade: Unidade | ''): void {
+    this.unidadeFilter = unidade;
     this.c1 = null;
     this.c2 = null;
     this.competenciasRanking = [];
     this.anosFiltro = [];
     this.funcionarioIdFilter = '';
+    this.opcoesMedico = [];
     this.dados = null;
     this.carregarOpcoes(true);
   }
@@ -426,7 +455,8 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     this.onFiltroChange();
   }
 
-  onModoChange(): void {
+  onModoChange(modo: VisitacaoAnaliseModo): void {
+    this.modo = modo;
     this.dados = null;
     this.resetFiltrosFaixa();
     this.atualizarPageContext();
@@ -445,7 +475,8 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     this.onFiltroChange();
   }
 
-  onExibicaoChange(): void {
+  onExibicaoChange(exibicao: VisitacaoAnaliseExibicao): void {
+    this.exibicao = exibicao;
     this.garantirQntParaGraficos();
     const next = this.topEfetivo ?? null;
     if (next !== this.ultimoTopEnviado) {
@@ -455,8 +486,42 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     }
   }
 
-  onQntChange(): void {
+  onQntChange(qnt: number | null): void {
+    this.qnt = qnt;
     this.garantirQntParaGraficos();
+    this.onFiltroChange();
+  }
+
+  onC1Change(c1: string | null): void {
+    this.c1 = c1;
+    this.onFiltroChange();
+  }
+
+  onC2Change(c2: string | null): void {
+    this.c2 = c2;
+    this.onFiltroChange();
+  }
+
+  onRepresentanteChange(funcionarioId: string): void {
+    this.funcionarioIdFilter = funcionarioId ?? '';
+    this.onFiltroChange();
+  }
+
+  onNaCarteiraChange(naCarteira: VisitacaoAnaliseNaCarteira): void {
+    this.naCarteiraFilter = naCarteira;
+    this.onFiltroChange();
+  }
+
+  onMedicosSelected(medicos: Set<string>): void {
+    this.selectedMedicos = medicos;
+    this.cdr.markForCheck();
+  }
+
+  onMedicosConfirmados(): void {
+    this.onFiltroChange();
+  }
+
+  onMedicosLimpos(): void {
     this.onFiltroChange();
   }
 
@@ -890,7 +955,10 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     const base = {
       unidade: this.unidadeFilter as Unidade,
       funcionarioId: this.funcionarioIdFilter || undefined,
-      nomeMedico: this.nomeMedicoFilter || undefined,
+      nomesMedico:
+        this.selectedMedicos.size > 0
+          ? Array.from(this.selectedMedicos)
+          : undefined,
       naCarteira: this.naCarteiraFilter,
       top,
     };
@@ -926,11 +994,13 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     }
   }
 
-  maxAbsDelta(lista: VisitacaoAnaliseMedico[]): number {
+  maxMeses(lista: VisitacaoAnaliseMedico[]): number {
     let max = 0;
     for (const item of lista) {
-      const abs = Math.abs(Number(item.delta) || 0);
-      if (abs > max) max = abs;
+      const v1 = Number(item.valorMes1) || 0;
+      const v2 = Number(item.valorMes2) || 0;
+      if (v1 > max) max = v1;
+      if (v2 > max) max = v2;
     }
     return max;
   }
@@ -942,6 +1012,14 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
       if (v > max) max = v;
     }
     return max;
+  }
+
+  /** Nome curto para rótulo vertical do ranking. */
+  nomeCurtoMedico(nome: string | null | undefined, maxLen = 14): string {
+    const n = String(nome ?? '').trim();
+    if (!n) return '—';
+    if (n.length <= maxLen) return n;
+    return `${n.slice(0, maxLen - 1)}…`;
   }
 
   maxSerie(lista: VisitacaoAnaliseMedico[]): number {
@@ -963,6 +1041,23 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
       return 0;
     }
     return Math.min(100, (Math.abs(Number(valor)) / max) * 100);
+  }
+
+  /**
+   * Seta SVG entre topos das barras c1→c2 (viewBox 0–100).
+   * x≈25 e x≈75 = centros das duas colunas.
+   */
+  pontosSetaComparar(
+    valorMes1: number | null | undefined,
+    valorMes2: number | null | undefined,
+    max: number,
+  ): string {
+    if (!max) {
+      return '';
+    }
+    const y1 = 100 - this.percentualBarra(valorMes1, max);
+    const y2 = 100 - this.percentualBarra(valorMes2, max);
+    return `25,${y1} 75,${y2}`;
   }
 
   /**
@@ -988,6 +1083,15 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     return Number(item.serie?.[index]) || 0;
   }
 
+  /** Δ da série: última competência − primeira (para seta no gráfico Evolução). */
+  deltaSerie(item: VisitacaoAnaliseMedico): number {
+    const serie = item.serie ?? [];
+    if (serie.length < 2) {
+      return 0;
+    }
+    return (Number(serie[serie.length - 1]) || 0) - (Number(serie[0]) || 0);
+  }
+
   private resetFiltrosFaixa(): void {
     this.filtroFaixaCresc = null;
     this.filtroFaixaQueda = null;
@@ -1011,6 +1115,7 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     if (!this.unidadeFilter) {
       this.competenciasDisponiveis = [];
       this.representantes = [];
+      this.opcoesMedico = [];
       this.loadingOpcoes = false;
       this.cdr.markForCheck();
       return;
@@ -1031,6 +1136,7 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
             'Falha ao carregar opções da análise.';
           this.competenciasDisponiveis = [];
           this.representantes = [];
+          this.opcoesMedico = [];
           this.anosFiltro = [];
           this.c1 = null;
           this.c2 = null;
@@ -1051,6 +1157,7 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
         try {
           this.competenciasDisponiveis = opcoes.competenciasDisponiveis ?? [];
           this.representantes = opcoes.representantes;
+          this.opcoesMedico = opcoes.medicos ?? [];
           if (selecionarPadrao) {
             this.aplicarAnosPadrao();
             this.aplicarSelecaoPadraoComparar();

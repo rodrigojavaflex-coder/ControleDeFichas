@@ -41,6 +41,8 @@ export class MedicoFilterPickerComponent implements OnDestroy {
   @Input() confirmLabel = 'Adicionar e aplicar';
   @Input() resumoVazio = 'todos';
   @Input() hintTodos = 'Todos os médicos';
+  /** Quando false, não lista chips com nomes — só o contador no título. */
+  @Input() exibirNomesSelecionados = true;
   @Input() ordenacaoOpcoes: Array<{
     value: MedicoOrdenacaoFiltro;
     label: string;

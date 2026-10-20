@@ -12,10 +12,18 @@ export interface VisitacaoAnaliseCompetencia {
   label: string;
 }
 
+export interface VisitacaoAnaliseMedicoOpcao {
+  nome: string;
+  total: number;
+  aprovados: number;
+  rejeitados: number;
+}
+
 export interface VisitacaoAnaliseOpcoes {
   unidade: Unidade;
   competenciasDisponiveis: VisitacaoAnaliseCompetencia[];
   representantes: VisitacaoPainelMedicoRepresentante[];
+  medicos: VisitacaoAnaliseMedicoOpcao[];
   analise?: VisitacaoAnaliseResponse | null;
 }
 
@@ -35,7 +43,10 @@ export interface FindVisitacaoAnaliseDto {
   competencias?: string[];
   unidade?: Unidade;
   funcionarioId?: string;
+  /** Legado: busca parcial. Preferir `nomesMedico`. */
   nomeMedico?: string;
+  /** Nomes exatos (multi-select do picker). */
+  nomesMedico?: string[];
   naCarteira?: VisitacaoAnaliseNaCarteira;
   top?: number;
 }
@@ -65,6 +76,7 @@ export interface VisitacaoAnaliseResponse {
   filtrosAplicados: {
     funcionarioId: string | null;
     nomeMedico: string | null;
+    nomesMedico: string[];
     naCarteira: VisitacaoAnaliseNaCarteira;
   };
   crescimento: VisitacaoAnaliseMedico[];

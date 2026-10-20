@@ -148,9 +148,49 @@ body.theme-dark .visitacao-analise-page .visitacao-analise-acoes .btn-atualizar 
 }
 
 .visitacao-analise-page .visitacao-analise-medico {
-  flex: 1 1 11rem;
-  min-width: 9rem;
-  max-width: 16rem;
+  flex: 1 1 16rem;
+  min-width: 14rem;
+  max-width: 22rem;
+}
+
+.visitacao-analise-page .visitacao-analise-medico .medico-filter-picker {
+  width: 100%;
+}
+
+.visitacao-analise-page .visitacao-analise-medico .filter-entity-card {
+  min-height: 2.375rem;
+}
+
+.visitacao-analise-page .visitacao-analise-medico-placeholder {
+  border: 1px solid var(--cor-borda, #e2e8f0);
+  border-radius: 10px;
+  background: var(--cor-superficie, #fff);
+  padding: 0.65rem 0.7rem;
+  opacity: 0.75;
+  pointer-events: none;
+  cursor: default;
+}
+
+.visitacao-analise-page .visitacao-analise-medico-placeholder .filter-entity-title {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--cor-texto-primario, #0f172a);
+}
+
+.visitacao-analise-page .visitacao-analise-medico-placeholder .filter-empty-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+}
+
+body.theme-dark .visitacao-analise-page .visitacao-analise-medico-placeholder {
+  border-color: var(--cor-borda, #334155);
+  background: var(--cor-superficie, #1e293b);
 }
 
 .visitacao-analise-page .visitacao-analise-anos .multi-select-dropdown,
@@ -395,6 +435,262 @@ body.theme-dark .visitacao-analise-chart .bar-fill-queda {
 
 body.theme-dark .visitacao-analise-chart .bar-fill-rejeitado {
   background: #f87171;
+}
+
+/* Comparar: par c1/c2 por médico + Δ no cabeçalho */
+.visitacao-analise-chart .comparar-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.85rem;
+  align-items: center;
+  margin-bottom: 0.55rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.visitacao-analise-chart .comparar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.visitacao-analise-chart .comparar-legend-item.is-delta {
+  font-weight: 600;
+}
+
+.visitacao-analise-chart .comparar-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 0.15rem;
+  display: inline-block;
+}
+
+.visitacao-analise-chart .swatch-c2-cresc {
+  background: #2563eb;
+}
+
+.visitacao-analise-chart .swatch-c2-queda {
+  background: #f97316;
+}
+
+.visitacao-analise-chart .swatch-c2-rej {
+  background: #dc2626;
+}
+
+.visitacao-analise-chart .comparar-legend-arrow.is-pos {
+  color: #15803d;
+}
+
+.visitacao-analise-chart .comparar-legend-arrow.is-neg {
+  color: #c2410c;
+}
+
+.visitacao-analise-chart .comparar-chart-item {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color, #e2e8f0) 55%, transparent);
+}
+
+.visitacao-analise-chart .comparar-chart-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.visitacao-analise-chart .comparar-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.visitacao-analise-chart .comparar-delta.is-pos {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.visitacao-analise-chart .comparar-delta.is-neg {
+  color: #c2410c;
+  font-weight: 600;
+}
+
+.visitacao-analise-chart .comparar-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+}
+
+.visitacao-analise-chart .comparar-valores-row,
+.visitacao-analise-chart .comparar-labels-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+}
+
+.visitacao-analise-chart .comparar-col-valor,
+.visitacao-analise-chart .comparar-col-label {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.visitacao-analise-chart .comparar-tracks-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  height: 4.5rem;
+  overflow: hidden;
+}
+
+.visitacao-analise-chart .comparar-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  z-index: 0;
+}
+
+.visitacao-analise-chart .comparar-col .bar-track-v {
+  width: 48%;
+  min-width: 0.85rem;
+  max-width: 2.2rem;
+  height: 100%;
+}
+
+.visitacao-analise-chart .comparar-trend-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 2;
+}
+
+.visitacao-analise-chart .comparar-trend-line {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.visitacao-analise-chart .comparar-trend-line.is-cresc {
+  stroke: #1d4ed8;
+}
+
+.visitacao-analise-chart .comparar-trend-line.is-queda {
+  stroke: #ea580c;
+}
+
+.visitacao-analise-chart .comparar-trend-line.is-rej {
+  stroke: #b91c1c;
+}
+
+.visitacao-analise-chart .comparar-arrow-fill.is-cresc {
+  fill: #1d4ed8;
+}
+
+.visitacao-analise-chart .comparar-arrow-fill.is-queda {
+  fill: #ea580c;
+}
+
+.visitacao-analise-chart .comparar-arrow-fill.is-rej {
+  fill: #b91c1c;
+}
+
+body.theme-dark .visitacao-analise-chart .comparar-delta.is-pos,
+body.theme-dark .visitacao-analise-chart .comparar-legend-arrow.is-pos {
+  color: #4ade80;
+}
+
+body.theme-dark .visitacao-analise-chart .comparar-delta.is-neg,
+body.theme-dark .visitacao-analise-chart .comparar-legend-arrow.is-neg {
+  color: #fb923c;
+}
+
+body.theme-dark .visitacao-analise-chart .comparar-trend-line.is-cresc {
+  stroke: #93c5fd;
+}
+
+body.theme-dark .visitacao-analise-chart .comparar-trend-line.is-queda {
+  stroke: #fdba74;
+}
+
+body.theme-dark .visitacao-analise-chart .comparar-trend-line.is-rej {
+  stroke: #fca5a5;
+}
+
+body.theme-dark .visitacao-analise-chart .comparar-arrow-fill.is-cresc {
+  fill: #93c5fd;
+}
+
+body.theme-dark .visitacao-analise-chart .comparar-arrow-fill.is-queda {
+  fill: #fdba74;
+}
+
+body.theme-dark .visitacao-analise-chart .comparar-arrow-fill.is-rej {
+  fill: #fca5a5;
+}
+
+/* Ranking: barras verticais (médicos no eixo X) */
+.visitacao-analise-chart .ranking-chart-v {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.35rem;
+  min-height: 12rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.visitacao-analise-chart .ranking-col {
+  flex: 1 1 0;
+  min-width: 3.25rem;
+  max-width: 5.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.visitacao-analise-chart .ranking-col-valor {
+  font-size: 0.65rem;
+  line-height: 1.15;
+  color: var(--text-secondary, #64748b);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.visitacao-analise-chart .ranking-col .bar-track-v {
+  width: 70%;
+  min-width: 1.15rem;
+  flex: 1 1 auto;
+  min-height: 7rem;
+  height: 7rem;
+}
+
+.visitacao-analise-chart .ranking-col-nome {
+  font-size: 0.62rem;
+  line-height: 1.15;
+  color: var(--text-primary, #0f172a);
+  text-align: center;
+  word-break: break-word;
+  max-width: 100%;
+  min-height: 2.2rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+body.theme-dark .visitacao-analise-chart .ranking-col-nome {
+  color: var(--text-primary, #e2e8f0);
 }
 
 /* Evolução: meses na horizontal, barras verticais + linha no topo das barras */
