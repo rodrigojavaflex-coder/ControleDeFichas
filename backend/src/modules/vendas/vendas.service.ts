@@ -67,6 +67,9 @@ export interface ImportacaoRpsPreviewItem {
   vendaId?: string;
   origem?: VendaOrigem;
   valorPagoAtual?: number | null;
+  valorCompraAtual?: number | null;
+  /** Valor de compra que será gravado (atual se > 0; senão valorCliente) */
+  valorCompraNovo?: number | null;
   dataFechamento?: string | null;
 }
 
@@ -1285,6 +1288,9 @@ export class VendasService {
       }
 
       const venda = candidatas[0];
+      const { valorCompraAtual, valorCompraNovo } =
+        this.resolverValoresCompraImportacaoRps(venda);
+
       if (venda.dataFechamento) {
         return {
           protocolo: item.protocolo,
@@ -1295,6 +1301,8 @@ export class VendasService {
           vendaId: venda.id,
           origem: venda.origem,
           valorPagoAtual: venda.valorPago ?? null,
+          valorCompraAtual,
+          valorCompraNovo,
           dataFechamento:
             typeof venda.dataFechamento === 'string'
               ? venda.dataFechamento
@@ -1310,6 +1318,8 @@ export class VendasService {
         vendaId: venda.id,
         origem: venda.origem,
         valorPagoAtual: venda.valorPago ?? null,
+        valorCompraAtual,
+        valorCompraNovo,
         dataFechamento: null,
       };
     });
@@ -1383,9 +1393,21 @@ export class VendasService {
         item.arquivoOrigem,
       );
 
+      const { valorCompraNovo } =
+        this.resolverValoresCompraImportacaoRps(venda);
+      const valorCompraAtualNum =
+        venda.valorCompra != null ? Number(venda.valorCompra) : 0;
+      const deveAtualizarValorCompra =
+        (!valorCompraAtualNum || valorCompraAtualNum <= 0) &&
+        valorCompraNovo != null &&
+        valorCompraNovo > 0;
+
       await this.vendaRepository.update(venda.id, {
         valorPago,
         tipoAtualizacao: TipoAtualizacao.RPS,
+        ...(deveAtualizarValorCompra
+          ? { valorCompra: valorCompraNovo }
+          : {}),
         ...(observacao !== undefined ? { observacao } : {}),
       });
 
@@ -1397,6 +1419,41 @@ export class VendasService {
     );
 
     return { sucesso, falhas };
+  }
+
+  /**
+   * Se valorCompra estiver null/0, o novo valor será valorCliente (quando > 0).
+   * Caso contrário mantém o valorCompra atual.
+   */
+  private resolverValoresCompraImportacaoRps(venda: Venda): {
+    valorCompraAtual: number | null;
+    valorCompraNovo: number | null;
+  } {
+    const atualRaw =
+      venda.valorCompra != null ? Number(venda.valorCompra) : null;
+    const valorCompraAtual =
+      atualRaw != null && !Number.isNaN(atualRaw) ? atualRaw : null;
+    const valorCliente =
+      venda.valorCliente != null ? Number(venda.valorCliente) : 0;
+
+    if (valorCompraAtual != null && valorCompraAtual > 0) {
+      return {
+        valorCompraAtual,
+        valorCompraNovo: Math.round(valorCompraAtual * 100) / 100,
+      };
+    }
+
+    if (valorCliente > 0) {
+      return {
+        valorCompraAtual,
+        valorCompraNovo: Math.round(valorCliente * 100) / 100,
+      };
+    }
+
+    return {
+      valorCompraAtual,
+      valorCompraNovo: valorCompraAtual,
+    };
   }
 
   private concatenarObservacaoArquivoRps(

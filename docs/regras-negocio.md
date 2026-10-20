@@ -296,7 +296,9 @@
 
 - Tela **`/fechamento-vendas`**: botão **Importar RPS** exige permissão **`venda:importar-rps-fechamento`**. Aceita **um ou mais** PDFs textuais de RPS.
 - Fluxo: upload → **preview obrigatório** (Gravar / Cancelar) → gravação.
-- Extração: protocolo no padrão `…/NNNNNN-D` da discriminação + **Valor Total** do item → atualiza somente **`valorPago`** (V. Fechamento). **Não** altera `valorCompra`.
+- Extração: protocolo no padrão `…/NNNNNN-D` da discriminação + **Valor Total** do item → atualiza **`valorPago`** (V. Fechamento).
+- Se **`valorCompra`** da venda estiver `null` ou `0`, preenche com **`valorCliente`**. Se `valorCliente` também estiver vazio/`0`, **não falha**: grava só o `valorPago`.
+- Preview exibe **V. Compra** / **V. Compra Novo** e **V. Fechamento** / **V. Fechamento Novo**.
 - Status do preview: **Pronto**, **Não encontrado**, **Já fechada**, **Ambíguo**. Só **Pronto** é gravado. Escopo por origem do usuário (quando houver unidade vinculada).
 - Endpoints: **`POST …/vendas/importar-rps/preview`** (multipart) e **`POST …/vendas/importar-rps/confirmar`**. Grava `tipoAtualizacao = RPS`.
 - Em cada venda atualizada, concatena na **`observacao`** o trecho `RPS: {nomeDoArquivo}` (se já existir observação, usa ` | ` como separador; não duplica o mesmo trecho).

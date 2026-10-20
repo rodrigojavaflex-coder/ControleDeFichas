@@ -91,6 +91,8 @@ export interface ImportacaoRpsPreviewItem {
   vendaId?: string;
   origem?: VendaOrigem;
   valorPagoAtual?: number | null;
+  valorCompraAtual?: number | null;
+  valorCompraNovo?: number | null;
   dataFechamento?: string | null;
 }
 

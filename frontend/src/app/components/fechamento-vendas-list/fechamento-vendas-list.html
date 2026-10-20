@@ -822,6 +822,7 @@
       </p>
       <p class="text-muted small">
         Ao gravar, o V. Fechamento das vendas com status Pronto será atualizado.
+        Se V. Compra estiver vazio, será preenchido com o valor do cliente.
       </p>
       <div class="importar-rps-table-wrap">
         <table class="vendas-table importar-rps-table">
@@ -829,6 +830,8 @@
             <tr>
               <th>Protocolo</th>
               <th>Arquivo</th>
+              <th>V. Compra</th>
+              <th>V. Compra Novo</th>
               <th>V. Fechamento</th>
               <th>V. Fechamento Novo</th>
               <th>Status</th>
@@ -839,6 +842,8 @@
             <tr *ngFor="let item of preview.itens" [attr.data-status]="item.status">
               <td>{{ item.protocolo }}</td>
               <td class="arquivo-cell">{{ item.arquivoOrigem }}</td>
+              <td>{{ item.valorCompraAtual != null ? formatCurrency(item.valorCompraAtual) : '-' }}</td>
+              <td>{{ item.valorCompraNovo != null ? formatCurrency(item.valorCompraNovo) : '-' }}</td>
               <td>{{ item.valorPagoAtual != null ? formatCurrency(item.valorPagoAtual) : '-' }}</td>
               <td>{{ formatCurrency(item.valorPagoRps) }}</td>
               <td>
@@ -851,7 +856,7 @@
           </tbody>
           <tfoot>
             <tr class="importar-rps-total-row">
-              <td colspan="3" class="text-right"><strong>Total V. Fechamento Novo</strong></td>
+              <td colspan="5" class="text-right"><strong>Total V. Fechamento Novo</strong></td>
               <td><strong>{{ formatCurrency(totalValorFechamentoNovoRps) }}</strong></td>
               <td colspan="2"></td>
             </tr>
