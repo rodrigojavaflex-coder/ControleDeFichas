@@ -272,7 +272,12 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   }
 
   get tituloBotaoFechar(): string {
-    if (this.mensagemGate) return this.mensagemGate;
+    if (this.podeFechar && !this.caixaUltimoDiaUtilConfirmado) {
+      return this.mensagemGate
+        ? this.mensagemGate
+        : 'Fechar sem caixa confirmado (permissão fechar-sem-caixa)';
+    }
+    if (this.mensagemGate && !this.podeFechar) return this.mensagemGate;
     if (this.dataUltimoDiaUtil) {
       return `Fechar competência (caixa confirmado em ${this.formatarData(this.dataUltimoDiaUtil)})`;
     }
@@ -282,7 +287,9 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   get confirmFecharMensagem(): string {
     const competencia = `${nomeMesPt(this.mesFiltro)}/${this.anoFiltro}`;
     const dia = this.dataUltimoDiaUtil
-      ? ` O caixa de ${this.formatarData(this.dataUltimoDiaUtil)} está confirmado.`
+      ? this.caixaUltimoDiaUtilConfirmado
+        ? ` O caixa de ${this.formatarData(this.dataUltimoDiaUtil)} está confirmado.`
+        : ` O caixa de ${this.formatarData(this.dataUltimoDiaUtil)} ainda está pendente; o fechamento usa a permissão fechar-sem-caixa.`
       : '';
     return (
       `Fechar a visitação de ${this.unidadeFilter} em ${competencia}? ` +

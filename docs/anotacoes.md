@@ -21,8 +21,8 @@
 - PDF Fórmula Certa = **base da fórmula** (DTEFE, cortesia C, tipo N, rateio `PRCOBR`, crédito por `SERIER`).
 - Comissão oficial = **venda da unidade** (caixa da filial). 99 e 199 são dois representantes no mesmo banco ERP; freeze é **`ano+mês+unidade`** (trava todos os visitadores da loja). CRM nos dois painéis credita **uma vez**, na unidade do DTEFE. Uberaba só na própria unidade.
 - Indicação em outra filial permanece **visível** (grade / Outras unidades); **não** entra em faixa, comissão, representatividade nem no retrato.
-- Gate do fechar: caixa da unidade no **último dia útil** da competência `CONFIRMADO` (`ultimoDiaUtilCompetencia` + RN-CAL-001 / RN-CXA-009).
-- Permissões `visitacao-fechamento:fechar` e `visitacao-fechamento:reabrir` no catálogo; atribuição **manual** em Perfis.
+- Gate do fechar: caixa da unidade no **último dia útil** da competência `CONFIRMADO` (`ultimoDiaUtilCompetencia` + RN-CAL-001 / RN-CXA-009). Bypass: `visitacao-fechamento:fechar-sem-caixa` (+ `fechar`) para backfill sem caixa.
+- Permissões `visitacao-fechamento:fechar`, `visitacao-fechamento:fechar-sem-caixa` e `visitacao-fechamento:reabrir` no catálogo; atribuição **manual** em Perfis.
 
 **Modelo (tabelas)**
 

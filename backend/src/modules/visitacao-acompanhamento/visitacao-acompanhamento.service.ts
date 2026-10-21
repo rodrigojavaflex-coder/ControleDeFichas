@@ -568,10 +568,24 @@ export class VisitacaoAcompanhamentoService {
         'A visitação desta unidade já está fechada nesta competência.',
       );
     }
-    if (!status.caixaUltimoDiaUtilConfirmado || !status.dataUltimoDiaUtil) {
+    if (!status.dataUltimoDiaUtil) {
+      throw new ConflictException(
+        status.mensagemGate ??
+          `Não há dia útil em ${unidade} nesta competência.`,
+      );
+    }
+    const podeBypassCaixa = getUsuarioPermissoes(usuario).includes(
+      Permission.VISITACAO_FECHAMENTO_FECHAR_SEM_CAIXA,
+    );
+    if (!status.caixaUltimoDiaUtilConfirmado && !podeBypassCaixa) {
       throw new ConflictException(
         status.mensagemGate ??
           `Não é possível fechar a visitação: o caixa de ${unidade} ainda não está confirmado.`,
+      );
+    }
+    if (!status.caixaUltimoDiaUtilConfirmado && podeBypassCaixa) {
+      this.logger.warn(
+        `Fechamento visitação ${unidade} ${dto.ano}-${dto.mes} sem caixa confirmado em ${status.dataUltimoDiaUtil} (bypass fechar-sem-caixa; usuário ${usuario.id}).`,
       );
     }
 
@@ -822,6 +836,9 @@ export class VisitacaoAcompanhamentoService {
     const podePermFechar = permissoes.includes(
       Permission.VISITACAO_FECHAMENTO_FECHAR,
     );
+    const podePermFecharSemCaixa = permissoes.includes(
+      Permission.VISITACAO_FECHAMENTO_FECHAR_SEM_CAIXA,
+    );
     const podePermReabrir = permissoes.includes(
       Permission.VISITACAO_FECHAMENTO_REABRIR,
     );
@@ -888,15 +905,20 @@ export class VisitacaoAcompanhamentoService {
     }
     const mensagemGate = !dataUltimoDiaUtil
       ? `Não há dia útil em ${unidade} nesta competência.`
-      : !caixaConfirmado
+      : !caixaConfirmado && !podePermFecharSemCaixa
         ? `Não é possível fechar a visitação: o caixa de ${unidade} em ${dataUltimoDiaUtil} ainda não está confirmado.`
-        : null;
+        : !caixaConfirmado && podePermFecharSemCaixa
+          ? `Caixa de ${unidade} em ${dataUltimoDiaUtil} pendente — fechamento liberado pela permissão fechar-sem-caixa.`
+          : null;
 
     return {
       competenciaStatus: 'ABERTO',
       dataUltimoDiaUtil,
       caixaUltimoDiaUtilConfirmado: caixaConfirmado,
-      podeFechar: podePermFechar && caixaConfirmado,
+      podeFechar:
+        podePermFechar &&
+        !!dataUltimoDiaUtil &&
+        (caixaConfirmado || podePermFecharSemCaixa),
       podeReabrir: false,
       mensagemGate,
       fechamento: null,

@@ -184,6 +184,11 @@ export enum Permission {
   VISITACAO_ACOMPANHAMENTO_COMISSAO = 'visitacao-acompanhamento:comissao',
   /** Visitação — fechar competência (retrato da unidade). */
   VISITACAO_FECHAMENTO_FECHAR = 'visitacao-fechamento:fechar',
+  /**
+   * Visitação — fechar competência sem exigir caixa CONFIRMADO no último DU
+   * (backfill / períodos em que o NEST não era usado). Exige também `fechar`.
+   */
+  VISITACAO_FECHAMENTO_FECHAR_SEM_CAIXA = 'visitacao-fechamento:fechar-sem-caixa',
   /** Visitação — reabrir competência fechada. */
   VISITACAO_FECHAMENTO_REABRIR = 'visitacao-fechamento:reabrir',
   /** Visitação — análise (evolução fechados + mês corrente). */
@@ -584,6 +589,11 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.VISITACAO_FECHAMENTO_FECHAR,
       label: 'Fechar competência da visitação (retrato da unidade)',
+    },
+    {
+      key: Permission.VISITACAO_FECHAMENTO_FECHAR_SEM_CAIXA,
+      label:
+        'Fechar visitação sem exigir caixa confirmado (backfill / períodos sem uso do NEST)',
     },
     {
       key: Permission.VISITACAO_FECHAMENTO_REABRIR,
