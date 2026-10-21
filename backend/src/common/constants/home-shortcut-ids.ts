@@ -30,6 +30,7 @@ export const HOME_SHORTCUT_IDS = [
   'producao-produtividade',
   'visitacao-painel-medico',
   'visitacao-acompanhamento',
+  'visitacao-analise',
   'visitacao-metas',
   'visitacao-comissoes',
   'comercial-acompanhamento',

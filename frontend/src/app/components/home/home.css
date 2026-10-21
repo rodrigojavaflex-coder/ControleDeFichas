@@ -147,12 +147,13 @@
 
 .home-shortcuts-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 148px));
+  grid-auto-rows: 118px;
   gap: 0.75rem;
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
-  align-content: stretch;
+  align-content: start;
+  justify-content: start;
 }
 
 .home-shortcut-card {
@@ -161,9 +162,11 @@
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  min-height: 0;
+  width: 100%;
   height: 100%;
-  padding: 0.9rem 0.65rem;
+  min-height: 118px;
+  max-width: 148px;
+  padding: 0.75rem 0.55rem;
   border-radius: 12px;
   border: 1px solid var(--border-color, #e2e8f0);
   background: var(--bg-secondary, #f8fafc);
@@ -328,8 +331,14 @@ body.theme-dark .home-empty,
     grid-template-columns: 1fr;
   }
 
+  .home-shortcuts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 136px));
+    grid-auto-rows: 104px;
+  }
+
   .home-shortcut-card {
-    min-height: 96px;
-    padding: 0.75rem 0.4rem;
+    min-height: 104px;
+    max-width: 136px;
+    padding: 0.65rem 0.4rem;
   }
 }
