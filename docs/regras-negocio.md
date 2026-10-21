@@ -838,15 +838,15 @@ Responder formalmente antes de alterar importação ou fechamento oficial:
 - **Objetivo:** alimentar **comercial** e **visitação** com baixas do ERP **antes** do Fechar Caixa, alinhado à loja baixar no ato do recebimento (e cobrir o atraso histórico “baixa na manhã seguinte”).
 - **Disparo:** integrada à sincronização agendada/manual do agente (`POST /sincronizacao/executar` e job do scheduler), **após** as demais etapas do agente (clientes/orçamentos/painel/etapas), por unidade mapeada ao agente.
 - **Janela (por unidade):**  
-  - `dataInicio` = **último** `caixa_fechamento.data_operacao` com `status = CONFIRMADO` da unidade; se não houver, `dataInicio = hoje`.  
+  - `dataInicio` = **último** `caixa_fechamento.data_operacao` com `status = CONFIRMADO` **menos 5 dias**; se não houver fechado, `dataInicio = hoje`.  
   - `dataFim` = **hoje** (America/Sao_Paulo).  
-  - **Proibido** usar D−1 calendário: fim de semana/feriado furam o último dia fechado que ainda precisa de detalhe.
+  - O lookback cobre a FC17000 que só preenche depois do Fechar do dia seguinte. **Não** substitui o **Atualizar Vendas** (esse continua limpando o dia aberto — RN-CXA-011).
 - **Processamento dia a dia** no intervalo `[dataInicio, dataFim]`:
   | Situação do dia | Modo | Grava |
   |-----------------|------|--------|
   | **FECHADO** (`CONFIRMADO`) | `somente_detalhes` | Só upsert `caixa_requisicoes_pagas` + `caixa_requisicao_formula`. **Não** apaga nem regrava `caixa_pagamentos_erp` / `caixa_itens_erp` (preserva financeiro oficial do fechamento). |
   | **Aberto** (sem confirmação) | `upsert` completo | Upsert pagamentos + itens + pagas + fórmulas. **Não** usa `substituirDia` no job (evita apagar o dia se o agente falhar no complemento). |
-- **Complemento incompleto na sync:** se pagas vierem incompletas frente a `nrrquCupomComPaga`, **não** aborta a sync inteira: registra erro/warn do dia e segue o próximo dia (diferente do Atualizar Vendas do fechamento — RN-CXA-003).
+- **Complemento incompleto na sync:** se pagas vierem incompletas frente a `nrrquCupomComPaga`, **grava o que veio** (upsert, sem apagar o dia), registra warn e segue o próximo dia. O **Atualizar Vendas** continua **recusando** o dia incompleto antes de limpar (RN-CXA-003 / RN-CXA-011).
 - **Retrato visitação fechado (RN-VIS-013):** a sync **pode** gravar PG, mas a tela/impressão oficial do mês fechado continua lendo só o retrato.
 - **Agente:** mesmos endpoints `pagamentos`, `itens`, `requisicoes-pagas` (com fórmulas).
 

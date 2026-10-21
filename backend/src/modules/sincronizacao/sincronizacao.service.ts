@@ -1538,7 +1538,7 @@ export class SincronizacaoService {
     }
   }
 
-  /** RN-CXA-010: baixas + detalhes do caixa ERP (último CONFIRMADO → hoje). */
+  /** RN-CXA-010: baixas + detalhes do caixa ERP (último CONFIRMADO − 5 dias → hoje). */
   private async sincronizarCaixaErp(
     config: SincronizacaoConfig,
     resultado: SincronizacaoResult,

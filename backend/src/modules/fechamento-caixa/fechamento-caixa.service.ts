@@ -47,6 +47,7 @@ import {
   dividirPeriodoEmSegmentosMensais,
   listarDiasIsoInclusive,
   normalizarDataIso,
+  subtrairDiasIso,
 } from '../../common/utils/data-date.util';
 import {
   normalizarFormaErp,
@@ -381,8 +382,11 @@ export class FechamentoCaixaService {
     }
   }
 
+  /** Dias antes do último CONFIRMADO reconsultados só para pagas/fórmulas (RN-CXA-010). */
+  private static readonly LOOKBACK_DIAS_DETALHES_CAIXA = 5;
+
   /**
-   * RN-CXA-010: sync automática — janela [último CONFIRMADO .. hoje].
+   * RN-CXA-010: sync automática — janela [último CONFIRMADO − 5 dias .. hoje].
    * Dia FECHADO = só detalhes; dia aberto = upsert completo (sem substituir).
    */
   async sincronizarCaixaErpAutomatico(unidade: Unidade): Promise<{
@@ -403,7 +407,12 @@ export class FechamentoCaixaService {
 
     const dataFim = this.dataIsoHojeBrasilia();
     const ultima = await this.obterUltimaDataFechamentoConfirmada(unidade);
-    const dataInicio = ultima ?? dataFim;
+    const dataInicio = ultima
+      ? (subtrairDiasIso(
+          ultima,
+          FechamentoCaixaService.LOOKBACK_DIAS_DETALHES_CAIXA,
+        ) ?? ultima)
+      : dataFim;
     if (dataInicio > dataFim) {
       return {
         dataInicio,
@@ -435,7 +444,7 @@ export class FechamentoCaixaService {
     const erros: string[] = [];
 
     this.logger.log(
-      `Sync caixa ERP automática ${unidade}: ${dataInicio}..${dataFim} (${dias.length} dia(s), últimoConfirmado=${ultima ?? 'nenhum'})`,
+      `Sync caixa ERP automática ${unidade}: ${dataInicio}..${dataFim} (${dias.length} dia(s), últimoConfirmado=${ultima ?? 'nenhum'}, lookback=${FechamentoCaixaService.LOOKBACK_DIAS_DETALHES_CAIXA}d)`,
     );
 
     for (const dia of dias) {
@@ -662,16 +671,18 @@ export class FechamentoCaixaService {
     ) {
       const nrrquItens = this.contarRequisicoesDistintasItens(itensRows);
       const esperadas = nrrquCupomComPaga ?? nrrquItens;
-      this.logger.error(
-        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: complemento incompleto (${qtdRequisicoes} paga(s) vs ${esperadas} requisição(ões) já em FC17000 / ${nrrquItens} nos itens). Importação abortada.`,
-      );
+      const msgIncompleto =
+        `complemento incompleto (${qtdRequisicoes} paga(s) vs ${esperadas} requisição(ões) já em FC17000 / ${nrrquItens} nos itens)`;
       if (abortarSeIncompleto) {
+        this.logger.error(
+          `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: ${msgIncompleto}. Importação abortada.`,
+        );
         throw new ServiceUnavailableException(
           `O detalhe das requisições pagas não veio completo do ERP (${qtdRequisicoes} paga(s) para ${esperadas} requisição(ões) já baixadas nos cupons de ${this.formatDateDisplay(dataInicio)} a ${this.formatDateDisplay(dataFim)}). Os valores do caixa não foram gravados. Atualize as vendas de novo antes de fechar o dia.`,
         );
       }
-      throw new Error(
-        `Complemento incompleto (${qtdRequisicoes} paga(s) vs ${esperadas} já em FC17000); dia ignorado na sync automática`,
+      this.logger.warn(
+        `Sync caixa ERP ${unidade} ${dataInicio}..${dataFim}: ${msgIncompleto}. Upsert do que veio; dia não apagado.`,
       );
     }
 
@@ -685,11 +696,13 @@ export class FechamentoCaixaService {
       ).size;
       if (nrrquPagas < nrrquCupomComPaga) {
         const msg = `Complemento incompleto no modo detalhes (${nrrquPagas} paga(s) vs ${nrrquCupomComPaga} cupomComPaga)`;
-        this.logger.warn(`Sync caixa ERP ${unidade} ${dataInicio}: ${msg}`);
         if (abortarSeIncompleto) {
+          this.logger.error(`Sync caixa ERP ${unidade} ${dataInicio}: ${msg}`);
           throw new ServiceUnavailableException(msg);
         }
-        throw new Error(`${msg}; dia ignorado na sync automática`);
+        this.logger.warn(
+          `Sync caixa ERP ${unidade} ${dataInicio}: ${msg}. Upsert das pagas recebidas.`,
+        );
       }
     }
 
