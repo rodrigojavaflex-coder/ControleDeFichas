@@ -36,22 +36,21 @@ export class MedicoFilterPickerComponent implements OnDestroy {
   @Input() opcoes: OrcamentoMedicoOpcaoFiltro[] = [];
   @Input() loading = false;
   @Input() selectedMedicos = new Set<string>();
-  @Input() defaultOrdenacao: MedicoOrdenacaoFiltro = 'alfabetica';
-  @Input() defaultLimiteExibicao: MedicoLimiteExibicaoFiltro = 20;
   @Input() confirmLabel = 'Adicionar e aplicar';
   @Input() resumoVazio = 'todos';
   @Input() hintTodos = 'Todos os médicos';
   /** Quando false, não lista chips com nomes — só o contador no título. */
   @Input() exibirNomesSelecionados = true;
+
+  /** @deprecated Ignorado — seleção é por busca. Mantido por compatibilidade. */
+  @Input() defaultOrdenacao: MedicoOrdenacaoFiltro = 'alfabetica';
+  /** @deprecated Ignorado — seleção é por busca. Mantido por compatibilidade. */
+  @Input() defaultLimiteExibicao: MedicoLimiteExibicaoFiltro = 20;
+  /** @deprecated Ignorado — seleção é por busca. Mantido por compatibilidade. */
   @Input() ordenacaoOpcoes: Array<{
     value: MedicoOrdenacaoFiltro;
     label: string;
-  }> = [
-    { value: 'total', label: 'Mais orçamentos' },
-    { value: 'aprovados', label: 'Mais orçamentos aprovados' },
-    { value: 'rejeitados', label: 'Mais orçamentos rejeitados' },
-    { value: 'alfabetica', label: 'Ordem alfabética' },
-  ];
+  }> = [];
 
   @Output() selectedMedicosChange = new EventEmitter<Set<string>>();
   @Output() confirmed = new EventEmitter<void>();
@@ -60,12 +59,6 @@ export class MedicoFilterPickerComponent implements OnDestroy {
   modalOpen = false;
   selectedRascunho = new Set<string>();
   buscaModal = '';
-  ordenacaoModal: MedicoOrdenacaoFiltro = 'alfabetica';
-  limiteExibicaoModal: MedicoLimiteExibicaoFiltro = 20;
-
-  readonly limiteExibicaoOpcoes: MedicoLimiteExibicaoFiltro[] = [
-    10, 15, 20, 'todos',
-  ];
 
   private readonly document = inject(DOCUMENT);
   private readonly renderer = inject(Renderer2);
@@ -85,53 +78,28 @@ export class MedicoFilterPickerComponent implements OnDestroy {
     );
   }
 
-  get opcoesFiltradas(): OrcamentoMedicoOpcaoFiltro[] {
-    const termo = this.normalizarTexto(this.buscaModal);
-    if (!termo) return this.opcoes;
-    return this.opcoes.filter((medico) =>
-      this.normalizarTexto(medico.nome).includes(termo),
+  get rascunhoLista(): string[] {
+    return Array.from(this.selectedRascunho).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR'),
     );
   }
 
+  get temBusca(): boolean {
+    return this.normalizarTexto(this.buscaModal).length > 0;
+  }
+
   get sugestoesMedicoOrdenadas(): OrcamentoMedicoOpcaoFiltro[] {
-    const sorted = [...this.opcoesFiltradas];
-    const compareNome = (
-      a: OrcamentoMedicoOpcaoFiltro,
-      b: OrcamentoMedicoOpcaoFiltro,
-    ) => a.nome.localeCompare(b.nome, 'pt-BR');
-
-    switch (this.ordenacaoModal) {
-      case 'total':
-        sorted.sort((a, b) => b.total - a.total || compareNome(a, b));
-        break;
-      case 'aprovados':
-        sorted.sort((a, b) => b.aprovados - a.aprovados || compareNome(a, b));
-        break;
-      case 'rejeitados':
-        sorted.sort((a, b) => b.rejeitados - a.rejeitados || compareNome(a, b));
-        break;
-      case 'alfabetica':
-      default:
-        sorted.sort(compareNome);
-        break;
-    }
-    return sorted;
+    const termo = this.normalizarTexto(this.buscaModal);
+    if (!termo) return [];
+    return this.opcoes
+      .filter((medico) => this.normalizarTexto(medico.nome).includes(termo))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   }
 
-  get sugestoesMedico(): OrcamentoMedicoOpcaoFiltro[] {
-    const ordenadas = this.sugestoesMedicoOrdenadas;
-    if (this.limiteExibicaoModal === 'todos') {
-      return ordenadas;
-    }
-    return ordenadas.slice(0, this.limiteExibicaoModal);
-  }
-
-  get todosFiltradosMarcados(): boolean {
-    return (
-      this.sugestoesMedico.length > 0 &&
-      this.sugestoesMedico.every((medico) =>
-        this.selectedRascunho.has(medico.nome),
-      )
+  /** Resultados da busca ainda não incluídos no rascunho. */
+  get sugestoesParaIncluir(): OrcamentoMedicoOpcaoFiltro[] {
+    return this.sugestoesMedicoOrdenadas.filter(
+      (medico) => !this.selectedRascunho.has(medico.nome),
     );
   }
 
@@ -139,8 +107,6 @@ export class MedicoFilterPickerComponent implements OnDestroy {
     event?.stopPropagation();
     this.selectedRascunho = new Set(this.selectedMedicos);
     this.buscaModal = '';
-    this.ordenacaoModal = this.defaultOrdenacao;
-    this.limiteExibicaoModal = this.defaultLimiteExibicao;
     this.modalOpen = true;
     this.cdr.detectChanges();
     this.scheduleAttachModalToBody();
@@ -163,21 +129,22 @@ export class MedicoFilterPickerComponent implements OnDestroy {
     this.cleared.emit();
   }
 
-  toggleRascunho(nome: string, checked: boolean): void {
-    if (checked) this.selectedRascunho.add(nome);
-    else this.selectedRascunho.delete(nome);
+  incluirMedico(nome: string): void {
+    const trimmed = String(nome ?? '').trim();
+    if (!trimmed || this.selectedRascunho.has(trimmed)) return;
+    const next = new Set(this.selectedRascunho);
+    next.add(trimmed);
+    this.selectedRascunho = next;
+    this.buscaModal = '';
+    this.cdr.markForCheck();
   }
 
-  toggleTodosRascunho(checked: boolean): void {
-    if (checked) {
-      for (const medico of this.sugestoesMedico) {
-        this.selectedRascunho.add(medico.nome);
-      }
-      return;
-    }
-    for (const medico of this.sugestoesMedico) {
-      this.selectedRascunho.delete(medico.nome);
-    }
+  removerRascunho(nome: string): void {
+    if (!this.selectedRascunho.has(nome)) return;
+    const next = new Set(this.selectedRascunho);
+    next.delete(nome);
+    this.selectedRascunho = next;
+    this.cdr.markForCheck();
   }
 
   confirmar(): void {
@@ -192,10 +159,6 @@ export class MedicoFilterPickerComponent implements OnDestroy {
 
   trackByNome(_: number, nome: string): string {
     return nome;
-  }
-
-  labelLimiteExibicao(valor: MedicoLimiteExibicaoFiltro): string {
-    return valor === 'todos' ? 'Todos' : String(valor);
   }
 
   private scheduleAttachModalToBody(): void {

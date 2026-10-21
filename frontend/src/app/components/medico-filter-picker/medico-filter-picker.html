@@ -53,58 +53,66 @@
       </header>
       <div class="picker-modal-body">
         <div class="picker-modal-controls">
-          <div class="picker-ordenacao-row">
-            <label class="picker-ordenacao-label" for="medicoOrdenacaoSelect">Ordenar por:</label>
-            <select
-              id="medicoOrdenacaoSelect"
-              class="form-control picker-ordenacao-select"
-              [(ngModel)]="ordenacaoModal"
-              aria-label="Ordenar médicos">
-              <option *ngFor="let opcao of ordenacaoOpcoes" [value]="opcao.value">
-                {{ opcao.label }}
-              </option>
-            </select>
-          </div>
-          <div class="picker-limite-row">
-            <label class="picker-ordenacao-label" for="medicoLimiteSelect">Qtd. de registros:</label>
-            <select
-              id="medicoLimiteSelect"
-              class="form-control picker-ordenacao-select"
-              [(ngModel)]="limiteExibicaoModal"
-              aria-label="Quantidade de registros exibidos">
-              <option *ngFor="let limite of limiteExibicaoOpcoes" [ngValue]="limite">
-                {{ labelLimiteExibicao(limite) }}
-              </option>
-            </select>
-          </div>
           <input
             type="text"
             class="form-control filter-search"
             placeholder="Buscar médico..."
-            [(ngModel)]="buscaModal" />
+            [(ngModel)]="buscaModal"
+            autocomplete="off"
+            aria-label="Buscar médico" />
         </div>
-        <div class="filter-suggestions picker-list" *ngIf="sugestoesMedicoOrdenadas.length; else medicoSemOpcaoModal">
-          <div class="picker-list-header">
-            <label class="picker-list-toggle-all">
-              <input
-                type="checkbox"
-                [checked]="todosFiltradosMarcados"
-                (change)="toggleTodosRascunho($any($event.target).checked)" />
-              Marcar/Desmarcar todos
-            </label>
+
+        <div class="picker-selected-section" *ngIf="rascunhoLista.length">
+          <div class="picker-selected-header">
+            Selecionados ({{ rascunhoLista.length }})
           </div>
-          <label
-            class="suggestion-item suggestion-check"
-            *ngFor="let medico of sugestoesMedico; trackBy: trackByMedicoOpcao">
-            <input
-              type="checkbox"
-              [checked]="selectedRascunho.has(medico.nome)"
-              (change)="toggleRascunho(medico.nome, $any($event.target).checked)" />
-            <span>{{ medico.nome }}</span>
-          </label>
+          <div class="picker-selected-chips">
+            <span
+              class="picker-selected-chip"
+              *ngFor="let nome of rascunhoLista; trackBy: trackByNome">
+              <span class="picker-selected-chip-label" [title]="nome">{{ nome }}</span>
+              <button
+                type="button"
+                class="picker-selected-chip-remove"
+                title="Remover {{ nome }}"
+                aria-label="Remover {{ nome }}"
+                (click)="removerRascunho(nome)">
+                <i class="fas fa-times" aria-hidden="true"></i>
+              </button>
+            </span>
+          </div>
         </div>
-        <ng-template #medicoSemOpcaoModal>
-          <span class="filter-empty-hint">Nenhum médico encontrado</span>
+        <p class="filter-empty-hint picker-selected-empty" *ngIf="!rascunhoLista.length">
+          Nenhum médico selecionado. Busque e inclua abaixo.
+        </p>
+
+        <div
+          class="filter-suggestions picker-list"
+          *ngIf="temBusca && sugestoesParaIncluir.length; else medicoBuscaEstado">
+          <div
+            class="suggestion-item"
+            *ngFor="let medico of sugestoesParaIncluir; trackBy: trackByMedicoOpcao">
+            <span class="suggestion-nome" [title]="medico.nome">{{ medico.nome }}</span>
+            <button
+              type="button"
+              class="medico-picker-btn medico-picker-btn-incluir"
+              (click)="incluirMedico(medico.nome)">
+              Incluir
+            </button>
+          </div>
+        </div>
+        <ng-template #medicoBuscaEstado>
+          <span class="filter-empty-hint" *ngIf="!temBusca">
+            Digite para buscar e incluir médicos
+          </span>
+          <span class="filter-empty-hint" *ngIf="temBusca && !sugestoesMedicoOrdenadas.length">
+            Nenhum médico encontrado
+          </span>
+          <span
+            class="filter-empty-hint"
+            *ngIf="temBusca && sugestoesMedicoOrdenadas.length && !sugestoesParaIncluir.length">
+            Todos os resultados já estão selecionados
+          </span>
         </ng-template>
       </div>
       <footer class="picker-modal-footer">

@@ -201,35 +201,81 @@
   margin-bottom: 0.55rem;
 }
 
-.medico-filter-picker-backdrop .picker-ordenacao-row,
-.medico-filter-picker-backdrop .picker-limite-row {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-}
-
-.medico-filter-picker-backdrop .picker-ordenacao-label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--cor-texto-primario, #0f172a);
-  white-space: nowrap;
-}
-
-.medico-filter-picker-backdrop .picker-ordenacao-select {
-  flex: 1;
-  min-width: 210px;
-  font-size: 0.8125rem;
-  padding: 0.35rem 0.5rem;
-}
-
 .medico-filter-picker-backdrop .filter-search {
   width: 100%;
   min-width: 0;
 }
 
+.medico-filter-picker-backdrop .picker-selected-section {
+  margin-bottom: 0.65rem;
+}
+
+.medico-filter-picker-backdrop .picker-selected-header {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto-primario, #0f172a);
+  margin-bottom: 0.4rem;
+}
+
+.medico-filter-picker-backdrop .picker-selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-height: 7.5rem;
+  overflow: auto;
+}
+
+.medico-filter-picker-backdrop .picker-selected-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  border: 1px solid var(--cor-borda, #e2e8f0);
+  border-radius: 999px;
+  padding: 0.2rem 0.35rem 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  color: var(--cor-texto-primario, #0f172a);
+  background: color-mix(in srgb, var(--cor-primaria, #2563eb) 10%, transparent);
+}
+
+.medico-filter-picker-backdrop .picker-selected-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 18rem;
+}
+
+.medico-filter-picker-backdrop .picker-selected-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.medico-filter-picker-backdrop .picker-selected-chip-remove:hover {
+  color: var(--cor-perigo, #dc2626);
+  background: color-mix(in srgb, var(--cor-perigo, #dc2626) 12%, transparent);
+}
+
+.medico-filter-picker-backdrop .picker-selected-chip-remove:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--cor-primaria, #2563eb) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.medico-filter-picker-backdrop .picker-selected-empty {
+  margin-bottom: 0.55rem;
+}
+
 .medico-filter-picker-backdrop .filter-suggestions {
-  max-height: 54vh;
+  max-height: 40vh;
   overflow-y: auto;
   border: 1px solid var(--cor-borda, #e2e8f0);
   border-radius: 6px;
@@ -238,27 +284,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-}
-
-.medico-filter-picker-backdrop .picker-list-header {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--cor-borda, #e2e8f0);
-  padding: 0.35rem 0.35rem 0.5rem;
-  margin-bottom: 0.2rem;
-  position: sticky;
-  top: 0;
-  background: var(--cor-superficie, #fff);
-  z-index: 1;
-}
-
-.medico-filter-picker-backdrop .picker-list-toggle-all {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--cor-texto-primario, #0f172a);
-  cursor: pointer;
 }
 
 .medico-filter-picker-backdrop .suggestion-item {
@@ -270,15 +295,39 @@
   padding: 0.35rem 0.45rem;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
 }
 
-.medico-filter-picker-backdrop .suggestion-check {
-  cursor: default;
+.medico-filter-picker-backdrop .suggestion-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.medico-filter-picker-backdrop .suggestion-check input {
+.medico-filter-picker-backdrop .medico-picker-btn-incluir {
+  flex-shrink: 0;
+  min-height: 1.85rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--cor-primaria, #2563eb) 55%, #000 10%);
+  background: var(--cor-primaria, #2563eb);
+  color: #fff;
+}
+
+.medico-filter-picker-backdrop .medico-picker-btn-incluir:hover {
+  filter: brightness(0.96);
+}
+
+.medico-filter-picker-backdrop .medico-picker-btn-incluir:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--cor-primaria, #2563eb) 45%, transparent);
+  outline-offset: 1px;
 }
 
 .medico-filter-picker-backdrop .suggestion-item:hover {
@@ -303,8 +352,7 @@ body.theme-dark .medico-filter-picker .filter-entity-card {
 }
 
 body.theme-dark .medico-filter-picker-backdrop .picker-modal,
-body.theme-dark .medico-filter-picker-backdrop .filter-suggestions,
-body.theme-dark .medico-filter-picker-backdrop .picker-list-header {
+body.theme-dark .medico-filter-picker-backdrop .filter-suggestions {
   background: var(--cor-superficie-hover, #1e293b);
   border-color: var(--cor-borda, #334155);
 }
@@ -316,19 +364,17 @@ body.theme-dark .medico-filter-picker .filter-entity-title {
 body.theme-dark .medico-filter-picker-backdrop .picker-modal-title,
 body.theme-dark .medico-filter-picker-backdrop .picker-modal-header h3,
 body.theme-dark .medico-filter-picker-backdrop .suggestion-item,
-body.theme-dark .medico-filter-picker-backdrop .picker-ordenacao-label {
+body.theme-dark .medico-filter-picker-backdrop .picker-selected-header {
+  color: var(--cor-texto-primario, #e2e8f0);
+}
+
+body.theme-dark .medico-filter-picker-backdrop .picker-selected-chip {
+  border-color: var(--cor-borda, #334155);
   color: var(--cor-texto-primario, #e2e8f0);
 }
 
 @media (max-width: 768px) {
-  .medico-filter-picker-backdrop .picker-ordenacao-row,
-  .medico-filter-picker-backdrop .picker-limite-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .medico-filter-picker-backdrop .picker-ordenacao-select {
-    min-width: 0;
-    width: 100%;
+  .medico-filter-picker-backdrop .picker-selected-chip-label {
+    max-width: 12rem;
   }
 }
