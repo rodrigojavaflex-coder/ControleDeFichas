@@ -574,16 +574,33 @@ export class ComercialAcompanhamentoPage implements OnInit {
     return `${nomeMesPt(this.mesFiltro)} ${this.anoFiltro}`;
   }
 
+  get dataUltimoCaixaFormatada(): string {
+    if (!this.unidadeFiltro || this.carregando) return '—';
+    const data = this.totais.dataUltimoCaixaFechado;
+    return data ? this.formatarData(data) : '—';
+  }
+
   get rotuloDiasUteis(): string {
     const mes = this.totais.diasUteisMes;
     if (mes == null) return '';
     return `${this.formatarDiasUteis(mes)} dias úteis`;
   }
 
-  get rotuloDiasRealizados(): string {
+  get valorDiasUteis(): string {
+    return this.formatarDiasUteis(this.totais.diasUteisMes);
+  }
+
+  get valorDiasRealizados(): string {
+    return this.formatarDiasUteis(this.totais.diasRealizados);
+  }
+
+  get valorDiasRestantes(): string {
+    const mes = this.totais.diasUteisMes;
     const realizados = this.totais.diasRealizados;
-    if (realizados == null) return '';
-    return `${this.formatarDiasUteis(realizados)} dias realizados`;
+    if (mes == null || realizados == null) return '—';
+    return this.formatarDiasUteis(
+      Math.max(0, Number(mes) - Number(realizados)),
+    );
   }
 
   formatarDiasUteis(valor: number | null | undefined): string {

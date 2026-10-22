@@ -66,6 +66,13 @@ export class ComercialDesempenhoBaseDto {
   @ApiPropertyOptional({ nullable: true })
   diasRealizados?: number | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Última data de caixa CONFIRMADO da unidade (YYYY-MM-DD). Teto dos dias realizados/faltam (RN-COM-004).',
+  })
+  dataUltimoCaixaFechado?: string | null;
+
   @ApiPropertyOptional()
   mesAberto?: boolean;
 }

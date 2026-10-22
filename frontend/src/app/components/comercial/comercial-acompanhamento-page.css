@@ -146,29 +146,102 @@
 
 .comercial-acomp-du-legend {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.75rem;
   margin-left: auto;
   padding: 0.45rem 0.75rem;
   border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--cor-superficie, var(--bg-primary, #fff));
   box-shadow: var(--sombra-sm, none);
   color: var(--text-primary, #1e293b);
   white-space: nowrap;
 }
 
-.comercial-acomp-du-legend strong {
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1.2;
+.comercial-acomp-du-legend-caixa {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
 }
 
-.comercial-acomp-du-legend span {
-  font-size: 0.75rem;
+.comercial-acomp-du-legend-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.15;
+}
+
+.comercial-acomp-du-legend-label i {
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.comercial-acomp-du-legend-data {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+.comercial-acomp-du-legend-comp {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  line-height: 1.2;
+  margin-right: 0.15rem;
+}
+
+.comercial-acomp-du-legend-dias {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.comercial-acomp-du-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.22rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  background: var(--cor-fundo-suave, var(--bg-secondary, #f8fafc));
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-secondary, #64748b);
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.comercial-acomp-du-chip em {
+  font-style: normal;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--text-primary, #1e293b);
+  font-variant-numeric: tabular-nums;
+}
+
+.comercial-acomp-du-chip-faltam {
+  border-color: color-mix(
+    in srgb,
+    var(--cor-alerta, #d97706) 35%,
+    var(--cor-borda, #e2e8f0)
+  );
+  background: color-mix(
+    in srgb,
+    var(--cor-alerta, #d97706) 10%,
+    var(--cor-superficie, #fff)
+  );
 }
 
 .comercial-acomp-cards-wrap {
@@ -1228,6 +1301,41 @@ body.theme-dark .comercial-acomp-du-legend,
   border-color: var(--cor-borda, var(--border-color, #334155));
 }
 
+body.theme-dark .comercial-acomp-du-legend-caixa,
+[data-theme='dark'] .comercial-acomp-du-legend-caixa {
+  border-right-color: var(--cor-borda, var(--border-color, #334155));
+}
+
+body.theme-dark .comercial-acomp-du-legend-data,
+body.theme-dark .comercial-acomp-du-legend-comp,
+body.theme-dark .comercial-acomp-du-chip em,
+[data-theme='dark'] .comercial-acomp-du-legend-data,
+[data-theme='dark'] .comercial-acomp-du-legend-comp,
+[data-theme='dark'] .comercial-acomp-du-chip em {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .comercial-acomp-du-chip,
+[data-theme='dark'] .comercial-acomp-du-chip {
+  background: var(--cor-fundo-suave, var(--bg-secondary, #0f172a));
+  border-color: var(--cor-borda, var(--border-color, #334155));
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .comercial-acomp-du-chip-faltam,
+[data-theme='dark'] .comercial-acomp-du-chip-faltam {
+  border-color: color-mix(
+    in srgb,
+    var(--cor-alerta, #fbbf24) 40%,
+    var(--cor-borda, #334155)
+  );
+  background: color-mix(
+    in srgb,
+    var(--cor-alerta, #fbbf24) 14%,
+    var(--cor-superficie, #1e293b)
+  );
+}
+
 body.theme-dark .comercial-acomp-card,
 [data-theme='dark'] .comercial-acomp-card {
   background: var(--cor-superficie, #1e293b);
@@ -2094,7 +2202,21 @@ body.theme-dark .comercial-acomp-card-detalhe-btn,
 
   .comercial-acomp-du-legend {
     margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
     white-space: normal;
+  }
+
+  .comercial-acomp-du-legend-caixa {
+    border-right: none;
+    padding-right: 0;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+    width: 100%;
+  }
+
+  .comercial-acomp-du-legend-dias {
+    flex-wrap: wrap;
   }
 
   .comercial-acomp-detalhe-card-header {

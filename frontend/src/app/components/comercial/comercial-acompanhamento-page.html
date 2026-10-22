@@ -103,14 +103,34 @@
         @if (rotuloCompetenciaLegenda && rotuloDiasUteis) {
           <aside
             class="comercial-acomp-du-legend"
-            aria-label="Competência, dias úteis e dias realizados">
-            <strong>{{ rotuloCompetenciaLegenda }}</strong>
-            <span>
-              {{ rotuloDiasUteis }}
-              @if (rotuloDiasRealizados) {
-                · {{ rotuloDiasRealizados }}
-              }
-            </span>
+            aria-label="Último caixa fechado, competência, dias úteis, realizados e que faltam">
+            <div class="comercial-acomp-du-legend-caixa">
+              <span class="comercial-acomp-du-legend-label">
+                <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                Último caixa fechado
+              </span>
+              <strong class="comercial-acomp-du-legend-data">{{
+                dataUltimoCaixaFormatada
+              }}</strong>
+            </div>
+            <div class="comercial-acomp-du-legend-dias" aria-label="Dias da competência">
+              <span class="comercial-acomp-du-legend-comp">{{
+                rotuloCompetenciaLegenda
+              }}</span>
+              <span class="comercial-acomp-du-chip" title="Dias úteis do mês">
+                <em>{{ valorDiasUteis }}</em> úteis
+              </span>
+              <span
+                class="comercial-acomp-du-chip"
+                title="Do início do mês até o último caixa fechado">
+                <em>{{ valorDiasRealizados }}</em> realizados
+              </span>
+              <span
+                class="comercial-acomp-du-chip comercial-acomp-du-chip-faltam"
+                title="Do último caixa fechado até o fim do mês">
+                <em>{{ valorDiasRestantes }}</em> faltam
+              </span>
+            </div>
           </aside>
         }
       </section>

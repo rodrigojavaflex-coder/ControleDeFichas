@@ -73,6 +73,7 @@ export interface ComercialAcompanhamentoItem {
   faltaMetaHojeTopoMarcaPropria?: number | null;
   diasUteisMes?: number | null;
   diasRealizados?: number | null;
+  dataUltimoCaixaFechado?: string | null;
   mesAberto?: boolean;
 }
 
@@ -124,6 +125,7 @@ export interface ComercialAcompanhamentoTotais {
   faltaMetaHojeTopoMarcaPropria?: number | null;
   diasUteisMes?: number | null;
   diasRealizados?: number | null;
+  dataUltimoCaixaFechado?: string | null;
   mesAberto?: boolean;
 }
 

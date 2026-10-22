@@ -15,9 +15,14 @@ import { ComercialComissaoPolitica } from '../comercial-meta/entities/comercial-
 import { ComercialComissaoPoliticaUnidade } from '../comercial-meta/entities/comercial-comissao-politica-unidade.entity';
 import { CalendarioUnidade } from '../producao-config/entities/calendario-unidade.entity';
 import { ProducaoFeriado } from '../producao-config/entities/producao-feriado.entity';
+import { CaixaFechamento } from '../fechamento-caixa/entities/caixa-fechamento.entity';
+import { CaixaFechamentoStatus } from '../fechamento-caixa/enums/caixa-fechamento-status.enum';
 import { Permission } from '../../common/enums/permission.enum';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
-import { dataTetoPreviaAcompanhamento } from '../../common/utils/data-date.util';
+import {
+  dataTetoPreviaAcompanhamento,
+  normalizarDataIso,
+} from '../../common/utils/data-date.util';
 import {
   competenciaAberta,
   periodoCompetencia,
@@ -84,6 +89,8 @@ export class ComercialAcompanhamentoService {
     private readonly calendarioRepo: Repository<CalendarioUnidade>,
     @InjectRepository(ProducaoFeriado)
     private readonly feriadoRepo: Repository<ProducaoFeriado>,
+    @InjectRepository(CaixaFechamento)
+    private readonly caixaFechamentoRepo: Repository<CaixaFechamento>,
   ) {}
 
   async findMeuCard(usuario: Usuario): Promise<ComercialAcompanhamentoMeuCardDto> {
@@ -1649,6 +1656,7 @@ export class ComercialAcompanhamentoService {
       politicaUnidade,
       calendario,
       feriados,
+      dataUltimoCaixa,
     ] = await Promise.all([
       ids.length
         ? this.metaRepo.find({
@@ -1684,6 +1692,7 @@ export class ComercialAcompanhamentoService {
           fim: periodo.dataFinal,
         })
         .getMany(),
+      this.obterUltimaDataCaixaConfirmado(unidade),
     ]);
     const criterioRanking =
       politicaUnidade?.criterioRanking ?? ComercialCriterioRanking.PERCENTUAL;
@@ -1735,17 +1744,22 @@ export class ComercialAcompanhamentoService {
     }
 
     const sabado = calendario?.sabadoDiaUtil ?? false;
-    const feriadosSet = new Set(feriados.map((f) => f.data));
+    const feriadosSet = new Set(
+      feriados.map((f) => this.toYmd(f.data)).filter(Boolean),
+    );
+    // Dias úteis do mês = competência inteira, feriado/domingo = 0 (RN-COM-004).
     const duMes = somarDiasUteisVisitacao(
       periodo.dataInicial,
       periodo.dataFinal,
       sabado,
       feriadosSet,
     );
+    // Realizados = início do mês até o último caixa CONFIRMADO (não “hoje”).
+    // Restantes = duMes − realizados (após o caixa até o fim do mês).
     const realizados = somarDiasRealizadosVisitacao(
       periodo.dataInicial,
       periodo.dataFinal,
-      hoje,
+      dataUltimoCaixa,
       sabado,
       feriadosSet,
     );
@@ -1753,6 +1767,7 @@ export class ComercialAcompanhamentoService {
     totais.mesAberto = mesAberto;
     totais.diasUteisMes = duMes;
     totais.diasRealizados = realizados;
+    totais.dataUltimoCaixaFechado = dataUltimoCaixa;
 
     let somaMetaReq = 0;
     let somaMetaMp = 0;
@@ -2288,6 +2303,25 @@ export class ComercialAcompanhamentoService {
                 AND i_ex.tipo_item = 'REQUISICAO'
                 AND i_ex.numero_requisicao = ${alias}.numero_requisicao
             )`;
+  }
+
+  /**
+   * Última data de caixa CONFIRMADO da unidade (teto dos dias realizados
+   * e do que falta no acompanhamento comercial — RN-COM-004).
+   */
+  private async obterUltimaDataCaixaConfirmado(
+    unidade: Unidade,
+  ): Promise<string | null> {
+    const row = await this.caixaFechamentoRepo
+      .createQueryBuilder('f')
+      .select("TO_CHAR(f.dataOperacao, 'YYYY-MM-DD')", 'data')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere('f.status = :status', {
+        status: CaixaFechamentoStatus.CONFIRMADO,
+      })
+      .orderBy('f.dataOperacao', 'DESC')
+      .getRawOne<{ data: string }>();
+    return normalizarDataIso(row?.data);
   }
 
   private normalizarCodigosSetor(
