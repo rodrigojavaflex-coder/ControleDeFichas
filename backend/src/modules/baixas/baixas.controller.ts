@@ -64,6 +64,7 @@ export class BaixasController {
   @ApiQuery({ name: 'tipoDaBaixa', required: false, type: String })
   @ApiQuery({ name: 'dataInicial', required: false, type: String })
   @ApiQuery({ name: 'dataFinal', required: false, type: String })
+  @ApiQuery({ name: 'vendedor', required: false, type: String })
   findAll(
     @Query() findBaixasDto: FindBaixasDto,
   ): Promise<PaginatedResponseDto<Baixa>> {

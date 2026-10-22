@@ -45,6 +45,9 @@ export class BaixasService {
       if (findBaixasDto.dataFinal) {
         params = params.set('dataFinal', findBaixasDto.dataFinal);
       }
+      if (findBaixasDto.vendedor) {
+        params = params.set('vendedor', findBaixasDto.vendedor);
+      }
     }
 
     return this.http.get<BaixaPaginatedResponse>(this.apiUrl, { params });

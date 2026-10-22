@@ -285,6 +285,11 @@
 - Critério: a venda **entra** se existir **ao menos uma** linha em `baixas` com `dataBaixa` no intervalo (`EXISTS`). Não altera o valor exibido na grade (`valorPago` da venda).
 - Combina com os demais filtros (vendedor, status, unidade, data da venda, etc.). Para conferir o card de terceiros do acompanhamento (RN-COM-003), usar este eixo e **não** Data da Venda.
 
+### RN-VND-008 — Filtro de vendedor no relatório de baixas
+
+- Tela **`/relatorios/baixas`**: o modal **Filtros de Baixas** tem o campo **Vendedor** (texto parcial, sem distinção de maiúsculas), no mesmo padrão da listagem de vendas.
+- API: `GET /baixas` aceita `vendedor`. Critério: nome do vendedor da venda da baixa (`vendedores.nome`). Combina com data, protocolo, cliente, unidade, origem e valor.
+
 ### RN-VND-006 — Edição manual de V. Compra / V. Fechamento (grade)
 
 - Tela **`/fechamento-vendas`**: com permissão **`venda:editar-valor-compra`** (e visualização **`venda:view-valor-compra`**), o usuário pode editar **inline** as colunas **V. Compra** (`valorCompra`) e **V. Fechamento** (`valorPago`) em vendas **sem** `dataFechamento`.

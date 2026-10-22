@@ -28,6 +28,7 @@ interface AppliedFilter {
 interface BaixasFilterSnapshot {
   protocolo: string;
   cliente: string;
+  vendedor: string;
   dataInicial: string;
   dataFinal: string;
   unidade: string | Unidade | Unidade[];
@@ -74,6 +75,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   unidadeDisabled = false;
   protocoloFilter = '';
   clienteFilter = '';
+  vendedorFilter = '';
   valorMinFilter = '';
   valorMaxFilter = '';
   origemFilter: VendaOrigem[] = [];
@@ -171,6 +173,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     return {
       protocolo: this.protocoloFilter || '',
       cliente: this.clienteFilter || '',
+      vendedor: this.vendedorFilter || '',
       dataInicial: this.dataInicialFilter || '',
       dataFinal: this.dataFinalFilter || '',
       unidade: this.unidadeFilter.length > 0 ? (this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter) : ('' as any),
@@ -208,6 +211,9 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
     if (this.dataFinalFilter) {
       filters.dataFinal = this.dataFinalFilter;
+    }
+    if (this.vendedorFilter.trim()) {
+      filters.vendedor = this.vendedorFilter.trim();
     }
     this.baixasService.getBaixas(filters).subscribe({
       next: (response: BaixaPaginatedResponse) => {
@@ -270,6 +276,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
     this.protocoloFilter = '';
     this.clienteFilter = '';
+    this.vendedorFilter = '';
     this.origemFilter = [];
     this.valorMinFilter = '';
     this.valorMaxFilter = '';
@@ -334,6 +341,9 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     if (snapshot.cliente.trim()) {
       filters.push({ key: 'cliente', label: 'Cliente', value: snapshot.cliente.trim() });
     }
+    if (snapshot.vendedor.trim()) {
+      filters.push({ key: 'vendedor', label: 'Vendedor', value: snapshot.vendedor.trim() });
+    }
     if (snapshot.dataInicial || snapshot.dataFinal) {
       const inicio = this.formatDateDisplay(snapshot.dataInicial);
       const fim = this.formatDateDisplay(snapshot.dataFinal);
@@ -370,6 +380,9 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       case 'cliente':
         this.clienteFilter = '';
         break;
+      case 'vendedor':
+        this.vendedorFilter = '';
+        break;
       case 'periodo':
         this.dataInicialFilter = '';
         this.dataFinalFilter = '';
@@ -401,6 +414,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     const icons: { [key: string]: string } = {
       protocolo: 'fa-hashtag',
       cliente: 'fa-user',
+      vendedor: 'fa-user-tie',
       periodo: 'fa-calendar-alt',
       unidade: 'fa-building',
       origem: 'fa-map-marker-alt',
@@ -785,6 +799,13 @@ export class BaixasListComponent implements OnInit, OnDestroy {
           : (baixa.venda?.cliente as any) || '';
         return clienteNome.toLowerCase().includes(cliente);
       });
+    }
+
+    if (this.vendedorFilter.trim()) {
+      const vendedor = this.vendedorFilter.trim().toLowerCase();
+      filtered = filtered.filter(baixa =>
+        this.getVendedorNome(baixa.venda).toLowerCase().includes(vendedor),
+      );
     }
 
     const valorMin = this.parseValorFilter(this.valorMinFilter);

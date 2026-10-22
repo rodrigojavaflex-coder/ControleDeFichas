@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsEnum, IsDateString } from 'class-validator';
+import {
+  IsOptional,
+  IsUUID,
+  IsEnum,
+  IsDateString,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { TipoDaBaixa } from '../../../common/enums/baixa.enum';
 
@@ -42,4 +49,13 @@ export class FindBaixasDto extends PaginationDto {
     { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
   )
   dataFinal?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nome do vendedor da venda (parcial, sem distinção de maiúsculas)',
+    example: 'MARIA',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  vendedor?: string;
 }

@@ -43,6 +43,7 @@ export interface FindBaixasDto {
   tipoDaBaixa?: TipoDaBaixa;
   dataInicial?: string;
   dataFinal?: string;
+  vendedor?: string;
 }
 
 export interface BaixaPaginatedResponse {

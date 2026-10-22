@@ -198,6 +198,17 @@
           </div>
 
           <div class="filter-group">
+            <label for="vendedorFilterModal" class="label-campo">Vendedor</label>
+            <input
+              id="vendedorFilterModal"
+              type="text"
+              [(ngModel)]="vendedorFilter"
+              placeholder="Buscar por vendedor..."
+              class="campo"
+              (keyup.enter)="applyFilters()">
+          </div>
+
+          <div class="filter-group">
             <label for="clienteFilterModal" class="label-campo">Cliente</label>
             <input
               id="clienteFilterModal"

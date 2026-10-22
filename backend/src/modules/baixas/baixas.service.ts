@@ -226,6 +226,16 @@ export class BaixasService {
         dataFinal: filters.dataFinal,
       });
     }
+
+    const vendedor = filters.vendedor?.trim();
+    if (vendedor) {
+      queryBuilder
+        .leftJoin('baixa.venda', 'venda')
+        .leftJoin('venda.vendedor', 'vendedor')
+        .andWhere('vendedor.nome ILIKE :vendedor', {
+          vendedor: `%${vendedor}%`,
+        });
+    }
   }
 
   private async getTotalBaixasParaVenda(idvenda: string): Promise<number> {
