@@ -180,169 +180,262 @@
           [class.is-total]="isCardTotal(card)"
           *ngFor="let card of cardsResumo">
           <header class="visitacao-acomp-rep-card-head">
-            <h3>{{ card.nomeRepresentante }}</h3>
-            <div class="visitacao-acomp-rep-medicos" *ngIf="!isCardTotal(card)">
-              <span>
-                <strong>{{ card.quantidadeMedicos }}</strong>
-                com movimento
-              </span>
-              <span>
-                <strong>{{ card.quantidadeMedicosPainel ?? 0 }}</strong>
-                ativos no painel
-              </span>
-              <span>
-                <strong>{{ card.quantidadeMedicosForaAtendimento ?? 0 }}</strong>
-                fora do atendimento
-              </span>
+            <div class="visitacao-acomp-card-head-start">
+              <h3>
+                {{ card.nomeRepresentante }}
+                <i
+                  class="fas visitacao-acomp-card-tipo-icon"
+                  [class.fa-building]="isCardTotal(card)"
+                  [class.fa-user]="!isCardTotal(card)"
+                  aria-hidden="true"
+                  [attr.title]="isCardTotal(card) ? 'Unidade' : 'Representante'"></i>
+              </h3>
+              <div class="visitacao-acomp-rep-medicos" *ngIf="!isCardTotal(card)">
+                <span>
+                  <strong>{{ card.quantidadeMedicos }}</strong>
+                  com movimento
+                </span>
+                <span>
+                  <strong>{{ card.quantidadeMedicosPainel ?? 0 }}</strong>
+                  ativos no painel
+                </span>
+                <span>
+                  <strong>{{ card.quantidadeMedicosForaAtendimento ?? 0 }}</strong>
+                  fora do atendimento
+                </span>
+              </div>
+            </div>
+            <div class="visitacao-acomp-card-head-end">
+              <div class="visitacao-acomp-card-head-total">
+                <span class="label">Total recebido</span>
+                <strong>{{ formatarMoeda(isCardTotal(card) ? valorRecebidoGrandTotal(card) : valorRecebidoTotal(card)) }}</strong>
+              </div>
+              <div class="visitacao-acomp-card-head-total is-rejeitado" *ngIf="isCardTotal(card)">
+                <span class="label">Total rejeitado</span>
+                <strong>{{ formatarMoeda(valorRejeitadoGrandTotal(card)) }}</strong>
+              </div>
             </div>
           </header>
+
           <div
-            class="visitacao-acomp-rep-recebido-unidades"
-            *ngIf="!isCardTotal(card)">
-            <div
-              class="visitacao-acomp-rep-metric is-success"
-              *ngFor="let linha of linhasRecebidoUnidade(card)"
-              [class.is-loja]="linha.isLoja"
-              [attr.title]="linha.isLoja
-                ? 'Unidade do cadastro — entra na comissão, meta e projeção'
-                : 'Unidade configurada — entra na comissão, meta e projeção'">
-              <span class="label">{{ linha.unidade }}</span>
-              <span class="value">{{ formatarMoeda(linha.valor) }}</span>
-              <span class="sub">{{ linha.quantidade }} requisição(ões)</span>
-            </div>
-            <div
-              class="visitacao-acomp-rep-metric is-total"
-              title="Soma das unidades de comissão. Base de % meta, projeção e comissão.">
-              <span class="label">Total</span>
-              <span class="value">{{ formatarMoeda(valorRecebidoTotal(card)) }}</span>
-              <span class="sub">{{ quantidadeRecebidoTotal(card) }} requisição(ões)</span>
-            </div>
-          </div>
-          <div
-            class="visitacao-acomp-rep-metrics"
-            [class.has-painel]="!isCardTotal(card)"
-            *ngIf="!isCardTotal(card)">
-            <div class="visitacao-acomp-rep-metric is-danger">
-              <span class="label">Rejeitado</span>
-              <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
-              <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
-            </div>
-            <div
-              class="visitacao-acomp-rep-metric is-primary">
-              <span class="label">Representatividade</span>
-              <span
-                class="value"
-                title="Participação no recebido do caixa no escopo">
-                {{ formatarRepresentatividade(card) }}
+            class="visitacao-acomp-bloco"
+            [class.is-collapsed]="!cardBlocoAberto(card, 'resultados')">
+            <button
+              type="button"
+              class="visitacao-acomp-bloco-toggle"
+              (click)="toggleCardBloco(card, 'resultados')"
+              [attr.aria-expanded]="cardBlocoAberto(card, 'resultados')">
+              <span class="visitacao-acomp-bloco-titulo">
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                Resultados
               </span>
-            </div>
-          </div>
-          <div class="visitacao-acomp-total-blocos" *ngIf="isCardTotal(card)">
-            <section class="visitacao-acomp-total-bloco">
-              <h4>Loja</h4>
-              <div class="visitacao-acomp-rep-metrics">
-                <div class="visitacao-acomp-rep-metric is-success">
-                  <span class="label">Recebido</span>
-                  <span class="value">{{ formatarMoeda(valorRecebidoLoja(card)) }}</span>
-                  <span class="sub">{{ quantidadeRecebidoLoja(card) }} requisição(ões)</span>
+            </button>
+            <div class="visitacao-acomp-bloco-corpo" *ngIf="cardBlocoAberto(card, 'resultados')">
+              <div class="visitacao-acomp-unidades-grid" *ngIf="!isCardTotal(card)">
+                <div
+                  class="visitacao-acomp-metric is-success"
+                  *ngFor="let linha of linhasRecebidoUnidade(card)"
+                  [attr.title]="linha.isLoja
+                    ? 'Unidade do cadastro — entra na comissão, meta e projeção'
+                    : 'Unidade de comissão — vendas do mesmo painel nesta loja'">
+                  <span class="label">{{ linha.unidade }}</span>
+                  <span class="sub">{{ linha.quantidade }} requisição(ões)</span>
+                  <span class="value">{{ formatarMoeda(linha.valor) }}</span>
                 </div>
-                <div class="visitacao-acomp-rep-metric is-danger">
+                <div
+                  class="visitacao-acomp-metric is-success is-total"
+                  title="Soma das unidades de comissão. Base de % meta, projeção e comissão.">
+                  <span class="label">Total</span>
+                  <span class="sub">{{ quantidadeRecebidoTotal(card) }} requisição(ões)</span>
+                  <span class="value">{{ formatarMoeda(valorRecebidoTotal(card)) }}</span>
+                </div>
+                <div class="visitacao-acomp-metric is-primary">
+                  <span class="label">Representatividade</span>
+                  <span class="value" title="Participação no recebido do caixa da unidade do filtro">
+                    {{ formatarRepresentatividade(card) }}
+                  </span>
+                </div>
+                <div class="visitacao-acomp-metric is-rejeitado">
                   <span class="label">Rejeitado</span>
-                  <span class="value">{{ formatarMoeda(valorRejeitadoLoja(card)) }}</span>
-                  <span class="sub">{{ quantidadeRejeitadoLoja(card) }} orçamento(s)</span>
+                  <span class="value">{{ formatarMoeda(card.valorRejeitado) }}</span>
+                  <span class="sub">{{ card.quantidadeRejeitado }} orçamento(s)</span>
                 </div>
               </div>
-            </section>
-            <section
-              class="visitacao-acomp-total-bloco"
-              *ngFor="let bloco of outrasUnidadesCard(card)">
-              <h4>{{ bloco.unidade }}</h4>
-              <div class="visitacao-acomp-rep-metrics">
-                <div class="visitacao-acomp-rep-metric is-success">
-                  <span class="label">Recebido</span>
-                  <span class="value">{{ formatarMoeda(bloco.valorRecebido) }}</span>
-                  <span class="sub">{{ bloco.quantidadeRecebido }} requisição(ões)</span>
-                </div>
-                <div class="visitacao-acomp-rep-metric is-danger">
-                  <span class="label">Rejeitado</span>
-                  <span class="value">{{ formatarMoeda(bloco.valorRejeitado) }}</span>
-                  <span class="sub">{{ bloco.quantidadeRejeitado }} orçamento(s)</span>
-                </div>
+              <div class="visitacao-acomp-total-blocos" *ngIf="isCardTotal(card)">
+                <section class="visitacao-acomp-total-bloco">
+                  <h4>Loja</h4>
+                  <div class="visitacao-acomp-unidades-grid">
+                    <div class="visitacao-acomp-metric is-success">
+                      <span class="label">Recebido</span>
+                      <span class="sub">{{ quantidadeRecebidoLoja(card) }} requisição(ões)</span>
+                      <span class="value">{{ formatarMoeda(valorRecebidoLoja(card)) }}</span>
+                    </div>
+                    <div class="visitacao-acomp-metric is-rejeitado">
+                      <span class="label">Rejeitado</span>
+                      <span class="value">{{ formatarMoeda(valorRejeitadoLoja(card)) }}</span>
+                      <span class="sub">{{ quantidadeRejeitadoLoja(card) }} orçamento(s)</span>
+                    </div>
+                  </div>
+                </section>
+                <section
+                  class="visitacao-acomp-total-bloco"
+                  *ngFor="let bloco of outrasUnidadesCard(card)">
+                  <h4>{{ bloco.unidade }}</h4>
+                  <div class="visitacao-acomp-unidades-grid">
+                    <div class="visitacao-acomp-metric is-success">
+                      <span class="label">Recebido</span>
+                      <span class="sub">{{ bloco.quantidadeRecebido }} requisição(ões)</span>
+                      <span class="value">{{ formatarMoeda(bloco.valorRecebido) }}</span>
+                    </div>
+                    <div class="visitacao-acomp-metric is-rejeitado">
+                      <span class="label">Rejeitado</span>
+                      <span class="value">{{ formatarMoeda(bloco.valorRejeitado) }}</span>
+                      <span class="sub">{{ bloco.quantidadeRejeitado }} orçamento(s)</span>
+                    </div>
+                  </div>
+                </section>
               </div>
-            </section>
-            <section
-              class="visitacao-acomp-total-bloco is-soma"
-              *ngIf="outrasUnidadesCard(card).length">
-              <h4>Total</h4>
-              <div class="visitacao-acomp-rep-metrics">
-                <div class="visitacao-acomp-rep-metric is-success is-total">
-                  <span class="label">Recebido</span>
-                  <span class="value">{{ formatarMoeda(valorRecebidoGrandTotal(card)) }}</span>
-                  <span class="sub">{{ quantidadeRecebidoGrandTotal(card) }} requisição(ões)</span>
-                </div>
-                <div class="visitacao-acomp-rep-metric is-danger is-total">
-                  <span class="label">Rejeitado</span>
-                  <span class="value">{{ formatarMoeda(valorRejeitadoGrandTotal(card)) }}</span>
-                  <span class="sub">{{ quantidadeRejeitadoGrandTotal(card) }} orçamento(s)</span>
-                </div>
-              </div>
-            </section>
-          </div>
-          <div
-            class="visitacao-acomp-rep-desempenho"
-            [class.has-projecao]="card.mesAberto"
-            *ngIf="!isCardTotal(card)">
-            <div class="visitacao-acomp-rep-metric">
-              <span class="label">Meta</span>
-              <span
-                class="value"
-                [title]="temMeta(card) ? formatarMoeda(card.valorMeta) : 'Sem meta'">
-                {{ temMeta(card) ? formatarMoeda(card.valorMeta) : 'Sem meta' }}
-              </span>
-            </div>
-            <div class="visitacao-acomp-rep-metric">
-              <span class="label">% Meta</span>
-              <span class="value">{{ temMeta(card) ? formatarPercentualMeta(card.percentualMeta) : '—' }}</span>
-              <span
-                class="visitacao-acomp-meta-bar"
-                *ngIf="temMeta(card)"
-                [attr.aria-valuenow]="card.percentualMeta"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                role="progressbar">
-                <span
-                  class="visitacao-acomp-meta-bar-fill"
-                  [class.is-ok]="(card.percentualMeta ?? 0) >= 100"
-                  [style.width.%]="larguraBarraMeta(card.percentualMeta)"></span>
-              </span>
-            </div>
-            <div class="visitacao-acomp-rep-metric" *ngIf="card.mesAberto">
-              <span class="label">Projeção</span>
-              <span class="value">{{ formatarMoeda(card.valorProjetado) }}</span>
-              <span class="sub" *ngIf="temMeta(card)">
-                {{ formatarPercentualMeta(card.percentualProjecao) }} da meta
-              </span>
             </div>
           </div>
+
           <div
-            class="visitacao-acomp-rep-comissao"
-            [class.has-projecao]="temComissaoProjetada(card)"
-            *ngIf="!isCardTotal(card) && temComissao(card)">
-            <div class="visitacao-acomp-rep-metric">
-              <span class="label">Faixa</span>
-              <span class="value">{{ formatarPercentualMeta(card.percentualComissaoFaixa) }}</span>
-            </div>
-            <div class="visitacao-acomp-rep-metric">
-              <span class="label">Comissão</span>
-              <span class="value">{{ formatarMoeda(card.valorComissao) }}</span>
-            </div>
-            <div class="visitacao-acomp-rep-metric" *ngIf="temComissaoProjetada(card)">
-              <span class="label">Faixa proj.</span>
-              <span class="value">{{ formatarPercentualMeta(card.percentualComissaoFaixaProjetada) }}</span>
-            </div>
-            <div class="visitacao-acomp-rep-metric" *ngIf="temComissaoProjetada(card)">
-              <span class="label">Comissão proj.</span>
-              <span class="value">{{ formatarMoeda(card.valorComissaoProjetado) }}</span>
+            class="visitacao-acomp-bloco visitacao-acomp-bloco-metas"
+            *ngIf="!isCardTotal(card)"
+            [class.is-collapsed]="!cardBlocoAberto(card, 'metas')">
+            <button
+              type="button"
+              class="visitacao-acomp-bloco-toggle"
+              (click)="toggleCardBloco(card, 'metas')"
+              [attr.aria-expanded]="cardBlocoAberto(card, 'metas')">
+              <span class="visitacao-acomp-bloco-titulo">
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                Metas
+              </span>
+            </button>
+            <div class="visitacao-acomp-bloco-corpo" *ngIf="cardBlocoAberto(card, 'metas')">
+              <section class="visitacao-acomp-base">
+                <header class="visitacao-acomp-base-head">
+                  <h4>
+                    <span class="visitacao-acomp-base-mark" aria-hidden="true"></span>
+                    Recebido
+                  </h4>
+                  <p class="visitacao-acomp-base-meta">
+                    Meta
+                    <strong>{{ temMeta(card) ? formatarMoeda(card.valorMeta) : 'Sem meta' }}</strong>
+                  </p>
+                </header>
+                <div class="visitacao-acomp-meta-cols" [class.has-projecao]="card.mesAberto">
+                  <article class="visitacao-acomp-meta-col">
+                    <h5>
+                      Realizado
+                      <span class="faixa" *ngIf="temComissao(card) && card.percentualComissaoFaixa != null">
+                        ({{ formatarPercentualMeta(card.percentualComissaoFaixa) }})
+                      </span>
+                    </h5>
+                    <div class="visitacao-acomp-meta-body">
+                      <div class="visitacao-acomp-meta-main">
+                        <span class="value">{{ formatarMoeda(valorRecebidoTotal(card)) }}</span>
+                        <span class="sub">{{ temMeta(card) ? formatarPercentualMeta(card.percentualMeta) + ' da meta' : 'Sem meta' }}</span>
+                      </div>
+                      <div class="visitacao-acomp-meta-ring-group" *ngIf="temMeta(card)">
+                        <div
+                          class="visitacao-acomp-meta-ring-wrap"
+                          [ngClass]="classeCorAnelMeta(card.percentualMeta)"
+                          role="progressbar"
+                          [attr.aria-valuenow]="card.percentualMeta"
+                          aria-label="Realizado da meta"
+                          aria-valuemin="0"
+                          aria-valuemax="100">
+                          <svg class="visitacao-acomp-meta-ring" viewBox="0 0 36 36" aria-hidden="true">
+                            <circle class="visitacao-acomp-meta-ring-bg" cx="18" cy="18" r="15.5"></circle>
+                            <circle
+                              class="visitacao-acomp-meta-ring-fg"
+                              cx="18"
+                              cy="18"
+                              r="15.5"
+                              [attr.stroke-dasharray]="arcoMetaRing(card.percentualMeta)"
+                              stroke-dashoffset="0"></circle>
+                          </svg>
+                          <span class="visitacao-acomp-meta-ring-pct">{{ formatarPercentualMeta(card.percentualMeta) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      class="visitacao-acomp-meta-bar"
+                      *ngIf="temMeta(card)"
+                      role="progressbar"
+                      [attr.aria-valuenow]="card.percentualMeta"
+                      aria-label="Realizado — barra da meta"
+                      aria-valuemin="0"
+                      aria-valuemax="100">
+                      <span
+                        class="visitacao-acomp-meta-bar-fill"
+                        [ngClass]="classeCorAnelMeta(card.percentualMeta)"
+                        [style.width.%]="larguraBarraMeta(card.percentualMeta)"></span>
+                    </span>
+                    <div class="visitacao-acomp-meta-col-comissao" *ngIf="temComissao(card)">
+                      <span class="label">Comissão</span>
+                      <span class="value">{{ formatarMoeda(card.valorComissao) }}</span>
+                    </div>
+                  </article>
+                  <article class="visitacao-acomp-meta-col is-projetado" *ngIf="card.mesAberto">
+                    <h5>
+                      Projeção
+                      <span class="faixa" *ngIf="temComissaoProjetada(card)">
+                        ({{ formatarPercentualMeta(card.percentualComissaoFaixaProjetada) }})
+                      </span>
+                    </h5>
+                    <div class="visitacao-acomp-meta-body">
+                      <div class="visitacao-acomp-meta-main">
+                        <span class="value">{{ formatarMoeda(card.valorProjetado) }}</span>
+                        <span class="sub">{{ temMeta(card) ? formatarPercentualMeta(card.percentualProjecao) + ' da meta' : 'Sem meta' }}</span>
+                        <span class="sub" *ngIf="card.diasRealizados != null">
+                          {{ formatarDiasUteis(card.diasRealizados) }} de {{ formatarDiasUteis(card.diasUteisMes) }} dias úteis
+                        </span>
+                      </div>
+                      <div class="visitacao-acomp-meta-ring-group" *ngIf="temMeta(card)">
+                        <div
+                          class="visitacao-acomp-meta-ring-wrap"
+                          [ngClass]="classeCorAnelMeta(card.percentualProjecao)"
+                          role="progressbar"
+                          [attr.aria-valuenow]="card.percentualProjecao"
+                          aria-label="Projeção da meta"
+                          aria-valuemin="0"
+                          aria-valuemax="100">
+                          <svg class="visitacao-acomp-meta-ring" viewBox="0 0 36 36" aria-hidden="true">
+                            <circle class="visitacao-acomp-meta-ring-bg" cx="18" cy="18" r="15.5"></circle>
+                            <circle
+                              class="visitacao-acomp-meta-ring-fg"
+                              cx="18"
+                              cy="18"
+                              r="15.5"
+                              [attr.stroke-dasharray]="arcoMetaRing(card.percentualProjecao)"
+                              stroke-dashoffset="0"></circle>
+                          </svg>
+                          <span class="visitacao-acomp-meta-ring-pct">{{ formatarPercentualMeta(card.percentualProjecao) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      class="visitacao-acomp-meta-bar"
+                      *ngIf="temMeta(card)"
+                      role="progressbar"
+                      [attr.aria-valuenow]="card.percentualProjecao"
+                      aria-label="Projeção — barra da meta"
+                      aria-valuemin="0"
+                      aria-valuemax="100">
+                      <span
+                        class="visitacao-acomp-meta-bar-fill"
+                        [ngClass]="classeCorAnelMeta(card.percentualProjecao)"
+                        [style.width.%]="larguraBarraMeta(card.percentualProjecao)"></span>
+                    </span>
+                    <div class="visitacao-acomp-meta-col-comissao" *ngIf="temComissaoProjetada(card)">
+                      <span class="label">Comissão</span>
+                      <span class="value">{{ formatarMoeda(card.valorComissaoProjetado) }}</span>
+                    </div>
+                  </article>
+                </div>
+              </section>
             </div>
           </div>
         </article>

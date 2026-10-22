@@ -229,6 +229,9 @@ export class FechamentoCaixaService {
           i + 1,
           segmentos.length,
           !dto.reimportacaoHistorica,
+          dto.reimportacaoHistorica
+            ? { abortarSeIncompleto: false }
+            : undefined,
         );
         pagamentosStats = this.somarUpsertStats(
           pagamentosStats,
@@ -795,7 +798,12 @@ export class FechamentoCaixaService {
       unidade,
       'upsert fórmulas da requisição',
       `${qtdFormulas} linha(s)`,
-      () => this.upsertFormulasDasPagas(requisicoesRows, unidade),
+      () =>
+        this.upsertFormulasDasPagas(
+          requisicoesRows,
+          unidade,
+          !substituirDia,
+        ),
     );
 
     prog(
@@ -1268,12 +1276,26 @@ export class FechamentoCaixaService {
   private async upsertFormulasDasPagas(
     rows: AgenteCaixaRequisicaoRow[],
     unidade: Unidade,
+    preservarSeVazio = false,
   ): Promise<void> {
     if (!rows.length) {
       return;
     }
+    const alvo = preservarSeVazio
+      ? rows.filter((r) =>
+          (r.formulas ?? []).some((f) => String(f.serie ?? '').trim()),
+        )
+      : rows;
+    if (!alvo.length) {
+      if (preservarSeVazio) {
+        this.logger.warn(
+          `Caixa ${unidade}: fórmulas não vieram no payload; séries já gravadas foram mantidas (${rows.length} paga(s)).`,
+        );
+      }
+      return;
+    }
     const chaves = [
-      ...new Set(rows.map((r) => this.buildChaveRequisicao(unidade, r))),
+      ...new Set(alvo.map((r) => this.buildChaveRequisicao(unidade, r))),
     ];
     const pagas = await this.requisicaoRepo.find({
       where: { chaveErp: In(chaves) },
@@ -1294,7 +1316,7 @@ export class FechamentoCaixaService {
     });
 
     const entities: CaixaRequisicaoFormula[] = [];
-    for (const row of rows) {
+    for (const row of alvo) {
       const paga = pagaPorChave.get(this.buildChaveRequisicao(unidade, row));
       if (!paga) {
         continue;

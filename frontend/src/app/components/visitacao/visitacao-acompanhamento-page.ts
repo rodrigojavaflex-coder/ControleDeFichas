@@ -35,6 +35,8 @@ interface AcompanhamentoFilterSnapshot {
   naCarteira: NaCarteiraFiltro;
 }
 
+type VisitacaoCardBloco = 'resultados' | 'metas';
+
 interface LinhaRecebidoCard {
   unidade: string;
   valor: number;
@@ -123,6 +125,10 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   mensagemGate: string | null = null;
   confirmFecharVisivel = false;
   confirmReabrirVisivel = false;
+  private cardBlocosAbertos: Record<
+    string,
+    Partial<Record<VisitacaoCardBloco, boolean>>
+  > = {};
 
   currentPage = 1;
   pageSize = 50;
@@ -1448,7 +1454,6 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
       const item = map.get(unidade);
       const valor = Number(item?.valor) || 0;
       const quantidade = Number(item?.quantidade) || 0;
-      if (unidade !== loja && valor <= 0) continue;
       linhas.push({
         unidade,
         valor,
@@ -1465,6 +1470,33 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
       });
     }
     return linhas;
+  }
+
+  chaveCard(card: VisitacaoAcompanhamentoTotaisRepresentante): string {
+    if (this.isCardTotal(card)) return 'total';
+    return card.funcionarioId || card.nomeRepresentante || 'card';
+  }
+
+  cardBlocoAberto(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+    bloco: VisitacaoCardBloco,
+  ): boolean {
+    return this.cardBlocosAbertos[this.chaveCard(card)]?.[bloco] ?? true;
+  }
+
+  toggleCardBloco(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+    bloco: VisitacaoCardBloco,
+  ): void {
+    const key = this.chaveCard(card);
+    const aberto = this.cardBlocoAberto(card, bloco);
+    this.cardBlocosAbertos = {
+      ...this.cardBlocosAbertos,
+      [key]: {
+        ...this.cardBlocosAbertos[key],
+        [bloco]: !aberto,
+      },
+    };
   }
 
   valorRecebidoTotal(card: VisitacaoAcompanhamentoTotaisRepresentante): number {
@@ -1610,6 +1642,24 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   larguraBarraMeta(valor: number | null | undefined): number {
     if (valor == null || valor <= 0) return 0;
     return Math.min(100, valor);
+  }
+
+  /** Circunferência do anel SVG (r=15.5), no mesmo desenho do acompanhamento comercial. */
+  arcoMetaRing(valor: number | null | undefined): string {
+    const circunferencia = 2 * Math.PI * 15.5;
+    const pct = this.larguraBarraMeta(valor) / 100;
+    const preenchido = circunferencia * pct;
+    return `${preenchido.toFixed(2)} ${(circunferencia - preenchido).toFixed(2)}`;
+  }
+
+  /**
+   * Cor do anel e da barra: abaixo de 80% vermelho, de 80% a 99,99% azul, a partir de 100% verde.
+   */
+  classeCorAnelMeta(valor: number | null | undefined): string {
+    const pct = Number(valor);
+    if (!Number.isFinite(pct) || pct < 80) return 'is-vermelho';
+    if (pct >= 100) return 'is-verde';
+    return 'is-azul';
   }
 
   formatarDiasUteis(valor: number | null | undefined): string {
