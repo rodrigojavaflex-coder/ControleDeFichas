@@ -289,6 +289,7 @@
 
 - Tela **`/relatorios/baixas`**: o modal **Filtros de Baixas** tem o campo **Vendedor** (texto parcial, sem distinção de maiúsculas), no mesmo padrão da listagem de vendas.
 - API: `GET /baixas` aceita `vendedor`. Critério: nome do vendedor da venda da baixa (`vendedores.nome`). Combina com data, protocolo, cliente, unidade, origem e valor.
+- **Imprimir (Fechamento):** o relatório usa **todas** as baixas que atendem aos filtros aplicados (paginando a API), **não** só a página visível da grade.
 
 ### RN-VND-006 — Edição manual de V. Compra / V. Fechamento (grade)
 

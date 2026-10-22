@@ -12,9 +12,14 @@
             <i class="fas fa-dollar-sign"></i>
             Baixa
           </button>
-          <button class="btn btn-imprimir" type="button" (click)="imprimirRelatorio()" [attr.disabled]="(loading || items.length === 0) ? 'disabled' : null">
-            <i class="fas fa-print"></i>
-            Imprimir
+          <button
+            class="btn btn-imprimir"
+            type="button"
+            (click)="imprimirRelatorio()"
+            [attr.disabled]="(loading || imprimindoRelatorio || items.length === 0) ? 'disabled' : null"
+            [attr.title]="imprimindoRelatorio ? 'Carregando baixas do filtro…' : 'Imprimir fechamento com todas as baixas do filtro'">
+            <i class="fas" [ngClass]="imprimindoRelatorio ? 'fa-spinner fa-spin' : 'fa-print'"></i>
+            {{ imprimindoRelatorio ? 'Preparando…' : 'Imprimir' }}
           </button>
         </div>
         <p class="results-info" *ngIf="totalItems !== undefined">

@@ -60,6 +60,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
   items: Baixa[] = [];
   loading = false;
+  imprimindoRelatorio = false;
   error = '';
 
   // Paginação
@@ -67,6 +68,8 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   totalPages = 1;
   totalItems = 0;
   pageSize = 50;
+  /** Limite máximo aceito por `GET /baixas` (PaginationDto @Max(200)). */
+  private readonly reportPageSize = 200;
 
   // Filtros
   dataInicialFilter = '';
@@ -520,13 +523,77 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     return `${environment.apiUrl}/configuracao/logo`;
   }
 
-  imprimirRelatorio(): void {
-    if (this.items.length === 0) {
-      this.error = 'Nenhuma baixa disponível para imprimir.';
-      setTimeout(() => (this.error = ''), 3000);
+  async imprimirRelatorio(): Promise<void> {
+    if (this.imprimindoRelatorio || this.loading) {
+      return;
+    }
+    if (
+      this.dataInicialFilter &&
+      this.dataFinalFilter &&
+      this.dataInicialFilter > this.dataFinalFilter
+    ) {
+      this.error = 'A data inicial não pode ser maior que a data final.';
       return;
     }
 
+    this.imprimindoRelatorio = true;
+    this.error = '';
+    try {
+      const baixas = await this.carregarBaixasFiltradasParaRelatorio();
+      if (baixas.length === 0) {
+        this.error = 'Nenhuma baixa disponível para imprimir com os filtros aplicados.';
+        setTimeout(() => (this.error = ''), 4000);
+        return;
+      }
+      this.abrirRelatorioFechamento(baixas);
+    } catch {
+      this.error = 'Erro ao carregar baixas para o relatório. Tente novamente.';
+    } finally {
+      this.imprimindoRelatorio = false;
+    }
+  }
+
+  /**
+   * Busca todas as páginas de `GET /baixas` com os filtros de API
+   * (data/vendedor) e aplica os filtros locais (unidade, origem, etc.).
+   * O relatório de fechamento não fica restrito à página da grade.
+   */
+  private async carregarBaixasFiltradasParaRelatorio(): Promise<Baixa[]> {
+    const todas: Baixa[] = [];
+    let page = 1;
+    let totalPages = 1;
+
+    do {
+      const response = await firstValueFrom(
+        this.baixasService.getBaixas(this.buildApiFilters(page)),
+      );
+      todas.push(...(response.data ?? []));
+      totalPages = Math.max(1, response.meta?.totalPages ?? 1);
+      page += 1;
+    } while (page <= totalPages);
+
+    const enriquecidas = await this.enrichBaixasWithVendas(todas);
+    return this.applyLocalFilters(enriquecidas);
+  }
+
+  private buildApiFilters(page: number): FindBaixasDto {
+    const filters: FindBaixasDto = {
+      page,
+      limit: this.reportPageSize,
+    };
+    if (this.dataInicialFilter) {
+      filters.dataInicial = this.dataInicialFilter;
+    }
+    if (this.dataFinalFilter) {
+      filters.dataFinal = this.dataFinalFilter;
+    }
+    if (this.vendedorFilter.trim()) {
+      filters.vendedor = this.vendedorFilter.trim();
+    }
+    return filters;
+  }
+
+  private abrirRelatorioFechamento(baixas: Baixa[]): void {
     const popup = window.open('', '_blank', 'width=1024,height=768');
     if (!popup) {
       this.error = 'Não foi possível abrir o relatório. Verifique bloqueadores de pop-up.';
@@ -536,16 +603,16 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     const logoUrl = this.getLogoRelatorioUrl();
     const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="Logo do sistema" />` : '';
 
-    const agrupadosPorTipo = this.items.reduce<Record<string, number>>((acc, baixa) => {
+    const agrupadosPorTipo = baixas.reduce<Record<string, number>>((acc, baixa) => {
       const tipo = baixa.tipoDaBaixa || 'Não informado';
       acc[tipo] = (acc[tipo] || 0) + (baixa.valorBaixa || 0);
       return acc;
     }, {});
 
-    const totalGeral = this.items.reduce((total, baixa) => total + (baixa.valorBaixa || 0), 0);
+    const totalGeral = baixas.reduce((total, baixa) => total + (baixa.valorBaixa || 0), 0);
 
     const baixasPorOrigem = new Map<string, Baixa[]>();
-    this.items.forEach(baixa => {
+    baixas.forEach(baixa => {
       const origemLabel = this.getOrigemLabel(baixa.venda?.origem);
       if (!baixasPorOrigem.has(origemLabel)) {
         baixasPorOrigem.set(origemLabel, []);
