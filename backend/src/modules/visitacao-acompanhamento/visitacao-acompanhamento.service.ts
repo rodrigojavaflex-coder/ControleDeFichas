@@ -55,6 +55,7 @@ import {
   ultimoDiaUtilCompetencia,
   ymdHojeSp,
 } from './utils/visitacao-dias-uteis.util';
+import { normalizarDataIso } from '../../common/utils/data-date.util';
 
 const NOME_SEM_REPRESENTANTE = 'Sem representante';
 /** Hobby Render ~1,6 MB; o MATERIALIZED da busca aberta despeja em disco. */
@@ -267,6 +268,14 @@ export class VisitacaoAcompanhamentoService {
         (g) => g.nomeRepresentante !== NOME_SEM_REPRESENTANTE,
       );
       const rowsTx = this.asJsonArray<RowAgregado>(combined?.data);
+      await this.aplicarUnidadesComissaoNosCards(gruposTx);
+      await this.anexarMarcaPropria(
+        totaisPorRepresentanteTx,
+        totaisTx,
+        periodo,
+        dto.unidade ?? unidadePainel,
+        manager,
+      );
       const [caixaTx, rejeitadoLojaTx, indicacaoTx] = await Promise.all([
         this.consultarRecebidoCaixa(escopo, periodo, manager),
         this.consultarRejeitadoLoja(escopo, periodo, manager),
@@ -280,7 +289,6 @@ export class VisitacaoAcompanhamentoService {
               ),
             )
           : Promise.resolve(INDICACAO_VAZIA),
-        this.aplicarUnidadesComissaoNosCards(gruposTx),
         this.anexarDesempenho(
           totaisPorRepresentanteTx,
           totaisTx,
@@ -1120,9 +1128,14 @@ export class VisitacaoAcompanhamentoService {
         (g) => g.quantidadeComMeta > 0,
       ).length,
     };
-    if (totais.valorMeta && totais.valorMeta > 0) {
-      totais.percentualMeta = (totais.valorRecebido / totais.valorMeta) * 100;
-    }
+    await this.anexarMarcaPropria(
+      totaisPorRepresentante,
+      totais,
+      periodo,
+      fechamento.unidade,
+    );
+    // Competência fechada: meta/comissão ficam no retrato (congeladas na abertura
+    // desta feature sem MP). MP é exibida ao vivo só como parcela.
 
     return {
       data,
@@ -2001,6 +2014,9 @@ export class VisitacaoAcompanhamentoService {
       outrasUnidades: [],
       quantidadeMedicosPainel: 0,
       quantidadeMedicosForaAtendimento: 0,
+      valorMarcaPropria: 0,
+      quantidadeMarcaPropria: 0,
+      dataUltimoCaixaFechado: null,
       ...this.desempenhoBase(periodo),
     };
   }
@@ -2137,6 +2153,183 @@ export class VisitacaoAcompanhamentoService {
     return { ...acc, ...this.desempenhoBase(periodo) };
   }
 
+  /** Base oficial única: requisições + marca própria (RN-VIS-010 / RN-VIS-014). */
+  private baseOficialVisitacao(
+    card: Pick<
+      VisitacaoAcompanhamentoTotaisDto,
+      'valorRecebido' | 'valorMarcaPropria'
+    >,
+  ): number {
+    return this.round2(
+      Number(card.valorRecebido || 0) + Number(card.valorMarcaPropria || 0),
+    );
+  }
+
+  /**
+   * Marca própria (RN-VIS-014): produtos com CRM.
+   * TOTAL = loja; representante = CRM no painel × unidades de comissão.
+   */
+  private async anexarMarcaPropria(
+    grupos: VisitacaoAcompanhamentoTotaisRepresentanteDto[],
+    totais: VisitacaoAcompanhamentoTotaisDto,
+    periodo: PeriodoCompetencia,
+    unidadeFiltro: Unidade | null,
+    manager?: EntityManager,
+  ): Promise<void> {
+    totais.valorMarcaPropria = 0;
+    totais.quantidadeMarcaPropria = 0;
+    for (const g of grupos) {
+      g.valorMarcaPropria = 0;
+      g.quantidadeMarcaPropria = 0;
+    }
+
+    if (unidadeFiltro) {
+      const loja = await this.consultarMarcaPropriaLoja(
+        unidadeFiltro,
+        periodo,
+        manager,
+      );
+      totais.valorMarcaPropria = loja.valor;
+      totais.quantidadeMarcaPropria = loja.quantidade;
+    }
+
+    const comFunc = grupos.filter((g) => !!g.funcionarioId);
+    if (!comFunc.length) return;
+
+    const porFunc = await this.consultarMarcaPropriaPorRepresentante(
+      comFunc,
+      periodo,
+      manager,
+    );
+    for (const g of comFunc) {
+      const fid = g.funcionarioId!;
+      const mp = porFunc.get(fid);
+      g.valorMarcaPropria = mp?.valor ?? 0;
+      g.quantidadeMarcaPropria = mp?.quantidade ?? 0;
+    }
+  }
+
+  private async consultarMarcaPropriaLoja(
+    unidade: Unidade,
+    periodo: PeriodoCompetencia,
+    manager?: EntityManager,
+  ): Promise<{ valor: number; quantidade: number }> {
+    const runner = manager ?? this.dataSource;
+    const rows = (await runner.query(
+      `
+      SELECT
+        COALESCE(SUM(GREATEST(
+          0,
+          i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+        )), 0) AS valor,
+        COUNT(*)::int AS quantidade
+      FROM caixa_itens_erp i
+      WHERE i.unidade = $1
+        AND i.tipo_item = 'PRODUTO'
+        AND i.pagamento_id IS NOT NULL
+        AND i.data_operacao >= $2
+        AND i.data_operacao <= $3
+        AND NULLIF(BTRIM(i.crm_medico), '') IS NOT NULL
+        AND NULLIF(BTRIM(i.uf_crm_medico), '') IS NOT NULL
+      `,
+      [unidade, periodo.dataInicial, periodo.dataFinal],
+    )) as Array<{ valor: string | number; quantidade: string | number }>;
+    const row = rows[0];
+    return {
+      valor: this.round2(this.toNumber(row?.valor)),
+      quantidade: this.toNumber(row?.quantidade),
+    };
+  }
+
+  private async consultarMarcaPropriaPorRepresentante(
+    grupos: VisitacaoAcompanhamentoTotaisRepresentanteDto[],
+    periodo: PeriodoCompetencia,
+    manager?: EntityManager,
+  ): Promise<Map<string, { valor: number; quantidade: number }>> {
+    const resultado = new Map<string, { valor: number; quantidade: number }>();
+    const ids = grupos
+      .map((g) => g.funcionarioId)
+      .filter((id): id is string => !!id);
+    if (!ids.length) return resultado;
+
+    const funcionarios = await this.funcionarioRepository.find({
+      where: { id: In(ids) },
+    });
+    const funcPorId = new Map(funcionarios.map((f) => [f.id, f]));
+    const runner = manager ?? this.dataSource;
+
+    for (const g of grupos) {
+      const fid = g.funcionarioId;
+      if (!fid) continue;
+      const func = funcPorId.get(fid);
+      if (
+        !func ||
+        func.painelContratoRepresentante == null ||
+        func.painelCodigoRepresentante == null
+      ) {
+        continue;
+      }
+      const unidades = (g.unidadesComissao?.length
+        ? g.unidadesComissao
+        : [func.unidade]) as Unidade[];
+      if (!unidades.length) continue;
+
+      const rows = (await runner.query(
+        `
+        SELECT
+          COALESCE(SUM(GREATEST(
+            0,
+            i.valor_liquido_item - COALESCE(i.valor_desconto_varejo, 0)
+          )), 0) AS valor,
+          COUNT(*)::int AS quantidade
+        FROM caixa_itens_erp i
+        INNER JOIN painel_medicos_representantes p
+          ON p.unidade = $1
+         AND BTRIM(p."crmMedico") = BTRIM(i.crm_medico)
+         AND UPPER(BTRIM(p."ufCrmMedico")) = UPPER(BTRIM(i.uf_crm_medico))
+         AND p."contratoRepresentante" = $2
+         AND p."codigoRepresentante" = $3
+        WHERE i.unidade = ANY($4::varchar[])
+          AND i.tipo_item = 'PRODUTO'
+          AND i.pagamento_id IS NOT NULL
+          AND i.data_operacao >= $5
+          AND i.data_operacao <= $6
+          AND NULLIF(BTRIM(i.crm_medico), '') IS NOT NULL
+          AND NULLIF(BTRIM(i.uf_crm_medico), '') IS NOT NULL
+        `,
+        [
+          func.unidade,
+          func.painelContratoRepresentante,
+          func.painelCodigoRepresentante,
+          unidades,
+          periodo.dataInicial,
+          periodo.dataFinal,
+        ],
+      )) as Array<{ valor: string | number; quantidade: string | number }>;
+      const row = rows[0];
+      resultado.set(fid, {
+        valor: this.round2(this.toNumber(row?.valor)),
+        quantidade: this.toNumber(row?.quantidade),
+      });
+    }
+    return resultado;
+  }
+
+  private async obterUltimaDataCaixaConfirmado(
+    unidade: Unidade,
+  ): Promise<string | null> {
+    const row = await this.caixaFechamentoRepository
+      .createQueryBuilder('f')
+      .select("TO_CHAR(f.dataOperacao, 'YYYY-MM-DD')", 'data')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere('f.status = :status', {
+        status: CaixaFechamentoStatus.CONFIRMADO,
+      })
+      .orderBy('f.dataOperacao', 'DESC')
+      .getRawOne<{ data: string }>();
+    return normalizarDataIso(row?.data);
+  }
+
   private async anexarDesempenho(
     grupos: VisitacaoAcompanhamentoTotaisRepresentanteDto[],
     totais: VisitacaoAcompanhamentoTotaisDto,
@@ -2189,7 +2382,7 @@ export class VisitacaoAcompanhamentoService {
       unidades.add(unidadeFiltro);
     }
     const unidadesList = [...unidades];
-    const [calendarios, feriadosRows] = await Promise.all([
+    const [calendarios, feriadosRows, caixasPorUnidade] = await Promise.all([
       unidadesList.length
         ? this.calendarioRepository.find({
             where: { unidade: In(unidadesList) },
@@ -2205,6 +2398,12 @@ export class VisitacaoAcompanhamentoService {
             })
             .getMany()
         : Promise.resolve([]),
+      Promise.all(
+        unidadesList.map(async (u) => {
+          const data = await this.obterUltimaDataCaixaConfirmado(u);
+          return [u, data] as const;
+        }),
+      ),
     ]);
     const sabadoPorUnidade = new Map<Unidade, boolean>();
     for (const c of calendarios) {
@@ -2217,6 +2416,9 @@ export class VisitacaoAcompanhamentoService {
     for (const f of feriadosRows) {
       feriadosPorUnidade.get(f.unidade)?.add(f.data);
     }
+    const ultimoCaixaPorUnidade = new Map<Unidade, string | null>(
+      caixasPorUnidade,
+    );
 
     const duDe = (unidade: Unidade, ate: string): number => {
       const sabado = sabadoPorUnidade.get(unidade) ?? false;
@@ -2228,13 +2430,15 @@ export class VisitacaoAcompanhamentoService {
         feriados,
       );
     };
+    // Realizados = até o último caixa CONFIRMADO (igual comercial / RN-VIS-010).
     const realizadosDe = (unidade: Unidade): number => {
       const sabado = sabadoPorUnidade.get(unidade) ?? false;
       const feriados = feriadosPorUnidade.get(unidade) ?? new Set<string>();
+      const dataUltimoCaixa = ultimoCaixaPorUnidade.get(unidade) ?? null;
       return somarDiasRealizadosVisitacao(
         periodo.dataInicial,
         periodo.dataFinal,
-        hoje,
+        dataUltimoCaixa,
         sabado,
         feriados,
       );
@@ -2243,11 +2447,11 @@ export class VisitacaoAcompanhamentoService {
     for (const grupo of grupos) {
       const fid = grupo.funcionarioId;
       if (!fid) continue;
+      const base = this.baseOficialVisitacao(grupo);
       const meta = metaPorFunc.get(fid);
       if (meta != null) {
         grupo.valorMeta = meta;
-        grupo.percentualMeta =
-          meta > 0 ? (grupo.valorRecebido / meta) * 100 : null;
+        grupo.percentualMeta = meta > 0 ? (base / meta) * 100 : null;
         grupo.quantidadeRepresentantes = 1;
         grupo.quantidadeComMeta = 1;
       } else {
@@ -2257,18 +2461,16 @@ export class VisitacaoAcompanhamentoService {
       const unidadeRep = funcPorId.get(fid)?.unidade;
       if (!unidadeRep) continue;
       const duMes = duDe(unidadeRep, periodo.dataFinal);
-      const duDec = mesAberto ? duDe(unidadeRep, hoje) : duMes;
+      const dataCaixa = ultimoCaixaPorUnidade.get(unidadeRep) ?? null;
       const realizados = realizadosDe(unidadeRep);
       grupo.diasUteisMes = duMes;
-      grupo.diasUteisDecorridos = duDec;
+      grupo.diasUteisDecorridos = realizados;
       grupo.diasRealizados = realizados;
+      grupo.dataUltimoCaixaFechado = dataCaixa;
       if (mesAberto && realizados > 0) {
-        grupo.valorProjetado = this.round2(
-          (grupo.valorRecebido / realizados) * duMes,
-        );
+        grupo.valorProjetado = this.round2((base / realizados) * duMes);
         if (meta != null && meta > 0) {
-          grupo.percentualProjecao =
-            (grupo.valorProjetado / meta) * 100;
+          grupo.percentualProjecao = (grupo.valorProjetado / meta) * 100;
         }
       }
     }
@@ -2291,13 +2493,14 @@ export class VisitacaoAcompanhamentoService {
       for (const grupo of grupos) {
         const fid = grupo.funcionarioId;
         if (!fid) continue;
+        const base = this.baseOficialVisitacao(grupo);
         const lista = faixasPorFunc.get(fid) ?? [];
         if (grupo.percentualMeta != null) {
           const faixa = this.resolverFaixaComissao(lista, grupo.percentualMeta);
           if (faixa) {
             grupo.percentualComissaoFaixa = Number(faixa.percentualComissao);
             grupo.valorComissao = this.round2(
-              (grupo.valorRecebido * grupo.percentualComissaoFaixa) / 100,
+              (base * grupo.percentualComissaoFaixa) / 100,
             );
           }
         }
@@ -2327,8 +2530,9 @@ export class VisitacaoAcompanhamentoService {
     totais.quantidadeComMeta = comMeta.length;
     const somaMeta = comMeta.reduce((s, g) => s + (g.valorMeta ?? 0), 0);
     totais.valorMeta = comMeta.length ? somaMeta : null;
+    const baseTotais = this.baseOficialVisitacao(totais);
     totais.percentualMeta =
-      somaMeta > 0 ? (totais.valorRecebido / somaMeta) * 100 : null;
+      somaMeta > 0 ? (baseTotais / somaMeta) * 100 : null;
 
     const unidadesVinculo = [
       ...new Set(
@@ -2344,15 +2548,14 @@ export class VisitacaoAcompanhamentoService {
       null;
     if (unidadeCalendario) {
       const duMes = duDe(unidadeCalendario, periodo.dataFinal);
-      const duDec = mesAberto ? duDe(unidadeCalendario, hoje) : duMes;
+      const dataCaixa = ultimoCaixaPorUnidade.get(unidadeCalendario) ?? null;
       const realizados = realizadosDe(unidadeCalendario);
       totais.diasUteisMes = duMes;
-      totais.diasUteisDecorridos = duDec;
+      totais.diasUteisDecorridos = realizados;
       totais.diasRealizados = realizados;
+      totais.dataUltimoCaixaFechado = dataCaixa;
       if (mesAberto && realizados > 0) {
-        totais.valorProjetado = this.round2(
-          (totais.valorRecebido / realizados) * duMes,
-        );
+        totais.valorProjetado = this.round2((baseTotais / realizados) * duMes);
         if (totais.valorMeta != null && totais.valorMeta > 0) {
           totais.percentualProjecao =
             (totais.valorProjetado / totais.valorMeta) * 100;
@@ -2364,6 +2567,7 @@ export class VisitacaoAcompanhamentoService {
         totais.diasUteisMes = comDu.diasUteisMes;
         totais.diasUteisDecorridos = comDu.diasUteisDecorridos ?? null;
         totais.diasRealizados = comDu.diasRealizados ?? null;
+        totais.dataUltimoCaixaFechado = comDu.dataUltimoCaixaFechado ?? null;
       }
     }
   }

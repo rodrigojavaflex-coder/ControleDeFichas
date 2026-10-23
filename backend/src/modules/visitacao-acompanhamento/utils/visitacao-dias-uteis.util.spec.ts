@@ -68,7 +68,7 @@ describe('visitacao-dias-uteis', () => {
     ).toBe(0);
   });
 
-  it('dias realizados usam prévia até hoje (não corta no caixa confirmado)', () => {
+  it('dias realizados usam teto informado (ex. último caixa confirmado)', () => {
     const nenhum = new Set<string>();
     expect(
       somarDiasRealizadosVisitacao(

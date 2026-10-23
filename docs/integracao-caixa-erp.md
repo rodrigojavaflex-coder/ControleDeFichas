@@ -217,6 +217,10 @@ FC31100 (capa) + FC31600 (pagamento por forma)
 | valor_item_bruto | numeric | FC31110.VRTOT |
 | valor_item_liquido | numeric | FC31110.VRLIQ |
 | desconto_item | numeric | FC31110.VRDSC |
+| valor_desconto_varejo | numeric | FC31110.VRDSCV / VRDSCG (produto) |
+| codigo_setor | integer nullable | FC03000.SETOR (produto) |
+| crm_medico | varchar nullable | FC31110.NRCRM → FC31100 (só PRODUTO; RN-VIS-014) |
+| uf_crm_medico | varchar(2) nullable | FC31110.UFCRM → FC31100 |
 | chave_erp | varchar unique | `{cdfil}-{cdtml}-{dtope}-{operid}-{nrcpm}-{itemid}` |
 | importado_em / atualizado_em | timestamptz | upsert igual pagamentos |
 

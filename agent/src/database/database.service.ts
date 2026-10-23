@@ -1041,6 +1041,18 @@ export class DatabaseService {
             ELSE COALESCE(item.vrdscv, item.vrdscg, 0)
           END AS NUMERIC(15,2)
         ) AS valor_desconto_varejo,
+        CASE
+          WHEN req.nrrqu IS NOT NULL THEN NULL
+          WHEN COALESCE(item.nrcrm, 0) > 0 THEN CAST(item.nrcrm AS VARCHAR(20))
+          WHEN COALESCE(capa.nrcrm, 0) > 0 THEN CAST(capa.nrcrm AS VARCHAR(20))
+          ELSE NULL
+        END AS crm_medico,
+        CASE
+          WHEN req.nrrqu IS NOT NULL THEN NULL
+          WHEN COALESCE(item.nrcrm, 0) > 0 THEN TRIM(item.ufcrm)
+          WHEN COALESCE(capa.nrcrm, 0) > 0 THEN TRIM(capa.ufcrm)
+          ELSE NULL
+        END AS uf_crm_medico,
         COALESCE(pag_cupom.pagamento_cupom, 0) AS pagamento_cupom
       FROM fc31100 capa
       JOIN fc31110 item
@@ -1495,6 +1507,14 @@ export class DatabaseService {
       })(),
       desconto_item: Number(get('desconto_item') ?? 0),
       valor_desconto_varejo: Number(get('valor_desconto_varejo') ?? 0),
+      crm_medico:
+        get('crm_medico') != null && String(get('crm_medico')).trim()
+          ? String(get('crm_medico')).trim()
+          : null,
+      uf_crm_medico:
+        get('uf_crm_medico') != null && String(get('uf_crm_medico')).trim()
+          ? String(get('uf_crm_medico')).trim().toUpperCase()
+          : null,
       pagamento_cupom: Number(get('pagamento_cupom') ?? 0),
       chave_erp: `${filial}-${cdtml}-${data}-${operid}-${cupom}-${itemCupom}`,
     };

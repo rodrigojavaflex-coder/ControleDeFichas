@@ -98,6 +98,9 @@ interface AgenteCaixaItemRow {
   codigo_vendedor?: number | null;
   desconto_item: number;
   valor_desconto_varejo?: number;
+  /** FC31110 / capa — prescritor do produto (RN-VIS-014). */
+  crm_medico?: string | null;
+  uf_crm_medico?: string | null;
   pagamento_cupom: number;
 }
 
@@ -1115,6 +1118,14 @@ export class FechamentoCaixaService {
             : null,
         descontoItem: row.desconto_item,
         valorDescontoVarejo: Number(row.valor_desconto_varejo ?? 0),
+        crmMedico:
+          row.crm_medico != null && String(row.crm_medico).trim()
+            ? String(row.crm_medico).trim()
+            : null,
+        ufCrmMedico:
+          row.uf_crm_medico != null && String(row.uf_crm_medico).trim()
+            ? String(row.uf_crm_medico).trim().toUpperCase()
+            : null,
         valorLiquidoLinha: row.pagamento_cupom,
         atualizadoEm: new Date(),
       });

@@ -80,6 +80,9 @@ const TOTAIS_VAZIOS: VisitacaoAcompanhamentoTotais = {
   diasUteisMes: null,
   diasUteisDecorridos: null,
   diasRealizados: null,
+  dataUltimoCaixaFechado: null,
+  valorMarcaPropria: 0,
+  quantidadeMarcaPropria: 0,
   mesAberto: false,
   quantidadeRepresentantes: 0,
   quantidadeComMeta: 0,
@@ -1676,24 +1679,71 @@ export class VisitacaoAcompanhamentoPageComponent implements OnInit {
   }
 
   get rotuloDiasUteis(): string {
-    const mes =
-      this.totais.diasUteisMes ??
-      this.totaisPorRepresentante.find((c) => c.diasUteisMes != null)
-        ?.diasUteisMes;
+    const mes = this.diasUteisMesValor;
     if (mes == null) {
       return '';
     }
     return `${this.formatarDiasUteis(mes)} dias úteis`;
   }
 
-  get rotuloDiasRealizados(): string {
-    const realizados =
+  get diasUteisMesValor(): number | null {
+    return (
+      this.totais.diasUteisMes ??
+      this.totaisPorRepresentante.find((c) => c.diasUteisMes != null)
+        ?.diasUteisMes ??
+      null
+    );
+  }
+
+  get diasRealizadosValor(): number | null {
+    return (
       this.totais.diasRealizados ??
       this.totaisPorRepresentante.find((c) => c.diasRealizados != null)
-        ?.diasRealizados;
-    if (realizados == null) {
-      return '';
-    }
-    return `${this.formatarDiasUteis(realizados)} dias realizados`;
+        ?.diasRealizados ??
+      null
+    );
+  }
+
+  get dataUltimoCaixaFormatada(): string {
+    if (!this.unidadeFilter || this.loading) return '—';
+    const data =
+      this.totais.dataUltimoCaixaFechado ??
+      this.totaisPorRepresentante.find((c) => c.dataUltimoCaixaFechado)
+        ?.dataUltimoCaixaFechado;
+    return data ? this.formatarData(data) : '—';
+  }
+
+  get valorDiasUteis(): string {
+    return this.formatarDiasUteis(this.diasUteisMesValor);
+  }
+
+  get valorDiasRealizados(): string {
+    return this.formatarDiasUteis(this.diasRealizadosValor);
+  }
+
+  get valorDiasRestantes(): string {
+    const mes = this.diasUteisMesValor;
+    const realizados = this.diasRealizadosValor;
+    if (mes == null || realizados == null) return '—';
+    return this.formatarDiasUteis(
+      Math.max(0, Number(mes) - Number(realizados)),
+    );
+  }
+
+  valorMarcaPropriaCard(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return Number(card.valorMarcaPropria) || 0;
+  }
+
+  quantidadeMarcaPropriaCard(
+    card: VisitacaoAcompanhamentoTotaisRepresentante,
+  ): number {
+    return Number(card.quantidadeMarcaPropria) || 0;
+  }
+
+  /** Base oficial = requisições + marca própria (meta / projeção / comissão). */
+  valorBaseOficial(card: VisitacaoAcompanhamentoTotaisRepresentante): number {
+    return this.valorRecebidoTotal(card) + this.valorMarcaPropriaCard(card);
   }
 }

@@ -195,6 +195,26 @@ export class CaixaItemErp {
   })
   valorDescontoVarejo: number;
 
+  @ApiProperty({
+    required: false,
+    description:
+      'CRM do prescritor no item/capa (FC31110 → FC31100). Marca própria da visitação (RN-VIS-014). Nulo em requisição.',
+  })
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'crm_medico' })
+  crmMedico?: string | null;
+
+  @ApiProperty({
+    required: false,
+    description: 'UF do CRM do prescritor (FC31110 → FC31100).',
+  })
+  @Column({
+    type: 'varchar',
+    length: 2,
+    nullable: true,
+    name: 'uf_crm_medico',
+  })
+  ufCrmMedico?: string | null;
+
   @ApiProperty()
   @Column({
     type: 'numeric',

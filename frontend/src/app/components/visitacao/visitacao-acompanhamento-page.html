@@ -93,7 +93,7 @@
           (keyup.enter)="onFiltroChange()"
           (change)="onFiltroChange()" />
       </div>
-      <div class="filter-group">
+      <div class="filter-group visitacao-acomp-toolbar-painel">
         <label class="form-label" for="va-na-painel">No Painel</label>
         <select
           id="va-na-painel"
@@ -143,26 +143,40 @@
       <aside
         class="visitacao-acomp-du-legend"
         *ngIf="unidadeFilter && rotuloCompetenciaLegenda && rotuloDiasUteis"
-        aria-label="Competência, dias úteis e dias realizados">
-        <div class="visitacao-acomp-du-legend-head">
-          <strong>{{ rotuloCompetenciaLegenda }}</strong>
+        aria-label="Último caixa fechado, competência, dias úteis, realizados e que faltam">
+        <div class="visitacao-acomp-du-legend-caixa">
+          <span class="visitacao-acomp-du-legend-label">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            Último caixa fechado
+          </span>
+          <strong class="visitacao-acomp-du-legend-data">{{
+            dataUltimoCaixaFormatada
+          }}</strong>
+        </div>
+        <div class="visitacao-acomp-du-legend-dias" aria-label="Dias da competência">
+          <span class="visitacao-acomp-du-legend-comp">
+            {{ rotuloCompetenciaLegenda }}
+            <span
+              class="visitacao-acomp-status-badge"
+              [class.is-fechado]="competenciaFechada"
+              *ngIf="!loading">
+              {{ competenciaFechada ? 'Fechado' : 'Aberto' }}
+            </span>
+          </span>
+          <span class="visitacao-acomp-du-chip" title="Dias úteis do mês">
+            <em>{{ valorDiasUteis }}</em> úteis
+          </span>
           <span
-            class="visitacao-acomp-status-badge"
-            [class.is-fechado]="competenciaFechada"
-            *ngIf="!loading">
-            {{ competenciaFechada ? 'Fechado' : 'Aberto' }}
+            class="visitacao-acomp-du-chip"
+            title="Do início do mês até o último caixa fechado">
+            <em>{{ valorDiasRealizados }}</em> realizados
+          </span>
+          <span
+            class="visitacao-acomp-du-chip visitacao-acomp-du-chip-faltam"
+            title="Do último caixa fechado até o fim do mês">
+            <em>{{ valorDiasRestantes }}</em> faltam
           </span>
         </div>
-        <span class="visitacao-acomp-du-legend-dias">
-          {{ rotuloDiasUteis }}
-          <ng-container *ngIf="rotuloDiasRealizados">
-            · {{ rotuloDiasRealizados }}
-          </ng-container>
-        </span>
-        <span *ngIf="dataUltimoDiaUtil">
-          Último DU {{ formatarData(dataUltimoDiaUtil) }}
-          {{ caixaUltimoDiaUtilConfirmado ? '(caixa confirmado)' : '(caixa pendente)' }}
-        </span>
       </aside>
     </section>
 
@@ -208,7 +222,7 @@
             <div class="visitacao-acomp-card-head-end">
               <div class="visitacao-acomp-card-head-total">
                 <span class="label">Total recebido</span>
-                <strong>{{ formatarMoeda(isCardTotal(card) ? valorRecebidoGrandTotal(card) : valorRecebidoTotal(card)) }}</strong>
+                <strong>{{ formatarMoeda(isCardTotal(card) ? valorRecebidoGrandTotal(card) + valorMarcaPropriaCard(card) : valorBaseOficial(card)) }}</strong>
               </div>
               <div class="visitacao-acomp-card-head-total is-rejeitado" *ngIf="isCardTotal(card)">
                 <span class="label">Total rejeitado</span>
@@ -244,14 +258,21 @@
                 </div>
                 <div
                   class="visitacao-acomp-metric is-success is-total"
-                  title="Soma das unidades de comissão. Base de % meta, projeção e comissão.">
-                  <span class="label">Total</span>
+                  title="Requisições nas unidades de comissão.">
+                  <span class="label">Total requisições</span>
                   <span class="sub">{{ quantidadeRecebidoTotal(card) }} requisição(ões)</span>
                   <span class="value">{{ formatarMoeda(valorRecebidoTotal(card)) }}</span>
                 </div>
+                <div
+                  class="visitacao-acomp-metric is-marca-propria"
+                  title="Produtos com CRM no painel (RN-VIS-014). Entra na meta, projeção e comissão.">
+                  <span class="label">Marca própria</span>
+                  <span class="sub">{{ quantidadeMarcaPropriaCard(card) }} item(ns)</span>
+                  <span class="value">{{ formatarMoeda(valorMarcaPropriaCard(card)) }}</span>
+                </div>
                 <div class="visitacao-acomp-metric is-primary">
                   <span class="label">Representatividade</span>
-                  <span class="value" title="Participação no recebido do caixa da unidade do filtro">
+                  <span class="value" title="Participação no recebido do caixa da unidade do filtro (só requisições)">
                     {{ formatarRepresentatividade(card) }}
                   </span>
                 </div>
@@ -269,6 +290,13 @@
                       <span class="label">Recebido</span>
                       <span class="sub">{{ quantidadeRecebidoLoja(card) }} requisição(ões)</span>
                       <span class="value">{{ formatarMoeda(valorRecebidoLoja(card)) }}</span>
+                    </div>
+                    <div
+                      class="visitacao-acomp-metric is-marca-propria"
+                      title="Produtos com CRM na loja (RN-VIS-014).">
+                      <span class="label">Marca própria</span>
+                      <span class="sub">{{ quantidadeMarcaPropriaCard(card) }} item(ns)</span>
+                      <span class="value">{{ formatarMoeda(valorMarcaPropriaCard(card)) }}</span>
                     </div>
                     <div class="visitacao-acomp-metric is-rejeitado">
                       <span class="label">Rejeitado</span>
@@ -334,8 +362,11 @@
                     </h5>
                     <div class="visitacao-acomp-meta-body">
                       <div class="visitacao-acomp-meta-main">
-                        <span class="value">{{ formatarMoeda(valorRecebidoTotal(card)) }}</span>
+                        <span class="value">{{ formatarMoeda(valorBaseOficial(card)) }}</span>
                         <span class="sub">{{ temMeta(card) ? formatarPercentualMeta(card.percentualMeta) + ' da meta' : 'Sem meta' }}</span>
+                        <span class="sub" title="Requisições + marca própria">
+                          Req {{ formatarMoeda(valorRecebidoTotal(card)) }} · MP {{ formatarMoeda(valorMarcaPropriaCard(card)) }}
+                        </span>
                       </div>
                       <div class="visitacao-acomp-meta-ring-group" *ngIf="temMeta(card)">
                         <div

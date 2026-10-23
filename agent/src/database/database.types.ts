@@ -43,6 +43,9 @@ export interface CaixaItemRow {
   codigo_vendedor: number | null;
   desconto_item: number;
   valor_desconto_varejo: number;
+  /** Prescritor do produto (FC31110 → FC31100). Só em PRODUTO. */
+  crm_medico: string | null;
+  uf_crm_medico: string | null;
   pagamento_cupom: number;
   chave_erp: string;
 }

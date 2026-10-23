@@ -64,6 +64,9 @@ export interface VisitacaoAcompanhamentoTotais {
   diasUteisMes?: number | null;
   diasUteisDecorridos?: number | null;
   diasRealizados?: number | null;
+  dataUltimoCaixaFechado?: string | null;
+  valorMarcaPropria?: number;
+  quantidadeMarcaPropria?: number;
   mesAberto?: boolean;
   quantidadeRepresentantes?: number;
   quantidadeComMeta?: number;

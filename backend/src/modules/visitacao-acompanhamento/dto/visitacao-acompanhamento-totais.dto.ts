@@ -134,9 +134,26 @@ export class VisitacaoAcompanhamentoTotaisDto {
   @ApiPropertyOptional({
     nullable: true,
     description:
-      'Dias úteis até o último caixa CONFIRMADO da unidade (Fechado ou Bloqueado).',
+      'Dias úteis até o último caixa CONFIRMADO da unidade (RN-VIS-010).',
   })
   diasRealizados?: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Data do último caixa CONFIRMADO da unidade (YYYY-MM-DD).',
+  })
+  dataUltimoCaixaFechado?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Marca própria: produtos com CRM (RN-VIS-014). Parcela exibida à parte; entra na base única de meta/projeção/comissão.',
+  })
+  valorMarcaPropria?: number;
+
+  @ApiPropertyOptional({
+    description: 'Quantidade de itens de marca própria (produtos com CRM).',
+  })
+  quantidadeMarcaPropria?: number;
 
   @ApiProperty()
   mesAberto: boolean;
