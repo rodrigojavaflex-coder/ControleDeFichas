@@ -55,6 +55,8 @@ export class ComercialVendedorCardComponent {
   @Input({ required: true }) item!: ComercialAcompanhamentoItem;
   @Input() podeVerComissao = false;
   @Input() mostrarAcompanhamento = false;
+  /** Exibe “Último caixa fechado” no cabeçalho do card (home). */
+  @Input() mostrarUltimoCaixa = false;
   @Input() competencia = '';
   @Input() unidade = '';
 
@@ -88,6 +90,10 @@ export class ComercialVendedorCardComponent {
 
   get titulo(): string {
     return this.rotuloVendedor(this.item);
+  }
+
+  get dataUltimoCaixaFormatada(): string {
+    return this.formatarData(this.item.dataUltimoCaixaFechado);
   }
 
   temAnaliseDoDia(): boolean {

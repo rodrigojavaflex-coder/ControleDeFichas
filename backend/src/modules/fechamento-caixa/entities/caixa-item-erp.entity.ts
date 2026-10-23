@@ -158,6 +158,18 @@ export class CaixaItemErp {
   })
   codigoSetor?: number | null;
 
+  @ApiProperty({
+    required: false,
+    description:
+      'Vendedor prévio da requisição (FC12100.CDFUNRE série 0). Usado no comercial "Vendido hoje" enquanto não há FC17000.',
+  })
+  @Column({
+    type: 'integer',
+    nullable: true,
+    name: 'codigo_vendedor_erp',
+  })
+  codigoVendedorErp?: number | null;
+
   @ApiProperty()
   @Column({
     type: 'numeric',

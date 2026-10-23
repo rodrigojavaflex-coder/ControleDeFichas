@@ -39,6 +39,8 @@ export interface CaixaItemRow {
   valor_item_liquido: number;
   valor_taxa: number;
   codigo_setor: number | null;
+  /** FC12100.CDFUNRE (série 0) — vendedor prévio no dia aberto (comercial "Vendido hoje"). */
+  codigo_vendedor: number | null;
   desconto_item: number;
   valor_desconto_varejo: number;
   pagamento_cupom: number;

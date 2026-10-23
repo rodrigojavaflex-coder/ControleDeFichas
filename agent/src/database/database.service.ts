@@ -1030,6 +1030,10 @@ export class DatabaseService {
           WHEN prod.setor IS NULL OR TRIM(prod.setor) = '' THEN NULL
           ELSE CAST(TRIM(prod.setor) AS INTEGER)
         END AS codigo_setor,
+        CASE
+          WHEN req.nrrqu IS NULL THEN NULL
+          ELSE vend_req.codigo_vendedor
+        END AS codigo_vendedor,
         item.vrdsc AS desconto_item,
         CAST(
           CASE
@@ -1070,6 +1074,19 @@ export class DatabaseService {
        AND req.operid = item.operid
        AND req.nrcpm = item.nrcpm
        AND req.itemid = item.itemid
+      LEFT JOIN (
+        SELECT
+          f.nrrqu,
+          COALESCE(
+            MAX(CASE WHEN TRIM(f.serier) = '0' AND COALESCE(f.cdfunre, 0) > 0 THEN f.cdfunre END),
+            MAX(CASE WHEN COALESCE(f.cdfunre, 0) > 0 THEN f.cdfunre END)
+          ) AS codigo_vendedor
+        FROM fc12100 f
+        WHERE f.cdfil = ?
+        GROUP BY f.nrrqu
+      ) vend_req
+        ON req.nrrqu IS NOT NULL
+       AND vend_req.nrrqu = req.nrrqu
       LEFT JOIN fc03000 prod
         ON prod.cdpro = item.cdpro
       WHERE capa.cdfil = ?
@@ -1077,7 +1094,7 @@ export class DatabaseService {
       ORDER BY capa.dtope, capa.nrcpm, item.itemid
     `;
 
-    return { sql, params: [unit, start, end, unit, start, end] };
+    return { sql, params: [unit, start, end, unit, unit, start, end] };
   }
 
   private buildCaixaRequisicoesPagasQuery(
@@ -1466,6 +1483,12 @@ export class DatabaseService {
       valor_taxa: Number(get('valor_taxa') ?? 0),
       codigo_setor: (() => {
         const raw = get('codigo_setor');
+        if (raw == null || raw === '') return null;
+        const n = Number(raw);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      })(),
+      codigo_vendedor: (() => {
+        const raw = get('codigo_vendedor');
         if (raw == null || raw === '') return null;
         const n = Number(raw);
         return Number.isFinite(n) && n > 0 ? n : null;

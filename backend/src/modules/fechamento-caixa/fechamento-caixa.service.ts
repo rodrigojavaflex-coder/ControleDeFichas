@@ -94,6 +94,8 @@ interface AgenteCaixaItemRow {
   valor_item_liquido: number;
   valor_taxa?: number;
   codigo_setor?: number | null;
+  /** FC12100.CDFUNRE — prévia de vendedor no dia aberto. */
+  codigo_vendedor?: number | null;
   desconto_item: number;
   valor_desconto_varejo?: number;
   pagamento_cupom: number;
@@ -1106,6 +1108,10 @@ export class FechamentoCaixaService {
         codigoSetor:
           row.codigo_setor != null && Number(row.codigo_setor) > 0
             ? Number(row.codigo_setor)
+            : null,
+        codigoVendedorErp:
+          row.codigo_vendedor != null && Number(row.codigo_vendedor) > 0
+            ? Number(row.codigo_vendedor)
             : null,
         descontoItem: row.desconto_item,
         valorDescontoVarejo: Number(row.valor_desconto_varejo ?? 0),

@@ -395,7 +395,7 @@ export class ComercialAcompanhamentoService {
         tercLojaHoje,
         tercPorCodHoje,
       ] = await Promise.all([
-        this.buscarRecebidoRequisicao(dto.unidade, hoje, hoje),
+        this.buscarRecebidoRequisicaoHoje(dto.unidade, hoje),
         this.buscarRecebidoMarcaPropria(dto.unidade, hoje, hoje),
         this.buscarRecebidoRevendaManipulados(dto.unidade, hoje, hoje),
         this.buscarVolumeLoja(
@@ -615,9 +615,14 @@ export class ComercialAcompanhamentoService {
             AND i.data_operacao >= $2
             AND i.data_operacao <= $3
             AND p.codigo_operador_caixa = $4
+            ${
+              setoresRevenda.length
+                ? `AND (i.codigo_setor IS NULL OR NOT (i.codigo_setor = ANY($5::int[])))`
+                : ''
+            }
           ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
         `,
-            paramsMp,
+            setoresRevenda.length ? [...paramsMp, setoresRevenda] : paramsMp,
           ) as Promise<
             Array<{
               data: string | Date;
@@ -895,9 +900,14 @@ export class ComercialAcompanhamentoService {
             AND i.unidade = $1
             AND i.data_operacao >= $2
             AND i.data_operacao <= $3
+            ${
+              setoresRevenda.length
+                ? `AND (i.codigo_setor IS NULL OR NOT (i.codigo_setor = ANY($4::int[])))`
+                : ''
+            }
           ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
         `,
-            paramsMp,
+            setoresRevenda.length ? [...paramsMp, setoresRevenda] : paramsMp,
           ) as Promise<
             Array<{
               data: string | Date;
@@ -1255,6 +1265,103 @@ export class ComercialAcompanhamentoService {
   }
 
   /**
+   * "Vendido hoje" Manipulados: regra oficial (paga) + prévia do cupom aberto
+   * (item REQUISICAO com codigo_vendedor_erp / FC12100.CDFUNRE), sem duplicar
+   * req que já entrou pela paga (RN-COM-003).
+   */
+  private async buscarRecebidoRequisicaoHoje(
+    unidade: Unidade,
+    hoje: string,
+  ): Promise<MapaMovimento> {
+    const [oficial, previa] = await Promise.all([
+      this.buscarRecebidoRequisicao(unidade, hoje, hoje),
+      this.buscarRecebidoRequisicaoPreviaCupom(unidade, hoje, hoje),
+    ]);
+    return this.mesclarMapaMovimento(oficial, previa);
+  }
+
+  /**
+   * Prévia operacional: itens REQUISICAO do dia com pagamento e
+   * `codigo_vendedor_erp`, ainda sem paga útil em `caixa_requisicoes_pagas`.
+   */
+  private async buscarRecebidoRequisicaoPreviaCupom(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinal: string,
+  ): Promise<MapaMovimento> {
+    const sql = `
+      WITH por_req AS (
+        SELECT
+          i.codigo_vendedor_erp AS codigo_vendedor,
+          i.numero_cupom,
+          i.numero_requisicao,
+          GREATEST(
+            0,
+            SUM(i.valor_liquido_item - COALESCE(i.valor_taxa, 0))
+          ) AS valor_recebido,
+          COUNT(*)::int AS qtd_formulas
+        FROM caixa_itens_erp i
+        INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+        WHERE i.tipo_item = 'REQUISICAO'
+          AND i.unidade = $1
+          AND i.numero_requisicao IS NOT NULL
+          AND i.data_operacao >= $2
+          AND i.data_operacao <= $3
+          AND i.codigo_vendedor_erp IS NOT NULL
+          AND i.codigo_vendedor_erp > 0
+          AND NOT EXISTS (
+            SELECT 1
+            FROM caixa_requisicoes_pagas c0
+            WHERE c0.unidade = i.unidade
+              AND c0.numero_requisicao = i.numero_requisicao
+              AND c0.codigo_vendedor IS NOT NULL
+              AND c0.codigo_vendedor > 0
+              AND COALESCE(c0.tipo_requisicao, '') <> 'C'
+          )
+        GROUP BY i.codigo_vendedor_erp, i.numero_cupom, i.numero_requisicao
+      )
+      SELECT codigo_vendedor,
+             NULL::text AS nome_vendedor,
+             SUM(valor_recebido) AS valor,
+             COUNT(*) AS qtd,
+             SUM(qtd_formulas) AS qtd_formulas
+      FROM por_req
+      GROUP BY codigo_vendedor
+    `;
+    const rows = (await this.dataSource.query(sql, [
+      unidade,
+      dataInicial,
+      dataFinal,
+    ])) as MovimentoRow[];
+    return this.mapMovimentoRows(rows);
+  }
+
+  private mesclarMapaMovimento(
+    base: MapaMovimento,
+    extra: MapaMovimento,
+  ): MapaMovimento {
+    const out: MapaMovimento = new Map(base);
+    for (const [codigo, mov] of extra) {
+      const atual = out.get(codigo);
+      if (!atual) {
+        out.set(codigo, { ...mov });
+        continue;
+      }
+      out.set(codigo, {
+        nome: atual.nome || mov.nome,
+        valor: this.round2(atual.valor + mov.valor),
+        qtd: atual.qtd + mov.qtd,
+        qtdFormulas: atual.qtdFormulas + mov.qtdFormulas,
+        valorSetores: this.round2(
+          (atual.valorSetores ?? 0) + (mov.valorSetores ?? 0),
+        ),
+        qtdSetores: (atual.qtdSetores ?? 0) + (mov.qtdSetores ?? 0),
+      });
+    }
+    return out;
+  }
+
+  /**
    * Revenda (PRODUTO) dos setores da política de Manipulados do vendedor.
    * Lista vazia na política = não entra (RN-COM-003).
    */
@@ -1324,6 +1431,17 @@ export class ComercialAcompanhamentoService {
     revendaManipulados: { valor: number; qtd: number };
   }> {
     const paramsPeriodo = [unidade, dataInicial, dataTeto];
+    const excluirRevendaSql =
+      setoresRevendaManipulados.length > 0
+        ? ` AND (i.codigo_setor IS NULL OR NOT (i.codigo_setor = ANY($4::int[])))`
+        : '';
+    const paramsMpTotal =
+      setoresRevendaManipulados.length > 0
+        ? [...paramsPeriodo, setoresRevendaManipulados]
+        : paramsPeriodo;
+    const setoresMpEfetivos = setoresUnidade.filter(
+      (s) => !setoresRevendaManipulados.includes(s),
+    );
     const [mpRows, mpSetoresRows, revendaRows] = await Promise.all([
       this.dataSource.query(
         `
@@ -1344,12 +1462,13 @@ export class ComercialAcompanhamentoService {
             AND i.unidade = $1
             AND i.data_operacao >= $2
             AND i.data_operacao <= $3
+            ${excluirRevendaSql}
         `,
-        paramsPeriodo,
+        paramsMpTotal,
       ) as Promise<
         Array<{ valor: string | number | null; qtd: string | number | null }>
       >,
-      setoresUnidade.length
+      setoresMpEfetivos.length
         ? (this.dataSource.query(
             `
               SELECT
@@ -1371,7 +1490,7 @@ export class ComercialAcompanhamentoService {
                 AND i.data_operacao <= $3
                 AND i.codigo_setor = ANY($4::int[])
             `,
-            [...paramsPeriodo, setoresUnidade],
+            [...paramsPeriodo, setoresMpEfetivos],
           ) as Promise<
             Array<{
               valor: string | number | null;
@@ -1430,6 +1549,8 @@ export class ComercialAcompanhamentoService {
     dataInicial: string,
     dataFinal: string,
   ): Promise<MapaMovimento> {
+    // Setores em codigosSetorRevendaManipulados somam só em Manipulados
+    // (setor) — ficam fora do total/setores/outros de Marca própria (RN-COM-003).
     const sql = `
       SELECT p.codigo_operador_caixa AS codigo_vendedor,
              MAX(p.nome_operador_caixa) AS nome_vendedor,
@@ -1472,10 +1593,18 @@ export class ComercialAcompanhamentoService {
       LEFT JOIN comercial_comissao_politica pol
         ON pol."funcionarioId" = f.id
        AND pol."tipoBase" = 'MARCA_PROPRIA'
+      LEFT JOIN comercial_comissao_politica pol_req
+        ON pol_req."funcionarioId" = f.id
+       AND pol_req."tipoBase" = 'REQUISICAO'
       WHERE i.tipo_item = 'PRODUTO'
         AND i.unidade = $1
         AND i.data_operacao >= $2
         AND i.data_operacao <= $3
+        AND NOT (
+          COALESCE(cardinality(pol_req."codigosSetorRevendaManipulados"), 0) > 0
+          AND i.codigo_setor IS NOT NULL
+          AND i.codigo_setor = ANY(pol_req."codigosSetorRevendaManipulados")
+        )
       GROUP BY p.codigo_operador_caixa
     `;
     const rows = (await this.dataSource.query(sql, [
@@ -1776,6 +1905,7 @@ export class ComercialAcompanhamentoService {
       item.mesAberto = mesAberto;
       item.diasUteisMes = duMes;
       item.diasRealizados = realizados;
+      item.dataUltimoCaixaFechado = dataUltimoCaixa;
       const fid = item.funcionarioId;
       if (!fid) continue;
 

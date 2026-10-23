@@ -5,6 +5,20 @@
         {{ titulo }}
         <i class="fas fa-user comercial-acomp-card-tipo-icon" aria-hidden="true" title="Vendedor"></i>
       </h3>
+      @if (mostrarUltimoCaixa) {
+        <div
+          class="comercial-acomp-card-ultimo-caixa"
+          title="Último caixa CONFIRMADO da unidade"
+          aria-label="Último caixa fechado da unidade">
+          <span class="comercial-acomp-card-ultimo-caixa-label">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            Último caixa fechado
+          </span>
+          <strong class="comercial-acomp-card-ultimo-caixa-data">{{
+            dataUltimoCaixaFormatada
+          }}</strong>
+        </div>
+      }
       @if (item.rankingManipulados != null || item.rankingMarcaPropria != null) {
         <div class="comercial-acomp-ranking-badges" aria-label="Ranking na unidade">
           @if (item.rankingManipulados != null) {
