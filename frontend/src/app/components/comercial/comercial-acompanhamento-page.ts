@@ -502,6 +502,52 @@ export class ComercialAcompanhamentoPage implements OnInit {
     );
   }
 
+  /** Soma das projeções (só faz sentido com competência aberta). */
+  valorTotalProjetado(card: {
+    valorProjetadoRequisicao?: number | null;
+    valorProjetadoMarcaPropria?: number | null;
+  }): number {
+    return (
+      Number(card.valorProjetadoRequisicao || 0) +
+      Number(card.valorProjetadoMarcaPropria || 0)
+    );
+  }
+
+  /**
+   * Meta total da loja = soma das metas cadastradas das duas bases.
+   * Sem nenhuma meta → null (Sem meta). Só uma → valor parcial coerente.
+   */
+  valorMetaTotalGeral(card: {
+    valorMetaRequisicao?: number | null;
+    valorMetaMarcaPropria?: number | null;
+  }): number | null {
+    const temReq = this.temMetaCadastrada(card.valorMetaRequisicao);
+    const temMp = this.temMetaCadastrada(card.valorMetaMarcaPropria);
+    if (!temReq && !temMp) return null;
+    return (
+      (temReq ? Number(card.valorMetaRequisicao) : 0) +
+      (temMp ? Number(card.valorMetaMarcaPropria) : 0)
+    );
+  }
+
+  /** True quando exatamente uma das duas bases tem meta (exibe como parcial). */
+  metaTotalGeralParcial(card: {
+    valorMetaRequisicao?: number | null;
+    valorMetaMarcaPropria?: number | null;
+  }): boolean {
+    const temReq = this.temMetaCadastrada(card.valorMetaRequisicao);
+    const temMp = this.temMetaCadastrada(card.valorMetaMarcaPropria);
+    return (temReq && !temMp) || (!temReq && temMp);
+  }
+
+  percentualSobreMetaTotal(
+    valor: number | null | undefined,
+    meta: number | null | undefined,
+  ): number | null {
+    if (!this.temMetaCadastrada(meta)) return null;
+    return (Number(valor || 0) / Number(meta)) * 100;
+  }
+
   rotuloVendedor(item: {
     nomeVendedor: string;
     codigoVendedorErp: number | null;

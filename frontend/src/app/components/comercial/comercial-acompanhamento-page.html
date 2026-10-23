@@ -395,7 +395,57 @@
     </button>
     @if (cardBlocoAberto(card, 'metas')) {
     <div class="comercial-acomp-bloco-corpo">
-    <div class="comercial-acomp-bases">
+    <div class="comercial-acomp-bases" [class.has-total-geral]="card.isTotal">
+      @if (card.isTotal) {
+        <section class="comercial-acomp-base is-total-geral">
+          <header class="comercial-acomp-base-head">
+            <h4>
+              <span class="comercial-acomp-base-mark is-neutro" aria-hidden="true"></span>
+              Total geral
+            </h4>
+            <p class="comercial-acomp-base-meta">
+              {{ metaTotalGeralParcial(card) ? 'Meta (parcial)' : 'Meta' }}
+              <strong>
+                {{ temMetaCadastrada(valorMetaTotalGeral(card))
+                  ? formatarMoeda(valorMetaTotalGeral(card))
+                  : 'Sem meta' }}
+              </strong>
+            </p>
+          </header>
+          <div class="comercial-acomp-meta-cols" [class.has-projecao]="card.mesAberto">
+            <ng-container
+              *ngTemplateOutlet="colunaMeta; context: {
+                titulo: 'Realizado',
+                valor: valorTotalRecebido(card),
+                percentual: percentualSobreMetaTotal(valorTotalRecebido(card), valorMetaTotalGeral(card)),
+                meta: valorMetaTotalGeral(card),
+                comissao: null,
+                bonus: null,
+                faixa: null,
+                mostrarComissao: false,
+                projetado: false,
+                card: card,
+                baseTipo: null
+              }"></ng-container>
+            @if (card.mesAberto) {
+              <ng-container
+                *ngTemplateOutlet="colunaMeta; context: {
+                  titulo: 'Projetado',
+                  valor: valorTotalProjetado(card),
+                  percentual: percentualSobreMetaTotal(valorTotalProjetado(card), valorMetaTotalGeral(card)),
+                  meta: valorMetaTotalGeral(card),
+                  comissao: null,
+                  bonus: null,
+                  faixa: null,
+                  mostrarComissao: false,
+                  projetado: true,
+                  card: card,
+                  baseTipo: null
+                }"></ng-container>
+            }
+          </div>
+        </section>
+      }
       <section class="comercial-acomp-base is-manip">
         <header class="comercial-acomp-base-head">
           <h4>

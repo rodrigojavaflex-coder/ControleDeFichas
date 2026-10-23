@@ -253,7 +253,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 0.85rem;
   align-items: stretch;
-  max-width: 1080px;
+  max-width: 1360px;
   margin: 0 auto;
 }
 
@@ -880,6 +880,11 @@
   margin-top: 0;
 }
 
+/* Card TOTAL: Total geral + Manipulados + Marca própria na mesma linha */
+.comercial-acomp-bases.has-total-geral {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .comercial-acomp-base {
   display: flex;
   flex-direction: column;
@@ -899,6 +904,11 @@
 .comercial-acomp-base.is-marca {
   background: transparent;
   border-color: color-mix(in srgb, var(--cor-primaria, #2563eb) 22%, var(--cor-borda, #e2e8f0));
+}
+
+.comercial-acomp-base.is-total-geral {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--text-secondary, #64748b) 28%, var(--cor-borda, #e2e8f0));
 }
 
 .comercial-acomp-base h4 {
@@ -927,6 +937,10 @@
 
 .comercial-acomp-base-mark.is-azul {
   background: var(--cor-primaria, var(--color-primary, #2563eb));
+}
+
+.comercial-acomp-base-mark.is-neutro {
+  background: var(--text-secondary, #64748b);
 }
 
 .comercial-acomp-base-head {
@@ -989,6 +1003,10 @@
   border-color: color-mix(in srgb, var(--cor-primaria, #2563eb) 28%, var(--cor-borda, #e2e8f0));
 }
 
+.comercial-acomp-base.is-total-geral .comercial-acomp-meta-col.is-projetado {
+  border-color: color-mix(in srgb, var(--text-secondary, #64748b) 28%, var(--cor-borda, #e2e8f0));
+}
+
 .comercial-acomp-meta-col h5 {
   display: flex;
   flex-wrap: wrap;
@@ -1029,6 +1047,15 @@
 
 .comercial-acomp-base.is-marca .comercial-acomp-base-meta strong {
   color: var(--cor-primaria, var(--color-primary, #2563eb));
+}
+
+.comercial-acomp-base.is-total-geral .comercial-acomp-meta-col h5 {
+  color: var(--text-primary, #0f172a);
+}
+
+.comercial-acomp-base.is-total-geral .comercial-acomp-meta-col .value,
+.comercial-acomp-base.is-total-geral .comercial-acomp-base-meta strong {
+  color: var(--text-primary, #0f172a);
 }
 
 .comercial-acomp-meta-body {
@@ -1559,9 +1586,25 @@ body.theme-dark .comercial-acomp-base.is-marca .comercial-acomp-analise-metric .
 body.theme-dark .comercial-acomp-base,
 [data-theme='dark'] .comercial-acomp-base,
 body.theme-dark .comercial-acomp-base.is-marca,
-[data-theme='dark'] .comercial-acomp-base.is-marca {
+[data-theme='dark'] .comercial-acomp-base.is-marca,
+body.theme-dark .comercial-acomp-base.is-total-geral,
+[data-theme='dark'] .comercial-acomp-base.is-total-geral {
   background: transparent;
   border-color: var(--cor-borda, #334155);
+}
+
+body.theme-dark .comercial-acomp-base-mark.is-neutro,
+[data-theme='dark'] .comercial-acomp-base-mark.is-neutro {
+  background: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .comercial-acomp-base.is-total-geral .comercial-acomp-meta-col h5,
+[data-theme='dark'] .comercial-acomp-base.is-total-geral .comercial-acomp-meta-col h5,
+body.theme-dark .comercial-acomp-base.is-total-geral .comercial-acomp-meta-col .value,
+[data-theme='dark'] .comercial-acomp-base.is-total-geral .comercial-acomp-meta-col .value,
+body.theme-dark .comercial-acomp-base.is-total-geral .comercial-acomp-base-meta strong,
+[data-theme='dark'] .comercial-acomp-base.is-total-geral .comercial-acomp-base-meta strong {
+  color: var(--text-primary, #e2e8f0);
 }
 
 body.theme-dark .comercial-acomp-base-meta strong,
@@ -2310,6 +2353,7 @@ body.theme-dark .comercial-acomp-card-detalhe-btn,
   .comercial-acomp-card-metrics,
   .comercial-acomp-card-metrics.has-rejeitado,
   .comercial-acomp-bases,
+  .comercial-acomp-bases.has-total-geral,
   .comercial-acomp-meta-cols.has-projecao {
     grid-template-columns: 1fr;
   }
