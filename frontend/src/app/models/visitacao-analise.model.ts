@@ -3,6 +3,7 @@ import { VisitacaoPainelMedicoRepresentante } from './visitacao-painel-medico.mo
 
 export type VisitacaoAnaliseNaCarteira = 'todos' | 'sim' | 'nao';
 export type VisitacaoAnaliseModo = 'comparar' | 'ranking' | 'evolucao';
+export type VisitacaoAnaliseMetrica = 'valor' | 'quantidade' | 'ticketMedio';
 
 export interface VisitacaoAnaliseCompetencia {
   key: string;
@@ -35,6 +36,8 @@ export interface FindVisitacaoAnaliseOpcoesDto {
 
 export interface FindVisitacaoAnaliseDto {
   modo?: VisitacaoAnaliseModo;
+  /** valor | quantidade | ticketMedio — campos valor* carregam a métrica. */
+  metrica?: VisitacaoAnaliseMetrica;
   /** Competência base YYYY-MM (modo comparar). */
   c1?: string;
   /** Competência referência YYYY-MM (modo comparar). */
@@ -78,6 +81,7 @@ export interface VisitacaoAnaliseResponse {
     nomeMedico: string | null;
     nomesMedico: string[];
     naCarteira: VisitacaoAnaliseNaCarteira;
+    metrica: VisitacaoAnaliseMetrica;
   };
   crescimento: VisitacaoAnaliseMedico[];
   queda: VisitacaoAnaliseMedico[];

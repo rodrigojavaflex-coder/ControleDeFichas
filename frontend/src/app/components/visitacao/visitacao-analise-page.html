@@ -64,6 +64,20 @@
             </select>
           </div>
 
+          <div class="filter-group visitacao-analise-metrica">
+            <label class="form-label" for="va-analise-metrica">Métrica</label>
+            <select
+              id="va-analise-metrica"
+              class="form-control"
+              [ngModel]="metrica"
+              [disabled]="!unidadeFilter || loadingOpcoes"
+              (ngModelChange)="onMetricaChange($event)">
+              <option value="valor">Valor</option>
+              <option value="quantidade">Qnt</option>
+              <option value="ticketMedio">Ticket médio</option>
+            </select>
+          </div>
+
           <div class="filter-group visitacao-analise-qnt">
             <label class="form-label" for="va-analise-qnt">Qnt</label>
             <select

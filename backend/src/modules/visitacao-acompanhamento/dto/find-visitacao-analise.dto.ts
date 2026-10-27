@@ -25,6 +25,14 @@ export const VISITACAO_ANALISE_MODOS = [
 ] as const;
 export type VisitacaoAnaliseModo = (typeof VISITACAO_ANALISE_MODOS)[number];
 
+/** Métrica da análise: campos valorMes*, valorPeriodo e serie passam a carregar esta medida. */
+export const VISITACAO_ANALISE_METRICAS = [
+  'valor',
+  'quantidade',
+  'ticketMedio',
+] as const;
+export type VisitacaoAnaliseMetrica = (typeof VISITACAO_ANALISE_METRICAS)[number];
+
 /** Chave de competência YYYY-MM (ex.: 2025-12). */
 export const COMPETENCIA_KEY_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -118,6 +126,16 @@ export class FindVisitacaoAnaliseDto {
   @IsOptional()
   @IsIn(VISITACAO_ANALISE_MODOS)
   modo?: VisitacaoAnaliseModo = 'comparar';
+
+  @ApiPropertyOptional({
+    enum: VISITACAO_ANALISE_METRICAS,
+    default: 'valor',
+    description:
+      'Métrica das grades/Δ/série: valor (R$), quantidade (qtd) ou ticketMedio (valor÷qtd).',
+  })
+  @IsOptional()
+  @IsIn(VISITACAO_ANALISE_METRICAS)
+  metrica?: VisitacaoAnaliseMetrica = 'valor';
 
   @ApiPropertyOptional({
     example: '2025-12',

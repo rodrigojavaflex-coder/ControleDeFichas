@@ -11,6 +11,7 @@ import {
   FindVisitacaoAnaliseDto,
   FindVisitacaoAnaliseOpcoesDto,
   VisitacaoAnaliseCompetenciaRef,
+  VisitacaoAnaliseMetrica,
   VisitacaoAnaliseModo,
   parseCompetenciaKey,
 } from './dto/find-visitacao-analise.dto';
@@ -45,8 +46,12 @@ type AgregadoComparativoRow = {
   nome_representante: string | null;
   recebido_mes1: string | number;
   recebido_mes2: string | number;
+  qtd_recebido_mes1: string | number;
+  qtd_recebido_mes2: string | number;
   rejeitado_mes1: string | number;
   rejeitado_mes2: string | number;
+  qtd_rejeitado_mes1: string | number;
+  qtd_rejeitado_mes2: string | number;
 };
 
 type AgregadoRankingRow = {
@@ -55,7 +60,9 @@ type AgregadoRankingRow = {
   nome_medico: string;
   nome_representante: string | null;
   recebido_periodo: string | number;
+  qtd_recebido_periodo: string | number;
   rejeitado_periodo: string | number;
+  qtd_rejeitado_periodo: string | number;
 };
 
 type AgregadoEvolucaoRow = {
@@ -66,7 +73,9 @@ type AgregadoEvolucaoRow = {
   ano: number;
   mes: number;
   recebido: string | number;
+  qtd_recebido: string | number;
   rejeitado: string | number;
+  qtd_rejeitado: string | number;
 };
 
 type MedicoValores = {
@@ -80,7 +89,12 @@ type MedicoValores = {
 
 type FiltrosAnalise = Pick<
   FindVisitacaoAnaliseDto,
-  'funcionarioId' | 'nomeMedico' | 'nomesMedico' | 'naCarteira' | 'top'
+  | 'funcionarioId'
+  | 'nomeMedico'
+  | 'nomesMedico'
+  | 'naCarteira'
+  | 'top'
+  | 'metrica'
 >;
 
 @Injectable()
@@ -127,6 +141,7 @@ export class VisitacaoAnaliseService {
           naCarteira: 'todos',
           top: undefined,
           nomesMedico: undefined,
+          metrica: 'valor',
         },
       );
       this.logger.log(
@@ -199,6 +214,7 @@ export class VisitacaoAnaliseService {
   ): Promise<VisitacaoAnaliseResponseDto> {
     const iniciouEm = Date.now();
     const top = dto.top ?? null;
+    const metrica = this.resolverMetrica(dto.metrica);
     const competencia1 = this.toCompetenciaDto(c1);
     const competencia2 = this.toCompetenciaDto(c2);
     const agregados = await this.carregarAgregadoComparativo(
@@ -211,17 +227,29 @@ export class VisitacaoAnaliseService {
     const mapaRecebido = new Map<string, MedicoValores>();
     const mapaRejeitado = new Map<string, MedicoValores>();
     for (const row of agregados) {
+      const recV1 = Number(row.recebido_mes1) || 0;
+      const recV2 = Number(row.recebido_mes2) || 0;
+      const recQ1 = Number(row.qtd_recebido_mes1) || 0;
+      const recQ2 = Number(row.qtd_recebido_mes2) || 0;
       this.aplicarComparativo(
         mapaRecebido,
         row,
-        Number(row.recebido_mes1) || 0,
-        Number(row.recebido_mes2) || 0,
+        this.metricFrom(recV1, recQ1, metrica),
+        this.metricFrom(recV2, recQ2, metrica),
+        this.temMovimento(recV1, recQ1, metrica),
+        this.temMovimento(recV2, recQ2, metrica),
       );
+      const rejV1 = Number(row.rejeitado_mes1) || 0;
+      const rejV2 = Number(row.rejeitado_mes2) || 0;
+      const rejQ1 = Number(row.qtd_rejeitado_mes1) || 0;
+      const rejQ2 = Number(row.qtd_rejeitado_mes2) || 0;
       this.aplicarComparativo(
         mapaRejeitado,
         row,
-        Number(row.rejeitado_mes1) || 0,
-        Number(row.rejeitado_mes2) || 0,
+        this.metricFrom(rejV1, rejQ1, metrica),
+        this.metricFrom(rejV2, rejQ2, metrica),
+        this.temMovimento(rejV1, rejQ1, metrica),
+        this.temMovimento(rejV2, rejQ2, metrica),
       );
     }
 
@@ -232,7 +260,7 @@ export class VisitacaoAnaliseService {
     const maioresRejeitados = this.montarMaioresRejeitados(mapaRejeitado, top);
 
     this.logger.log(
-      `Análise comparar ${unidade} ${c1.key}→${c2.key} cresc=${crescimento.length} queda=${queda.length} rej=${maioresRejeitados.length} em ${Date.now() - iniciouEm}ms`,
+      `Análise comparar ${unidade} ${c1.key}→${c2.key} metrica=${metrica} cresc=${crescimento.length} queda=${queda.length} rej=${maioresRejeitados.length} em ${Date.now() - iniciouEm}ms`,
     );
 
     return {
@@ -257,17 +285,22 @@ export class VisitacaoAnaliseService {
   ): Promise<VisitacaoAnaliseResponseDto> {
     const iniciouEm = Date.now();
     const top = dto.top ?? null;
+    const metrica = this.resolverMetrica(dto.metrica);
     const competencias = refs.map((r) => this.toCompetenciaDto(r));
     const agregados = await this.carregarAgregadoRanking(unidade, refs, dto);
 
     const vendas: VisitacaoAnaliseMedicoDto[] = [];
     const rejeitados: VisitacaoAnaliseMedicoDto[] = [];
-    const qtd = refs.length;
+    const nComp = refs.length;
 
     for (const row of agregados) {
-      const recebido = Number(row.recebido_periodo) || 0;
-      const rejeitado = Number(row.rejeitado_periodo) || 0;
-      if (recebido <= 0 && rejeitado <= 0) {
+      const recV = Number(row.recebido_periodo) || 0;
+      const recQ = Number(row.qtd_recebido_periodo) || 0;
+      const rejV = Number(row.rejeitado_periodo) || 0;
+      const rejQ = Number(row.qtd_rejeitado_periodo) || 0;
+      const metRec = this.metricFrom(recV, recQ, metrica);
+      const metRej = this.metricFrom(rejV, rejQ, metrica);
+      if (metRec == null && metRej == null) {
         continue;
       }
       const base = {
@@ -280,18 +313,20 @@ export class VisitacaoAnaliseService {
         delta: 0,
         percentual: null as number | null,
       };
-      if (recebido > 0) {
+      if (metRec != null) {
         vendas.push({
           ...base,
-          valorPeriodo: recebido,
-          valorMedia: qtd > 0 ? recebido / qtd : null,
+          valorPeriodo: metRec,
+          valorMedia:
+            metrica === 'ticketMedio' || nComp <= 0 ? null : metRec / nComp,
         });
       }
-      if (rejeitado > 0) {
+      if (metRej != null) {
         rejeitados.push({
           ...base,
-          valorPeriodo: rejeitado,
-          valorMedia: qtd > 0 ? rejeitado / qtd : null,
+          valorPeriodo: metRej,
+          valorMedia:
+            metrica === 'ticketMedio' || nComp <= 0 ? null : metRej / nComp,
         });
       }
     }
@@ -303,7 +338,7 @@ export class VisitacaoAnaliseService {
     const maioresRejeitados = this.limitar(rejeitados, top);
 
     this.logger.log(
-      `Análise ranking ${unidade} competencias=[${refs.map((r) => r.key).join(',')}] vendas=${maioresVendas.length} rej=${maioresRejeitados.length} em ${Date.now() - iniciouEm}ms`,
+      `Análise ranking ${unidade} metrica=${metrica} competencias=[${refs.map((r) => r.key).join(',')}] vendas=${maioresVendas.length} rej=${maioresRejeitados.length} em ${Date.now() - iniciouEm}ms`,
     );
 
     return {
@@ -328,6 +363,7 @@ export class VisitacaoAnaliseService {
   ): Promise<VisitacaoAnaliseResponseDto> {
     const iniciouEm = Date.now();
     const top = dto.top ?? null;
+    const metrica = this.resolverMetrica(dto.metrica);
     const competencias = refs.map((r) => this.toCompetenciaDto(r));
     const agregados = await this.carregarAgregadoEvolucao(unidade, refs, dto);
 
@@ -336,8 +372,10 @@ export class VisitacaoAnaliseService {
       ufCrmMedico: string;
       nomeMedico: string;
       nomeRepresentante: string | null;
-      recebido: number[];
-      rejeitado: number[];
+      recebidoValor: number[];
+      recebidoQtd: number[];
+      rejeitadoValor: number[];
+      rejeitadoQtd: number[];
     };
     const mapa = new Map<string, Acc>();
     const idxPorKey = new Map(refs.map((r, i) => [r.key, i]));
@@ -351,8 +389,10 @@ export class VisitacaoAnaliseService {
           ufCrmMedico: String(row.uf_crm_medico).trim().toUpperCase(),
           nomeMedico: row.nome_medico,
           nomeRepresentante: row.nome_representante,
-          recebido: refs.map(() => 0),
-          rejeitado: refs.map(() => 0),
+          recebidoValor: refs.map(() => 0),
+          recebidoQtd: refs.map(() => 0),
+          rejeitadoValor: refs.map(() => 0),
+          rejeitadoQtd: refs.map(() => 0),
         };
         mapa.set(key, acc);
       }
@@ -361,17 +401,37 @@ export class VisitacaoAnaliseService {
       if (idx == null) {
         continue;
       }
-      acc.recebido[idx] += Number(row.recebido) || 0;
-      acc.rejeitado[idx] += Number(row.rejeitado) || 0;
+      acc.recebidoValor[idx] += Number(row.recebido) || 0;
+      acc.recebidoQtd[idx] += Number(row.qtd_recebido) || 0;
+      acc.rejeitadoValor[idx] += Number(row.rejeitado) || 0;
+      acc.rejeitadoQtd[idx] += Number(row.qtd_rejeitado) || 0;
     }
 
     const vendas: VisitacaoAnaliseMedicoDto[] = [];
     const rejeitados: VisitacaoAnaliseMedicoDto[] = [];
 
     for (const acc of mapa.values()) {
-      const totalRec = acc.recebido.reduce((s, v) => s + v, 0);
-      const totalRej = acc.rejeitado.reduce((s, v) => s + v, 0);
-      if (totalRec <= 0 && totalRej <= 0) {
+      const serieRec = acc.recebidoValor.map((v, i) =>
+        this.metricFrom(v, acc.recebidoQtd[i], metrica),
+      );
+      const serieRej = acc.rejeitadoValor.map((v, i) =>
+        this.metricFrom(v, acc.rejeitadoQtd[i], metrica),
+      );
+      const totalRecValor = acc.recebidoValor.reduce((s, v) => s + v, 0);
+      const totalRecQtd = acc.recebidoQtd.reduce((s, v) => s + v, 0);
+      const totalRejValor = acc.rejeitadoValor.reduce((s, v) => s + v, 0);
+      const totalRejQtd = acc.rejeitadoQtd.reduce((s, v) => s + v, 0);
+      const metRecPeriodo = this.metricFrom(
+        totalRecValor,
+        totalRecQtd,
+        metrica,
+      );
+      const metRejPeriodo = this.metricFrom(
+        totalRejValor,
+        totalRejQtd,
+        metrica,
+      );
+      if (metRecPeriodo == null && metRejPeriodo == null) {
         continue;
       }
       const base = {
@@ -385,18 +445,18 @@ export class VisitacaoAnaliseService {
         delta: 0,
         percentual: null as number | null,
       };
-      if (totalRec > 0) {
+      if (metRecPeriodo != null) {
         vendas.push({
           ...base,
-          valorPeriodo: totalRec,
-          serie: [...acc.recebido],
+          valorPeriodo: metRecPeriodo,
+          serie: serieRec.map((v) => v ?? 0),
         });
       }
-      if (totalRej > 0) {
+      if (metRejPeriodo != null) {
         rejeitados.push({
           ...base,
-          valorPeriodo: totalRej,
-          serie: [...acc.rejeitado],
+          valorPeriodo: metRejPeriodo,
+          serie: serieRej.map((v) => v ?? 0),
         });
       }
     }
@@ -408,7 +468,7 @@ export class VisitacaoAnaliseService {
     const maioresRejeitados = this.limitar(rejeitados, top);
 
     this.logger.log(
-      `Análise evolução ${unidade} competencias=[${refs.map((r) => r.key).join(',')}] vendas=${maioresVendas.length} rej=${maioresRejeitados.length} em ${Date.now() - iniciouEm}ms`,
+      `Análise evolução ${unidade} metrica=${metrica} competencias=[${refs.map((r) => r.key).join(',')}] vendas=${maioresVendas.length} rej=${maioresRejeitados.length} em ${Date.now() - iniciouEm}ms`,
     );
 
     return {
@@ -426,11 +486,43 @@ export class VisitacaoAnaliseService {
     };
   }
 
+  private resolverMetrica(
+    metrica?: VisitacaoAnaliseMetrica,
+  ): VisitacaoAnaliseMetrica {
+    return metrica ?? 'valor';
+  }
+
+  /** Deriva a métrica a partir de valor e quantidade agregados. */
+  private metricFrom(
+    valor: number,
+    qtd: number,
+    metrica: VisitacaoAnaliseMetrica,
+  ): number | null {
+    switch (metrica) {
+      case 'quantidade':
+        return qtd > 0 ? qtd : null;
+      case 'ticketMedio':
+        return qtd > 0 ? valor / qtd : null;
+      case 'valor':
+      default:
+        return valor > 0 ? valor : null;
+    }
+  }
+
+  private temMovimento(
+    valor: number,
+    qtd: number,
+    metrica: VisitacaoAnaliseMetrica,
+  ): boolean {
+    return this.metricFrom(valor, qtd, metrica) != null;
+  }
+
   private montarFiltrosAplicados(dto: FiltrosAnalise): {
     funcionarioId: string | null;
     nomeMedico: string | null;
     nomesMedico: string[];
     naCarteira: 'sim' | 'nao' | 'todos';
+    metrica: VisitacaoAnaliseMetrica;
   } {
     const nomes =
       dto.nomesMedico
@@ -442,6 +534,7 @@ export class VisitacaoAnaliseService {
       nomeMedico: dto.nomeMedico?.trim() || null,
       nomesMedico: [...new Set(nomes)],
       naCarteira: dto.naCarteira ?? 'todos',
+      metrica: this.resolverMetrica(dto.metrica),
     };
   }
 
@@ -658,12 +751,28 @@ export class VisitacaoAnaliseService {
         'recebido_mes2',
       )
       .addSelect(
+        `COALESCE(SUM(CASE WHEN f.ano = :cmpAno1 AND f.mes = :cmpMes1 THEN m.qtd_recebido ELSE 0 END), 0)`,
+        'qtd_recebido_mes1',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN f.ano = :cmpAno2 AND f.mes = :cmpMes2 THEN m.qtd_recebido ELSE 0 END), 0)`,
+        'qtd_recebido_mes2',
+      )
+      .addSelect(
         `COALESCE(SUM(CASE WHEN f.ano = :cmpAno1 AND f.mes = :cmpMes1 THEN m.rejeitado_loja ELSE 0 END), 0)`,
         'rejeitado_mes1',
       )
       .addSelect(
         `COALESCE(SUM(CASE WHEN f.ano = :cmpAno2 AND f.mes = :cmpMes2 THEN m.rejeitado_loja ELSE 0 END), 0)`,
         'rejeitado_mes2',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN f.ano = :cmpAno1 AND f.mes = :cmpMes1 THEN m.qtd_rejeitado ELSE 0 END), 0)`,
+        'qtd_rejeitado_mes1',
+      )
+      .addSelect(
+        `COALESCE(SUM(CASE WHEN f.ano = :cmpAno2 AND f.mes = :cmpMes2 THEN m.qtd_rejeitado ELSE 0 END), 0)`,
+        'qtd_rejeitado_mes2',
       )
       .where('f.unidade = :unidade', { unidade })
       .setParameter('cmpAno1', c1.ano)
@@ -691,7 +800,9 @@ export class VisitacaoAnaliseService {
       .addSelect('MAX(m.nome_medico)', 'nome_medico')
       .addSelect('MAX(m.nome_representante)', 'nome_representante')
       .addSelect('COALESCE(SUM(m.recebido_loja), 0)', 'recebido_periodo')
+      .addSelect('COALESCE(SUM(m.qtd_recebido), 0)', 'qtd_recebido_periodo')
       .addSelect('COALESCE(SUM(m.rejeitado_loja), 0)', 'rejeitado_periodo')
+      .addSelect('COALESCE(SUM(m.qtd_rejeitado), 0)', 'qtd_rejeitado_periodo')
       .where('f.unidade = :unidade', { unidade })
       .groupBy('UPPER(BTRIM(m.crm_medico))')
       .addGroupBy('UPPER(BTRIM(m.uf_crm_medico))');
@@ -716,7 +827,9 @@ export class VisitacaoAnaliseService {
       .addSelect('f.ano', 'ano')
       .addSelect('f.mes', 'mes')
       .addSelect('COALESCE(SUM(m.recebido_loja), 0)', 'recebido')
+      .addSelect('COALESCE(SUM(m.qtd_recebido), 0)', 'qtd_recebido')
       .addSelect('COALESCE(SUM(m.rejeitado_loja), 0)', 'rejeitado')
+      .addSelect('COALESCE(SUM(m.qtd_rejeitado), 0)', 'qtd_rejeitado')
       .where('f.unidade = :unidade', { unidade })
       .groupBy('UPPER(BTRIM(m.crm_medico))')
       .addGroupBy('UPPER(BTRIM(m.uf_crm_medico))')
@@ -735,22 +848,22 @@ export class VisitacaoAnaliseService {
   private aplicarComparativo(
     mapa: Map<string, MedicoValores>,
     row: AgregadoComparativoRow,
-    valorMes1: number,
-    valorMes2: number,
+    metricMes1: number | null,
+    metricMes2: number | null,
+    tem1: boolean,
+    tem2: boolean,
   ): void {
-    if (valorMes1 === 0 && valorMes2 === 0) {
+    if (!tem1 && !tem2) {
       return;
     }
-    const tem1 = valorMes1 > 0;
-    const tem2 = valorMes2 > 0;
     const key = this.chaveMedico(row.crm_medico, row.uf_crm_medico);
     mapa.set(key, {
       crmMedico: String(row.crm_medico).trim(),
       ufCrmMedico: String(row.uf_crm_medico).trim().toUpperCase(),
       nomeMedico: row.nome_medico,
       nomeRepresentante: row.nome_representante,
-      valorMes1: tem1 ? valorMes1 : tem2 ? 0 : null,
-      valorMes2: tem2 ? valorMes2 : tem1 ? 0 : null,
+      valorMes1: tem1 ? (metricMes1 ?? 0) : tem2 ? 0 : null,
+      valorMes2: tem2 ? (metricMes2 ?? 0) : tem1 ? 0 : null,
     });
   }
 

@@ -148,7 +148,7 @@
 - Login/refresh retornam `atalhosHome` no objeto do usuário.
 - A home é um **dashboard**: coluna de atalhos (largura estável ~300–400px) e coluna de **widgets de indicador** (restante). Widgets **não** entram em `atalhos_home` nem contam no limite de 10.
 - Permissões de widgets ficam no módulo de Perfis **Tela inicial → Home — Cards** (catálogo; atribuição **manual**). Cada widget usa a própria permissão; ordem fixa no host (ex.: Meu desempenho → resumo da unidade).
-- Widgets comerciais: **Meu desempenho** (`comercial-acompanhamento:home`) e **resumo da unidade** (`comercial-acompanhamento:home-unidade`) — ver RN-COM-004.
+- Widgets comerciais: **Meu desempenho** (`comercial-acompanhamento:home`) e **resumo da unidade** (`comercial-acompanhamento:home-unidade`) — ver RN-COM-004. Enquanto qualquer widget carrega ou atualiza, a tela inicial exibe **modal de status bloqueante** (overlay) até concluir.
 
 ### RN-015 — Envio de recibo de pagamento por WhatsApp (folha)
 
@@ -478,24 +478,28 @@
 - **Filtro Ano (UI):** multi-select dos anos que possuem fechamento; **padrão = ano corrente** (se não houver fechamento no ano corrente, usa o ano mais recente disponível). Restringe as opções de Competência 1/2 e do multi-select de ranking — a API continua recebendo competências `YYYY-MM` explícitas.
 - **Agregação por médico (todos os modos):** se o mesmo CRM+UF aparecer em **mais de uma unidade** no retrato (ex. INHUMAS + NERÓPOLIS), **soma** recebido e rejeitado de todas as linhas da competência — **não** sobrescreve unidade a unidade. Dimensão fixa desta tela = **médico** (CRM+UF).
 - **Filtros comuns:** Unidade (escopo RN-VIS-003), Ano (multi), Representante (`funcionarioId`), Médico (picker multi-select com nomes exatos dos fechamentos da unidade — mesmo componente dos indicadores de orçamento, **somente ordenação alfabética**; vazio = todos; query `nomesMedico`), No Painel (`todos` / `sim` / `nao`).
+- **Métrica** (combo; padrão **`valor`**): define o que as grades, Δ, ranking, evolução, gráficos e Excel exibem. Vale para **recebido e rejeitados**. Query `metrica=valor|quantidade|ticketMedio`. Campos da API (`valorMes1/2`, `valorPeriodo`, `serie`, `delta`, …) **carregam a métrica escolhida** (não há campos paralelos). Fonte no retrato: `recebido_loja` / `qtd_recebido` e `rejeitado_loja` / `qtd_rejeitado` (soma por CRM+UF).
+  - **`valor`** — `SUM(valor)`; médico entra se valor &gt; 0 na competência/período; UI em R$.
+  - **`quantidade`** — `SUM(qtd)`; entra se qtd &gt; 0; UI inteiro.
+  - **`ticketMedio`** — `SUM(valor) ÷ SUM(qtd)` quando qtd &gt; 0; senão **null** (não entra como 0). No **período** (ranking/evolução Total): usa soma valor ÷ soma qtd do período — **não** média das médias mensais. Ranking: `valorMedia` fica **null** (ticket não é aditivo). UI em R$.
 - **Modo de análise** (campo explícito — o layout **não** é inferido só pela quantidade de competências):
-  - **`comparar`** — Δ entre **duas competências** (podem ser de anos diferentes).
-  - **`ranking`** — ranking absoluto no **período selecionado** (1 ou N competências fechadas, qualquer ano; **total** e **média** = total ÷ N).
-  - **`evolucao`** — série mensal (coluna/barra por competência) de **recebido** e **rejeitados**; **mínimo 2** competências; ordenado por **Total** desc; ao abrir o modo, seleciona as **2 últimas** fechadas nos anos filtrados.
+  - **`comparar`** — Δ entre **duas competências** (podem ser de anos diferentes) na métrica selecionada.
+  - **`ranking`** — ranking absoluto no **período selecionado** (1 ou N competências fechadas, qualquer ano; **total** e **média** = total ÷ N, exceto ticket médio — só total do período).
+  - **`evolucao`** — série mensal (coluna/barra por competência) na métrica; **mínimo 2** competências; ordenado por **Total** desc; ao abrir o modo, seleciona as **2 últimas** fechadas nos anos filtrados.
 - **Exibição** (ortogonal ao modo; mesma resposta da API):
   - **`Dados`** — grades/planilhas (padrão) + Excel por card.
   - **`Gráficos`** — barras CSS por card: **Comparar** = par vertical c1/c2 por médico + Δ no rótulo; **Ranking** = barras **horizontais** (Total); **Evolução** = mesmo layout do Comparar (série + seta). Trocar só Exibição **não** refaz a busca se o `top` efetivo for o mesmo.
-- **Qnt** (combo: 5 / 10 / 15 / 20 / 50 / Todos; padrão **10**): envia `top` à API; **Todos** omite `top` (lista completa). Em **Gráficos**, **força no máximo 50** (Todos ou Qnt &gt; 50 → `top=50`; opção Todos fica desabilitada).
-- **Endpoints:** `GET /visitacao/analise/opcoes` (competências fechadas de todos os anos + representantes + médicos distintos — resposta **leve**; `comAnalise=true` opcional e desaconselhado no bootstrap da tela) e `GET /visitacao/analise?modo=comparar|ranking|evolucao&…` (`top` opcional; `nomesMedico` opcional). A tela carrega **opções primeiro** (Ano/Competência/Médico) e a análise em chamada separada.
+- **Qnt** (combo: 5 / 10 / 15 / 20 / 50 / Todos; padrão **10**): **limite de linhas** (`top`) — distinto da métrica quantidade. **Todos** omite `top`. Em **Gráficos**, **força no máximo 50** (Todos ou Qnt &gt; 50 → `top=50`; opção Todos fica desabilitada).
+- **Endpoints:** `GET /visitacao/analise/opcoes` (competências fechadas de todos os anos + representantes + médicos distintos — resposta **leve**; `comAnalise=true` opcional e desaconselhado no bootstrap da tela) e `GET /visitacao/analise?modo=comparar|ranking|evolucao&metrica=…&…` (`top` opcional; `nomesMedico` opcional). A tela carrega **opções primeiro** (Ano/Competência/Médico) e a análise em chamada separada.
 - **Fora de escopo nesta versão:** comparar período×período (N competências de cada lado), presets de trimestre/semestre, meta, comissão/faixa, motivos de rejeição, check-in/roteiro e cards de KPI.
 
 #### Modo `comparar`
 
 - **Objetivo:** evolução do **valor total recebido** e dos **rejeitados (orçamentos)** entre **duas competências fechadas**.
 - **Seleção:** **Competência 1** (base) e **Competência 2** (referência); `c1` ≠ `c2` (formato `YYYY-MM`); ambas fechadas → senão **400**. Query: `modo=comparar&c1=2025-12&c2=2026-01` (modo omitido = comparar). Labels na UI: `Dezembro/2025`, `Janeiro/2026`.
-- **Valor total (recebido):** `SUM(valorRecebido)` por médico em cada competência. Médico entra se tiver recebido em **pelo menos uma** das duas (ausente = 0 no Δ; ambos 0/ausentes → fora). **Δ** = valor(c2) − valor(c1); **%** = Δ ÷ valor(c1) × 100 (null se c1 = 0 ou null).
-- **Rejeitados:** mesmo padrão sobre `SUM(valorRejeitado)`; ordenado por **Δ desc** (aumentos de rejeitado **+** primeiro; empate por rejeitado de c2). Colunas: nome, valor c1, valor c2, Diferença e %. **Sem** representatividade. **Menos é melhor:** Diferença negativa = faixas de “crescimento” (bom); positiva = faixas de “queda” (ruim). Legenda única por |Diferença| (só em Dados).
-- **UI:** filtros em **container** (Modo, Exibição, Qnt, …) com botão **Atualizar** (refaz a busca; a análise também dispara ao mudar filtros, como antes). **Três cards na mesma linha** — maior crescimento, maior queda e **Rejeitados** (cabeçalho vermelho): **Dados** = grades + legenda (chips); **Gráficos** = por médico **duas barras verticais na cor do card** (c1 e c2) + **seta** c1→c2 e **Δ** (↑ crescimento / ↓ queda / ↑ rejeição). Cabeçalhos de competência **abreviados** (ex. `Ago/2026`). Limite por **Qnt**/`top`. **Excel** por grade (só em Dados) = lista **visível**.
+- **Recebido:** por médico em cada competência, na **métrica** selecionada. Médico entra se tiver movimento na métrica em **pelo menos uma** das duas (ausente = 0 no Δ; ambos ausentes → fora). **Δ** = métrica(c2) − métrica(c1); **%** = Δ ÷ métrica(c1) × 100 (null se c1 = 0 ou null).
+- **Rejeitados:** mesmo padrão na métrica sobre rejeitados; ordenado por **Δ desc** (aumentos **+** primeiro; empate por c2). Colunas: nome, c1, c2, Diferença e %. **Sem** representatividade. **Menos é melhor:** Diferença negativa = faixas de “crescimento” (bom); positiva = faixas de “queda” (ruim). Legenda única por |Diferença| (só em Dados).
+- **UI:** filtros em **container** (Modo, Exibição, Métrica, Qnt, …) com botão **Atualizar** (refaz a busca; a análise também dispara ao mudar filtros, como antes). **Três cards na mesma linha** — maior crescimento, maior queda e **Rejeitados** (cabeçalho vermelho): **Dados** = grades + legenda (chips); **Gráficos** = por médico **duas barras verticais na cor do card** (c1 e c2) + **seta** c1→c2 e **Δ**. Cabeçalhos de competência **abreviados** (ex. `Ago/2026`). Limite por **Qnt**/`top`. **Excel** por grade (só em Dados) = lista **visível**.
 
 #### Modo `ranking`
 

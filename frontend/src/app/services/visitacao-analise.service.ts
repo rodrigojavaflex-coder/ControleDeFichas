@@ -34,6 +34,9 @@ export class VisitacaoAnaliseService {
   ): Observable<VisitacaoAnaliseResponse> {
     const modo = filters.modo ?? 'comparar';
     let params = new HttpParams().set('modo', modo);
+    if (filters.metrica) {
+      params = params.set('metrica', filters.metrica);
+    }
 
     if (modo === 'ranking' || modo === 'evolucao') {
       const competencias = (filters.competencias ?? [])

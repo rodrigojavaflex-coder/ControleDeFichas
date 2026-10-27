@@ -121,6 +121,10 @@ body.theme-dark .visitacao-analise-page .visitacao-analise-acoes .btn-atualizar 
   width: 7.5rem;
 }
 
+.visitacao-analise-page .visitacao-analise-metrica {
+  width: 8.5rem;
+}
+
 .visitacao-analise-page .visitacao-analise-qnt {
   width: 5.5rem;
 }
@@ -210,6 +214,7 @@ body.theme-dark .visitacao-analise-page .visitacao-analise-medico-placeholder {
   .visitacao-analise-page .visitacao-analise-anos,
   .visitacao-analise-page .visitacao-analise-modo,
   .visitacao-analise-page .visitacao-analise-exibicao,
+  .visitacao-analise-page .visitacao-analise-metrica,
   .visitacao-analise-page .visitacao-analise-qnt,
   .visitacao-analise-page .visitacao-analise-painel,
   .visitacao-analise-page .visitacao-analise-competencia,

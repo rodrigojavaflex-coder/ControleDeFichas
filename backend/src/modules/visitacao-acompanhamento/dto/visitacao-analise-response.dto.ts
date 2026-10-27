@@ -2,8 +2,14 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Unidade } from '../../../common/enums/unidade.enum';
 import { VisitacaoPainelMedicoRepresentanteDto } from '../../visitacao-painel-medico/dto/visitacao-painel-medico-representante.dto';
 import { NA_CARTEIRA_FILTRO } from './find-visitacao-acompanhamento.dto';
-import { VISITACAO_ANALISE_MODOS } from './find-visitacao-analise.dto';
-import type { VisitacaoAnaliseModo } from './find-visitacao-analise.dto';
+import {
+  VISITACAO_ANALISE_METRICAS,
+  VISITACAO_ANALISE_MODOS,
+} from './find-visitacao-analise.dto';
+import type {
+  VisitacaoAnaliseMetrica,
+  VisitacaoAnaliseModo,
+} from './find-visitacao-analise.dto';
 
 export class VisitacaoAnaliseCompetenciaDto {
   @ApiProperty({ example: '2025-12', description: 'Chave YYYY-MM' })
@@ -83,46 +89,48 @@ export class VisitacaoAnaliseMedicoDto {
 
   @ApiPropertyOptional({
     nullable: true,
-    description: 'Valor total na competência 1 (modo comparar).',
+    description:
+      'Competência 1 (comparar). Significado conforme `filtrosAplicados.metrica`.',
   })
   valorMes1: number | null;
 
   @ApiPropertyOptional({
     nullable: true,
-    description: 'Valor total na competência 2 (modo comparar).',
+    description:
+      'Competência 2 (comparar). Significado conforme `filtrosAplicados.metrica`.',
   })
   valorMes2: number | null;
 
   @ApiPropertyOptional({
     nullable: true,
-    description: 'Total do período (modo ranking).',
+    description:
+      'Total do período (ranking/evolução). Ticket médio = soma valor ÷ soma qtd do período.',
   })
   valorPeriodo: number | null;
 
   @ApiPropertyOptional({
     nullable: true,
     description:
-      'Média mensal do período (modo ranking): valorPeriodo ÷ quantidade de competências.',
+      'Média mensal (ranking): valorPeriodo ÷ N competências (null para ticketMedio).',
   })
   valorMedia: number | null;
 
   @ApiPropertyOptional({
     type: [Number],
     description:
-      'Série por competência (modo evolucao), na mesma ordem de `competencias`. Ausente nos demais modos.',
+      'Série por competência (evolucao), na métrica selecionada. Ausente nos demais modos.',
   })
   serie?: number[];
 
   @ApiProperty({
     description:
-      'Modo comparar: valorMes2 − valorMes1. Ranking/evolução: 0 (não aplicável).',
+      'Comparar: valorMes2 − valorMes1 (métrica). Ranking/evolução: 0.',
   })
   delta: number;
 
   @ApiPropertyOptional({
     nullable: true,
-    description:
-      'Modo comparar: delta / valorMes1 * 100. Ranking/evolução: null.',
+    description: 'Comparar: delta / valorMes1 * 100. Ranking/evolução: null.',
   })
   percentual: number | null;
 }
@@ -142,6 +150,12 @@ export class VisitacaoAnaliseFiltrosAplicadosDto {
 
   @ApiProperty({ enum: ['todos', 'sim', 'nao'] })
   naCarteira: (typeof NA_CARTEIRA_FILTRO)[number];
+
+  @ApiProperty({
+    enum: VISITACAO_ANALISE_METRICAS,
+    description: 'Métrica aplicada aos campos valor*/serie/delta.',
+  })
+  metrica: VisitacaoAnaliseMetrica;
 }
 
 export class VisitacaoAnaliseResponseDto {

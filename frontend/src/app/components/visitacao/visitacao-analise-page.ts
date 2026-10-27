@@ -25,6 +25,7 @@ import {
   VisitacaoAnaliseCompetencia,
   VisitacaoAnaliseMedico,
   VisitacaoAnaliseMedicoOpcao,
+  VisitacaoAnaliseMetrica,
   VisitacaoAnaliseModo,
   VisitacaoAnaliseNaCarteira,
   VisitacaoAnaliseResponse,
@@ -105,6 +106,8 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
   unidadeDisabled = false;
 
   modo: VisitacaoAnaliseModo = 'comparar';
+  /** Métrica das grades/Δ/gráficos (padrão Valor). */
+  metrica: VisitacaoAnaliseMetrica = 'valor';
   /** Dados = grades; Gráficos = barras CSS (top forçado ≤ 50). */
   exibicao: VisitacaoAnaliseExibicao = 'dados';
   /** Limite por grade; `null` = Todos (omitido na API, exceto em Gráficos). */
@@ -156,6 +159,9 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
   private readonly moedaFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
+  });
+  private readonly inteiroFormatter = new Intl.NumberFormat('pt-BR', {
+    maximumFractionDigits: 0,
   });
   private readonly percentualFormatter = new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
@@ -475,6 +481,12 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     this.onFiltroChange();
   }
 
+  onMetricaChange(metrica: VisitacaoAnaliseMetrica): void {
+    this.metrica = metrica;
+    this.resetFiltrosFaixa();
+    this.onFiltroChange();
+  }
+
   onExibicaoChange(exibicao: VisitacaoAnaliseExibicao): void {
     this.exibicao = exibicao;
     this.garantirQntParaGraficos();
@@ -626,15 +638,25 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  get metricaUsaMoeda(): boolean {
+    return this.metrica === 'valor' || this.metrica === 'ticketMedio';
+  }
+
   formatarValor(v: number | null | undefined): string {
     if (v == null) {
       return '—';
+    }
+    if (this.metrica === 'quantidade') {
+      return this.inteiroFormatter.format(v);
     }
     return this.moedaFormatter.format(v);
   }
 
   formatarDelta(v: number): string {
     const sinal = v > 0 ? '+' : '';
+    if (this.metrica === 'quantidade') {
+      return `${sinal}${this.inteiroFormatter.format(v)}`;
+    }
     return `${sinal}${this.moedaFormatter.format(v)}`;
   }
 
@@ -954,6 +976,7 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     this.ultimoTopEnviado = top ?? null;
     const base = {
       unidade: this.unidadeFilter as Unidade,
+      metrica: this.metrica,
       funcionarioId: this.funcionarioIdFilter || undefined,
       nomesMedico:
         this.selectedMedicos.size > 0
