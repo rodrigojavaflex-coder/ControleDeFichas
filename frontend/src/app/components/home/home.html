@@ -1,4 +1,4 @@
-<div class="home-page" [class.has-dashboard]="podeVerCardHome">
+<div class="home-page" [class.has-dashboard]="temDashboardWidgets">
   <div class="home-col home-col-nav">
     <header class="home-header">
       <div class="home-welcome">
@@ -48,30 +48,7 @@
     </section>
   </div>
 
-  @if (podeVerCardHome) {
-    <section class="home-col home-col-card" aria-label="Meu desempenho">
-      <div class="home-dashboard-head">
-        <h2 class="home-section-title">Meu desempenho</h2>
-        @if (cardCompetencia) {
-          <p class="home-dashboard-competencia">{{ cardCompetencia }}</p>
-        }
-      </div>
-      @if (cardCarregando) {
-        <p class="home-dashboard-status">Carregando seu card comercial…</p>
-      } @else if (cardErro) {
-        <p class="home-dashboard-status is-aviso">{{ cardErro }}</p>
-      } @else if (cardItem) {
-        <app-comercial-vendedor-card
-          [item]="cardItem"
-          [podeVerComissao]="podeVerComissao"
-          [mostrarAcompanhamento]="podeAbrirAcompanhamento"
-          [mostrarUltimoCaixa]="true"
-          [competencia]="cardCompetencia"
-          [unidade]="cardUnidade"
-        />
-      }
-    </section>
-  }
+  <app-home-widgets-host />
 </div>
 
 <app-home-shortcuts-modal

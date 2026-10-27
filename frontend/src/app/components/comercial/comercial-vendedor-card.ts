@@ -11,6 +11,7 @@ import {
   ComercialAcompanhamentoItem,
   ComercialAcompanhamentoMovimentoProduto,
 } from '../../models/comercial-acompanhamento.model';
+import { Unidade } from '../../models/usuario.model';
 
 type ComercialDetalheSecao =
   | 'requisicoes'
@@ -57,6 +58,10 @@ export class ComercialVendedorCardComponent {
   @Input() mostrarAcompanhamento = false;
   /** Exibe “Último caixa fechado” no cabeçalho do card (home). */
   @Input() mostrarUltimoCaixa = false;
+  /** Card TOTAL da unidade (anel limiar 80%, sem comissão/ranking). */
+  @Input() isTotal = false;
+  /** Fonte do modal Detalhes: próprio vendedor ou total da unidade. */
+  @Input() modoDetalhe: 'meu' | 'unidade' = 'meu';
   @Input() competencia = '';
   @Input() unidade = '';
 
@@ -78,7 +83,14 @@ export class ComercialVendedorCardComponent {
   private cardBlocosAbertos: Partial<Record<ComercialCardBloco, boolean>> = {};
 
   cardBlocoAberto(bloco: ComercialCardBloco): boolean {
-    return this.cardBlocosAbertos[bloco] ?? CARD_BLOCO_DEFAULT[bloco];
+    if (Object.prototype.hasOwnProperty.call(this.cardBlocosAbertos, bloco)) {
+      return this.cardBlocosAbertos[bloco] === true;
+    }
+    // Modal da unidade (total): todas as seções abertas.
+    if (this.isTotal) {
+      return true;
+    }
+    return CARD_BLOCO_DEFAULT[bloco];
   }
 
   toggleCardBloco(bloco: ComercialCardBloco): void {
@@ -89,6 +101,13 @@ export class ComercialVendedorCardComponent {
   }
 
   get titulo(): string {
+    if (this.isTotal) {
+      const unidade = (this.unidade || '').trim();
+      if (unidade) return unidade;
+      return String(this.item.nomeVendedor || '')
+        .replace(/^TOTAL\s+/i, '')
+        .trim();
+    }
     return this.rotuloVendedor(this.item);
   }
 
@@ -97,6 +116,9 @@ export class ComercialVendedorCardComponent {
   }
 
   temAnaliseDoDia(): boolean {
+    if (this.isTotal) {
+      return false;
+    }
     return (
       this.item.mesAberto === true &&
       (this.item.valorRecebidoHojeRequisicao != null ||
@@ -216,6 +238,7 @@ export class ComercialVendedorCardComponent {
   }
 
   limiarVermelhoAnelMeta(basePrimeiraFaixa?: number | null): number {
+    if (this.isTotal) return 80;
     const base = Number(basePrimeiraFaixa);
     if (!Number.isFinite(base)) return 80;
     return Math.max(80, base);
@@ -230,6 +253,41 @@ export class ComercialVendedorCardComponent {
     if (pct >= 100) return 'is-verde';
     if (pct < this.limiarVermelhoAnelMeta(basePrimeiraFaixa)) return 'is-vermelho';
     return 'is-azul';
+  }
+
+  get mostrarComissaoEfetiva(): boolean {
+    return this.podeVerComissao && !this.isTotal;
+  }
+
+  valorTotalProjetado(): number {
+    return (
+      Number(this.item.valorProjetadoRequisicao || 0) +
+      Number(this.item.valorProjetadoMarcaPropria || 0)
+    );
+  }
+
+  valorMetaTotalGeral(): number | null {
+    const temReq = this.temMetaCadastrada(this.item.valorMetaRequisicao);
+    const temMp = this.temMetaCadastrada(this.item.valorMetaMarcaPropria);
+    if (!temReq && !temMp) return null;
+    return (
+      (temReq ? Number(this.item.valorMetaRequisicao) : 0) +
+      (temMp ? Number(this.item.valorMetaMarcaPropria) : 0)
+    );
+  }
+
+  metaTotalGeralParcial(): boolean {
+    const temReq = this.temMetaCadastrada(this.item.valorMetaRequisicao);
+    const temMp = this.temMetaCadastrada(this.item.valorMetaMarcaPropria);
+    return (temReq && !temMp) || (!temReq && temMp);
+  }
+
+  percentualSobreMetaTotal(
+    valor: number | null | undefined,
+    meta: number | null | undefined,
+  ): number | null {
+    if (!this.temMetaCadastrada(meta)) return null;
+    return (Number(valor || 0) / Number(meta)) * 100;
   }
 
   rotuloCorAnelMeta(
@@ -374,7 +432,7 @@ export class ComercialVendedorCardComponent {
     event: Event,
     percentual: number | null | undefined,
     titulo: string,
-    baseTipo: ComercialProjecaoBase,
+    baseTipo: ComercialProjecaoBase | null,
   ): void {
     event.preventDefault();
     event.stopPropagation();
@@ -383,7 +441,9 @@ export class ComercialVendedorCardComponent {
         ? null
         : Number(percentual);
     this.infoCorAnelTitulo = titulo;
-    this.infoCorAnelBasePrimeiraFaixa = this.basePrimeiraFaixa(baseTipo);
+    this.infoCorAnelBasePrimeiraFaixa = baseTipo
+      ? this.basePrimeiraFaixa(baseTipo)
+      : null;
     this.infoCorAnelAberto = true;
   }
 
@@ -400,8 +460,11 @@ export class ComercialVendedorCardComponent {
     this.detalhe = null;
     this.detalheSecoesAbertas = { ...DETALHE_SECOES_PADRAO };
     this.detalheReq$.next();
-    this.service
-      .meuDetalhe()
+    const req$ =
+      this.modoDetalhe === 'unidade' && this.unidade
+        ? this.service.unidadeDetalhe(this.unidade as Unidade)
+        : this.service.meuDetalhe();
+    req$
       .pipe(takeUntil(this.detalheReq$), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
@@ -412,7 +475,7 @@ export class ComercialVendedorCardComponent {
           this.carregandoDetalhe = false;
           this.errors.show(
             e?.error?.message ?? 'Erro ao carregar o detalhe.',
-            'Meu desempenho',
+            this.isTotal ? 'Unidade' : 'Meu desempenho',
           );
         },
       });

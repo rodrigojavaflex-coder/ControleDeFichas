@@ -11,9 +11,11 @@ import {
   ComercialAcompanhamentoDetalheDto,
   ComercialAcompanhamentoListResponseDto,
   ComercialAcompanhamentoMeuCardDto,
+  ComercialAcompanhamentoUnidadeCardsResponseDto,
   ComercialAcompanhamentoVendedorOpcaoDto,
   FindComercialAcompanhamentoDetalheDto,
   FindComercialAcompanhamentoDto,
+  FindComercialAcompanhamentoUnidadeDetalheDto,
 } from './dto/comercial-acompanhamento.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -70,6 +72,36 @@ export class ComercialAcompanhamentoController {
     @Req() req: { user: Usuario },
   ): Promise<ComercialAcompanhamentoDetalheDto> {
     return this.service.findMeuDetalhe(req.user);
+  }
+
+  @Get('unidade')
+  @Permissions(Permission.COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE)
+  @ApiOperation({
+    summary:
+      'Cards TOTAL da unidade na home (escopo do usuário ou todas as unidades)',
+  })
+  @ApiResponse({
+    status: 200,
+    type: ComercialAcompanhamentoUnidadeCardsResponseDto,
+  })
+  findUnidade(
+    @Req() req: { user: Usuario },
+  ): Promise<ComercialAcompanhamentoUnidadeCardsResponseDto> {
+    return this.service.findUnidadeCards(req.user);
+  }
+
+  @Get('unidade/detalhe')
+  @Permissions(Permission.COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE)
+  @ApiOperation({
+    summary:
+      'Movimentos do TOTAL da unidade na competência atual (modal da home)',
+  })
+  @ApiResponse({ status: 200, type: ComercialAcompanhamentoDetalheDto })
+  findUnidadeDetalhe(
+    @Req() req: { user: Usuario },
+    @Query() query: FindComercialAcompanhamentoUnidadeDetalheDto,
+  ): Promise<ComercialAcompanhamentoDetalheDto> {
+    return this.service.findUnidadeDetalhe(req.user, query.unidade);
   }
 
   @Get('vendedores')

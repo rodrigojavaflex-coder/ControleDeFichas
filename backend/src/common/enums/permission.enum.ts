@@ -205,7 +205,10 @@ export enum Permission {
   /** Comercial — acompanhamento de vendas por vendedor. */
   COMERCIAL_ACOMPANHAMENTO_READ = 'comercial-acompanhamento:read',
   COMERCIAL_ACOMPANHAMENTO_COMISSAO = 'comercial-acompanhamento:comissao',
+  /** Desempenho do Vendedor na home (só o vendedor do JWT). */
   COMERCIAL_ACOMPANHAMENTO_HOME = 'comercial-acompanhamento:home',
+  /** Card resumo TOTAL da unidade na home (1 loja ou todas se sem vínculo). */
+  COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE = 'comercial-acompanhamento:home-unidade',
   /** Comercial — configuração de metas mensais. */
   COMERCIAL_META_READ = 'comercial-meta:read',
   COMERCIAL_META_UPDATE = 'comercial-meta:update',
@@ -634,6 +637,16 @@ export const PERMISSION_GROUPS = {
       label: 'Excluir faixas de comissão',
     },
   ],
+  'Home — Cards': [
+    {
+      key: Permission.COMERCIAL_ACOMPANHAMENTO_HOME,
+      label: 'Desempenho do Vendedor (comercial)',
+    },
+    {
+      key: Permission.COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE,
+      label: 'Resumo Unidade (comercial)',
+    },
+  ],
   'Comercial — Acompanhamento': [
     {
       key: Permission.COMERCIAL_ACOMPANHAMENTO_READ,
@@ -642,10 +655,6 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.COMERCIAL_ACOMPANHAMENTO_COMISSAO,
       label: 'Visualizar faixa e valor de comissão no acompanhamento',
-    },
-    {
-      key: Permission.COMERCIAL_ACOMPANHAMENTO_HOME,
-      label: 'Visualizar o próprio card na tela inicial',
     },
   ],
   'Comercial — Configuração Metas': [

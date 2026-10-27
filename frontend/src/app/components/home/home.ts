@@ -7,18 +7,12 @@ import { AuthService } from '../../services/auth.service';
 import { PageContextService } from '../../services/page-context.service';
 import { HomeShortcutsService } from '../../services/home-shortcuts.service';
 import { HomeShortcutDef } from '../../config/home-shortcuts.registry';
+import { HOME_WIDGETS } from '../../config/home-widgets.registry';
 import { getNavigationMenuIconHtml } from '../navigation/navigation-lucide-svgs';
 import { HomeShortcutsModalComponent } from '../home-shortcuts-modal/home-shortcuts-modal';
+import { HomeWidgetsHostComponent } from '../home-widgets/home-widgets-host';
 import { NavigationService } from '../../services/navigation.service';
 import { ErrorModalService } from '../../services/error-modal.service';
-import { ComercialAcompanhamentoService } from '../../services/comercial-acompanhamento.service';
-import {
-  ComercialAcompanhamentoItem,
-  ComercialAcompanhamentoMeuCard,
-} from '../../models/comercial-acompanhamento.model';
-import { Permission } from '../../models/usuario.model';
-import { ComercialVendedorCardComponent } from '../comercial/comercial-vendedor-card';
-import { nomeMesPt } from '../folha/folha-meses';
 
 @Component({
   selector: 'app-home',
@@ -27,7 +21,7 @@ import { nomeMesPt } from '../folha/folha-meses';
     CommonModule,
     RouterModule,
     HomeShortcutsModalComponent,
-    ComercialVendedorCardComponent,
+    HomeWidgetsHostComponent,
   ],
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
@@ -39,7 +33,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private navigationService = inject(NavigationService);
   private errors = inject(ErrorModalService);
-  private comercialAcomp = inject(ComercialAcompanhamentoService);
   private destroy$ = new Subject<void>();
 
   userName = '';
@@ -47,12 +40,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   shortcuts: HomeShortcutDef[] = [];
   activeShortcutIds: string[] = [];
   showPersonalizeModal = false;
-
-  cardCarregando = false;
-  cardItem: ComercialAcompanhamentoItem | null = null;
-  cardCompetencia = '';
-  cardUnidade = '';
-  cardErro: string | null = null;
 
   ngOnInit(): void {
     this.pageCtx.setContext({
@@ -65,7 +52,6 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.userName = nome;
       this.userInitial = nome ? nome.charAt(0).toUpperCase() : '';
       this.reloadShortcuts(user?.id);
-      this.carregarMeuCard();
     });
   }
 
@@ -74,16 +60,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  get podeVerCardHome(): boolean {
-    return this.auth.hasPermission(Permission.COMERCIAL_ACOMPANHAMENTO_HOME);
-  }
-
-  get podeAbrirAcompanhamento(): boolean {
-    return this.auth.hasPermission(Permission.COMERCIAL_ACOMPANHAMENTO_READ);
-  }
-
-  get podeVerComissao(): boolean {
-    return this.auth.hasPermission(Permission.COMERCIAL_ACOMPANHAMENTO_COMISSAO);
+  get temDashboardWidgets(): boolean {
+    return HOME_WIDGETS.some((w) => this.auth.hasPermission(w.permission));
   }
 
   iconHtml(key?: string | null): SafeHtml {
@@ -122,33 +100,5 @@ export class HomeComponent implements OnInit, OnDestroy {
   private reloadShortcuts(userId: string | undefined): void {
     this.activeShortcutIds = this.shortcutsService.getActiveShortcutIds(userId);
     this.shortcuts = this.shortcutsService.resolveShortcuts(this.activeShortcutIds);
-  }
-
-  private carregarMeuCard(): void {
-    this.cardItem = null;
-    this.cardErro = null;
-    this.cardCompetencia = '';
-    this.cardUnidade = '';
-    if (!this.podeVerCardHome) {
-      return;
-    }
-    this.cardCarregando = true;
-    this.comercialAcomp.meuCard().subscribe({
-      next: (res: ComercialAcompanhamentoMeuCard) => {
-        this.cardItem = res.item;
-        this.cardUnidade = res.unidade;
-        const [ano, mes] = res.anoMes.split('-').map((n: string) => Number(n));
-        this.cardCompetencia =
-          Number.isFinite(mes) && Number.isFinite(ano)
-            ? `${nomeMesPt(mes)} ${ano}`
-            : res.anoMes;
-        this.cardCarregando = false;
-      },
-      error: (e: { error?: { message?: string } }) => {
-        this.cardCarregando = false;
-        this.cardErro =
-          e?.error?.message ?? 'Não foi possível carregar o card comercial.';
-      },
-    });
   }
 }

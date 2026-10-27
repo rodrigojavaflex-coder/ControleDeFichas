@@ -1,0 +1,61 @@
+.home-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.home-widget-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.home-widget-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.home-widget-head .home-section-title {
+  margin: 0;
+}
+
+.home-widget-head .home-dashboard-competencia {
+  margin: 0;
+}
+
+.home-widget-btn-atualizar {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.85rem;
+  height: 1.85rem;
+  min-width: 1.85rem;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 999px !important;
+  background: var(--cor-sucesso, #16a34a) !important;
+  color: #fff !important;
+  box-shadow: none;
+}
+
+.home-widget-btn-atualizar:hover:not(:disabled),
+.home-widget-btn-atualizar:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--cor-sucesso, #16a34a) 85%, #000) !important;
+  color: #fff !important;
+}
+
+.home-widget-btn-atualizar:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.home-widget-btn-atualizar i {
+  font-size: 0.78rem;
+}

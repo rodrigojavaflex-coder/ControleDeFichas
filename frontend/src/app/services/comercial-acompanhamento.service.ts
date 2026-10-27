@@ -7,6 +7,7 @@ import {
   ComercialAcompanhamentoDetalhe,
   ComercialAcompanhamentoListResponse,
   ComercialAcompanhamentoMeuCard,
+  ComercialAcompanhamentoUnidadeCardsResponse,
   ComercialAcompanhamentoVendedorOpcao,
   FindComercialAcompanhamentoDto,
 } from '../models/comercial-acompanhamento.model';
@@ -36,6 +37,20 @@ export class ComercialAcompanhamentoService {
 
   meuDetalhe(): Observable<ComercialAcompanhamentoDetalhe> {
     return this.http.get<ComercialAcompanhamentoDetalhe>(`${base}/meu/detalhe`);
+  }
+
+  unidadeCards(): Observable<ComercialAcompanhamentoUnidadeCardsResponse> {
+    return this.http.get<ComercialAcompanhamentoUnidadeCardsResponse>(
+      `${base}/unidade`,
+    );
+  }
+
+  unidadeDetalhe(unidade: Unidade): Observable<ComercialAcompanhamentoDetalhe> {
+    const params = new HttpParams().set('unidade', unidade);
+    return this.http.get<ComercialAcompanhamentoDetalhe>(
+      `${base}/unidade/detalhe`,
+      { params },
+    );
   }
 
   listarVendedores(

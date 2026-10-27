@@ -1,0 +1,35 @@
+<section class="home-widget" aria-label="Meu desempenho">
+  <div class="home-widget-head">
+    <div class="home-widget-head-title">
+      <h2 class="home-section-title">Meu desempenho</h2>
+      @if (cardCompetencia) {
+        <p class="home-dashboard-competencia">{{ cardCompetencia }}</p>
+      }
+      <button
+        type="button"
+        class="btn btn-sm home-widget-btn-atualizar"
+        (click)="atualizar()"
+        [disabled]="cardCarregando"
+        title="Atualizar desempenho"
+        aria-label="Atualizar meu desempenho">
+        <i class="fas fa-sync-alt" [class.fa-spin]="cardCarregando" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+  @if (cardCarregando && !cardItem) {
+    <p class="home-dashboard-status">Carregando seu card comercial…</p>
+  } @else if (cardErro && !cardItem) {
+    <p class="home-dashboard-status is-aviso">{{ cardErro }}</p>
+  } @else if (cardItem) {
+    <app-comercial-vendedor-card
+      [item]="cardItem"
+      [podeVerComissao]="podeVerComissao"
+      [mostrarAcompanhamento]="podeAbrirAcompanhamento"
+      [mostrarUltimoCaixa]="true"
+      [competencia]="cardCompetencia"
+      [unidade]="cardUnidade"
+    />
+  } @else if (cardErro) {
+    <p class="home-dashboard-status is-aviso">{{ cardErro }}</p>
+  }
+</section>

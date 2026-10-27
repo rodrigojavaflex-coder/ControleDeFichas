@@ -7,6 +7,11 @@ export interface PermissionModuleConfig {
 
 export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
   {
+    key: 'home',
+    label: 'Tela inicial',
+    groupKeys: ['Home — Cards'],
+  },
+  {
     key: 'sistema',
     label: 'Sistema',
     groupKeys: ['Configuração', 'Feriados', 'Usuários', 'Perfis', 'Auditoria'],

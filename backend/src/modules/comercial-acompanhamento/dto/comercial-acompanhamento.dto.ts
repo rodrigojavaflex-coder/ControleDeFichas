@@ -566,6 +566,44 @@ export class ComercialAcompanhamentoMeuCardDto {
   dataFinal: string;
 }
 
+/** Card total da unidade na home (mesmo shape do MeuCard). */
+export class ComercialAcompanhamentoUnidadeCardDto {
+  @ApiProperty({ type: ComercialAcompanhamentoItemDto })
+  item: ComercialAcompanhamentoItemDto;
+
+  @ApiProperty({ enum: Unidade })
+  unidade: Unidade;
+
+  @ApiProperty()
+  anoMes: string;
+
+  @ApiProperty()
+  dataInicial: string;
+
+  @ApiProperty()
+  dataFinal: string;
+}
+
+export class ComercialAcompanhamentoUnidadeCardsResponseDto {
+  @ApiProperty({ type: [ComercialAcompanhamentoUnidadeCardDto] })
+  itens: ComercialAcompanhamentoUnidadeCardDto[];
+
+  @ApiProperty()
+  anoMes: string;
+
+  @ApiProperty()
+  dataInicial: string;
+
+  @ApiProperty()
+  dataFinal: string;
+}
+
+export class FindComercialAcompanhamentoUnidadeDetalheDto {
+  @ApiProperty({ enum: Unidade })
+  @IsEnum(Unidade)
+  unidade: Unidade;
+}
+
 export class ComercialAcompanhamentoVendedorOpcaoDto {
   @ApiProperty()
   funcionarioId: string;

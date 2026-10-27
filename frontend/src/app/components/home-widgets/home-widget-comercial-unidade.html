@@ -1,0 +1,200 @@
+<section class="home-widget home-widget-unidade" aria-label="Desempenho da unidade">
+  <div class="home-widget-head">
+    <div class="home-widget-head-title">
+      <h2 class="home-section-title">Desempenho da unidade</h2>
+      @if (competencia) {
+        <p class="home-dashboard-competencia">{{ competencia }}</p>
+      }
+      <button
+        type="button"
+        class="btn btn-sm home-widget-btn-atualizar"
+        (click)="atualizar()"
+        [disabled]="carregando"
+        title="Atualizar desempenho da unidade"
+        aria-label="Atualizar desempenho da unidade">
+        <i class="fas fa-sync-alt" [class.fa-spin]="carregando" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  @if (carregando && cards.length === 0) {
+    <p class="home-dashboard-status">Carregando resumo da unidade…</p>
+  } @else if (erro && cards.length === 0) {
+    <p class="home-dashboard-status is-aviso">{{ erro }}</p>
+  } @else if (cards.length === 0) {
+    <p class="home-dashboard-status">Nenhum total de unidade disponível.</p>
+  } @else {
+    <div class="home-unidade-resumo-lista">
+      @for (card of cards; track card.unidade) {
+        <article class="home-unidade-resumo-card">
+          <header class="home-unidade-resumo-head">
+            <div class="home-unidade-resumo-head-start">
+              <h3>
+                {{ card.unidade }}
+                <i class="fas fa-building" aria-hidden="true" title="Unidade"></i>
+              </h3>
+              <span
+                class="home-unidade-resumo-caixa"
+                title="Último caixa CONFIRMADO da unidade">
+                <span class="home-unidade-resumo-caixa-label">
+                  <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                  Último caixa fechado
+                </span>
+                <strong>{{ formatarData(card.item.dataUltimoCaixaFechado) }}</strong>
+              </span>
+            </div>
+            <div class="home-unidade-resumo-head-end">
+              <button
+                type="button"
+                class="btn btn-sm btn-primary home-unidade-btn-completo"
+                (click)="abrirCompleto(card)"
+                title="Ver card completo"
+                aria-label="Ver mais sobre {{ card.unidade }}">
+                <i class="fas fa-expand-alt" aria-hidden="true"></i>
+                <span>Ver mais</span>
+              </button>
+            </div>
+          </header>
+
+          <section class="home-unidade-resumo-metas" aria-label="Total geral">
+            <div class="home-unidade-resumo-metas-head">
+              <h4>Total geral</h4>
+              <p>
+                {{ metaTotalGeralParcial(card.item) ? 'Meta (parcial)' : 'Meta' }}
+                <strong>
+                  {{ temMetaCadastrada(valorMetaTotalGeral(card.item))
+                    ? formatarMoeda(valorMetaTotalGeral(card.item))
+                    : 'Sem meta' }}
+                </strong>
+              </p>
+            </div>
+            <div
+              class="home-unidade-resumo-meta-cols"
+              [class.has-projecao]="card.item.mesAberto">
+              <div class="home-unidade-resumo-meta-col">
+                <div class="home-unidade-resumo-meta-body">
+                  <div class="main">
+                    <span class="col-label">Realizado</span>
+                    <span class="value">{{ formatarMoeda(valorTotalRecebido(card.item)) }}</span>
+                    @if (temMetaCadastrada(valorMetaTotalGeral(card.item))) {
+                      <span class="sub">
+                        {{ formatarPercentualMeta(percentualSobreMetaTotal(valorTotalRecebido(card.item), valorMetaTotalGeral(card.item))) }}
+                        da meta
+                      </span>
+                    } @else {
+                      <span class="sub">Sem meta</span>
+                    }
+                  </div>
+                  @if (temMetaCadastrada(valorMetaTotalGeral(card.item))) {
+                    <div
+                      class="home-unidade-ring"
+                      [class.is-vermelho]="classeCorAnelMeta(percentualSobreMetaTotal(valorTotalRecebido(card.item), valorMetaTotalGeral(card.item))) === 'is-vermelho'"
+                      [class.is-azul]="classeCorAnelMeta(percentualSobreMetaTotal(valorTotalRecebido(card.item), valorMetaTotalGeral(card.item))) === 'is-azul'"
+                      [class.is-verde]="classeCorAnelMeta(percentualSobreMetaTotal(valorTotalRecebido(card.item), valorMetaTotalGeral(card.item))) === 'is-verde'"
+                      role="progressbar"
+                      [attr.aria-valuenow]="percentualSobreMetaTotal(valorTotalRecebido(card.item), valorMetaTotalGeral(card.item))"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-label="Realizado da meta">
+                      <svg class="home-unidade-ring-svg" viewBox="0 0 36 36" aria-hidden="true">
+                        <circle class="home-unidade-ring-bg" cx="18" cy="18" r="15.5"></circle>
+                        <circle
+                          class="home-unidade-ring-fg"
+                          cx="18"
+                          cy="18"
+                          r="15.5"
+                          [attr.stroke-dasharray]="arcoMetaRing(percentualSobreMetaTotal(valorTotalRecebido(card.item), valorMetaTotalGeral(card.item)))"
+                          stroke-dashoffset="0"></circle>
+                      </svg>
+                      <span class="home-unidade-ring-pct">
+                        {{ formatarPercentualMeta(percentualSobreMetaTotal(valorTotalRecebido(card.item), valorMetaTotalGeral(card.item))) }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+              @if (card.item.mesAberto) {
+                <div class="home-unidade-resumo-meta-col is-projetado">
+                  <div class="home-unidade-resumo-meta-body">
+                    <div class="main">
+                      <span class="col-label">Projetado</span>
+                      <span class="value">{{ formatarMoeda(valorTotalProjetado(card.item)) }}</span>
+                      @if (temMetaCadastrada(valorMetaTotalGeral(card.item))) {
+                        <span class="sub">
+                          {{ formatarPercentualMeta(percentualSobreMetaTotal(valorTotalProjetado(card.item), valorMetaTotalGeral(card.item))) }}
+                          da meta
+                        </span>
+                      } @else {
+                        <span class="sub">Sem meta</span>
+                      }
+                    </div>
+                    @if (temMetaCadastrada(valorMetaTotalGeral(card.item))) {
+                      <div
+                        class="home-unidade-ring"
+                        [class.is-vermelho]="classeCorAnelMeta(percentualSobreMetaTotal(valorTotalProjetado(card.item), valorMetaTotalGeral(card.item))) === 'is-vermelho'"
+                        [class.is-azul]="classeCorAnelMeta(percentualSobreMetaTotal(valorTotalProjetado(card.item), valorMetaTotalGeral(card.item))) === 'is-azul'"
+                        [class.is-verde]="classeCorAnelMeta(percentualSobreMetaTotal(valorTotalProjetado(card.item), valorMetaTotalGeral(card.item))) === 'is-verde'"
+                        role="progressbar"
+                        [attr.aria-valuenow]="percentualSobreMetaTotal(valorTotalProjetado(card.item), valorMetaTotalGeral(card.item))"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        aria-label="Projetado da meta">
+                        <svg class="home-unidade-ring-svg" viewBox="0 0 36 36" aria-hidden="true">
+                          <circle class="home-unidade-ring-bg" cx="18" cy="18" r="15.5"></circle>
+                          <circle
+                            class="home-unidade-ring-fg"
+                            cx="18"
+                            cy="18"
+                            r="15.5"
+                            [attr.stroke-dasharray]="arcoMetaRing(percentualSobreMetaTotal(valorTotalProjetado(card.item), valorMetaTotalGeral(card.item)))"
+                            stroke-dashoffset="0"></circle>
+                        </svg>
+                        <span class="home-unidade-ring-pct">
+                          {{ formatarPercentualMeta(percentualSobreMetaTotal(valorTotalProjetado(card.item), valorMetaTotalGeral(card.item))) }}
+                        </span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+
+        </article>
+      }
+    </div>
+  }
+</section>
+
+@if (modalAberto && modalCard) {
+  <div class="modal-overlay nao-clicavel home-unidade-modal-overlay">
+    <div
+      class="modal-conteudo home-unidade-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="'Card completo ' + modalCard.unidade">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">{{ modalCard.unidade }}</h3>
+        <button
+          type="button"
+          class="modal-fechar"
+          (click)="fecharCompleto()"
+          aria-label="Fechar">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="modal-corpo home-unidade-modal-corpo">
+        <app-comercial-vendedor-card
+          [item]="modalCard.item"
+          [isTotal]="true"
+          [modoDetalhe]="'unidade'"
+          [podeVerComissao]="false"
+          [mostrarAcompanhamento]="podeAbrirAcompanhamento"
+          [mostrarUltimoCaixa]="true"
+          [competencia]="competencia"
+          [unidade]="modalCard.unidade"
+        />
+      </div>
+    </div>
+  </div>
+}

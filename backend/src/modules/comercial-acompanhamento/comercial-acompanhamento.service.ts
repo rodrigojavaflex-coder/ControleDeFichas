@@ -7,7 +7,10 @@ import { Unidade } from '../../common/enums/unidade.enum';
 import { ComercialTipoBase } from '../../common/enums/comercial-tipo-base.enum';
 import { ComercialIncidenciaComissao } from '../../common/enums/comercial-incidencia-comissao.enum';
 import { ComercialCriterioRanking } from '../../common/enums/comercial-criterio-ranking.enum';
-import { assertUnidadeFolha } from '../folha/utils/folha-unidade-scope.util';
+import {
+  assertUnidadeFolha,
+  unidadeEscopoUsuarioFolha,
+} from '../folha/utils/folha-unidade-scope.util';
 import { ComercialMetaVendedor } from '../comercial-meta/entities/comercial-meta-vendedor.entity';
 import { ComercialMetaUnidade } from '../comercial-meta/entities/comercial-meta-unidade.entity';
 import { ComercialComissaoFaixa } from '../comercial-meta/entities/comercial-comissao-faixa.entity';
@@ -36,6 +39,8 @@ import {
   ComercialAcompanhamentoListResponseDto,
   ComercialAcompanhamentoMeuCardDto,
   ComercialAcompanhamentoTotaisDto,
+  ComercialAcompanhamentoUnidadeCardDto,
+  ComercialAcompanhamentoUnidadeCardsResponseDto,
   ComercialAcompanhamentoVendedorOpcaoDto,
   FindComercialAcompanhamentoDetalheDto,
   FindComercialAcompanhamentoDto,
@@ -128,6 +133,139 @@ export class ComercialAcompanhamentoService {
       mes,
       funcionarioId: funcionario.id,
     });
+  }
+
+  /**
+   * Cards TOTAL da unidade para a home.
+   * Com `usuario.unidade` (ou vendedor): só essa loja.
+   * Sem vínculo: um card por unidade do enum.
+   */
+  async findUnidadeCards(
+    usuario: Usuario,
+  ): Promise<ComercialAcompanhamentoUnidadeCardsResponseDto> {
+    const usuarioCompleto = await this.dataSource.getRepository(Usuario).findOne({
+      where: { id: usuario.id },
+      relations: ['vendedor'],
+    });
+    const user = usuarioCompleto ?? usuario;
+    const hoje = ymdHojeSp();
+    const [anoStr, mesStr] = hoje.split('-');
+    const ano = Number(anoStr);
+    const mes = Number(mesStr);
+    const escopo = unidadeEscopoUsuarioFolha(user);
+    const unidades: Unidade[] = escopo
+      ? [escopo]
+      : (Object.values(Unidade) as Unidade[]);
+
+    const cards = await Promise.all(
+      unidades.map((unidade) => this.montarCardUnidade(user, unidade, ano, mes)),
+    );
+
+    const primeiro = cards[0];
+    return {
+      itens: cards,
+      anoMes: primeiro?.anoMes ?? `${anoStr}-${mesStr.padStart(2, '0')}`,
+      dataInicial: primeiro?.dataInicial ?? '',
+      dataFinal: primeiro?.dataFinal ?? '',
+    };
+  }
+
+  async findUnidadeDetalhe(
+    usuario: Usuario,
+    unidade: Unidade,
+  ): Promise<ComercialAcompanhamentoDetalheDto> {
+    const usuarioCompleto = await this.dataSource.getRepository(Usuario).findOne({
+      where: { id: usuario.id },
+      relations: ['vendedor'],
+    });
+    const user = usuarioCompleto ?? usuario;
+    assertUnidadeFolha(user, unidade);
+    const hoje = ymdHojeSp();
+    const [anoStr, mesStr] = hoje.split('-');
+    return this.detalhe(user, {
+      unidade,
+      ano: Number(anoStr),
+      mes: Number(mesStr),
+    });
+  }
+
+  private async montarCardUnidade(
+    usuario: Usuario,
+    unidade: Unidade,
+    ano: number,
+    mes: number,
+  ): Promise<ComercialAcompanhamentoUnidadeCardDto> {
+    assertUnidadeFolha(usuario, unidade);
+    const lista = await this.findAll(usuario, { unidade, ano, mes });
+    return {
+      item: this.mapTotaisParaItemTotal(unidade, lista.totais),
+      unidade,
+      anoMes: lista.anoMes,
+      dataInicial: lista.dataInicial,
+      dataFinal: lista.dataFinal,
+    };
+  }
+
+  private mapTotaisParaItemTotal(
+    unidade: Unidade,
+    totais: ComercialAcompanhamentoTotaisDto,
+  ): ComercialAcompanhamentoItemDto {
+    return {
+      funcionarioId: null,
+      nomeVendedor: `TOTAL ${unidade}`,
+      codigoVendedorErp: null,
+      valorRecebidoRequisicao: totais.valorRecebidoRequisicao,
+      quantidadeRecebidoRequisicao: totais.quantidadeRecebidoRequisicao,
+      quantidadeFormulasRequisicao: totais.quantidadeFormulasRequisicao,
+      valorRequisicaoPura: totais.valorRequisicaoPura,
+      valorRevendaManipulados: totais.valorRevendaManipulados,
+      quantidadeRevendaManipulados: totais.quantidadeRevendaManipulados,
+      codigosSetorRevendaManipulados: totais.codigosSetorRevendaManipulados,
+      valorTerceirosManipulados: totais.valorTerceirosManipulados,
+      quantidadeTerceirosManipulados: totais.quantidadeTerceirosManipulados,
+      valorComissaoBaseRequisicao: totais.valorComissaoBaseRequisicao,
+      valorRecebidoMarcaPropria: totais.valorRecebidoMarcaPropria,
+      quantidadeRecebidoMarcaPropria: totais.quantidadeRecebidoMarcaPropria,
+      codigosSetorMarcaPropria: totais.codigosSetorMarcaPropria,
+      valorRecebidoMarcaPropriaSetores: totais.valorRecebidoMarcaPropriaSetores,
+      quantidadeRecebidoMarcaPropriaSetores:
+        totais.quantidadeRecebidoMarcaPropriaSetores,
+      valorRecebidoMarcaPropriaOutros: totais.valorRecebidoMarcaPropriaOutros,
+      quantidadeRecebidoMarcaPropriaOutros:
+        totais.quantidadeRecebidoMarcaPropriaOutros,
+      valorComissaoBaseMarcaPropria: totais.valorComissaoBaseMarcaPropria,
+      valorRejeitado: totais.valorRejeitado,
+      quantidadeRejeitado: totais.quantidadeRejeitado,
+      valorMetaRequisicao: totais.valorMetaRequisicao,
+      percentualMetaRequisicao: totais.percentualMetaRequisicao,
+      valorProjetadoRequisicao: totais.valorProjetadoRequisicao,
+      percentualProjecaoRequisicao: totais.percentualProjecaoRequisicao,
+      valorMetaMarcaPropria: totais.valorMetaMarcaPropria,
+      percentualMetaMarcaPropria: totais.percentualMetaMarcaPropria,
+      valorProjetadoMarcaPropria: totais.valorProjetadoMarcaPropria,
+      percentualProjecaoMarcaPropria: totais.percentualProjecaoMarcaPropria,
+      percentualMetaTopoFaixaRequisicao: totais.percentualMetaTopoFaixaRequisicao,
+      percentualMetaTopoFaixaMarcaPropria:
+        totais.percentualMetaTopoFaixaMarcaPropria,
+      faltaMeta100Requisicao: totais.faltaMeta100Requisicao,
+      faltaMetaTopoRequisicao: totais.faltaMetaTopoRequisicao,
+      vendaDiaMeta100Requisicao: totais.vendaDiaMeta100Requisicao,
+      vendaDiaMetaTopoRequisicao: totais.vendaDiaMetaTopoRequisicao,
+      faltaMeta100MarcaPropria: totais.faltaMeta100MarcaPropria,
+      faltaMetaTopoMarcaPropria: totais.faltaMetaTopoMarcaPropria,
+      vendaDiaMeta100MarcaPropria: totais.vendaDiaMeta100MarcaPropria,
+      vendaDiaMetaTopoMarcaPropria: totais.vendaDiaMetaTopoMarcaPropria,
+      valorRecebidoHojeRequisicao: totais.valorRecebidoHojeRequisicao,
+      valorRecebidoHojeMarcaPropria: totais.valorRecebidoHojeMarcaPropria,
+      faltaMetaHoje100Requisicao: totais.faltaMetaHoje100Requisicao,
+      faltaMetaHojeTopoRequisicao: totais.faltaMetaHojeTopoRequisicao,
+      faltaMetaHoje100MarcaPropria: totais.faltaMetaHoje100MarcaPropria,
+      faltaMetaHojeTopoMarcaPropria: totais.faltaMetaHojeTopoMarcaPropria,
+      diasUteisMes: totais.diasUteisMes,
+      diasRealizados: totais.diasRealizados,
+      dataUltimoCaixaFechado: totais.dataUltimoCaixaFechado,
+      mesAberto: totais.mesAberto,
+    };
   }
 
   private async resolverMeuFuncionario(usuario: Usuario): Promise<{

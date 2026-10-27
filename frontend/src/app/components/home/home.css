@@ -8,9 +8,9 @@
   min-height: calc((100vh - 64px) / var(--app-zoom-factor, 1) - 2rem);
 }
 
-/* Atalhos mais estreitos; card Meu desempenho ganha largura. */
+/* Atalhos com largura estável; coluna de widgets ocupa o restante. */
 .home-page.has-dashboard {
-  grid-template-columns: minmax(240px, 0.36fr) minmax(0, 0.64fr);
+  grid-template-columns: clamp(300px, 34%, 400px) minmax(0, 1fr);
 }
 
 .home-col {
