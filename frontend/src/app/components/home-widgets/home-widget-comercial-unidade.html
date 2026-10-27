@@ -17,13 +17,11 @@
     </div>
   </div>
 
-  @if (carregando && cards.length === 0) {
-    <p class="home-dashboard-status">Carregando resumo da unidade…</p>
-  } @else if (erro && cards.length === 0) {
+  @if (erro && !carregando && cards.length === 0) {
     <p class="home-dashboard-status is-aviso">{{ erro }}</p>
-  } @else if (cards.length === 0) {
+  } @else if (!carregando && cards.length === 0) {
     <p class="home-dashboard-status">Nenhum total de unidade disponível.</p>
-  } @else {
+  } @else if (cards.length > 0) {
     <div class="home-unidade-resumo-lista">
       @for (card of cards; track card.unidade) {
         <article class="home-unidade-resumo-card">

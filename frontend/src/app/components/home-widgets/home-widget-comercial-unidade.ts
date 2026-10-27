@@ -1,7 +1,9 @@
 import {
   Component,
+  EventEmitter,
   OnDestroy,
   OnInit,
+  Output,
   ViewEncapsulation,
   inject,
 } from '@angular/core';
@@ -31,6 +33,8 @@ export class HomeWidgetComercialUnidadeComponent implements OnInit, OnDestroy {
   private comercialAcomp = inject(ComercialAcompanhamentoService);
   private destroy$ = new Subject<void>();
 
+  @Output() carregandoChange = new EventEmitter<boolean>();
+
   carregando = false;
   erro: string | null = null;
   competencia = '';
@@ -44,6 +48,9 @@ export class HomeWidgetComercialUnidadeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.carregando) {
+      this.setCarregando(false);
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -148,7 +155,7 @@ export class HomeWidgetComercialUnidadeComponent implements OnInit, OnDestroy {
   }
 
   private carregar(): void {
-    this.carregando = true;
+    this.setCarregando(true);
     this.erro = null;
     this.comercialAcomp
       .unidadeCards()
@@ -169,14 +176,20 @@ export class HomeWidgetComercialUnidadeComponent implements OnInit, OnDestroy {
               this.modalCard = atualizado;
             }
           }
-          this.carregando = false;
+          this.setCarregando(false);
         },
         error: (e: { error?: { message?: string } }) => {
-          this.carregando = false;
+          this.setCarregando(false);
           this.erro =
             e?.error?.message ??
             'Não foi possível carregar o resumo da unidade.';
         },
       });
+  }
+
+  private setCarregando(valor: boolean): void {
+    if (this.carregando === valor) return;
+    this.carregando = valor;
+    this.carregandoChange.emit(valor);
   }
 }

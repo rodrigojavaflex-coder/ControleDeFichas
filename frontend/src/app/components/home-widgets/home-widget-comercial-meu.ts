@@ -1,4 +1,11 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  OnDestroy,
+  OnInit,
+  Output,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
@@ -23,6 +30,8 @@ export class HomeWidgetComercialMeuComponent implements OnInit, OnDestroy {
   private comercialAcomp = inject(ComercialAcompanhamentoService);
   private destroy$ = new Subject<void>();
 
+  @Output() carregandoChange = new EventEmitter<boolean>();
+
   cardCarregando = false;
   cardItem: ComercialAcompanhamentoItem | null = null;
   cardCompetencia = '';
@@ -34,6 +43,9 @@ export class HomeWidgetComercialMeuComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.cardCarregando) {
+      this.setCarregando(false);
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -52,7 +64,7 @@ export class HomeWidgetComercialMeuComponent implements OnInit, OnDestroy {
 
   private carregarMeuCard(): void {
     this.cardErro = null;
-    this.cardCarregando = true;
+    this.setCarregando(true);
     this.comercialAcomp
       .meuCard()
       .pipe(takeUntil(this.destroy$))
@@ -65,13 +77,19 @@ export class HomeWidgetComercialMeuComponent implements OnInit, OnDestroy {
             Number.isFinite(mes) && Number.isFinite(ano)
               ? `${nomeMesPt(mes)} ${ano}`
               : res.anoMes;
-          this.cardCarregando = false;
+          this.setCarregando(false);
         },
         error: (e: { error?: { message?: string } }) => {
-          this.cardCarregando = false;
+          this.setCarregando(false);
           this.cardErro =
             e?.error?.message ?? 'Não foi possível carregar o card comercial.';
         },
       });
+  }
+
+  private setCarregando(valor: boolean): void {
+    if (this.cardCarregando === valor) return;
+    this.cardCarregando = valor;
+    this.carregandoChange.emit(valor);
   }
 }

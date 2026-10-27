@@ -48,8 +48,26 @@
     </section>
   </div>
 
-  <app-home-widgets-host />
+  <app-home-widgets-host
+    (processamentoChange)="onWidgetsProcessamentoChange($event)"
+  />
 </div>
+
+@if (processamentoWidgets.ativo) {
+  <div
+    class="home-processing-overlay"
+    role="alertdialog"
+    aria-modal="true"
+    aria-busy="true"
+    aria-labelledby="home-proc-titulo"
+    aria-describedby="home-proc-sub">
+    <div class="home-processing-modal">
+      <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+      <h3 id="home-proc-titulo">{{ processamentoWidgets.titulo }}</h3>
+      <p id="home-proc-sub">{{ processamentoWidgets.subtitulo }}</p>
+    </div>
+  </div>
+}
 
 <app-home-shortcuts-modal
   [visible]="showPersonalizeModal"

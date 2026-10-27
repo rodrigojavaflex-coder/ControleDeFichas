@@ -2,10 +2,14 @@
   <section class="home-col home-col-card home-widgets-host" aria-label="Indicadores">
     <div class="home-widgets-stack">
       @if (mostrar('comercial-meu')) {
-        <app-home-widget-comercial-meu />
+        <app-home-widget-comercial-meu
+          (carregandoChange)="onCarregandoChange('comercial-meu', $event)"
+        />
       }
       @if (mostrar('comercial-unidade')) {
-        <app-home-widget-comercial-unidade />
+        <app-home-widget-comercial-unidade
+          (carregandoChange)="onCarregandoChange('comercial-unidade', $event)"
+        />
       }
     </div>
   </section>

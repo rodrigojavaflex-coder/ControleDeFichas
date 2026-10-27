@@ -10,7 +10,10 @@ import { HomeShortcutDef } from '../../config/home-shortcuts.registry';
 import { HOME_WIDGETS } from '../../config/home-widgets.registry';
 import { getNavigationMenuIconHtml } from '../navigation/navigation-lucide-svgs';
 import { HomeShortcutsModalComponent } from '../home-shortcuts-modal/home-shortcuts-modal';
-import { HomeWidgetsHostComponent } from '../home-widgets/home-widgets-host';
+import {
+  HomeWidgetsHostComponent,
+  HomeWidgetsProcessamentoEstado,
+} from '../home-widgets/home-widgets-host';
 import { NavigationService } from '../../services/navigation.service';
 import { ErrorModalService } from '../../services/error-modal.service';
 
@@ -40,6 +43,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   shortcuts: HomeShortcutDef[] = [];
   activeShortcutIds: string[] = [];
   showPersonalizeModal = false;
+  processamentoWidgets: HomeWidgetsProcessamentoEstado = {
+    ativo: false,
+    titulo: 'Carregando indicadores…',
+    subtitulo: 'Aguarde um momento. A tela ficará disponível ao concluir.',
+  };
 
   ngOnInit(): void {
     this.pageCtx.setContext({
@@ -49,10 +57,19 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     this.auth.currentUser$.pipe(takeUntil(this.destroy$)).subscribe((user) => {
       const nome = user?.nome?.trim() || '';
-      this.userName = nome;
-      this.userInitial = nome ? nome.charAt(0).toUpperCase() : '';
+      this.userName = this.primeiroEUltimoNome(nome);
+      this.userInitial = this.userName
+        ? this.userName.charAt(0).toUpperCase()
+        : '';
       this.reloadShortcuts(user?.id);
     });
+  }
+
+  /** Exibe só primeiro e último nome para caber no cabeçalho. */
+  private primeiroEUltimoNome(nomeCompleto: string): string {
+    const partes = nomeCompleto.split(/\s+/).filter(Boolean);
+    if (partes.length <= 2) return partes.join(' ');
+    return `${partes[0]} ${partes[partes.length - 1]}`;
   }
 
   ngOnDestroy(): void {
@@ -95,6 +112,10 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   onShortcutNavigate(): void {
     this.navigationService.closeOnNavigation();
+  }
+
+  onWidgetsProcessamentoChange(estado: HomeWidgetsProcessamentoEstado): void {
+    this.processamentoWidgets = estado;
   }
 
   private reloadShortcuts(userId: string | undefined): void {

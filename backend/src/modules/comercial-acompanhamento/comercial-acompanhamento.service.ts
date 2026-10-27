@@ -196,7 +196,7 @@ export class ComercialAcompanhamentoService {
     mes: number,
   ): Promise<ComercialAcompanhamentoUnidadeCardDto> {
     assertUnidadeFolha(usuario, unidade);
-    const lista = await this.findAll(usuario, { unidade, ano, mes });
+    const lista = await this.calcularTotaisUnidadeHome(unidade, ano, mes);
     return {
       item: this.mapTotaisParaItemTotal(unidade, lista.totais),
       unidade,
@@ -204,6 +204,302 @@ export class ComercialAcompanhamentoService {
       dataInicial: lista.dataInicial,
       dataFinal: lista.dataFinal,
     };
+  }
+
+  /**
+   * Totais da loja para a home — sem montar cards por vendedor, ranking nem comissão.
+   * Mantém a mesma regra de valor do card TOTAL (RN-COM-003 / RN-COM-004).
+   */
+  private async calcularTotaisUnidadeHome(
+    unidade: Unidade,
+    ano: number,
+    mes: number,
+  ): Promise<{
+    totais: ComercialAcompanhamentoTotaisDto;
+    anoMes: string;
+    dataInicial: string;
+    dataFinal: string;
+  }> {
+    const periodo = periodoCompetencia(ano, mes);
+    const hoje = ymdHojeSp();
+    const tetoLoja = dataTetoPreviaAcompanhamento(
+      periodo.dataInicial,
+      periodo.dataFinal,
+      hoje,
+    );
+
+    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
+      where: { unidade },
+    });
+    const setoresUnidade = this.normalizarCodigosSetor(
+      politicaUnidade?.codigosSetor,
+    );
+    const setoresUnidadeRevenda = this.normalizarCodigosSetor(
+      politicaUnidade?.codigosSetorRevendaManipulados,
+    );
+
+    const [reqMap, rejMap, vinculados, volumeLoja, terceirosLoja] =
+      await Promise.all([
+        tetoLoja
+          ? this.buscarRecebidoRequisicao(
+              unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve(new Map() as MapaMovimento),
+        this.buscarRejeitado(unidade, periodo.dataInicial, periodo.dataFinal),
+        this.funcionarioRepo
+          .createQueryBuilder('f')
+          .select(['f.id', 'f.codigoVendedorErp'])
+          .where('f.unidade = :unidade', { unidade })
+          .andWhere('f.codigoVendedorErp IS NOT NULL')
+          .andWhere('f.codigoVendedorErp > 0')
+          .getMany(),
+        tetoLoja
+          ? this.buscarVolumeLoja(
+              unidade,
+              periodo.dataInicial,
+              tetoLoja,
+              setoresUnidade,
+              setoresUnidadeRevenda,
+            )
+          : Promise.resolve({
+              marcaPropria: {
+                valor: 0,
+                qtd: 0,
+                valorSetores: 0,
+                qtdSetores: 0,
+              },
+              revendaManipulados: { valor: 0, qtd: 0 },
+            }),
+        tetoLoja
+          ? this.buscarRecebidoTerceiros(
+              unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve({ valor: 0, qtd: 0 }),
+      ]);
+
+    let puraLoja = 0;
+    let qtdReq = 0;
+    let qtdFormulas = 0;
+    for (const f of vinculados) {
+      const codigo = f.codigoVendedorErp;
+      if (codigo == null || codigo <= 0) continue;
+      const mov = reqMap.get(codigo);
+      if (!mov) continue;
+      puraLoja += mov.valor;
+      qtdReq += mov.qtd;
+      qtdFormulas += mov.qtdFormulas ?? 0;
+    }
+    puraLoja = this.round2(puraLoja);
+
+    const lojaRecebidoMp = volumeLoja.marcaPropria;
+    const lojaRejeitado = this.somarMapa(rejMap);
+    const lojaMpTotal = this.round2(lojaRecebidoMp.valor);
+    const lojaMpQtdTotal = lojaRecebidoMp.qtd;
+    const lojaMpSetores = this.round2(
+      setoresUnidade.length > 0 ? lojaRecebidoMp.valorSetores : 0,
+    );
+    const lojaMpQtdSetores =
+      setoresUnidade.length > 0 ? lojaRecebidoMp.qtdSetores : 0;
+    const lojaMpOutros = this.round2(lojaMpTotal - lojaMpSetores);
+    const lojaMpQtdOutros = Math.max(0, lojaMpQtdTotal - lojaMpQtdSetores);
+    const lojaComissaoMp =
+      setoresUnidade.length > 0 ? lojaMpSetores : lojaMpTotal;
+    const extraLoja = volumeLoja.revendaManipulados;
+    const terceirosValor = this.round2(terceirosLoja.valor);
+    const lojaComissaoReq = this.round2(puraLoja + extraLoja.valor);
+    const lojaRecebidoReq = this.round2(lojaComissaoReq + terceirosValor);
+
+    const totais: ComercialAcompanhamentoTotaisDto = {
+      valorRecebidoRequisicao: lojaRecebidoReq,
+      quantidadeRecebidoRequisicao: qtdReq,
+      quantidadeFormulasRequisicao: qtdFormulas,
+      valorRequisicaoPura: puraLoja,
+      valorRevendaManipulados: extraLoja.valor,
+      quantidadeRevendaManipulados: extraLoja.qtd,
+      codigosSetorRevendaManipulados: setoresUnidadeRevenda,
+      valorTerceirosManipulados: terceirosValor,
+      quantidadeTerceirosManipulados: terceirosLoja.qtd,
+      valorComissaoBaseRequisicao: lojaComissaoReq,
+      valorRecebidoMarcaPropria: lojaMpTotal,
+      quantidadeRecebidoMarcaPropria: lojaMpQtdTotal,
+      codigosSetorMarcaPropria: setoresUnidade,
+      valorRecebidoMarcaPropriaSetores: lojaMpSetores,
+      quantidadeRecebidoMarcaPropriaSetores: lojaMpQtdSetores,
+      valorRecebidoMarcaPropriaOutros: lojaMpOutros,
+      quantidadeRecebidoMarcaPropriaOutros: lojaMpQtdOutros,
+      valorComissaoBaseMarcaPropria: lojaComissaoMp,
+      valorRejeitado: lojaRejeitado.valor,
+      quantidadeRejeitado: lojaRejeitado.qtd,
+      quantidadeVendedores: vinculados.length,
+      valorRecebidoHojeRequisicao: null,
+      valorRecebidoHojeMarcaPropria: null,
+    };
+
+    await this.anexarDesempenhoSomenteTotais(
+      totais,
+      periodo,
+      unidade,
+      vinculados.map((f) => f.id),
+      lojaRecebidoReq,
+      lojaMpTotal,
+      hoje,
+    );
+
+    return {
+      totais,
+      anoMes: periodo.anoMes,
+      dataInicial: periodo.dataInicial,
+      dataFinal: periodo.dataFinal,
+    };
+  }
+
+  /**
+   * Metas/projeção/análise só do card total (home) — sem faixas, ranking ou comissão por vendedor.
+   */
+  private async anexarDesempenhoSomenteTotais(
+    totais: ComercialAcompanhamentoTotaisDto,
+    periodo: ReturnType<typeof periodoCompetencia>,
+    unidade: Unidade,
+    funcionarioIds: string[],
+    lojaRecebidoReq: number,
+    lojaRecebidoMp: number,
+    hoje: string,
+  ): Promise<void> {
+    const mesAberto = competenciaAberta(
+      hoje,
+      periodo.dataInicial,
+      periodo.dataFinal,
+    );
+
+    const [metasUnidade, calendario, feriados, dataUltimoCaixa] =
+      await Promise.all([
+        this.metaUnidadeRepo.find({
+          where: { unidade, anoMes: periodo.anoMes },
+        }),
+        this.calendarioRepo.findOne({ where: { unidade } }),
+        this.feriadoRepo
+          .createQueryBuilder('f')
+          .where('f.unidade = :unidade', { unidade })
+          .andWhere('f.data >= :ini AND f.data <= :fim', {
+            ini: periodo.dataInicial,
+            fim: periodo.dataFinal,
+          })
+          .getMany(),
+        this.obterUltimaDataCaixaConfirmado(unidade),
+      ]);
+
+    let metaLojaReq: number | null = null;
+    let metaLojaMp: number | null = null;
+    for (const m of metasUnidade) {
+      if (m.tipoBase === ComercialTipoBase.REQUISICAO) {
+        metaLojaReq = Number(m.valorMeta);
+      } else {
+        metaLojaMp = Number(m.valorMeta);
+      }
+    }
+
+    let somaMetaReq = 0;
+    let somaMetaMp = 0;
+    if (
+      (metaLojaReq == null || metaLojaMp == null) &&
+      funcionarioIds.length > 0
+    ) {
+      const metas = await this.metaRepo.find({
+        where: {
+          anoMes: periodo.anoMes,
+          funcionario: { id: In(funcionarioIds) },
+        },
+        relations: ['funcionario'],
+      });
+      for (const m of metas) {
+        if (m.valorMeta <= 0) continue;
+        if (m.tipoBase === ComercialTipoBase.REQUISICAO) {
+          somaMetaReq += Number(m.valorMeta);
+        } else {
+          somaMetaMp += Number(m.valorMeta);
+        }
+      }
+    }
+
+    const sabado = calendario?.sabadoDiaUtil ?? false;
+    const feriadosSet = new Set(
+      feriados.map((f) => this.toYmd(f.data)).filter(Boolean),
+    );
+    const duMes = somarDiasUteisVisitacao(
+      periodo.dataInicial,
+      periodo.dataFinal,
+      sabado,
+      feriadosSet,
+    );
+    const realizados = somarDiasRealizadosVisitacao(
+      periodo.dataInicial,
+      periodo.dataFinal,
+      dataUltimoCaixa,
+      sabado,
+      feriadosSet,
+    );
+
+    totais.mesAberto = mesAberto;
+    totais.diasUteisMes = duMes;
+    totais.diasRealizados = realizados;
+    totais.dataUltimoCaixaFechado = dataUltimoCaixa;
+
+    totais.valorMetaRequisicao =
+      metaLojaReq ?? (somaMetaReq > 0 ? somaMetaReq : null);
+    totais.percentualMetaRequisicao =
+      totais.valorMetaRequisicao != null && totais.valorMetaRequisicao > 0
+        ? (lojaRecebidoReq / totais.valorMetaRequisicao) * 100
+        : null;
+    totais.valorMetaMarcaPropria =
+      metaLojaMp ?? (somaMetaMp > 0 ? somaMetaMp : null);
+    totais.percentualMetaMarcaPropria =
+      totais.valorMetaMarcaPropria != null && totais.valorMetaMarcaPropria > 0
+        ? (lojaRecebidoMp / totais.valorMetaMarcaPropria) * 100
+        : null;
+
+    const lojaProjetadoReq =
+      mesAberto && realizados > 0
+        ? this.round2((lojaRecebidoReq / realizados) * duMes)
+        : null;
+    const lojaProjetadoMp =
+      mesAberto && realizados > 0
+        ? this.round2((lojaRecebidoMp / realizados) * duMes)
+        : null;
+
+    totais.valorProjetadoRequisicao = lojaProjetadoReq;
+    totais.percentualProjecaoRequisicao =
+      lojaProjetadoReq != null &&
+      totais.valorMetaRequisicao != null &&
+      totais.valorMetaRequisicao > 0
+        ? (lojaProjetadoReq / totais.valorMetaRequisicao) * 100
+        : null;
+    totais.valorProjetadoMarcaPropria = lojaProjetadoMp;
+    totais.percentualProjecaoMarcaPropria =
+      lojaProjetadoMp != null &&
+      totais.valorMetaMarcaPropria != null &&
+      totais.valorMetaMarcaPropria > 0
+        ? (lojaProjetadoMp / totais.valorMetaMarcaPropria) * 100
+        : null;
+
+    const diasRestantes = Math.max(0, duMes - realizados);
+    totais.percentualMetaTopoFaixaRequisicao = TOPO_META_LOJA_PCT;
+    totais.percentualMetaTopoFaixaMarcaPropria = TOPO_META_LOJA_PCT;
+    this.anexarAnaliseDesempenho(
+      totais,
+      lojaRecebidoReq,
+      totais.valorMetaRequisicao,
+      TOPO_META_LOJA_PCT,
+      lojaRecebidoMp,
+      totais.valorMetaMarcaPropria,
+      TOPO_META_LOJA_PCT,
+      diasRestantes,
+      totais.valorRecebidoHojeRequisicao,
+      totais.valorRecebidoHojeMarcaPropria,
+    );
   }
 
   private mapTotaisParaItemTotal(

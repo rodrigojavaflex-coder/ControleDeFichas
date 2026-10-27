@@ -16,9 +16,7 @@
       </button>
     </div>
   </div>
-  @if (cardCarregando && !cardItem) {
-    <p class="home-dashboard-status">Carregando seu card comercial…</p>
-  } @else if (cardErro && !cardItem) {
+  @if (cardErro && !cardItem && !cardCarregando) {
     <p class="home-dashboard-status is-aviso">{{ cardErro }}</p>
   } @else if (cardItem) {
     <app-comercial-vendedor-card
@@ -29,7 +27,5 @@
       [competencia]="cardCompetencia"
       [unidade]="cardUnidade"
     />
-  } @else if (cardErro) {
-    <p class="home-dashboard-status is-aviso">{{ cardErro }}</p>
   }
 </section>

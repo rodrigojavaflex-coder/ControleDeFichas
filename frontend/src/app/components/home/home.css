@@ -313,6 +313,61 @@ body.theme-dark .home-empty,
   color: var(--text-secondary, #94a3b8);
 }
 
+.home-processing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 13000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--cor-fundo, #0f172a) 55%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.home-processing-modal {
+  text-align: center;
+  padding: 1.75rem;
+  border-radius: 12px;
+  background: var(--cor-superficie, var(--bg-primary, #fff));
+  border: 1px solid var(--cor-borda, var(--border-color, #e2e8f0));
+  max-width: 400px;
+  width: calc(100% - 2rem);
+  box-shadow: var(--sombra-md, 0 10px 30px color-mix(in srgb, #0f172a 18%, transparent));
+}
+
+.home-processing-modal i {
+  font-size: 2rem;
+  color: var(--cor-primaria, #2563eb);
+}
+
+.home-processing-modal h3 {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 1.05rem;
+  color: var(--text-primary, #1e293b);
+}
+
+.home-processing-modal p {
+  margin: 0;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.9rem;
+}
+
+body.theme-dark .home-processing-modal,
+[data-theme='dark'] .home-processing-modal {
+  background: var(--cor-superficie, var(--bg-primary, #1e293b));
+  border-color: var(--cor-borda, var(--border-color, #334155));
+}
+
+body.theme-dark .home-processing-modal h3,
+[data-theme='dark'] .home-processing-modal h3 {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .home-processing-modal p,
+[data-theme='dark'] .home-processing-modal p {
+  color: var(--text-secondary, #94a3b8);
+}
+
 @media (max-width: 700px) {
   .home-page,
   .home-page.has-dashboard {
