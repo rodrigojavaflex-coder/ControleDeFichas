@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { PainelMedicoRepresentante } from './entities/painel-medico-representante.entity';
 import { PainelMedicoRepresentanteHistorico } from './entities/painel-medico-representante-historico.entity';
+import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { MotivoRemocaoPainel } from '../../common/enums/motivo-remocao-painel.enum';
 import {
@@ -13,6 +14,7 @@ import {
 import { padronizarNomeDeSistemaLegado } from '../../common/utils/encoding-legado.util';
 import { mensagemErroChamadaAgente } from '../../common/utils/formatar-erro-agente.util';
 import { fetchAgenteComRetry } from '../../common/utils/fetch-agente-com-retry.util';
+import { garantirPrescritorPorCrmUf } from '../../common/utils/prescritor-crm.util';
 
 export interface AgentePainelMedico {
   nome_medico: string;
@@ -46,6 +48,8 @@ export class PainelMedicosService {
     private readonly painelRepository: Repository<PainelMedicoRepresentante>,
     @InjectRepository(PainelMedicoRepresentanteHistorico)
     private readonly historicoRepository: Repository<PainelMedicoRepresentanteHistorico>,
+    @InjectRepository(Prescritor)
+    private readonly prescritorRepository: Repository<Prescritor>,
   ) {}
 
   getUnidadePorAgente(agente: string): Unidade {
@@ -138,11 +142,19 @@ export class PainelMedicosService {
         },
       });
 
+      const crmMedico = String(registro.crm_medico).trim();
+      const ufCrmMedico = String(registro.uf_crm_medico).trim().toUpperCase();
+      await garantirPrescritorPorCrmUf(
+        this.prescritorRepository,
+        crmMedico,
+        ufCrmMedico,
+        registro.nome_medico,
+      );
+
       const payload: Partial<PainelMedicoRepresentante> = {
         unidade,
-        nomeMedico: padronizarNomeDeSistemaLegado(registro.nome_medico),
-        ufCrmMedico: String(registro.uf_crm_medico).trim(),
-        crmMedico: String(registro.crm_medico).trim(),
+        ufCrmMedico,
+        crmMedico,
         contratoRepresentante: registro.contrato_representante,
         codigoRepresentante: registro.codigo_representante,
         nomeRepresentante: padronizarNomeDeSistemaLegado(
@@ -248,22 +260,33 @@ export class PainelMedicosService {
     }
 
     const agora = new Date();
-    const historicos = registros.map((registro) =>
-      this.historicoRepository.create({
-        unidade: registro.unidade,
-        nomeMedico: registro.nomeMedico,
-        ufCrmMedico: registro.ufCrmMedico,
-        crmMedico: registro.crmMedico,
-        contratoRepresentante: registro.contratoRepresentante,
-        codigoRepresentante: registro.codigoRepresentante,
-        nomeRepresentante: registro.nomeRepresentante,
-        configNoMomento,
-        motivoRemocao: motivo,
-        removidoEm: agora,
-        origemPainelId: registro.id,
-        criadoEmPainel: registro.criadoEm,
-      }),
-    );
+    const historicos: PainelMedicoRepresentanteHistorico[] = [];
+    for (const registro of registros) {
+      const prescritor = await garantirPrescritorPorCrmUf(
+        this.prescritorRepository,
+        registro.crmMedico,
+        registro.ufCrmMedico,
+      );
+      const nomeMedico =
+        prescritor?.nome?.trim() ||
+        `CRM ${registro.crmMedico}/${registro.ufCrmMedico}`;
+      historicos.push(
+        this.historicoRepository.create({
+          unidade: registro.unidade,
+          nomeMedico,
+          ufCrmMedico: registro.ufCrmMedico,
+          crmMedico: registro.crmMedico,
+          contratoRepresentante: registro.contratoRepresentante,
+          codigoRepresentante: registro.codigoRepresentante,
+          nomeRepresentante: registro.nomeRepresentante,
+          configNoMomento,
+          motivoRemocao: motivo,
+          removidoEm: agora,
+          origemPainelId: registro.id,
+          criadoEmPainel: registro.criadoEm,
+        }),
+      );
+    }
 
     await this.historicoRepository.save(historicos);
     await this.painelRepository.remove(registros);

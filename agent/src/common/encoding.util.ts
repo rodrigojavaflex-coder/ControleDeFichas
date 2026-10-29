@@ -19,6 +19,34 @@ export function precisaCorrecaoEncoding(str: string): boolean {
   return false;
 }
 
+/**
+ * Decodifica bytes crus do Firebird (CAST … CHARACTER SET OCTETS).
+ * Preferível a strings do node-firebird, que trocam acentos por U+FFFD.
+ */
+export function decodificarBytesFirebird(
+  value: Buffer | string | null | undefined,
+  sourceCharset: string = 'NONE',
+): string {
+  if (value == null) return '';
+
+  const charsetNormalizado = sourceCharset?.trim() || 'NONE';
+  const effectiveCharset =
+    charsetNormalizado === 'NONE' ? 'WIN1252' : charsetNormalizado;
+
+  if (Buffer.isBuffer(value)) {
+    try {
+      return iconv
+        .decode(value, effectiveCharset)
+        .replace(/\0/g, '')
+        .trim();
+    } catch {
+      return value.toString('latin1').replace(/\0/g, '').trim();
+    }
+  }
+
+  return converterTextoFirebird(value, sourceCharset);
+}
+
 export function converterTextoFirebird(
   str: string | Buffer | null | undefined,
   sourceCharset: string = 'NONE',
@@ -31,7 +59,8 @@ export function converterTextoFirebird(
 
   if (Buffer.isBuffer(str)) {
     try {
-      return fixCorruptedChars(iconv.decode(str, effectiveCharset));
+      const decoded = decodificarBytesFirebird(str, sourceCharset);
+      return fixCorruptedChars(decoded);
     } catch {
       return fixCorruptedChars(str.toString('utf8'));
     }
@@ -39,6 +68,13 @@ export function converterTextoFirebird(
 
   if (typeof str !== 'string') {
     return fixCorruptedChars(String(str));
+  }
+
+  // node-firebird com NONE/UTF8 substitui bytes WIN1252 por U+FFFD.
+  // Reinterpretar FFFD via latin1 vira 0xFD (ý) e as heurísticas geram
+  // JÉLIA/ÇRABE a partir de JÚLIA/ÁRABE — não recuperar sem OCTETS.
+  if (str.includes('\uFFFD')) {
+    return str;
   }
 
   try {

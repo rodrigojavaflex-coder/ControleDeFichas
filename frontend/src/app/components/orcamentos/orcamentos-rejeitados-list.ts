@@ -116,6 +116,9 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
   statusFilter: OrcamentoListaStatusFiltro = 'REJEITADO';
   dataInicialFilter = '';
   dataFinalFilter = '';
+  /** Filtro valor (precoVenda); string para input; vazio = sem filtro */
+  valorMaiorIgualFilter = '';
+  valorMenorIgualFilter = '';
   unidades = Object.values(Unidade);
   unidadeDisabled = false;
 
@@ -598,11 +601,20 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     }
     if (this.dataInicialFilter) filters.dataInicial = this.dataInicialFilter;
     if (this.dataFinalFilter) filters.dataFinal = this.dataFinalFilter;
+    if (this.canViewValores()) {
+      const valorMaior = this.parseValorFiltro(this.valorMaiorIgualFilter);
+      if (valorMaior != null) filters.valorMaiorIgual = valorMaior;
+      const valorMenor = this.parseValorFiltro(this.valorMenorIgualFilter);
+      if (valorMenor != null) filters.valorMenorIgual = valorMenor;
+    }
 
     return filters;
   }
 
   applyFilters(): void {
+    if (!this.validarFiltrosValor()) {
+      return;
+    }
     this.filtersPanelOpen = false;
     this.currentPage = 1;
     this.buildAppliedFilters();
@@ -617,6 +629,8 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     this.selectedMedicos.clear();
     this.dataInicialFilter = '';
     this.dataFinalFilter = '';
+    this.valorMaiorIgualFilter = '';
+    this.valorMenorIgualFilter = '';
     this.initializeStatusFilter();
     this.initializeDateFilters();
     if (!this.unidadeDisabled) {
@@ -626,6 +640,68 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     this.currentPage = 1;
     this.buildAppliedFilters();
     this.loadItems();
+  }
+
+  private parseValorFiltro(raw: string): number | null {
+    if (!raw || typeof raw !== 'string') return null;
+    const trimmed = raw.trim().replace(',', '.');
+    if (!trimmed) return null;
+    const n = parseFloat(trimmed);
+    if (Number.isNaN(n)) return null;
+    return n;
+  }
+
+  private validarFiltrosValor(): boolean {
+    if (!this.canViewValores()) {
+      return true;
+    }
+
+    const maiorRaw = this.valorMaiorIgualFilter.trim();
+    const menorRaw = this.valorMenorIgualFilter.trim();
+
+    if (!maiorRaw && !menorRaw) {
+      return true;
+    }
+
+    const maior = maiorRaw ? this.parseValorFiltro(maiorRaw) : null;
+    const menor = menorRaw ? this.parseValorFiltro(menorRaw) : null;
+
+    if (maiorRaw && maior == null) {
+      this.errorModalService.show(
+        'Valor maior ou igual deve ser um número válido.',
+        'Validação',
+      );
+      return false;
+    }
+    if (menorRaw && menor == null) {
+      this.errorModalService.show(
+        'Valor menor ou igual deve ser um número válido.',
+        'Validação',
+      );
+      return false;
+    }
+    if (maior != null && maior < 0) {
+      this.errorModalService.show(
+        'Valor maior ou igual deve ser maior ou igual a zero.',
+        'Validação',
+      );
+      return false;
+    }
+    if (menor != null && menor < 0) {
+      this.errorModalService.show(
+        'Valor menor ou igual deve ser maior ou igual a zero.',
+        'Validação',
+      );
+      return false;
+    }
+    if (maior != null && menor != null && maior > menor) {
+      this.errorModalService.show(
+        'Valor maior ou igual não pode ser superior ao valor menor ou igual.',
+        'Validação',
+      );
+      return false;
+    }
+    return true;
   }
 
   onDataRangeChangeModal(range: DateRangeValue): void {
@@ -697,6 +773,24 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
         list.push({ key: 'dataOrcamento', label: 'Data do orçamento', value });
       }
     }
+    if (this.canViewValores()) {
+      const valorMaior = this.parseValorFiltro(this.valorMaiorIgualFilter);
+      if (valorMaior != null) {
+        list.push({
+          key: 'valorMaiorIgual',
+          label: 'Valor ≥',
+          value: this.formatarMoeda(valorMaior),
+        });
+      }
+      const valorMenor = this.parseValorFiltro(this.valorMenorIgualFilter);
+      if (valorMenor != null) {
+        list.push({
+          key: 'valorMenorIgual',
+          label: 'Valor ≤',
+          value: this.formatarMoeda(valorMenor),
+        });
+      }
+    }
     this.appliedFilters = list;
   }
 
@@ -718,6 +812,8 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
       motivoRejeicao: 'fa-tag',
       status: 'fa-exchange-alt',
       dataOrcamento: 'fa-calendar-alt',
+      valorMaiorIgual: 'fa-dollar-sign',
+      valorMenorIgual: 'fa-dollar-sign',
     };
     return icons[key] ?? 'fa-filter';
   }
@@ -757,6 +853,12 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
       case 'dataOrcamento':
         this.dataInicialFilter = '';
         this.dataFinalFilter = '';
+        break;
+      case 'valorMaiorIgual':
+        this.valorMaiorIgualFilter = '';
+        break;
+      case 'valorMenorIgual':
+        this.valorMenorIgualFilter = '';
         break;
     }
     this.applyFilters();

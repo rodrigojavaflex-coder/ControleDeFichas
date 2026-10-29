@@ -188,6 +188,7 @@
 - Usuário com **ambas** permissões de leitura vê abas/filtro **Todos | Aprovados | Rejeitados**; com apenas uma, o tipo fica fixo.
 - Permissões de leitura: **`orcamento-rejeitado:read`** (rejeitados) e **`orcamento-aprovado:read`** (aprovados).
 - Coluna **Valor** e totais monetários na listagem/relatório exigem **`orcamento:view-valores`** — a API mascara `precoCobrado`, `precoVenda` e `descontoFormula` (zero) quando o usuário não possui a permissão.
+- **Filtro por valor** (opcional, independente): query params **`valorMaiorIgual`** (`precoVenda >=`) e **`valorMenorIgual`** (`precoVenda <=`); campos vazios = sem filtro; podem ser combinados em faixa. Valores devem ser **>= 0**; se ambos forem informados e `valorMaiorIgual > valorMenorIgual`, a API retorna erro de negócio. Exige **`orcamento:view-valores`** (UI não exibe os campos sem a permissão; API retorna **403** se os params forem enviados sem ela). Os mesmos filtros aplicam-se à impressão/exportação da listagem.
 - Impressão exige **`orcamento:print`** — requisições com query **`relatorio=true`** em **`GET /orcamentos`** retornam **403** sem essa permissão.
 
 ### RN-ORC-002 — Registro de motivo em rejeitados
@@ -331,7 +332,9 @@
 - A cada sincronização geral: criar, atualizar e **remover** registros do escopo configurado que não constarem na lista retornada pelo ERP (conforme **RN-REP-002**).
 - Sem watermark de data; a configuração de contrato/representantes substitui o filtro temporal.
 - Integrada à sync geral (`POST /sincronizacao/executar`), após orçamentos, quando `painelContratoRepresentantes` estiver preenchido.
-- Encoding: `padronizarNomeDeSistemaLegado()` / `normalizarTextoLegado()` em campos de texto legados.
+- Encoding: nomes de médico/representante lidos no agente via **CAST … CHARACTER SET OCTETS** + decode **WIN1252** (evita `U+FFFD` do `node-firebird` e a heurística `ý`→É/Ç que gerava JÉLIA/ÇRABE). No backend: `padronizarNomeDeSistemaLegado()` / `normalizarTextoLegado()` sem re-iconv de texto UTF-8 válido. Identidade de prescritor na sync: **CRM + UF** (atualiza nome se divergir).
+- **Nome canônico:** o nome do médico fica só em **`prescritores`** (chave **CRM + UF**). Painel ativo, orçamentos e caixa guardam CRM/UF e leem o nome via JOIN. O **retrato** de visitação (`visitacao_fechamento_*`) e o **histórico** do painel **mantêm** o nome congelado no momento do fechamento/remoção.
+- **Reparo de nomes já gravados:** Configuração → Importação → **Reparar nomes de médicos** (`POST /sincronizacao/reparar-nomes-medicos`). Escopo opcional por **unidade** (consulta só o agente correspondente no ERP). Dry-run devolve lista completa `paraCorrigir` (checkbox na UI) e `pendentesRelatorio` (CSV). Apply só nos **itens selecionados** (`itensSelecionados`) ou `aplicarTodos=true`. Sobrescreve **apenas** `prescritores.nome`. Não altera CRM/UF.
 
 ### RN-REP-002 — Histórico do painel médicos × representantes
 

@@ -752,6 +752,26 @@
         </div>
       </div>
 
+      <div class="importacao-card">
+        <div class="importacao-header">
+          <div>
+            <h3 class="section-title">Nomes de médicos (encoding)</h3>
+            <p class="section-description">
+              Corrige nomes já gravados no NEST (prescritores, painel, caixa e orçamentos) cruzando
+              <strong>CRM + UF</strong> com o cadastro <code>FC04000</code> dos agentes.
+              Use dry-run antes de aplicar. Exige agents atualizados (leitura OCTETS/WIN1252).
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-migracao btn-reparar-nomes-medicos"
+            (click)="abrirModalRepararNomesMedicos()">
+            <i class="fas fa-user-md"></i>
+            Reparar nomes de médicos
+          </button>
+        </div>
+      </div>
+
     </div>
   }
 
@@ -847,3 +867,8 @@
   #orcamentosModal
   (importacaoConcluida)="onImportacaoOrcamentosConcluida()">
 </app-importar-orcamentos-modal>
+
+<app-reparar-nomes-medicos-modal
+  #repararNomesMedicosModal
+  (reparoConcluido)="onReparoNomesMedicosConcluido()">
+</app-reparar-nomes-medicos-modal>

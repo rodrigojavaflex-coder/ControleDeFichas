@@ -22,6 +22,7 @@ import { ImportarCaixaErpModalComponent } from '../../components/importar-caixa-
 import { ImportarProducaoEtapasModalComponent } from '../../components/importar-producao-etapas-modal/importar-producao-etapas-modal';
 import { LimparProducaoEtapasModalComponent } from '../../components/limpar-producao-etapas-modal/limpar-producao-etapas-modal';
 import { ImportarOrcamentosModalComponent } from '../../components/importar-orcamentos-modal/importar-orcamentos-modal';
+import { RepararNomesMedicosModalComponent } from '../../components/reparar-nomes-medicos-modal/reparar-nomes-medicos-modal';
 import { SincronizacaoLogsModalComponent } from '../../components/sincronizacao-logs-modal/sincronizacao-logs-modal';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
 import { Permission, Unidade } from '../../models/usuario.model';
@@ -46,6 +47,7 @@ type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
     ImportarProducaoEtapasModalComponent,
     LimparProducaoEtapasModalComponent,
     ImportarOrcamentosModalComponent,
+    RepararNomesMedicosModalComponent,
     SincronizacaoLogsModalComponent,
   ],
   templateUrl: './configuracao.component.html',
@@ -64,6 +66,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   @ViewChild('etapasModal') etapasModal?: ImportarProducaoEtapasModalComponent;
   @ViewChild('limparEtapasModal') limparEtapasModal?: LimparProducaoEtapasModalComponent;
   @ViewChild('orcamentosModal') orcamentosModal?: ImportarOrcamentosModalComponent;
+  @ViewChild('repararNomesMedicosModal')
+  repararNomesMedicosModal?: RepararNomesMedicosModalComponent;
   @ViewChild('sincronizacaoLogsModal')
   sincronizacaoLogsModal?: SincronizacaoLogsModalComponent;
   private progressSubscription?: Subscription;
@@ -311,6 +315,16 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
 
   onImportacaoOrcamentosConcluida(): void {
     this.success = 'Importação de orçamentos concluída.';
+    this.error = null;
+  }
+
+  abrirModalRepararNomesMedicos(): void {
+    this.repararNomesMedicosModal?.abrir();
+  }
+
+  onReparoNomesMedicosConcluido(): void {
+    this.success =
+      'Reparo de nomes de médicos aplicado. Valide a Visitação e rode a sync se necessário.';
     this.error = null;
   }
 

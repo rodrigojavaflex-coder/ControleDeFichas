@@ -566,10 +566,15 @@ export class VisitacaoMetaService {
       SELECT
         BTRIM(p."crmMedico") AS crm,
         UPPER(BTRIM(p."ufCrmMedico")) AS uf,
-        MAX(p."nomeMedico") AS nome,
+        MAX(pr_painel.nome) AS nome,
         p.unidade,
         MAX(p."nomeRepresentante") AS representante
       FROM painel_medicos_representantes p
+      LEFT JOIN prescritores pr_painel
+        ON pr_painel."numeroCRM" IS NOT NULL
+       AND pr_painel."UFCRM" IS NOT NULL
+       AND BTRIM(pr_painel."numeroCRM"::text) = BTRIM(CAST(p."crmMedico" AS TEXT))
+       AND UPPER(BTRIM(pr_painel."UFCRM")) = UPPER(BTRIM(p."ufCrmMedico"))
       WHERE p.unidade = ANY($1)
         AND NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
         AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL

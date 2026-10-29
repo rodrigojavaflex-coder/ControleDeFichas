@@ -325,6 +325,30 @@
                 (keyup.enter)="applyFilters()" />
             </div>
 
+            <div class="filter-group" *ngIf="canViewValores()">
+              <label for="valorMaiorIgualFilterModal" class="label-campo">Valor maior ou igual</label>
+              <input
+                id="valorMaiorIgualFilterModal"
+                type="text"
+                inputmode="decimal"
+                class="campo form-control"
+                [(ngModel)]="valorMaiorIgualFilter"
+                placeholder="Ex: 500"
+                (keyup.enter)="applyFilters()" />
+            </div>
+
+            <div class="filter-group" *ngIf="canViewValores()">
+              <label for="valorMenorIgualFilterModal" class="label-campo">Valor menor ou igual</label>
+              <input
+                id="valorMenorIgualFilterModal"
+                type="text"
+                inputmode="decimal"
+                class="campo form-control"
+                [(ngModel)]="valorMenorIgualFilter"
+                placeholder="Ex: 1000"
+                (keyup.enter)="applyFilters()" />
+            </div>
+
             <div class="filter-group filter-group-medico">
               <app-orcamentos-rejeitados-medico-filtro
                 [opcoes]="opcoesMedico"

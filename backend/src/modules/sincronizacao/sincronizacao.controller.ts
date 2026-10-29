@@ -45,6 +45,11 @@ import {
 } from './dto/limpar-producao-etapas-antigas.dto';
 import { ProducaoConfigUnidadeQueryDto } from '../producao-config/dto/producao-config-unidade-query.dto';
 import { ListarSincronizacaoLogsDto } from './dto/listar-sincronizacao-logs.dto';
+import { RepararNomesMedicosService } from './reparar-nomes-medicos.service';
+import {
+  RepararNomesMedicosDto,
+  RepararNomesMedicosResponseDto,
+} from './dto/reparar-nomes-medicos.dto';
 
 @ApiTags('sincronizacao')
 @Controller('sincronizacao')
@@ -53,6 +58,7 @@ export class SincronizacaoController {
     private readonly sincronizacaoService: SincronizacaoService,
     private readonly producaoEtapasLimpezaService: ProducaoEtapasLimpezaService,
     private readonly sincronizacaoLogService: SincronizacaoLogService,
+    private readonly repararNomesMedicosService: RepararNomesMedicosService,
   ) {}
 
   @Post('executar')
@@ -200,6 +206,21 @@ export class SincronizacaoController {
     @Body() dto: ImportarOrcamentosDto,
   ): Promise<ImportarOrcamentosResponseDto> {
     return this.sincronizacaoService.importarOrcamentosManual(dto);
+  }
+
+  @Post('reparar-nomes-medicos')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Repara nomes de médicos/prescritores no NEST cruzando CRM+UF com o cadastro FC04000 dos agentes (dry-run ou apply)',
+  })
+  @ApiResponse({ status: 200, type: RepararNomesMedicosResponseDto })
+  repararNomesMedicos(
+    @Body() dto: RepararNomesMedicosDto,
+  ): Promise<RepararNomesMedicosResponseDto> {
+    return this.repararNomesMedicosService.executar(dto);
   }
 
   @Get('logs')

@@ -184,6 +184,47 @@ export interface ImportarOrcamentosResponse {
   erros: string[];
 }
 
+export interface ReparoNomeMedicoSelecao {
+  tabela: string;
+  id: string;
+}
+
+export interface RepararNomesMedicosDto {
+  aplicar: boolean;
+  unidade?: string;
+  itensSelecionados?: ReparoNomeMedicoSelecao[];
+  aplicarTodos?: boolean;
+}
+
+export interface ReparoNomeMedicoItem {
+  id: string;
+  tabela: string;
+  unidade: string | null;
+  crm: string;
+  uf: string;
+  nomeAtual: string;
+  nomeErp: string | null;
+  origemErp?: string;
+  motivo: string;
+  acao: 'corrigir' | 'pendente' | 'sem_crm' | 'igual';
+}
+
+export interface RepararNomesMedicosResponse {
+  aplicar: boolean;
+  unidadeFiltro: string | null;
+  totalAnalisado: number;
+  suspeitos: number;
+  aCorrigir: number;
+  corrigidos: number;
+  pendentes: number;
+  semCrm: number;
+  iguais: number;
+  agentesConsultados: string[];
+  erros: string[];
+  paraCorrigir: ReparoNomeMedicoItem[];
+  pendentesRelatorio: ReparoNomeMedicoItem[];
+}
+
 export interface SincronizacaoLogErro {
   id: string;
   agente: string;

@@ -13,9 +13,14 @@ import { resolverEscopoListaFechamentoPorUsuario } from '../folha/utils/folha-un
 import { VisitacaoPainelMedicoItemDto } from './dto/visitacao-painel-medico-item.dto';
 import { VisitacaoPainelMedicoRepresentanteDto } from './dto/visitacao-painel-medico-representante.dto';
 import { Unidade } from '../../common/enums/unidade.enum';
+import {
+  sqlNomePrescritorJoin,
+  sqlOnPrescritores,
+} from '../../common/utils/prescritor-crm.util';
 
 type PainelComFuncionario = PainelMedicoRepresentante & {
   funcionarioVinculado?: Funcionario | null;
+  nomeMedicoJoin?: string | null;
 };
 
 @Injectable()
@@ -46,8 +51,16 @@ export class VisitacaoPainelMedicoService {
       dto.unidade,
     );
 
+    const exprNome = sqlNomePrescritorJoin('pr_nome', `''`);
+
     const qb = this.painelRepository
       .createQueryBuilder('p')
+      .leftJoin(
+        'prescritores',
+        'pr_nome',
+        sqlOnPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_nome'),
+      )
+      .addSelect('pr_nome.nome', 'pr_nome_nome')
       .leftJoinAndMapOne(
         'p.funcionarioVinculado',
         Funcionario,
@@ -62,7 +75,7 @@ export class VisitacaoPainelMedicoService {
     }
 
     if (nomeMedico?.trim()) {
-      qb.andWhere('p.nomeMedico ILIKE :nomeMedico', {
+      qb.andWhere(`${exprNome} ILIKE :nomeMedico`, {
         nomeMedico: `%${nomeMedico.trim()}%`,
       });
     }
@@ -111,16 +124,20 @@ export class VisitacaoPainelMedicoService {
       });
     }
 
-    const [rows, total] = await qb
-      .orderBy('p.nomeMedico', 'ASC')
+    // Contagem sem orderBy no clone (paginação DISTINCT do TypeORM)
+    const total = await qb.clone().orderBy().getCount();
+    const { entities, raw } = await qb
+      .orderBy('pr_nome_nome', 'ASC')
       .addOrderBy('p.crmMedico', 'ASC')
       .skip((page - 1) * limit)
       .take(limit)
-      .getManyAndCount();
+      .getRawAndEntities();
 
-    const data = (rows as PainelComFuncionario[]).map((row) =>
-      this.mapItem(row),
-    );
+    const data = entities.map((row, i) => {
+      const rawRow = raw[i] as Record<string, string | null | undefined>;
+      const nomeJoin = rawRow?.pr_nome_nome ?? null;
+      return this.mapItem(row as PainelComFuncionario, nomeJoin);
+    });
     const meta = new PaginationMetaDto(page, limit, total);
     return new PaginatedResponseDto(data, meta);
   }
@@ -151,13 +168,18 @@ export class VisitacaoPainelMedicoService {
     }));
   }
 
-  private mapItem(row: PainelComFuncionario): VisitacaoPainelMedicoItemDto {
+  private mapItem(
+    row: PainelComFuncionario,
+    nomeMedicoJoin?: string | null,
+  ): VisitacaoPainelMedicoItemDto {
     const funcionario = row.funcionarioVinculado ?? null;
     const vinculado = !!funcionario;
     return {
       id: row.id,
       unidade: row.unidade,
-      nomeMedico: row.nomeMedico,
+      nomeMedico:
+        nomeMedicoJoin?.trim() ||
+        `CRM ${row.crmMedico}/${row.ufCrmMedico}`,
       ufCrmMedico: row.ufCrmMedico,
       crmMedico: row.crmMedico,
       contratoRepresentante: row.contratoRepresentante,

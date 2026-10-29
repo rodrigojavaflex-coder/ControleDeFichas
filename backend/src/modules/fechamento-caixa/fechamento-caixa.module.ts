@@ -11,6 +11,7 @@ import { CaixaRequisicaoFormula } from './entities/caixa-requisicao-formula.enti
 import { Orcamento } from '../orcamentos/entities/orcamento.entity';
 import { Baixa } from '../baixas/entities/baixa.entity';
 import { Cliente } from '../clientes/entities/cliente.entity';
+import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { CaixaSaldoInicialUnidade } from './entities/caixa-saldo-inicial-unidade.entity';
 import { CaixaFechamento } from './entities/caixa-fechamento.entity';
@@ -28,6 +29,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
       Orcamento,
       Baixa,
       Cliente,
+      Prescritor,
       Usuario,
       CaixaSaldoInicialUnidade,
       CaixaFechamento,

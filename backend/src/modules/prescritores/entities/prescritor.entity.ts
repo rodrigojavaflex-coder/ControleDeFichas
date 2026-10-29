@@ -1,8 +1,12 @@
-import { Entity, Column } from 'typeorm';
+import { Entity, Column, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
 
 @Entity('prescritores')
+@Index('uq_prescritores_numero_crm_uf', ['numeroCRM', 'UFCRM'], {
+  unique: true,
+  where: `"numeroCRM" IS NOT NULL AND "UFCRM" IS NOT NULL`,
+})
 export class Prescritor extends BaseEntity {
   /**
    * Nome amigável da entidade para uso em logs de auditoria

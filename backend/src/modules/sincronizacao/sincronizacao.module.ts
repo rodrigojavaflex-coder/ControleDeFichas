@@ -23,6 +23,7 @@ import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.servic
 import { ProducaoEtapasLimpezaService } from './producao-etapas-limpeza.service';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { FechamentoCaixaModule } from '../fechamento-caixa/fechamento-caixa.module';
+import { RepararNomesMedicosService } from './reparar-nomes-medicos.service';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { FechamentoCaixaModule } from '../fechamento-caixa/fechamento-caixa.modu
     PainelMedicosService,
     ProducaoEtapasService,
     ProducaoEtapasLimpezaService,
+    RepararNomesMedicosService,
     PermissionsGuard,
   ],
   exports: [SincronizacaoConfigService, SincronizacaoService],

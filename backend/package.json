@@ -26,7 +26,9 @@
     "create:admin-audit": "ts-node -r tsconfig-paths/register src/scripts/create-admin-with-audit.ts",
     "migration:run": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d ./src/data-source.ts",
     "migration:revert": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d ./src/data-source.ts",
-    "migration:show": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:show -d ./src/data-source.ts"
+    "migration:show": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:show -d ./src/data-source.ts",
+    "verificar:nome-canonico": "ts-node -r tsconfig-paths/register src/scripts/verificar-prescritor-nome-canonico.ts",
+    "reparar:nomes-dry-run": "ts-node -r tsconfig-paths/register src/scripts/reparar-nomes-medicos-dry-run.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.18",

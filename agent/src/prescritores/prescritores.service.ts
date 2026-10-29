@@ -21,4 +21,9 @@ export class PrescritoresService {
 
     return this.databaseService.buscarPrescritores(dataMinima);
   }
+
+  /** Cadastro completo FC04000 (reparo de encoding / CRM+UF). */
+  async buscarCadastroCompleto(): Promise<PrescritorRow[]> {
+    return this.databaseService.buscarTodosPrescritores();
+  }
 }

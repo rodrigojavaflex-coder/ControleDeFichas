@@ -1,0 +1,248 @@
+<div class="modal-overlay" *ngIf="visible">
+  <div class="modal-conteudo modal-reparar-nomes">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Reparar nomes de médicos (encoding)</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="loading"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="reparar-nomes-topo">
+        <div class="reparar-nomes-filtros">
+          <div class="filter-group">
+            <label for="reparoUnidade" class="label-campo">Unidade</label>
+            @if (unidadeBloqueada) {
+              <input
+                id="reparoUnidade"
+                type="text"
+                class="campo"
+                [value]="unidade"
+                disabled
+                readonly />
+            } @else {
+              <select
+                id="reparoUnidade"
+                class="campo"
+                [(ngModel)]="unidade"
+                [disabled]="loading">
+                <option value="">Todas</option>
+                <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+              </select>
+            }
+          </div>
+
+          @if (result && !loading && tabelasDisponiveis.length) {
+            <div class="filter-group">
+              <label for="reparoTabela" class="label-campo">Tabela</label>
+              <select
+                id="reparoTabela"
+                class="campo"
+                [(ngModel)]="filtroTabela"
+                (ngModelChange)="onFiltroChange()"
+                [disabled]="loading || result.aplicar">
+                <option value="">Todas</option>
+                @for (tabela of tabelasDisponiveis; track tabela) {
+                  <option [ngValue]="tabela">{{ tabela }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          @if (result && !loading && motivosDisponiveis.length) {
+            <div class="filter-group filter-group-motivo">
+              <label for="reparoMotivo" class="label-campo">Motivo</label>
+              <select
+                id="reparoMotivo"
+                class="campo"
+                [(ngModel)]="filtroMotivo"
+                (ngModelChange)="onFiltroChange()"
+                [disabled]="loading || result.aplicar">
+                <option value="">Todos</option>
+                @for (motivo of motivosDisponiveis; track motivo) {
+                  <option [ngValue]="motivo">{{ motivo }}</option>
+                }
+              </select>
+            </div>
+          }
+        </div>
+
+        <p class="reparar-nomes-hint reparar-nomes-hint-compact">
+          CRM+UF × ERP · clique na linha para marcar ·
+          <code>/prescritores/cadastro</code> (404 = agent antigo)
+        </p>
+      </div>
+
+      <div class="reparar-nomes-erro" *ngIf="error">{{ error }}</div>
+
+      <div class="inline-loading" *ngIf="loading">
+        <div class="spinner"></div>
+        <span>Consultando agente(s) e comparando nomes...</span>
+      </div>
+
+      @if (result && !loading) {
+        <section class="reparar-nomes-resultado">
+          <div class="reparar-nomes-resumo">
+            <span class="resumo-titulo">
+              {{ result.aplicar ? 'Aplicado' : 'Dry-run' }}
+              · {{ result.unidadeFiltro || 'Todas' }}
+              · {{ result.agentesConsultados.join(', ') || '—' }}
+            </span>
+            <ul class="reparar-nomes-stats">
+              <li><b>{{ result.totalAnalisado }}</b> anal.</li>
+              <li><b>{{ result.aCorrigir }}</b> corrigir</li>
+              <li><b>{{ qtdSelecionados }}</b> sel.</li>
+              <li><b>{{ result.corrigidos }}</b> ok</li>
+              <li><b>{{ result.pendentes }}</b> pend.</li>
+              <li><b>{{ result.iguais }}</b> iguais</li>
+              @if (temFiltroAtivo) {
+                <li class="stat-filtro"><b>{{ qtdFiltrados }}</b> filtrados</li>
+              }
+            </ul>
+            <div class="reparar-nomes-acoes-relatorio">
+              <button
+                type="button"
+                class="botao botao-secundario botao-compacto"
+                (click)="baixarRelatorioPendentes()"
+                [disabled]="!result.pendentesRelatorio.length">
+                <i class="fas fa-file-csv"></i>
+                Pendentes ({{ result.pendentes }})
+              </button>
+              <button
+                type="button"
+                class="botao botao-secundario botao-compacto"
+                (click)="baixarRelatorioCorrigir()"
+                [disabled]="!result.paraCorrigir.length">
+                <i class="fas fa-file-csv"></i>
+                Exportar ({{ temFiltroAtivo ? qtdFiltrados : result.aCorrigir }})
+              </button>
+            </div>
+          </div>
+
+          @if (result.erros.length) {
+            <div class="reparar-nomes-erros-lista">
+              <strong>Avisos ({{ result.erros.length }}):</strong>
+              {{ result.erros.join(' · ') }}
+            </div>
+          }
+
+          @if (result.paraCorrigir.length) {
+            <div class="reparar-nomes-selecao-bar">
+              <button type="button" class="link-acao" (click)="selecionarTodos()">
+                Todos ({{ result.aCorrigir }})
+              </button>
+              @if (temFiltroAtivo) {
+                <button type="button" class="link-acao" (click)="selecionarFiltrados()">
+                  Filtrados ({{ qtdFiltrados }})
+                </button>
+              }
+              <button type="button" class="link-acao" (click)="limparSelecao()">
+                Limpar
+              </button>
+              <span class="reparar-nomes-paginacao">
+                Pág. {{ pagina }}/{{ totalPaginas }} · {{ qtdFiltrados }}
+              </span>
+              <button
+                type="button"
+                class="link-acao"
+                (click)="paginaAnterior()"
+                [disabled]="pagina <= 1">
+                Anterior
+              </button>
+              <button
+                type="button"
+                class="link-acao"
+                (click)="paginaProxima()"
+                [disabled]="pagina >= totalPaginas">
+                Próxima
+              </button>
+            </div>
+
+            <div class="reparar-nomes-amostra-wrap">
+              <table class="reparar-nomes-table">
+                <thead>
+                  <tr>
+                    <th class="col-check">
+                      <input
+                        type="checkbox"
+                        [checked]="paginaTodaSelecionada"
+                        (change)="onCheckPagina($event)"
+                        [disabled]="result.aplicar"
+                        [attr.aria-label]="'Selecionar página'" />
+                    </th>
+                    <th>Tabela</th>
+                    <th>Unid.</th>
+                    <th>CRM</th>
+                    <th>UF</th>
+                    <th>NEST</th>
+                    <th>ERP</th>
+                    <th>Origem</th>
+                    <th>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of paginaItens; track item.id) {
+                    <tr
+                      class="acao-corrigir linha-selecionavel"
+                      [class.linha-marcada]="estaSelecionado(item)"
+                      (click)="onClickLinha(item)">
+                      <td class="col-check" (click)="$event.stopPropagation()">
+                        <input
+                          type="checkbox"
+                          [checked]="estaSelecionado(item)"
+                          (change)="onCheckItem(item, $event)"
+                          [disabled]="result.aplicar"
+                          [attr.aria-label]="'Incluir ' + item.crm + ' na correção'" />
+                      </td>
+                      <td>{{ item.tabela }}</td>
+                      <td>{{ item.unidade || '—' }}</td>
+                      <td>{{ item.crm }}</td>
+                      <td>{{ item.uf }}</td>
+                      <td>{{ item.nomeAtual }}</td>
+                      <td>{{ item.nomeErp || '—' }}</td>
+                      <td>{{ item.origemErp || '—' }}</td>
+                      <td>{{ item.motivo }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else if (!result.aplicar) {
+            <p class="reparar-nomes-hint">Nenhum nome divergente a corrigir neste escopo.</p>
+          }
+        </section>
+      }
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="fechar()"
+        [disabled]="loading">
+        Fechar
+      </button>
+      <button
+        type="button"
+        class="botao botao-secundario"
+        (click)="executarDryRun()"
+        [disabled]="loading">
+        <i class="fas fa-search" [class.fa-spin]="loading"></i>
+        Dry-run
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="executarApply()"
+        [disabled]="loading || !result || result.aplicar || qtdSelecionados === 0">
+        <i class="fas fa-wrench"></i>
+        Aplicar selecionados ({{ qtdSelecionados }})
+      </button>
+    </div>
+  </div>
+</div>

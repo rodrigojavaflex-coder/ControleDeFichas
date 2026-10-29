@@ -19,6 +19,10 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { unidadeEscopoUsuarioFolha } from '../folha/utils/folha-unidade-scope.util';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import { Permission } from '../../common/enums/permission.enum';
+import {
+  sqlNomePrescritorJoin,
+  sqlOnPrescritores,
+} from '../../common/utils/prescritor-crm.util';
 
 /** Classificação operacional para rejeitados sem motivo cadastrado (RN-ORC-002). */
 export const SEM_MOTIVO_CLASSIFICACAO = 'Sem motivo';
@@ -26,6 +30,12 @@ const LIMITE_PERFORMANCE_MEDICO = 20;
 const LIMITE_OPCOES_FILTRO = 5000;
 const LIMITE_PARETO = 20;
 const LIMITE_PONTOS_EVOLUCAO_DIA = 90;
+
+const EXPR_NOME_MEDICO = sqlNomePrescritorJoin(
+  'pr_nome',
+  `'Sem médico'`,
+);
+const LABEL_MEDICO = `CONCAT(${EXPR_NOME_MEDICO}, ' - ', o.unidade)`;
 
 interface DashboardFiltrosInternos {
   dataInicial?: string;
@@ -129,11 +139,14 @@ export class OrcamentosDashboardService {
       .limit(LIMITE_OPCOES_FILTRO);
     this.aplicarFiltrosComuns(qbVendedor, filtros, false);
 
-    const labelMedico = `CONCAT(TRIM(o.nomeMedico), ' - ', o.unidade)`;
-
     const qbMedico = this.orcamentoRepo
       .createQueryBuilder('o')
-      .select(labelMedico, 'nome')
+      .leftJoin(
+        'prescritores',
+        'pr_nome',
+        sqlOnPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_nome'),
+      )
+      .select(LABEL_MEDICO, 'nome')
       .addSelect('COUNT(*)', 'total')
       .addSelect(
         `SUM(CASE WHEN o.status = :aprovado THEN 1 ELSE 0 END)`,
@@ -143,11 +156,11 @@ export class OrcamentosDashboardService {
         `SUM(CASE WHEN o.status = :rejeitado THEN 1 ELSE 0 END)`,
         'rejeitados',
       )
-      .where('o.nomeMedico IS NOT NULL')
-      .andWhere("TRIM(o.nomeMedico) <> ''")
+      .where(`${EXPR_NOME_MEDICO} IS NOT NULL`)
+      .andWhere(`TRIM(${EXPR_NOME_MEDICO}) <> ''`)
       .setParameter('aprovado', OrcamentoStatus.APROVADO)
       .setParameter('rejeitado', OrcamentoStatus.REJEITADO)
-      .groupBy(labelMedico)
+      .groupBy(LABEL_MEDICO)
       .orderBy('nome', 'ASC')
       .limit(LIMITE_OPCOES_FILTRO);
     this.aplicarFiltrosComuns(qbMedico, filtros, false);
@@ -315,8 +328,9 @@ export class OrcamentosDashboardService {
     }
 
     if (filtros.nomesMedico.length > 0) {
+      this.garantirJoinPrescritor(qb, alias);
       qb.andWhere(
-        `CONCAT(COALESCE(NULLIF(TRIM(${alias}.nomeMedico), ''), 'Sem médico'), ' - ', ${alias}.unidade) IN (:...labelsMedico)`,
+        `CONCAT(${sqlNomePrescritorJoin('pr_nome', `'Sem médico'`)}, ' - ', ${alias}.unidade) IN (:...labelsMedico)`,
         { labelsMedico: filtros.nomesMedico },
       );
     }
@@ -608,9 +622,9 @@ export class OrcamentosDashboardService {
   private async buscarPerformanceMedico(
     filtros: DashboardFiltrosInternos,
   ): Promise<DashboardPerformanceMedicoDto> {
-    const labelMedico = `CONCAT(COALESCE(NULLIF(TRIM(o.nomeMedico), ''), 'Sem médico'), ' - ', o.unidade)`;
     const qb = this.orcamentoRepo.createQueryBuilder('o');
-    qb.select(labelMedico, 'nomeMedico')
+    this.garantirJoinPrescritor(qb);
+    qb.select(LABEL_MEDICO, 'nomeMedico')
       .addSelect('COUNT(*)', 'quantidadeTotal')
       .addSelect(
         `COUNT(*) FILTER (WHERE o.status = :aprovado)`,
@@ -626,7 +640,7 @@ export class OrcamentosDashboardService {
       )
       .setParameter('aprovado', OrcamentoStatus.APROVADO)
       .setParameter('rejeitado', OrcamentoStatus.REJEITADO)
-      .groupBy(labelMedico);
+      .groupBy(LABEL_MEDICO);
 
     this.aplicarFiltrosComuns(qb, filtros);
 
@@ -745,6 +759,25 @@ export class OrcamentosDashboardService {
       ],
       pareto,
     };
+  }
+
+  private garantirJoinPrescritor(
+    qb: SelectQueryBuilder<Orcamento>,
+    alias = 'o',
+  ): void {
+    const joins = qb.expressionMap.joinAttributes ?? [];
+    if (joins.some((j) => j.alias?.name === 'pr_nome')) {
+      return;
+    }
+    qb.leftJoin(
+      'prescritores',
+      'pr_nome',
+      sqlOnPrescritores(
+        `${alias}."crmMedico"`,
+        `${alias}."ufcrmMedico"`,
+        'pr_nome',
+      ),
+    );
   }
 
   private toNumber(value: string | number | null | undefined): number {

@@ -14,6 +14,7 @@ import {
   converterObjetoFirebird,
   converterTextoFirebird,
   corrigirPadroesGravadosErrados,
+  decodificarBytesFirebird,
   padronizarDescricaoLegado,
   precisaCorrecaoEncoding,
 } from '../common/encoding.util';
@@ -107,6 +108,25 @@ export class DatabaseService {
     const dbConfig = this.configService.get<AgentDbConfig>('agent.db');
     const charset = dbConfig?.charset?.trim();
     return charset || 'NONE';
+  }
+
+  /**
+   * Texto legado como OCTETS: node-firebird devolve Buffer e o util decodifica WIN1252.
+   * TRIM em VARCHAR/NONE vira U+FFFD nos acentos (JÚLIA→J�LIA→heurística JÉLIA).
+   */
+  private sqlTextoOctets(expr: string, alias: string, length = 120): string {
+    return `CAST(${expr} AS VARCHAR(${length}) CHARACTER SET OCTETS) AS ${alias}`;
+  }
+
+  private textoCampoFirebird(value: unknown): string {
+    if (value == null) return '';
+    if (Buffer.isBuffer(value)) {
+      return decodificarBytesFirebird(value, this.getDbCharset());
+    }
+    if (typeof value === 'string') {
+      return converterTextoFirebird(value, this.getDbCharset()).trim();
+    }
+    return String(value).trim();
   }
 
   private getConnectOptions(): Record<string, unknown> {
@@ -306,27 +326,73 @@ export class DatabaseService {
   }
 
   private buildPrescritoresQuery(
-    dataMinima: string,
+    dataMinima: string | null,
   ): { sql: string; params: Array<string> } {
+    const filtroData = dataMinima
+      ? `WHERE prescritor.dtcad >= ?`
+      : '';
     const sql = `
       SELECT 
         prescritor.nrcrm AS nrcrm,
         prescritor.ufcrm AS ufcrm,
-        prescritor.nomemed AS nomemed,
+        ${this.sqlTextoOctets('prescritor.nomemed', 'nomemed', 120)},
         prescritor.dtcad AS dtcad
       FROM fc04000 prescritor
-      WHERE prescritor.dtcad >= ?
+      ${filtroData}
       ORDER BY prescritor.dtcad
     `;
 
-    const params: Array<string> = [dataMinima];
+    const params: Array<string> = dataMinima ? [dataMinima] : [];
     
-    // ADICIONAR LOG para debug do filtro de prescritores
     this.logger.log(`[Agente - DB] Query de prescritores:`);
     this.logger.log(`  SQL: ${sql.trim()}`);
-    this.logger.log(`  Parâmetro dataMinima: ${dataMinima} (tipo: ${typeof dataMinima})`);
+    this.logger.log(
+      `  Parâmetro dataMinima: ${dataMinima ?? '(todos)'} (tipo: ${typeof dataMinima})`,
+    );
     
     return { sql, params };
+  }
+
+  /**
+   * Cadastro completo de médicos (FC04000) com nome via OCTETS — uso em reparo de encoding.
+   */
+  async buscarTodosPrescritores(): Promise<any[]> {
+    const { sql, params } = this.buildPrescritoresQuery(null);
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    return new Promise<any[]>((resolve, reject) => {
+      Firebird.attach(options, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          this.logger.error('Erro ao conectar ao banco', attachErr);
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        db.query(sql, params, (queryErr: Error, result: any[]) => {
+          db.detach();
+
+          if (queryErr) {
+            this.logger.error(
+              'Erro ao executar consulta de todos os prescritores',
+              queryErr,
+            );
+            return reject(
+              new InternalServerErrorException('Erro ao consultar banco.'),
+            );
+          }
+
+          const rows = (result ?? []).map((row) =>
+            this.mapPrescritorRow(converterObjetoFirebird(row, charset)),
+          );
+          this.logger.log(
+            `Prescritores (cadastro completo): ${rows.length} registros`,
+          );
+          resolve(rows);
+        });
+      });
+    });
   }
 
   private mapClienteRow(row: any): any {
@@ -404,8 +470,8 @@ export class DatabaseService {
 
     return {
       nrcrm: get('nrcrm') ? Number(get('nrcrm')) : undefined,
-      ufcrm: get('ufcrm') ? String(get('ufcrm')) : undefined,
-      nomemed: String(get('nomemed') ?? ''),
+      ufcrm: get('ufcrm') ? String(get('ufcrm')).trim() : undefined,
+      nomemed: this.textoCampoFirebird(get('nomemed')),
       dtcad: dtcad,
     };
   }
@@ -543,11 +609,11 @@ export class DatabaseService {
         COALESCE(o.vrdsc, 0) AS desconto_formula,
         COALESCE(o.cdcli, cap.cdcli) AS codigo_cliente,
         o.cdfunre AS codigo_vendedor,
-        TRIM(v.nomefun) AS nome_vendedor,
-        TRIM(cap.nomepa) AS nome_cliente,
+        ${this.sqlTextoOctets('v.nomefun', 'nome_vendedor', 120)},
+        ${this.sqlTextoOctets('cap.nomepa', 'nome_cliente', 120)},
         CAST(o.NRCRM AS VARCHAR(20)) AS crm_medico,
         TRIM(o.UFCRM) AS ufcrm_medico,
-        TRIM(med.NOMEMED) AS nome_medico
+        ${this.sqlTextoOctets('med.NOMEMED', 'nome_medico', 120)}
       FROM fc15100 o
       JOIN fc15000 cap
         ON cap.cdfil = o.cdfil
@@ -600,11 +666,11 @@ export class DatabaseService {
         COALESCE(o.vrdsc, 0) AS desconto_formula,
         COALESCE(o.cdcli, cap.cdcli) AS codigo_cliente,
         o.cdfunre AS codigo_vendedor,
-        TRIM(v.nomefun) AS nome_vendedor,
-        TRIM(cap.nomepa) AS nome_cliente,
+        ${this.sqlTextoOctets('v.nomefun', 'nome_vendedor', 120)},
+        ${this.sqlTextoOctets('cap.nomepa', 'nome_cliente', 120)},
         CAST(o.NRCRM AS VARCHAR(20)) AS crm_medico,
         TRIM(o.UFCRM) AS ufcrm_medico,
-        TRIM(med.NOMEMED) AS nome_medico
+        ${this.sqlTextoOctets('med.NOMEMED', 'nome_medico', 120)}
       FROM fc15100 o
       JOIN fc15000 cap
         ON cap.cdfil = o.cdfil
@@ -662,14 +728,20 @@ export class DatabaseService {
         codigoCliente !== null && codigoCliente !== undefined && codigoCliente !== ''
           ? Number(codigoCliente)
           : null,
-      nome_cliente: nomeCliente ? String(nomeCliente).trim() : null,
+      nome_cliente: (() => {
+        const nome = this.textoCampoFirebird(nomeCliente);
+        return nome || null;
+      })(),
       codigo_vendedor:
         codigoVendedor !== null &&
         codigoVendedor !== undefined &&
         codigoVendedor !== ''
           ? Number(codigoVendedor)
           : null,
-      nome_vendedor: nomeVendedor ? String(nomeVendedor).trim() : null,
+      nome_vendedor: (() => {
+        const nome = this.textoCampoFirebird(nomeVendedor);
+        return nome || null;
+      })(),
       crm_medico:
         crmMedico !== null && crmMedico !== undefined && String(crmMedico).trim()
           ? String(crmMedico).trim()
@@ -678,7 +750,10 @@ export class DatabaseService {
         ufcrmMedico !== null && ufcrmMedico !== undefined && String(ufcrmMedico).trim()
           ? String(ufcrmMedico).trim()
           : null,
-      nome_medico: nomeMedico ? String(nomeMedico).trim() : null,
+      nome_medico: (() => {
+        const nome = this.textoCampoFirebird(nomeMedico);
+        return nome || null;
+      })(),
     };
   }
 
@@ -1198,7 +1273,7 @@ export class DatabaseService {
           ) AS VARCHAR(20)
         ) AS crm_medico,
         TRIM(COALESCE(form.ufcrm, r.ufcrm)) AS uf_crm_medico,
-        TRIM(m.nomemed) AS nome_medico
+        ${this.sqlTextoOctets('m.nomemed', 'nome_medico', 120)}
       FROM fc17000 r
       INNER JOIN (
         SELECT r1.cdfil, r1.nrrqu, r1.dtefe, r1.nrcpm
@@ -1331,7 +1406,7 @@ export class DatabaseService {
             r.ufcrm
           )
         ) AS uf_crm_medico,
-        TRIM(m.nomemed) AS nome_medico
+        ${this.sqlTextoOctets('m.nomemed', 'nome_medico', 120)}
       FROM fc17000 r
       INNER JOIN (
         SELECT r1.cdfil, r1.nrrqu, r1.dtefe, r1.nrcpm
@@ -1568,7 +1643,9 @@ export class DatabaseService {
           ? Number(get('gap_orcamento_vs_pago'))
           : null,
       codigo_vendedor: this.parseCodigoPositivo(get('codigo_vendedor')),
-      vendedor: get('vendedor') ? String(get('vendedor')).trim() : null,
+      vendedor: get('vendedor')
+        ? this.textoCampoFirebird(get('vendedor')) || null
+        : null,
       crm_medico:
         get('crm_medico') != null && String(get('crm_medico')).trim()
           ? String(get('crm_medico')).trim()
@@ -1577,9 +1654,10 @@ export class DatabaseService {
         get('uf_crm_medico') != null && String(get('uf_crm_medico')).trim()
           ? String(get('uf_crm_medico')).trim()
           : null,
-      nome_medico: get('nome_medico')
-        ? String(get('nome_medico')).trim()
-        : null,
+      nome_medico: (() => {
+        const nome = this.textoCampoFirebird(get('nome_medico'));
+        return nome || null;
+      })(),
       chave_erp: `${filial}-${requisicao}-${cupom}-${dataPagamento}`,
       formulas: [],
     };
@@ -1614,9 +1692,10 @@ export class DatabaseService {
           get('uf_crm_medico') != null && String(get('uf_crm_medico')).trim()
             ? String(get('uf_crm_medico')).trim()
             : null,
-        nome_medico: get('nome_medico')
-          ? String(get('nome_medico')).trim()
-          : null,
+        nome_medico: (() => {
+          const nome = this.textoCampoFirebird(get('nome_medico'));
+          return nome || null;
+        })(),
       },
     };
   }
@@ -1705,12 +1784,12 @@ export class DatabaseService {
     const placeholders = cdfun.map(() => '?').join(',');
     const sql = `
       SELECT
-        TRIM(m.nomemed)                 AS nome_medico,
+        ${this.sqlTextoOctets('m.nomemed', 'nome_medico', 120)},
         TRIM(m.ufcrm)                   AS uf_crm_medico,
         CAST(m.nrcrm AS VARCHAR(20))    AS crm_medico,
         v.cdcon                         AS contrato_representante,
         v.cdfun                         AS codigo_representante,
-        TRIM(f.nomefun)                 AS nome_representante
+        ${this.sqlTextoOctets('f.nomefun', 'nome_representante', 120)}
       FROM fc04200 v
       INNER JOIN fc04000 m
         ON m.pfcrm = v.pfcrm
@@ -1734,12 +1813,12 @@ export class DatabaseService {
       row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
 
     return {
-      nome_medico: String(get('nome_medico') ?? '').trim(),
+      nome_medico: this.textoCampoFirebird(get('nome_medico')),
       uf_crm_medico: String(get('uf_crm_medico') ?? '').trim(),
       crm_medico: String(get('crm_medico') ?? '').trim(),
       contrato_representante: Number(get('contrato_representante') ?? 0),
       codigo_representante: Number(get('codigo_representante') ?? 0),
-      nome_representante: String(get('nome_representante') ?? '').trim(),
+      nome_representante: this.textoCampoFirebird(get('nome_representante')),
     };
   }
 
@@ -2185,7 +2264,7 @@ export class DatabaseService {
         CAST(${crmNrcrm} AS VARCHAR(20))                          AS crf,
         TRIM(${crmUfcrm})                                         AS uf_crf,
         (
-          SELECT FIRST 1 TRIM(m.nomemed)
+          SELECT FIRST 1 CAST(m.nomemed AS VARCHAR(120) CHARACTER SET OCTETS)
           FROM fc04000 m
           WHERE m.pfcrm = ${crmPfcrm}
             AND m.ufcrm = ${crmUfcrm}

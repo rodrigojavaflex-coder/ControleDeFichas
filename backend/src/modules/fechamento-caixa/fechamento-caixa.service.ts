@@ -21,9 +21,15 @@ import {
   normalizarTextoLegado,
   padronizarNomeDeSistemaLegado,
 } from '../../common/utils/encoding-legado.util';
+import {
+  garantirPrescritorPorCrmUf,
+  sqlLeftJoinPrescritores,
+  sqlNomePrescritorJoin,
+} from '../../common/utils/prescritor-crm.util';
 import { Baixa } from '../baixas/entities/baixa.entity';
 import { Cliente } from '../clientes/entities/cliente.entity';
 import { Orcamento } from '../orcamentos/entities/orcamento.entity';
+import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import {
   CaixaFormaTotalDto,
   ImportarCaixaErpResponseDto,
@@ -169,6 +175,8 @@ export class FechamentoCaixaService {
     private readonly clienteRepo: Repository<Cliente>,
     @InjectRepository(CaixaFechamento)
     private readonly fechamentoRepo: Repository<CaixaFechamento>,
+    @InjectRepository(Prescritor)
+    private readonly prescritorRepo: Repository<Prescritor>,
   ) {}
 
   async importarCaixaErp(
@@ -1225,6 +1233,28 @@ export class FechamentoCaixaService {
 
     const orcamentoPorNr = new Map(orcamentos.map((o) => [o.nrorc, o.id]));
 
+    const prescritorVisto = new Set<string>();
+    for (const row of rows) {
+      const crm =
+        row.crm_medico != null && String(row.crm_medico).trim()
+          ? String(row.crm_medico).trim()
+          : null;
+      const uf =
+        row.uf_crm_medico != null && String(row.uf_crm_medico).trim()
+          ? String(row.uf_crm_medico).trim().toUpperCase()
+          : null;
+      if (!crm || !uf) continue;
+      const chave = `${crm}|${uf}`;
+      if (prescritorVisto.has(chave)) continue;
+      prescritorVisto.add(chave);
+      await garantirPrescritorPorCrmUf(
+        this.prescritorRepo,
+        crm,
+        uf,
+        row.nome_medico,
+      );
+    }
+
     const entities = rows.map((row) =>
       this.requisicaoRepo.create({
         chaveErp: this.buildChaveRequisicao(unidade, row),
@@ -1251,16 +1281,13 @@ export class FechamentoCaixaService {
         nomeVendedor: row.vendedor
           ? padronizarNomeDeSistemaLegado(row.vendedor)
           : null,
-        nomeMedico: row.nome_medico
-          ? padronizarNomeDeSistemaLegado(row.nome_medico)
-          : null,
         crmMedico:
           row.crm_medico != null && String(row.crm_medico).trim()
             ? String(row.crm_medico).trim()
             : null,
         ufCrmMedico:
           row.uf_crm_medico != null && String(row.uf_crm_medico).trim()
-            ? String(row.uf_crm_medico).trim()
+            ? String(row.uf_crm_medico).trim().toUpperCase()
             : null,
         orcamentoId:
           row.nr_orcamento != null
@@ -1345,6 +1372,20 @@ export class FechamentoCaixaService {
           continue;
         }
         vistas.add(serie);
+        const crmMedico =
+          f.crm_medico != null && String(f.crm_medico).trim()
+            ? String(f.crm_medico).trim()
+            : null;
+        const ufCrmMedico =
+          f.uf_crm_medico != null && String(f.uf_crm_medico).trim()
+            ? String(f.uf_crm_medico).trim().toUpperCase()
+            : null;
+        await garantirPrescritorPorCrmUf(
+          this.prescritorRepo,
+          crmMedico,
+          ufCrmMedico,
+          f.nome_medico,
+        );
         entities.push(
           this.formulaRepo.create({
             requisicaoPagaId: paga.id,
@@ -1355,17 +1396,8 @@ export class FechamentoCaixaService {
             numeroOrcamento: f.nr_orcamento,
             valorPrcobr: Number(f.valor_prcobr) || 0,
             valorRateado: Number(f.valor_rateado) || 0,
-            nomeMedico: f.nome_medico
-              ? padronizarNomeDeSistemaLegado(f.nome_medico)
-              : null,
-            crmMedico:
-              f.crm_medico != null && String(f.crm_medico).trim()
-                ? String(f.crm_medico).trim()
-                : null,
-            ufCrmMedico:
-              f.uf_crm_medico != null && String(f.uf_crm_medico).trim()
-                ? String(f.uf_crm_medico).trim().toUpperCase()
-                : null,
+            crmMedico,
+            ufCrmMedico,
             atualizadoEm: new Date(),
           }),
         );
@@ -1444,10 +1476,29 @@ export class FechamentoCaixaService {
     unidade: Unidade,
     data: string,
   ): Promise<CaixaErpCortesiaDetalheDto[]> {
-    const pagas = await this.requisicaoRepo.find({
-      where: { unidade, dataPagamento: data, tipoRequisicao: 'C' },
-      order: { numeroCupom: 'ASC', numeroRequisicao: 'ASC' },
-    });
+    const pagas = (await this.requisicaoRepo.query(
+      `
+      SELECT
+        c.numero_cupom AS "numeroCupom",
+        c.numero_requisicao AS "numeroRequisicao",
+        c.valor_pago_requisicao AS "valorPagoRequisicao",
+        c.crm_medico AS "crmMedico",
+        ${sqlNomePrescritorJoin('pr_nome', 'NULL')} AS "nomeMedico"
+      FROM caixa_requisicoes_pagas c
+      ${sqlLeftJoinPrescritores('c.crm_medico', 'c.uf_crm_medico')}
+      WHERE c.unidade = $1
+        AND c.data_pagamento = $2
+        AND c.tipo_requisicao = 'C'
+      ORDER BY c.numero_cupom ASC, c.numero_requisicao ASC
+      `,
+      [unidade, data],
+    )) as Array<{
+      numeroCupom: number;
+      numeroRequisicao: number;
+      valorPagoRequisicao: number;
+      crmMedico: string | null;
+      nomeMedico: string | null;
+    }>;
 
     const mapa = new Map<string, CaixaErpCortesiaDetalheDto>();
     for (const paga of pagas) {

@@ -98,9 +98,7 @@ export class CaixaRequisicaoFormula {
   })
   valorRateado: number;
 
-  @ApiProperty({ required: false })
-  @Column({ type: 'varchar', length: 500, nullable: true, name: 'nome_medico' })
-  nomeMedico?: string | null;
+  /** Nome canônico em `prescritores` (CRM+UF). */
 
   @ApiProperty({ required: false })
   @Column({ type: 'varchar', length: 20, nullable: true, name: 'crm_medico' })

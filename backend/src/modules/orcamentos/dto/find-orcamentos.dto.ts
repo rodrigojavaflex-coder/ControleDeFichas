@@ -5,9 +5,11 @@ import {
   IsDateString,
   IsEnum,
   IsIn,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Min,
 } from 'class-validator';
 import { PaginationDto } from '../../../common/dto/pagination.dto';
 import { Unidade } from '../../../common/enums/unidade.enum';
@@ -31,6 +33,14 @@ function toStringArray(value: unknown): string[] | undefined {
       .filter(Boolean);
   }
   return undefined;
+}
+
+function toOptionalNumber(value: unknown): number | undefined {
+  if (value === '' || value === null || value === undefined) {
+    return undefined;
+  }
+  const n = Number(value);
+  return Number.isNaN(n) ? (value as number) : n;
 }
 
 export class FindOrcamentosDto extends PaginationDto {
@@ -105,6 +115,28 @@ export class FindOrcamentosDto extends PaginationDto {
     { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
   )
   dataFinal?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Filtrar por precoVenda >= valor (exige orcamento:view-valores)',
+    example: 500,
+  })
+  @IsOptional()
+  @Transform(({ value }) => toOptionalNumber(value))
+  @IsNumber({}, { message: 'Valor maior ou igual deve ser um número' })
+  @Min(0, { message: 'Valor maior ou igual deve ser >= 0' })
+  valorMaiorIgual?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Filtrar por precoVenda <= valor (exige orcamento:view-valores)',
+    example: 1000,
+  })
+  @IsOptional()
+  @Transform(({ value }) => toOptionalNumber(value))
+  @IsNumber({}, { message: 'Valor menor ou igual deve ser um número' })
+  @Min(0, { message: 'Valor menor ou igual deve ser >= 0' })
+  valorMenorIgual?: number;
 
   @ApiPropertyOptional({ default: 'dataOrcamento' })
   @IsOptional()

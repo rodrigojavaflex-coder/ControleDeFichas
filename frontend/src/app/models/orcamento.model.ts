@@ -65,6 +65,10 @@ export interface FindOrcamentosDto {
   motivoRejeicaoId?: string;
   dataInicial?: string;
   dataFinal?: string;
+  /** precoVenda >= valor (exige orcamento:view-valores). */
+  valorMaiorIgual?: number;
+  /** precoVenda <= valor (exige orcamento:view-valores). */
+  valorMenorIgual?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   /** Exportação/impressão em massa (exige orcamento:print na API). */

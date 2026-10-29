@@ -4,7 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Orcamento } from './entities/orcamento.entity';
 import { OrcamentoMotivoRejeicao } from './entities/orcamento-motivo-rejeicao.entity';
 import {
@@ -24,13 +24,25 @@ import {
   usuarioPodeGerenciarUnidade,
 } from '../folha/utils/folha-unidade-scope.util';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
+import {
+  sqlNomePrescritorJoin,
+  sqlOnPrescritores,
+} from '../../common/utils/prescritor-crm.util';
+
+/** Orçamento com nome hidratado de `prescritores` (contrato API). */
+export type OrcamentoComNomeMedico = Orcamento & {
+  nomeMedico?: string | null;
+};
+
+const EXPR_NOME_MEDICO = sqlNomePrescritorJoin('pr_nome', `''`);
+const LABEL_MEDICO = `CONCAT(TRIM(${EXPR_NOME_MEDICO}), ' - ', o.unidade)`;
 
 const SORTABLE_FIELDS: Record<string, string> = {
   dataOrcamento: 'o.dataOrcamento',
   nrOrcamento: 'o.nrOrcamento',
   nomeCliente: 'o.nomeCliente',
   nomeVendedor: 'o.nomeVendedor',
-  nomeMedico: 'o.nomeMedico',
+  nomeMedico: EXPR_NOME_MEDICO,
   unidade: 'o.unidade',
   precoCobrado: 'o.precoCobrado',
   status: 'o.status',
@@ -50,7 +62,7 @@ export class OrcamentosService {
   async findOrcamentos(
     dto: FindOrcamentosDto,
     usuario: Usuario,
-  ): Promise<PaginatedResponseDto<Orcamento>> {
+  ): Promise<PaginatedResponseDto<OrcamentoComNomeMedico>> {
     if (dto.relatorio) {
       this.assertPermissaoRelatorio(usuario);
     }
@@ -68,6 +80,12 @@ export class OrcamentosService {
     const qb = this.orcamentoRepo
       .createQueryBuilder('o')
       .leftJoinAndSelect('o.motivoRejeicao', 'motivo')
+      .leftJoin(
+        'prescritores',
+        'pr_nome',
+        sqlOnPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_nome'),
+      )
+      .addSelect('pr_nome.nome', 'joined_nome_medico')
       .where('o.status IN (:...statusList)', { statusList });
 
     if (escopo !== 'ALL') {
@@ -93,10 +111,9 @@ export class OrcamentosService {
     }
 
     if (dto.nomesMedico?.length) {
-      qb.andWhere(
-        `CONCAT(TRIM(o.nomeMedico), ' - ', o.unidade) IN (:...nomesMedico)`,
-        { nomesMedico: dto.nomesMedico },
-      );
+      qb.andWhere(`${LABEL_MEDICO} IN (:...nomesMedico)`, {
+        nomesMedico: dto.nomesMedico,
+      });
     }
 
     if (incluiRejeitados) {
@@ -128,23 +145,33 @@ export class OrcamentosService {
       });
     }
 
+    this.aplicarFiltrosValor(qb, dto, usuario);
+
     const sortField =
       SORTABLE_FIELDS[dto.sortBy ?? 'dataOrcamento'] ??
       SORTABLE_FIELDS.dataOrcamento;
     const sortOrder = dto.sortOrder === 'asc' ? 'ASC' : 'DESC';
     qb.orderBy(sortField, sortOrder).addOrderBy('o.nrOrcamento', 'ASC');
 
-    const [data, total] = await qb
+    const total = await qb.clone().getCount();
+    const { entities, raw } = await qb
       .skip((page - 1) * limit)
       .take(limit)
-      .getManyAndCount();
+      .getRawAndEntities();
 
     const visualizarValores = this.usuarioPodeVisualizarValores(usuario);
 
+    const data: OrcamentoComNomeMedico[] = entities.map((item, i) => {
+      const mascarado = this.mascararValoresOrcamento(item, visualizarValores);
+      const nomeRaw = raw[i] as { joined_nome_medico?: string | null };
+      return {
+        ...mascarado,
+        nomeMedico: nomeRaw?.joined_nome_medico ?? null,
+      };
+    });
+
     return new PaginatedResponseDto(
-      data.map((item) =>
-        this.mascararValoresOrcamento(item, visualizarValores),
-      ),
+      data,
       new PaginationMetaDto(page, limit, total),
     );
   }
@@ -169,11 +196,14 @@ export class OrcamentosService {
       dto.unidade,
     );
 
-    const labelMedico = `CONCAT(TRIM(o.nomeMedico), ' - ', o.unidade)`;
-
     const qb = this.orcamentoRepo
       .createQueryBuilder('o')
-      .select(labelMedico, 'nome')
+      .leftJoin(
+        'prescritores',
+        'pr_nome',
+        sqlOnPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_nome'),
+      )
+      .select(LABEL_MEDICO, 'nome')
       .addSelect('COUNT(*)', 'total')
       .addSelect(
         `SUM(CASE WHEN o.status = :aprovado THEN 1 ELSE 0 END)`,
@@ -183,12 +213,12 @@ export class OrcamentosService {
         `SUM(CASE WHEN o.status = :rejeitado THEN 1 ELSE 0 END)`,
         'rejeitados',
       )
-      .where('o.nomeMedico IS NOT NULL')
-      .andWhere("TRIM(o.nomeMedico) <> ''")
+      .where(`${EXPR_NOME_MEDICO} IS NOT NULL`)
+      .andWhere(`TRIM(${EXPR_NOME_MEDICO}) <> ''`)
       .andWhere('o.status IN (:...statusList)', { statusList })
       .setParameter('aprovado', OrcamentoStatus.APROVADO)
       .setParameter('rejeitado', OrcamentoStatus.REJEITADO)
-      .groupBy(labelMedico)
+      .groupBy(LABEL_MEDICO)
       .orderBy('nome', 'ASC')
       .limit(LIMITE_OPCOES_FILTRO);
 
@@ -334,6 +364,44 @@ export class OrcamentosService {
       throw new ForbiddenException(
         'Acesso negado. Permissão necessária: orcamento:print',
       );
+    }
+  }
+
+  private aplicarFiltrosValor(
+    qb: SelectQueryBuilder<Orcamento>,
+    dto: Pick<FindOrcamentosDto, 'valorMaiorIgual' | 'valorMenorIgual'>,
+    usuario: Usuario,
+  ): void {
+    const temMaior =
+      dto.valorMaiorIgual != null && !Number.isNaN(dto.valorMaiorIgual);
+    const temMenor =
+      dto.valorMenorIgual != null && !Number.isNaN(dto.valorMenorIgual);
+
+    if (!temMaior && !temMenor) {
+      return;
+    }
+
+    if (!this.usuarioPodeVisualizarValores(usuario)) {
+      throw new ForbiddenException(
+        'Acesso negado. Filtrar por valor exige a permissão orcamento:view-valores.',
+      );
+    }
+
+    if (temMaior && temMenor && dto.valorMaiorIgual! > dto.valorMenorIgual!) {
+      throw new BadRequestException(
+        'Valor maior ou igual não pode ser superior ao valor menor ou igual.',
+      );
+    }
+
+    if (temMaior) {
+      qb.andWhere('o.precoVenda >= :valorMaiorIgual', {
+        valorMaiorIgual: dto.valorMaiorIgual,
+      });
+    }
+    if (temMenor) {
+      qb.andWhere('o.precoVenda <= :valorMenorIgual', {
+        valorMenorIgual: dto.valorMenorIgual,
+      });
     }
   }
 

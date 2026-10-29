@@ -85,9 +85,7 @@ export class Orcamento extends BaseEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   nomeVendedor?: string | null;
 
-  @ApiProperty({ required: false })
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  nomeMedico?: string | null;
+  /** Nome canônico em `prescritores` (CRM+UF); hidratado nas queries de leitura. */
 
   @ApiProperty({ required: false })
   @Column({ type: 'varchar', length: 20, nullable: true })

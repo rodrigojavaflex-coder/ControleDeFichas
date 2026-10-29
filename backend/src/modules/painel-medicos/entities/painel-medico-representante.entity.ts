@@ -25,9 +25,7 @@ export class PainelMedicoRepresentante extends BaseEntity {
   @Column({ type: 'varchar', length: 20 })
   unidade: Unidade;
 
-  @ApiProperty()
-  @Column({ type: 'varchar', length: 500 })
-  nomeMedico: string;
+  /** Nome canônico em `prescritores` (CRM+UF). Mantido só no histórico/retrato. */
 
   @ApiProperty()
   @Column({ type: 'varchar', length: 2 })

@@ -18,6 +18,7 @@ import {
   padronizarNomeDeSistemaLegado,
   padronizarNomeLegadoNullable,
 } from '../../common/utils/encoding-legado.util';
+import { garantirPrescritorPorCrmUf } from '../../common/utils/prescritor-crm.util';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PainelMedicosService } from '../painel-medicos/painel-medicos.service';
 import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.service';
@@ -2327,6 +2328,16 @@ export class SincronizacaoService {
         ? OrcamentoStatus.APROVADO
         : OrcamentoStatus.REJEITADO;
 
+    const crmMedico = orcamentoAgente.crm_medico?.trim() || null;
+    const ufcrmMedico =
+      orcamentoAgente.ufcrm_medico?.trim()?.toUpperCase() || null;
+    await garantirPrescritorPorCrmUf(
+      this.prescritorRepository,
+      crmMedico,
+      ufcrmMedico,
+      orcamentoAgente.nome_medico,
+    );
+
     const payload: Partial<Orcamento> = {
       unidade,
       cdfil: Number(orcamentoAgente.filial ?? 0),
@@ -2342,9 +2353,8 @@ export class SincronizacaoService {
       nomeCliente: padronizarNomeLegadoNullable(orcamentoAgente.nome_cliente),
       codigoVendedor: orcamentoAgente.codigo_vendedor ?? null,
       nomeVendedor: padronizarNomeLegadoNullable(orcamentoAgente.nome_vendedor),
-      nomeMedico: padronizarNomeLegadoNullable(orcamentoAgente.nome_medico),
-      crmMedico: orcamentoAgente.crm_medico?.trim() || null,
-      ufcrmMedico: orcamentoAgente.ufcrm_medico?.trim() || null,
+      crmMedico,
+      ufcrmMedico,
       ultimaModificacao: new Date(orcamentoAgente.ultima_modificacao),
     };
 
@@ -2574,24 +2584,27 @@ export class SincronizacaoService {
   private async processarPrescritor(
     prescritorAgente: AgentePrescritor,
   ): Promise<boolean> {
-    // Padronizar nome para usar na busca
     const nomePadronizado = padronizarNomeDeSistemaLegado(
       prescritorAgente.nomemed,
     );
     const ufcrmValido = prescritorAgente.ufcrm
-      ? normalizarTextoLegado(prescritorAgente.ufcrm)
+      ? normalizarTextoLegado(prescritorAgente.ufcrm).trim().toUpperCase() ||
+        undefined
       : undefined;
+    const numeroCRM =
+      prescritorAgente.nrcrm != null &&
+      Number.isFinite(Number(prescritorAgente.nrcrm)) &&
+      Number(prescritorAgente.nrcrm) > 0
+        ? Number(prescritorAgente.nrcrm)
+        : undefined;
 
-    // Buscar prescritor existente por nome + numeroCRM + UFCRM juntos
-    // NUNCA buscar apenas por nome (pode ser o mesmo nome mas CRM diferente)
+    // Identidade estável: CRM + UF (nunca só nome; nome pode estar corrompido)
     let prescritor: Prescritor | null = null;
 
-    if (prescritorAgente.nrcrm && ufcrmValido) {
-      // Buscar por nome + CRM + UF juntos (todos os três campos)
+    if (numeroCRM != null && ufcrmValido) {
       prescritor = await this.prescritorRepository.findOne({
         where: {
-          nome: nomePadronizado,
-          numeroCRM: prescritorAgente.nrcrm,
+          numeroCRM,
           UFCRM: ufcrmValido,
         },
       });
@@ -2600,19 +2613,15 @@ export class SincronizacaoService {
     const foiCriado = !prescritor;
 
     if (!prescritor) {
-      // Criar novo prescritor (não encontrou com nome + CRM + UF)
       prescritor = this.prescritorRepository.create({
         nome: nomePadronizado,
-        numeroCRM: prescritorAgente.nrcrm || undefined,
+        numeroCRM,
         UFCRM: ufcrmValido,
       });
     } else {
-      // Atualizar prescritor existente (encontrou com nome + CRM + UF)
-      // Atualizar nome se mudou
-      if (prescritor.nome !== nomePadronizado) {
+      if (nomePadronizado && prescritor.nome !== nomePadronizado) {
         prescritor.nome = nomePadronizado;
       }
-      // CRM e UF já estão corretos pois foram usados na busca
     }
 
     await this.prescritorRepository.save(prescritor);

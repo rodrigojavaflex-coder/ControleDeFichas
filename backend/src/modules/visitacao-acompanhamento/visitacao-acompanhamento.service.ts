@@ -47,6 +47,10 @@ import { FecharVisitacaoDto } from './dto/fechar-visitacao.dto';
 import { Permission } from '../../common/enums/permission.enum';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import {
+  sqlLeftJoinPrescritores,
+  sqlNomePrescritorJoin,
+} from '../../common/utils/prescritor-crm.util';
+import {
   competenciaAberta,
   PeriodoCompetencia,
   periodoCompetencia,
@@ -487,9 +491,10 @@ export class VisitacaoAcompanhamentoService {
         o."nomeCliente" AS nome_cliente,
         o."precoVenda" AS preco_venda,
         m.descricao AS motivo_rejeicao,
-        o."nomeMedico" AS nome_medico
+        ${sqlNomePrescritorJoin('pr_orc', `''`)} AS nome_medico
       FROM orcamentos o
       LEFT JOIN orcamento_motivo_rejeicao m ON m.id = o."motivoRejeicaoId"
+      ${sqlLeftJoinPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_orc')}
       WHERE o.status = 'REJEITADO'
         AND o.unidade = $1
         AND BTRIM(o."crmMedico") = $2
@@ -600,7 +605,7 @@ export class VisitacaoAcompanhamentoService {
     const periodo = periodoCompetencia(dto.ano, dto.mes);
     await this.assertFormulasNoPeriodo(unidade, periodo);
 
-    const [live, painel, funcionarios] = await Promise.all([
+    const [live, painel, funcionarios, nomesPainel] = await Promise.all([
       this.findAll(
         usuario,
         {
@@ -614,7 +619,22 @@ export class VisitacaoAcompanhamentoService {
       ),
       this.painelRepository.find({ where: { unidade } }),
       this.funcionarioRepository.find({ where: { unidade } }),
+      this.dataSource.query(
+        `
+        SELECT
+          BTRIM(p."crmMedico") AS crm,
+          UPPER(BTRIM(p."ufCrmMedico")) AS uf,
+          ${sqlNomePrescritorJoin('pr_painel', `''`)} AS nome
+        FROM painel_medicos_representantes p
+        ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel')}
+        WHERE p.unidade = $1
+        `,
+        [unidade],
+      ) as Promise<Array<{ crm: string; uf: string; nome: string | null }>>,
     ]);
+    const nomePainelPorCrmUf = new Map(
+      nomesPainel.map((n) => [`${n.crm}|${n.uf}`, (n.nome || '').trim()]),
+    );
     const funcPorPar = new Map(
       funcionarios
         .filter(
@@ -649,8 +669,12 @@ export class VisitacaoAcompanhamentoService {
 
     await this.dataSource.transaction(async (manager) => {
       const salvo = await manager.save(VisitacaoFechamento, header);
-      const carteira = painel.map((p) =>
-        manager.create(VisitacaoFechamentoCarteira, {
+      const carteira = painel.map((p) => {
+        const chave = `${p.crmMedico.trim()}|${p.ufCrmMedico.trim().toUpperCase()}`;
+        const nomeMedico =
+          nomePainelPorCrmUf.get(chave) ||
+          `CRM ${p.crmMedico}/${p.ufCrmMedico}`;
+        return manager.create(VisitacaoFechamentoCarteira, {
           fechamentoId: salvo.id,
           funcionario:
             funcPorPar.get(
@@ -658,12 +682,12 @@ export class VisitacaoAcompanhamentoService {
             ) ?? null,
           crmMedico: p.crmMedico,
           ufCrmMedico: p.ufCrmMedico,
-          nomeMedico: p.nomeMedico,
+          nomeMedico,
           contratoRepresentante: p.contratoRepresentante,
           codigoRepresentante: p.codigoRepresentante,
           nomeRepresentante: p.nomeRepresentante,
-        }),
-      );
+        });
+      });
       if (carteira.length) {
         await manager.save(VisitacaoFechamentoCarteira, carteira, {
           chunk: 250,
@@ -1578,10 +1602,11 @@ export class VisitacaoAcompanhamentoService {
           o.unidade AS unidade,
           BTRIM(o."crmMedico") AS crm,
           UPPER(BTRIM(o."ufcrmMedico")) AS uf,
-          MAX(o."nomeMedico") AS nome_medico,
+          MAX(${sqlNomePrescritorJoin('pr_orc', `''`)}) AS nome_medico,
           SUM(o."precoVenda") AS valor_rejeitado,
           COUNT(*)::int AS qtd_rejeitado
         FROM orcamentos o
+        ${sqlLeftJoinPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_orc')}
         WHERE o.status = 'REJEITADO'
           AND o."crmMedico" IS NOT NULL AND BTRIM(o."crmMedico") <> ''
           AND o."ufcrmMedico" IS NOT NULL AND BTRIM(o."ufcrmMedico") <> ''
@@ -1617,11 +1642,12 @@ export class VisitacaoAcompanhamentoService {
           p.unidade,
           BTRIM(p."crmMedico") AS crm,
           UPPER(BTRIM(p."ufCrmMedico")) AS uf,
-          p."nomeMedico" AS nome_painel,
+          ${sqlNomePrescritorJoin('pr_painel', `''`)} AS nome_painel,
           p."nomeRepresentante" AS nome_representante_erp,
           f.id AS funcionario_id,
           f.nome AS nome_funcionario
         FROM painel_medicos_representantes p
+        ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel')}
         LEFT JOIN funcionarios f
           ON f.unidade = p.unidade
           AND f."painelContratoRepresentante" = p."contratoRepresentante"
@@ -3116,7 +3142,12 @@ export class VisitacaoAcompanhamentoService {
   private sqlJoinFormulaSerie(): string {
     return `
           LEFT JOIN caixa_requisicao_formula f
-            ON f.requisicao_paga_id = c.id`;
+            ON f.requisicao_paga_id = c.id
+          ${sqlLeftJoinPrescritores(
+            this.sqlCrmPrescritor(),
+            this.sqlUfPrescritor(),
+            'pr_vis',
+          )}`;
   }
 
   /** CRM do crédito: série FC12100, senão paga FC17000. Sem orçamento (RN-VIS-008). */
@@ -3128,8 +3159,9 @@ export class VisitacaoAcompanhamentoService {
     return `COALESCE(NULLIF(UPPER(BTRIM(f.uf_crm_medico)), ''), NULLIF(UPPER(BTRIM(c.uf_crm_medico)), ''))`;
   }
 
+  /** Nome canônico em prescritores (CRM+UF). */
   private sqlNomePrescritor(): string {
-    return `COALESCE(NULLIF(BTRIM(f.nome_medico), ''), NULLIF(BTRIM(c.nome_medico), ''))`;
+    return sqlNomePrescritorJoin('pr_vis', `''`);
   }
 
   private sqlValorRecebidoPrescritorOuSerie(): string {

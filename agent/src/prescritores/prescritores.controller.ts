@@ -5,6 +5,11 @@ import { PrescritoresService } from './prescritores.service';
 export class PrescritoresController {
   constructor(private readonly prescritoresService: PrescritoresService) {}
 
+  @Get('cadastro')
+  async buscarCadastroCompleto() {
+    return this.prescritoresService.buscarCadastroCompleto();
+  }
+
   @Get()
   async buscarPrescritores(@Query('dataMinima') dataMinima: string) {
     return this.prescritoresService.buscarPrescritores(dataMinima);

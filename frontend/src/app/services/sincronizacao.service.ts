@@ -12,6 +12,8 @@ import {
   ImportarProducaoEtapasResponse,
   ImportarOrcamentosDto,
   ImportarOrcamentosResponse,
+  RepararNomesMedicosDto,
+  RepararNomesMedicosResponse,
   ProducaoEtapaDisponivelLimpeza,
   LimparProducaoEtapasAntigasDto,
   LimparProducaoEtapasAntigasResponse,
@@ -125,6 +127,15 @@ export class SincronizacaoService {
   ): Observable<ImportarOrcamentosResponse> {
     return this.http.post<ImportarOrcamentosResponse>(
       `${this.syncApiUrl}/orcamentos/importar`,
+      data,
+    );
+  }
+
+  repararNomesMedicos(
+    data: RepararNomesMedicosDto,
+  ): Observable<RepararNomesMedicosResponse> {
+    return this.http.post<RepararNomesMedicosResponse>(
+      `${this.syncApiUrl}/reparar-nomes-medicos`,
       data,
     );
   }
