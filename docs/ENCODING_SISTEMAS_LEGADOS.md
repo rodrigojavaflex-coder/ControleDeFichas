@@ -91,3 +91,5 @@ npm run reparar:nomes-dry-run
 ```
 
 Critérios OCTETS: JSON com JÚLIA / ÁRABE / GONÇALVES — sem `` / JÉLIA / ÇRABE / `\uFFFD`.
+
+Reparo NEST (`reparar-nomes-medicos`): o nome ERP da lista é o da base para aquele CRM+UF. Colisão (nomes distintos na mesma chave) → pendente ambíguo, sem `scoreNome` escolhendo outra pessoa. Divergência com nome único → motivo **Nome diferente**.

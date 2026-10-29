@@ -386,9 +386,39 @@ export class DatabaseService {
           const rows = (result ?? []).map((row) =>
             this.mapPrescritorRow(converterObjetoFirebird(row, charset)),
           );
-          this.logger.log(
-            `Prescritores (cadastro completo): ${rows.length} registros`,
+          const porChave = new Map<string, Set<string>>();
+          for (const r of rows) {
+            const crm = r?.nrcrm != null ? String(r.nrcrm).trim() : '';
+            const uf = String(r?.ufcrm ?? '')
+              .trim()
+              .toUpperCase();
+            const nome = String(r?.nomemed ?? '')
+              .trim()
+              .toLocaleUpperCase('pt-BR');
+            if (!crm || !uf || !nome) continue;
+            const k = `${crm}|${uf}`;
+            const set = porChave.get(k) ?? new Set<string>();
+            set.add(nome);
+            porChave.set(k, set);
+          }
+          const ambiguos = [...porChave.entries()].filter(
+            ([, nomes]) => nomes.size > 1,
           );
+          this.logger.log(
+            `Prescritores (cadastro completo): ${rows.length} registros` +
+              (ambiguos.length
+                ? `; ${ambiguos.length} CRM+UF com nomes distintos no FC04000`
+                : ''),
+          );
+          if (ambiguos.length > 0) {
+            const amostra = ambiguos
+              .slice(0, 5)
+              .map(([k, nomes]) => `${k}=[${[...nomes].join(' | ')}]`)
+              .join('; ');
+            this.logger.warn(
+              `FC04000 CRM+UF ambíguo (amostra): ${amostra}`,
+            );
+          }
           resolve(rows);
         });
       });

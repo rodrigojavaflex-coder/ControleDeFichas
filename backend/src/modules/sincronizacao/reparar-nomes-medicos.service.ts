@@ -6,6 +6,7 @@ import { SincronizacaoConfig } from './entities/sincronizacao-config.entity';
 import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { padronizarNomeDeSistemaLegado } from '../../common/utils/encoding-legado.util';
+import { parseCrmNumero } from '../../common/utils/prescritor-crm.util';
 import { fetchAgenteComRetry } from '../../common/utils/fetch-agente-com-retry.util';
 import {
   RepararNomesMedicosDto,
@@ -13,11 +14,18 @@ import {
   ReparoNomeMedicoItemDto,
 } from './dto/reparar-nomes-medicos.dto';
 
-interface ErpMedico {
+/** Entrada do mapa ERP: um nome por CRM+UF, ou ambíguo se a base trouxer nomes distintos. */
+interface ErpMedicoEntry {
   crm: string;
   uf: string;
-  nome: string;
+  /** Nome padronizado único (null se ambíguo). */
+  nome: string | null;
+  /** Texto bruto preferido (melhor encoding) para o nome único. */
+  nomeBruto: string | null;
   origem: string;
+  ambiguo: boolean;
+  /** Nomes padronizados distintos vistos para esta chave. */
+  nomesDistintos: string[];
 }
 
 interface NestNomeRow {
@@ -41,6 +49,10 @@ const UNIDADE_AGENTE: Record<Unidade, string> = {
 /**
  * Reparo de nomes: sobrescreve apenas `prescritores.nome` (fonte canônica).
  * Satélites (painel/orçamentos/caixa) leem via JOIN CRM+UF.
+ *
+ * Garantia: o nome ERP usado é o da base para aquele CRM+UF.
+ * Se o cadastro trouxer nomes distintos na mesma chave → pendente (ambíguo),
+ * nunca escolhe “vencedor” por score.
  */
 @Injectable()
 export class RepararNomesMedicosService {
@@ -81,12 +93,13 @@ export class RepararNomesMedicosService {
     let suspeitos = 0;
 
     for (const row of nestRows) {
-      const crm = row.crm.trim();
-      const uf = row.uf.trim().toUpperCase();
+      const crmNum = parseCrmNumero(row.crm);
+      const uf = (row.uf || '').trim().toUpperCase();
+      const crm = crmNum != null ? String(crmNum) : row.crm.trim();
       const nomeAtual = (row.nome || '').trim();
       const suspeitoHeuristica = this.nomeSuspeito(nomeAtual);
 
-      if (!crm || !uf) {
+      if (crmNum == null || !uf) {
         semCrm++;
         if (suspeitoHeuristica) {
           suspeitos++;
@@ -128,7 +141,25 @@ export class RepararNomesMedicosService {
         continue;
       }
 
-      const nomeErp = padronizarNomeDeSistemaLegado(erp.nome);
+      if (erp.ambiguo || !erp.nome) {
+        if (suspeitoHeuristica) suspeitos++;
+        pendentesRelatorio.push({
+          id: row.id,
+          tabela: row.tabela,
+          unidade: row.unidade,
+          crm,
+          uf,
+          nomeAtual: padronizarNomeDeSistemaLegado(nomeAtual) || nomeAtual,
+          nomeErp: erp.nomesDistintos.join(' | '),
+          origemErp: erp.origem,
+          motivo: `CRM+UF ambíguo no ERP (${erp.nomesDistintos.length} nomes distintos) — não sobrescreve`,
+          acao: 'pendente',
+        });
+        continue;
+      }
+
+      const nomeErp =
+        padronizarNomeDeSistemaLegado(erp.nomeBruto || erp.nome) || erp.nome;
       if (!nomeErp) {
         pendentesRelatorio.push({
           id: row.id,
@@ -137,7 +168,7 @@ export class RepararNomesMedicosService {
           crm,
           uf,
           nomeAtual,
-          nomeErp: erp.nome,
+          nomeErp: erp.nomeBruto,
           origemErp: erp.origem,
           motivo: 'Nome vazio no ERP após padronização',
           acao: 'pendente',
@@ -179,8 +210,8 @@ export class RepararNomesMedicosService {
         nomeErp,
         origemErp: erp.origem,
         motivo: suspeitoHeuristica
-          ? 'Divergência CRM+UF (NEST suspeito / ERP preferido)'
-          : 'Divergência de nome CRM+UF — sobrescrever pelo ERP',
+          ? 'Nome diferente (NEST com encoding suspeito)'
+          : 'Nome diferente',
         acao: 'corrigir',
       };
       paraCorrigir.push(itemCorrigir);
@@ -202,8 +233,9 @@ export class RepararNomesMedicosService {
       }
     }
 
+    const ambiguosErp = [...erpMap.values()].filter((e) => e.ambiguo).length;
     this.logger.log(
-      `Reparo nomes médicos: unidade=${unidadeFiltro ?? 'TODAS'} analisado=${nestRows.length} aCorrigir=${paraCorrigir.length} corrigidos=${corrigidos} pendentes=${pendentesRelatorio.length} aplicar=${aplicar}`,
+      `Reparo nomes médicos: unidade=${unidadeFiltro ?? 'TODAS'} analisado=${nestRows.length} aCorrigir=${paraCorrigir.length} corrigidos=${corrigidos} pendentes=${pendentesRelatorio.length} chavesAmbiguasErp=${ambiguosErp} aplicar=${aplicar}`,
     );
 
     return {
@@ -263,8 +295,8 @@ export class RepararNomesMedicosService {
     agentesConsultados: string[],
     erros: string[],
     unidadeFiltro: Unidade | null,
-  ): Promise<Map<string, ErpMedico>> {
-    const mapa = new Map<string, ErpMedico>();
+  ): Promise<Map<string, ErpMedicoEntry>> {
+    const mapa = new Map<string, ErpMedicoEntry>();
     const configs = await this.configRepository.find({
       where: { ativo: true },
       order: { agente: 'ASC' },
@@ -314,27 +346,33 @@ export class RepararNomesMedicosService {
         agentesConsultados.push(config.agente);
 
         for (const row of data || []) {
-          const crm = String(row.nrcrm ?? '').trim();
+          const crmNum = parseCrmNumero(row.nrcrm);
           const uf = String(row.ufcrm ?? '')
             .trim()
             .toUpperCase();
-          const nome = String(row.nomemed ?? '').trim();
-          if (!crm || !uf || !nome) continue;
+          const nomeBruto = String(row.nomemed ?? '').trim();
+          if (crmNum == null || !uf || !nomeBruto) continue;
 
+          const crm = String(crmNum);
+          const nomePad =
+            padronizarNomeDeSistemaLegado(nomeBruto) || nomeBruto;
           const chave = this.chave(crm, uf);
-          const candidato: ErpMedico = {
-            crm,
-            uf,
-            nome,
-            origem: config.agente,
-          };
-          const existente = mapa.get(chave);
-          if (
-            !existente ||
-            this.scoreNome(nome) > this.scoreNome(existente.nome)
-          ) {
-            mapa.set(chave, candidato);
-          }
+          this.registrarNomeErp(
+            mapa,
+            chave,
+            {
+              crm,
+              uf,
+              nome: nomePad,
+              nomeBruto,
+              origem: config.agente,
+              ambiguo: false,
+              nomesDistintos: [nomePad],
+            },
+            nomePad,
+            nomeBruto,
+            config.agente,
+          );
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -345,7 +383,53 @@ export class RepararNomesMedicosService {
       }
     }
 
+    const ambiguos = [...mapa.values()].filter((e) => e.ambiguo);
+    if (ambiguos.length > 0) {
+      this.logger.warn(
+        `Cadastro ERP com ${ambiguos.length} chave(s) CRM+UF ambígua(s) (nomes distintos na mesma chave)`,
+      );
+    }
+
     return mapa;
+  }
+
+  /**
+   * Acumula nomes por CRM+UF. Mesmo nome (após padronizar) = ok (fica o bruto com melhor encoding).
+   * Nomes distintos = ambíguo (não escolhe vencedor).
+   */
+  private registrarNomeErp(
+    mapa: Map<string, ErpMedicoEntry>,
+    chave: string,
+    seed: ErpMedicoEntry,
+    nomePad: string,
+    nomeBruto: string,
+    origem: string,
+  ): void {
+    const existente = mapa.get(chave);
+    if (!existente) {
+      mapa.set(chave, seed);
+      return;
+    }
+
+    if (!existente.nomesDistintos.includes(nomePad)) {
+      existente.nomesDistintos.push(nomePad);
+      existente.ambiguo = true;
+      existente.nome = null;
+      existente.nomeBruto = null;
+      existente.origem = `${existente.origem}+${origem}`;
+      return;
+    }
+
+    // Mesmo nome padronizado: preferir bruto com melhor encoding (acentos).
+    if (
+      !existente.ambiguo &&
+      existente.nomeBruto &&
+      this.scoreEncoding(nomeBruto) > this.scoreEncoding(existente.nomeBruto)
+    ) {
+      existente.nomeBruto = nomeBruto;
+      existente.nome = nomePad;
+      existente.origem = origem;
+    }
   }
 
   private async carregarNomesNest(): Promise<NestNomeRow[]> {
@@ -409,8 +493,9 @@ export class RepararNomesMedicosService {
     return !this.nomeSuspeito(nome) && !!nome.trim();
   }
 
-  private scoreNome(nome: string): number {
-    let score = nome.length;
+  /** Só para escolher variante de encoding do *mesmo* nome — nunca entre pessoas diferentes. */
+  private scoreEncoding(nome: string): number {
+    let score = 0;
     if (this.nomeSuspeito(nome)) score -= 1000;
     if (/[ÁÉÍÓÚÂÊÔÃÕÇ]/i.test(nome)) score += 50;
     return score;
