@@ -37,6 +37,9 @@ export class PrescritoresService {
       if (findPrescritoresDto.numeroCRM) {
         params = params.set('numeroCRM', findPrescritoresDto.numeroCRM.toString());
       }
+      if (findPrescritoresDto.pfcrm) {
+        params = params.set('pfcrm', findPrescritoresDto.pfcrm);
+      }
     }
 
     return this.http.get<PrescritorPaginatedResponse>(this.apiUrl, { params });

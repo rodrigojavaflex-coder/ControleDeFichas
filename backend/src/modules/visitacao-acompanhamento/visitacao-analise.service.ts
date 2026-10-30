@@ -42,6 +42,7 @@ const MESES_PT = [
 type AgregadoComparativoRow = {
   crm_medico: string;
   uf_crm_medico: string;
+  pfcrm: string;
   nome_medico: string;
   nome_representante: string | null;
   recebido_mes1: string | number;
@@ -57,6 +58,7 @@ type AgregadoComparativoRow = {
 type AgregadoRankingRow = {
   crm_medico: string;
   uf_crm_medico: string;
+  pfcrm: string;
   nome_medico: string;
   nome_representante: string | null;
   recebido_periodo: string | number;
@@ -68,6 +70,7 @@ type AgregadoRankingRow = {
 type AgregadoEvolucaoRow = {
   crm_medico: string;
   uf_crm_medico: string;
+  pfcrm: string;
   nome_medico: string;
   nome_representante: string | null;
   ano: number;
@@ -381,7 +384,11 @@ export class VisitacaoAnaliseService {
     const idxPorKey = new Map(refs.map((r, i) => [r.key, i]));
 
     for (const row of agregados) {
-      const key = this.chaveMedico(row.crm_medico, row.uf_crm_medico);
+      const key = this.chaveMedico(
+        row.crm_medico,
+        row.uf_crm_medico,
+        row.pfcrm,
+      );
       let acc = mapa.get(key);
       if (!acc) {
         acc = {
@@ -740,6 +747,10 @@ export class VisitacaoAnaliseService {
       .innerJoin('m.fechamento', 'f')
       .select('UPPER(BTRIM(m.crm_medico))', 'crm_medico')
       .addSelect('UPPER(BTRIM(m.uf_crm_medico))', 'uf_crm_medico')
+      .addSelect(
+        `UPPER(BTRIM(COALESCE(NULLIF(BTRIM(m.pfcrm), ''), '1')))`,
+        'pfcrm',
+      )
       .addSelect('MAX(m.nome_medico)', 'nome_medico')
       .addSelect('MAX(m.nome_representante)', 'nome_representante')
       .addSelect(
@@ -780,7 +791,10 @@ export class VisitacaoAnaliseService {
       .setParameter('cmpAno2', c2.ano)
       .setParameter('cmpMes2', c2.mes)
       .groupBy('UPPER(BTRIM(m.crm_medico))')
-      .addGroupBy('UPPER(BTRIM(m.uf_crm_medico))');
+      .addGroupBy('UPPER(BTRIM(m.uf_crm_medico))')
+      .addGroupBy(
+        `UPPER(BTRIM(COALESCE(NULLIF(BTRIM(m.pfcrm), ''), '1')))`,
+      );
 
     this.aplicarFiltroCompetencias(qb, [c1, c2]);
     this.aplicarFiltrosMedico(qb, dto);
@@ -797,6 +811,10 @@ export class VisitacaoAnaliseService {
       .innerJoin('m.fechamento', 'f')
       .select('UPPER(BTRIM(m.crm_medico))', 'crm_medico')
       .addSelect('UPPER(BTRIM(m.uf_crm_medico))', 'uf_crm_medico')
+      .addSelect(
+        `UPPER(BTRIM(COALESCE(NULLIF(BTRIM(m.pfcrm), ''), '1')))`,
+        'pfcrm',
+      )
       .addSelect('MAX(m.nome_medico)', 'nome_medico')
       .addSelect('MAX(m.nome_representante)', 'nome_representante')
       .addSelect('COALESCE(SUM(m.recebido_loja), 0)', 'recebido_periodo')
@@ -805,7 +823,10 @@ export class VisitacaoAnaliseService {
       .addSelect('COALESCE(SUM(m.qtd_rejeitado), 0)', 'qtd_rejeitado_periodo')
       .where('f.unidade = :unidade', { unidade })
       .groupBy('UPPER(BTRIM(m.crm_medico))')
-      .addGroupBy('UPPER(BTRIM(m.uf_crm_medico))');
+      .addGroupBy('UPPER(BTRIM(m.uf_crm_medico))')
+      .addGroupBy(
+        `UPPER(BTRIM(COALESCE(NULLIF(BTRIM(m.pfcrm), ''), '1')))`,
+      );
 
     this.aplicarFiltroCompetencias(qb, refs);
     this.aplicarFiltrosMedico(qb, dto);
@@ -822,6 +843,10 @@ export class VisitacaoAnaliseService {
       .innerJoin('m.fechamento', 'f')
       .select('UPPER(BTRIM(m.crm_medico))', 'crm_medico')
       .addSelect('UPPER(BTRIM(m.uf_crm_medico))', 'uf_crm_medico')
+      .addSelect(
+        `UPPER(BTRIM(COALESCE(NULLIF(BTRIM(m.pfcrm), ''), '1')))`,
+        'pfcrm',
+      )
       .addSelect('MAX(m.nome_medico)', 'nome_medico')
       .addSelect('MAX(m.nome_representante)', 'nome_representante')
       .addSelect('f.ano', 'ano')
@@ -833,6 +858,9 @@ export class VisitacaoAnaliseService {
       .where('f.unidade = :unidade', { unidade })
       .groupBy('UPPER(BTRIM(m.crm_medico))')
       .addGroupBy('UPPER(BTRIM(m.uf_crm_medico))')
+      .addGroupBy(
+        `UPPER(BTRIM(COALESCE(NULLIF(BTRIM(m.pfcrm), ''), '1')))`,
+      )
       .addGroupBy('f.ano')
       .addGroupBy('f.mes');
 
@@ -841,8 +869,13 @@ export class VisitacaoAnaliseService {
     return qb.getRawMany<AgregadoEvolucaoRow>();
   }
 
-  private chaveMedico(crm: string, uf: string): string {
-    return `${String(crm).trim().toUpperCase()}|${String(uf).trim().toUpperCase()}`;
+  private chaveMedico(
+    crm: string,
+    uf: string,
+    pfcrm?: string | null,
+  ): string {
+    const pf = String(pfcrm ?? '1').trim().toUpperCase() || '1';
+    return `${String(crm).trim().toUpperCase()}|${String(uf).trim().toUpperCase()}|${pf}`;
   }
 
   private aplicarComparativo(
@@ -856,7 +889,11 @@ export class VisitacaoAnaliseService {
     if (!tem1 && !tem2) {
       return;
     }
-    const key = this.chaveMedico(row.crm_medico, row.uf_crm_medico);
+    const key = this.chaveMedico(
+      row.crm_medico,
+      row.uf_crm_medico,
+      row.pfcrm,
+    );
     mapa.set(key, {
       crmMedico: String(row.crm_medico).trim(),
       ufCrmMedico: String(row.uf_crm_medico).trim().toUpperCase(),

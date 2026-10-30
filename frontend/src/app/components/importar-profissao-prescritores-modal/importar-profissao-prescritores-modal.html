@@ -1,0 +1,252 @@
+<div class="modal-overlay" *ngIf="visible">
+  <div class="modal-conteudo modal-importar-pfcrm">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Importar profissão (PFCRM) dos prescritores</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="loading"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <div class="importar-pfcrm-topo">
+        <div class="importar-pfcrm-filtros">
+          <div class="filter-group">
+            <label for="importPfCrmUnidade" class="label-campo">Unidade</label>
+            @if (unidadeBloqueada) {
+              <input
+                id="importPfCrmUnidade"
+                type="text"
+                class="campo"
+                [value]="unidade"
+                disabled
+                readonly />
+            } @else {
+              <select
+                id="importPfCrmUnidade"
+                class="campo"
+                [(ngModel)]="unidade"
+                [disabled]="loading">
+                <option value="">Todas</option>
+                <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+              </select>
+            }
+          </div>
+
+          @if (result && !loading && motivosDisponiveis.length) {
+            <div class="filter-group filter-group-motivo">
+              <label for="importPfCrmMotivo" class="label-campo">Motivo</label>
+              <select
+                id="importPfCrmMotivo"
+                class="campo"
+                [(ngModel)]="filtroMotivo"
+                (ngModelChange)="onFiltroChange()"
+                [disabled]="loading || result.aplicar">
+                <option value="">Todos</option>
+                @for (motivo of motivosDisponiveis; track motivo) {
+                  <option [ngValue]="motivo">{{ motivo }}</option>
+                }
+              </select>
+            </div>
+          }
+        </div>
+
+        <p class="importar-pfcrm-hint">
+          CRM+UF+nome × ERP · clique na linha para marcar ·
+          <code>/prescritores/cadastro</code>
+        </p>
+        <p class="importar-pfcrm-hint">
+          <strong>Ordem de execução:</strong>
+          1) atualizar default 1 →
+          2) criar outra profissão →
+          3) sem prescritor NEST →
+          4) outro nome no mesmo CRM →
+          5) pendentes (não aplicar)
+        </p>
+      </div>
+
+      <div class="importar-pfcrm-erro" *ngIf="error">{{ error }}</div>
+
+      <div class="inline-loading" *ngIf="loading">
+        <div class="spinner"></div>
+        <span>Consultando agente(s) e comparando PFCRM...</span>
+      </div>
+
+      @if (result && !loading) {
+        <section class="importar-pfcrm-resultado">
+          <div class="importar-pfcrm-resumo">
+            <span class="resumo-titulo">
+              {{ result.aplicar ? 'Aplicado' : 'Dry-run' }}
+              · {{ result.unidadeFiltro || 'Todas' }}
+              · {{ result.agentesConsultados.join(', ') || '—' }}
+            </span>
+            <ul class="importar-pfcrm-stats">
+              <li><b>{{ result.totalAnalisado }}</b> ERP</li>
+              <li><b>{{ result.aAplicar }}</b> aplicar</li>
+              <li><b>{{ qtdSelecionados }}</b> sel.</li>
+              <li><b>{{ result.aplicados }}</b> ok</li>
+              <li><b>{{ result.pendentes }}</b> pend.</li>
+              <li><b>{{ result.iguais }}</b> iguais</li>
+              @if (temFiltroAtivo) {
+                <li class="stat-filtro"><b>{{ qtdFiltrados }}</b> filtrados</li>
+              }
+            </ul>
+          </div>
+
+          @if (result.erros.length) {
+            <div class="importar-pfcrm-erros-lista">
+              <strong>Avisos ({{ result.erros.length }}):</strong>
+              {{ result.erros.join(' · ') }}
+            </div>
+          }
+
+          @if (result.paraAplicar.length) {
+            <div class="importar-pfcrm-selecao-bar">
+              <button
+                type="button"
+                class="link-acao"
+                (click)="selecionarTodos()"
+                [disabled]="!!result.aplicar">
+                Todos ({{ result.aAplicar }})
+              </button>
+              @if (temFiltroAtivo) {
+                <button
+                  type="button"
+                  class="link-acao"
+                  (click)="selecionarFiltrados()"
+                  [disabled]="!!result.aplicar">
+                  Filtrados ({{ qtdFiltrados }})
+                </button>
+              }
+              <button
+                type="button"
+                class="link-acao"
+                (click)="limparSelecao()"
+                [disabled]="!!result.aplicar">
+                Limpar
+              </button>
+              <span class="importar-pfcrm-paginacao">
+                Pág. {{ pagina }}/{{ totalPaginas }} · {{ qtdFiltrados }}
+              </span>
+              <button
+                type="button"
+                class="link-acao"
+                (click)="paginaAnterior()"
+                [disabled]="pagina <= 1">
+                Anterior
+              </button>
+              <button
+                type="button"
+                class="link-acao"
+                (click)="paginaProxima()"
+                [disabled]="pagina >= totalPaginas">
+                Próxima
+              </button>
+            </div>
+
+            <div class="importar-pfcrm-tabela-wrap">
+              <table class="importar-pfcrm-table">
+                <thead>
+                  <tr>
+                    <th class="col-check">
+                      <input
+                        type="checkbox"
+                        [checked]="paginaTodaSelecionada"
+                        (change)="onCheckPagina($event)"
+                        [disabled]="result.aplicar"
+                        [attr.aria-label]="'Selecionar página'" />
+                    </th>
+                    <th>Ação</th>
+                    <th>CRM</th>
+                    <th>UF</th>
+                    <th>PFCRM</th>
+                    <th>Profissão</th>
+                    <th>NEST</th>
+                    <th>ERP</th>
+                    <th>Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of paginaItens; track chave(item)) {
+                    <tr
+                      class="linha-selecionavel"
+                      [class.linha-marcada]="estaSelecionado(item)"
+                      (click)="onClickLinha(item)">
+                      <td class="col-check" (click)="$event.stopPropagation()">
+                        <input
+                          type="checkbox"
+                          [checked]="estaSelecionado(item)"
+                          (change)="onCheckItem(item, $event)"
+                          [disabled]="result.aplicar"
+                          [attr.aria-label]="'Incluir ' + item.crm" />
+                      </td>
+                      <td>{{ item.acao }}</td>
+                      <td>{{ item.crm }}</td>
+                      <td>{{ item.uf }}</td>
+                      <td>
+                        {{ item.pfcrm }}
+                        @if (item.pfcrmAtual) {
+                          <small>
+                            {{ item.acao === 'atualizar' ? '(era ' + item.pfcrmAtual + ')' : '(NEST ' + item.pfcrmAtual + ')' }}
+                          </small>
+                        }
+                      </td>
+                      <td>{{ item.profissao }}</td>
+                      <td>{{ item.nomeNest || '—' }}</td>
+                      <td>{{ item.nomeErp }}</td>
+                      <td>{{ item.motivo }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else if (!result.aplicar) {
+            @if (result.totalAnalisado === 0) {
+              <p class="importar-pfcrm-hint">
+                Nenhum registro veio do ERP.
+                @if (!result.agentesConsultados.length) {
+                  Agente não consultado — confira Configuração → Sincronização
+                  (agente ativo para a unidade) e URL/token no ambiente.
+                }
+              </p>
+            } @else {
+              <p class="importar-pfcrm-hint">
+                Nenhum PFCRM a aplicar neste escopo (já alinhados ou só pendentes).
+              </p>
+            }
+          }
+        </section>
+      }
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="fechar()"
+        [disabled]="loading">
+        Fechar
+      </button>
+      <button
+        type="button"
+        class="botao botao-secundario"
+        (click)="dryRun()"
+        [disabled]="loading">
+        <i class="fas fa-search" [class.fa-spin]="loading"></i>
+        Dry-run
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="aplicar()"
+        [disabled]="loading || !result || result.aplicar || qtdSelecionados === 0">
+        <i class="fas fa-id-badge"></i>
+        Aplicar selecionados ({{ qtdSelecionados }})
+      </button>
+    </div>
+  </div>
+</div>

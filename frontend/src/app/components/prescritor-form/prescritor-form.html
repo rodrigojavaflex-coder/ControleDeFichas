@@ -61,6 +61,23 @@
       </div>
     </div>
 
+    <!-- Profissão (PFCRM) -->
+    <div class="form-group">
+      <label for="pfcrm" class="form-label">Profissão (PFCRM) *</label>
+      <select
+        id="pfcrm"
+        formControlName="pfcrm"
+        class="form-control"
+        [class.error]="pfcrm?.invalid && pfcrm?.touched">
+        @for (op of pfCrmOpcoes; track op.codigo) {
+          <option [value]="op.codigo">{{ op.codigo }} — {{ op.label }}</option>
+        }
+      </select>
+      <div class="form-help">
+        Identidade canônica: CRM + UF + profissão (mesmo CRM pode ter mais de uma)
+      </div>
+    </div>
+
     <!-- Botões -->
     <div class="form-actions">
       <button

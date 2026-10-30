@@ -83,7 +83,12 @@ export class OrcamentosService {
       .leftJoin(
         'prescritores',
         'pr_nome',
-        sqlOnPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_nome'),
+        sqlOnPrescritores(
+          'o."crmMedico"',
+          'o."ufcrmMedico"',
+          'pr_nome',
+          'o.pfcrm',
+        ),
       )
       .addSelect('pr_nome.nome', 'joined_nome_medico')
       .where('o.status IN (:...statusList)', { statusList });
@@ -201,7 +206,12 @@ export class OrcamentosService {
       .leftJoin(
         'prescritores',
         'pr_nome',
-        sqlOnPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_nome'),
+        sqlOnPrescritores(
+          'o."crmMedico"',
+          'o."ufcrmMedico"',
+          'pr_nome',
+          'o.pfcrm',
+        ),
       )
       .select(LABEL_MEDICO, 'nome')
       .addSelect('COUNT(*)', 'total')

@@ -1,6 +1,10 @@
 import { Repository } from 'typeorm';
 import { Prescritor } from '../../modules/prescritores/entities/prescritor.entity';
 import { padronizarNomeDeSistemaLegado } from './encoding-legado.util';
+import {
+  PF_CRM_PADRAO_VISITACAO,
+  normalizarPfCrm,
+} from '../enums/pf-crm.enum';
 
 /** Normaliza CRM para comparação (só dígitos). */
 export function normalizarCrmTexto(
@@ -27,18 +31,22 @@ export function normalizarUfCrm(
 }
 
 /**
- * Condição ON do JOIN canônico: satélite (CRM texto + UF) → prescritores.
- * `crmExpr` / `ufExpr` = expressões SQL já no escopo (ex.: BTRIM(f.crm_medico)).
+ * Condição ON do JOIN canônico: satélite → prescritores.
+ * Sempre inclui PFCRM (COALESCE → padrão MEDICO) para evitar fan-out
+ * quando o mesmo CRM+UF tem várias profissões.
  */
 export function sqlOnPrescritores(
   crmExpr: string,
   ufExpr: string,
   alias = 'pr_nome',
+  pfcrmExpr: string,
 ): string {
   return `${alias}."numeroCRM" IS NOT NULL
    AND ${alias}."UFCRM" IS NOT NULL
    AND BTRIM(${alias}."numeroCRM"::text) = BTRIM(CAST(${crmExpr} AS TEXT))
-   AND UPPER(BTRIM(${alias}."UFCRM")) = UPPER(BTRIM(${ufExpr}))`;
+   AND UPPER(BTRIM(${alias}."UFCRM")) = UPPER(BTRIM(${ufExpr}))
+   AND UPPER(BTRIM(COALESCE(${alias}.pfcrm, '${PF_CRM_PADRAO_VISITACAO}')))
+       = UPPER(BTRIM(COALESCE(CAST(${pfcrmExpr} AS TEXT), '${PF_CRM_PADRAO_VISITACAO}')))`;
 }
 
 /** JOIN canônico completo (LEFT JOIN + ON). */
@@ -46,9 +54,10 @@ export function sqlLeftJoinPrescritores(
   crmExpr: string,
   ufExpr: string,
   alias = 'pr_nome',
+  pfcrmExpr: string,
 ): string {
   return `LEFT JOIN prescritores ${alias}
-    ON ${sqlOnPrescritores(crmExpr, ufExpr, alias)}`;
+    ON ${sqlOnPrescritores(crmExpr, ufExpr, alias, pfcrmExpr)}`;
 }
 
 export function sqlNomePrescritorJoin(
@@ -59,16 +68,18 @@ export function sqlNomePrescritorJoin(
 }
 
 /**
- * Garante prescritor por CRM+UF; atualiza nome se vier do ERP.
+ * Garante prescritor por CRM+UF+PFCRM; atualiza nome se vier do ERP.
  */
 export async function garantirPrescritorPorCrmUf(
   repo: Repository<Prescritor>,
   crm: string | number | null | undefined,
   uf: string | null | undefined,
   nome?: string | null,
+  pfcrm?: string | number | null,
 ): Promise<Prescritor | null> {
   const numeroCRM = parseCrmNumero(crm);
   const UFCRM = normalizarUfCrm(uf);
+  const pfcrmNorm = normalizarPfCrm(pfcrm) ?? PF_CRM_PADRAO_VISITACAO;
   if (numeroCRM == null || !UFCRM) {
     return null;
   }
@@ -78,13 +89,14 @@ export async function garantirPrescritorPorCrmUf(
     : '';
 
   let prescritor = await repo.findOne({
-    where: { numeroCRM, UFCRM },
+    where: { numeroCRM, UFCRM, pfcrm: pfcrmNorm },
   });
 
   if (!prescritor) {
     prescritor = repo.create({
       numeroCRM,
       UFCRM,
+      pfcrm: pfcrmNorm,
       nome: nomePad || `CRM ${numeroCRM}/${UFCRM}`,
     });
     return repo.save(prescritor);

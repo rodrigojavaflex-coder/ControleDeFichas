@@ -18,6 +18,7 @@ import { garantirPrescritorPorCrmUf } from '../../common/utils/prescritor-crm.ut
 
 export interface AgentePainelMedico {
   nome_medico: string;
+  pfcrm?: string;
   uf_crm_medico: string;
   crm_medico: string;
   contrato_representante: number;
@@ -144,17 +145,20 @@ export class PainelMedicosService {
 
       const crmMedico = String(registro.crm_medico).trim();
       const ufCrmMedico = String(registro.uf_crm_medico).trim().toUpperCase();
+      const pfcrm = registro.pfcrm?.trim()?.toUpperCase() || null;
       await garantirPrescritorPorCrmUf(
         this.prescritorRepository,
         crmMedico,
         ufCrmMedico,
         registro.nome_medico,
+        pfcrm,
       );
 
       const payload: Partial<PainelMedicoRepresentante> = {
         unidade,
         ufCrmMedico,
         crmMedico,
+        pfcrm,
         contratoRepresentante: registro.contrato_representante,
         codigoRepresentante: registro.codigo_representante,
         nomeRepresentante: padronizarNomeDeSistemaLegado(
@@ -266,6 +270,8 @@ export class PainelMedicosService {
         this.prescritorRepository,
         registro.crmMedico,
         registro.ufCrmMedico,
+        undefined,
+        registro.pfcrm,
       );
       const nomeMedico =
         prescritor?.nome?.trim() ||
@@ -276,6 +282,7 @@ export class PainelMedicosService {
           nomeMedico,
           ufCrmMedico: registro.ufCrmMedico,
           crmMedico: registro.crmMedico,
+          pfcrm: registro.pfcrm ?? null,
           contratoRepresentante: registro.contratoRepresentante,
           codigoRepresentante: registro.codigoRepresentante,
           nomeRepresentante: registro.nomeRepresentante,

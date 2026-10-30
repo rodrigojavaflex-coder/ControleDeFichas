@@ -31,6 +31,7 @@ import {
   VisitacaoComissaoFaixaItemDto,
   VisitacaoComissaoRepresentantesResponseDto,
 } from './dto/visitacao-comissao-faixa.dto';
+import { sqlLeftJoinPrescritores } from '../../common/utils/prescritor-crm.util';
 
 interface FaixaIntervalo {
   id?: string;
@@ -570,11 +571,7 @@ export class VisitacaoMetaService {
         p.unidade,
         MAX(p."nomeRepresentante") AS representante
       FROM painel_medicos_representantes p
-      LEFT JOIN prescritores pr_painel
-        ON pr_painel."numeroCRM" IS NOT NULL
-       AND pr_painel."UFCRM" IS NOT NULL
-       AND BTRIM(pr_painel."numeroCRM"::text) = BTRIM(CAST(p."crmMedico" AS TEXT))
-       AND UPPER(BTRIM(pr_painel."UFCRM")) = UPPER(BTRIM(p."ufCrmMedico"))
+      ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel', 'p.pfcrm')}
       WHERE p.unidade = ANY($1)
         AND NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
         AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL

@@ -1,9 +1,10 @@
 import { Entity, Column, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
+import { PfCrm } from '../../../common/enums/pf-crm.enum';
 
 @Entity('prescritores')
-@Index('uq_prescritores_numero_crm_uf', ['numeroCRM', 'UFCRM'], {
+@Index('uq_prescritores_crm_uf_pfcrm', ['numeroCRM', 'UFCRM', 'pfcrm'], {
   unique: true,
   where: `"numeroCRM" IS NOT NULL AND "UFCRM" IS NOT NULL`,
 })
@@ -39,4 +40,12 @@ export class Prescritor extends BaseEntity {
   })
   @Column({ length: 2, nullable: true })
   UFCRM?: string;
+
+  @ApiProperty({
+    description: 'Profissão/prefixo CRM (PFCRM do ERP)',
+    example: PfCrm.MEDICO,
+    maxLength: 3,
+  })
+  @Column({ type: 'varchar', length: 3, default: PfCrm.MEDICO })
+  pfcrm: string;
 }

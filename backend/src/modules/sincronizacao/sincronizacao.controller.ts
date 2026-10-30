@@ -50,6 +50,16 @@ import {
   RepararNomesMedicosDto,
   RepararNomesMedicosResponseDto,
 } from './dto/reparar-nomes-medicos.dto';
+import { ImportarProfissaoPrescritoresService } from './importar-profissao-prescritores.service';
+import {
+  ImportarProfissaoPrescritoresDto,
+  ImportarProfissaoPrescritoresResponseDto,
+} from './dto/importar-profissao-prescritores.dto';
+import { BackfillPfcrmRetratosService } from './backfill-pfcrm-retratos.service';
+import {
+  BackfillPfcrmRetratosDto,
+  BackfillPfcrmRetratosResponseDto,
+} from './dto/backfill-pfcrm-retratos.dto';
 
 @ApiTags('sincronizacao')
 @Controller('sincronizacao')
@@ -59,6 +69,8 @@ export class SincronizacaoController {
     private readonly producaoEtapasLimpezaService: ProducaoEtapasLimpezaService,
     private readonly sincronizacaoLogService: SincronizacaoLogService,
     private readonly repararNomesMedicosService: RepararNomesMedicosService,
+    private readonly importarProfissaoPrescritoresService: ImportarProfissaoPrescritoresService,
+    private readonly backfillPfcrmRetratosService: BackfillPfcrmRetratosService,
   ) {}
 
   @Post('executar')
@@ -221,6 +233,36 @@ export class SincronizacaoController {
     @Body() dto: RepararNomesMedicosDto,
   ): Promise<RepararNomesMedicosResponseDto> {
     return this.repararNomesMedicosService.executar(dto);
+  }
+
+  @Post('importar-profissao-prescritores')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Importa PFCRM (profissão) do cadastro FC04000 para prescritores NEST (dry-run ou apply com seleção)',
+  })
+  @ApiResponse({ status: 200, type: ImportarProfissaoPrescritoresResponseDto })
+  importarProfissaoPrescritores(
+    @Body() dto: ImportarProfissaoPrescritoresDto,
+  ): Promise<ImportarProfissaoPrescritoresResponseDto> {
+    return this.importarProfissaoPrescritoresService.executar(dto);
+  }
+
+  @Post('backfill-pfcrm-retratos')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Preenche PFCRM nos retratos de visitação já fechados (lote; só referência, sem recalcular valores)',
+  })
+  @ApiResponse({ status: 200, type: BackfillPfcrmRetratosResponseDto })
+  backfillPfcrmRetratos(
+    @Body() dto: BackfillPfcrmRetratosDto,
+  ): Promise<BackfillPfcrmRetratosResponseDto> {
+    return this.backfillPfcrmRetratosService.executar(dto);
   }
 
   @Get('logs')

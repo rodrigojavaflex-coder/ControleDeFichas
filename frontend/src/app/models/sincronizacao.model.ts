@@ -225,6 +225,87 @@ export interface RepararNomesMedicosResponse {
   pendentesRelatorio: ReparoNomeMedicoItem[];
 }
 
+export interface ImportProfissaoSelecao {
+  acao: string;
+  id?: string;
+  crm: string;
+  uf: string;
+  pfcrm: string;
+}
+
+export interface ImportarProfissaoPrescritoresDto {
+  aplicar: boolean;
+  unidade?: string;
+  itensSelecionados?: ImportProfissaoSelecao[];
+  aplicarTodos?: boolean;
+}
+
+export interface ImportProfissaoItem {
+  id: string | null;
+  crm: string;
+  uf: string;
+  pfcrm: string;
+  profissao: string;
+  nomeNest: string | null;
+  nomeErp: string;
+  pfcrmAtual?: string | null;
+  origemErp?: string;
+  motivo: string;
+  acao: 'atualizar' | 'criar' | 'pendente' | 'igual';
+}
+
+export interface ImportarProfissaoPrescritoresResponse {
+  aplicar: boolean;
+  unidadeFiltro: string | null;
+  totalAnalisado: number;
+  aAplicar: number;
+  aplicados: number;
+  pendentes: number;
+  iguais: number;
+  agentesConsultados: string[];
+  erros: string[];
+  paraAplicar: ImportProfissaoItem[];
+  pendentesRelatorio: ImportProfissaoItem[];
+}
+
+export interface BackfillPfcrmRetratosDto {
+  aplicar: boolean;
+  unidade?: string;
+}
+
+export interface BackfillPfcrmUnidadeResumo {
+  unidade: string;
+  /** Linhas em todos os meses fechados (com ou sem PFCRM). */
+  medicosTotal: number;
+  carteiraTotal: number;
+  medicosSemPfcrm: number;
+  carteiraSemPfcrm: number;
+  medicosPreenchidos: number;
+  carteiraPreenchidos: number;
+  ambiguos: number;
+  semMatch: number;
+  /** Resolvidos com PFCRM padrão 1 após dúvida (nome não desambiguou). */
+  fallbackPadrao: number;
+}
+
+export interface BackfillPfcrmRetratosResponse {
+  aplicar: boolean;
+  unidadeFiltro: string | null;
+  /** Linhas em todos os meses fechados do escopo. */
+  medicosTotal: number;
+  carteiraTotal: number;
+  medicosSemPfcrm: number;
+  carteiraSemPfcrm: number;
+  medicosPreenchidos: number;
+  carteiraPreenchidos: number;
+  ambiguos: number;
+  semMatch: number;
+  /** Linhas ok via fallback PFCRM 1 (MEDICO). */
+  fallbackPadrao: number;
+  porUnidade: BackfillPfcrmUnidadeResumo[];
+  amostraFalhas: string[];
+}
+
 export interface SincronizacaoLogErro {
   id: string;
   agente: string;

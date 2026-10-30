@@ -19,6 +19,18 @@
         class="form-control"
       >
     </div>
+    <div class="filter-group">
+      <select
+        class="form-control"
+        [(ngModel)]="pfcrmFilter"
+        (ngModelChange)="onFilterChange()"
+        aria-label="Filtrar por profissão">
+        <option value="">Todas as profissões</option>
+        @for (op of pfCrmOpcoes; track op.codigo) {
+          <option [value]="op.codigo">{{ op.codigo }} — {{ op.label }}</option>
+        }
+      </select>
+    </div>
     <button class="btn btn-limpar" (click)="clearFilters()">
       Limpar Filtros
     </button>
@@ -51,6 +63,7 @@
           <tr>
             <th>Nome</th>
             <th>CRM</th>
+            <th>Profissão</th>
             <th>Criado em</th>
             <th>Ações</th>
           </tr>
@@ -59,6 +72,7 @@
           <tr *ngFor="let prescritor of items">
             <td>{{ prescritor.nome }}</td>
             <td>{{ getCRMFormat(prescritor) }}</td>
+            <td>{{ formatProfissao(prescritor) }}</td>
             <td>{{ formatDate(prescritor.criadoEm) }}</td>
             <td class="action-buttons">
               @if (canEditPrescritor()) {
@@ -81,7 +95,7 @@
           </tr>
           @if (items.length === 0) {
             <tr class="no-data">
-              <td colspan="4" class="text-center">
+              <td colspan="5" class="text-center">
                 <i class="fas fa-inbox"></i>
                 Nenhum prescritor encontrado
               </td>

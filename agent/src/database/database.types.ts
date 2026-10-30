@@ -46,6 +46,7 @@ export interface CaixaItemRow {
   /** Prescritor do produto (FC31110 → FC31100). Só em PRODUTO. */
   crm_medico: string | null;
   uf_crm_medico: string | null;
+  pfcrm: string | null;
   pagamento_cupom: number;
   chave_erp: string;
 }
@@ -57,6 +58,7 @@ export interface CaixaRequisicaoFormulaRow {
   valor_rateado: number;
   crm_medico: string | null;
   uf_crm_medico: string | null;
+  pfcrm: string | null;
   nome_medico: string | null;
 }
 
@@ -81,6 +83,7 @@ export interface CaixaRequisicaoPagaRow {
   vendedor: string | null;
   crm_medico: string | null;
   uf_crm_medico: string | null;
+  pfcrm: string | null;
   nome_medico: string | null;
   chave_erp: string;
   formulas: CaixaRequisicaoFormulaRow[];
@@ -98,6 +101,7 @@ export interface PainelMedicoRepresentanteRow {
   nome_medico: string;
   uf_crm_medico: string;
   crm_medico: string;
+  pfcrm?: string;
   contrato_representante: number;
   codigo_representante: number;
   nome_representante: string;
@@ -183,6 +187,7 @@ export interface OrcamentoRow {
   nome_vendedor?: string | null;
   crm_medico?: string | null;
   ufcrm_medico?: string | null;
+  pfcrm?: string | null;
   nome_medico?: string | null;
 }
 

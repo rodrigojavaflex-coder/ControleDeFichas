@@ -144,7 +144,12 @@ export class OrcamentosDashboardService {
       .leftJoin(
         'prescritores',
         'pr_nome',
-        sqlOnPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_nome'),
+        sqlOnPrescritores(
+          'o."crmMedico"',
+          'o."ufcrmMedico"',
+          'pr_nome',
+          'o.pfcrm',
+        ),
       )
       .select(LABEL_MEDICO, 'nome')
       .addSelect('COUNT(*)', 'total')
@@ -776,6 +781,7 @@ export class OrcamentosDashboardService {
         `${alias}."crmMedico"`,
         `${alias}."ufcrmMedico"`,
         'pr_nome',
+        `${alias}.pfcrm`,
       ),
     );
   }

@@ -117,6 +117,7 @@ interface AgenteCaixaRequisicaoFormulaRow {
   valor_rateado: number;
   crm_medico: string | null;
   uf_crm_medico: string | null;
+  pfcrm?: string | null;
   nome_medico: string | null;
 }
 
@@ -140,6 +141,7 @@ interface AgenteCaixaRequisicaoRow {
   vendedor: string | null;
   crm_medico: string | null;
   uf_crm_medico: string | null;
+  pfcrm?: string | null;
   nome_medico: string | null;
   formulas?: AgenteCaixaRequisicaoFormulaRow[];
 }
@@ -1243,8 +1245,12 @@ export class FechamentoCaixaService {
         row.uf_crm_medico != null && String(row.uf_crm_medico).trim()
           ? String(row.uf_crm_medico).trim().toUpperCase()
           : null;
+      const pfcrm =
+        row.pfcrm != null && String(row.pfcrm).trim()
+          ? String(row.pfcrm).trim().toUpperCase()
+          : null;
       if (!crm || !uf) continue;
-      const chave = `${crm}|${uf}`;
+      const chave = `${crm}|${uf}|${pfcrm ?? ''}`;
       if (prescritorVisto.has(chave)) continue;
       prescritorVisto.add(chave);
       await garantirPrescritorPorCrmUf(
@@ -1252,6 +1258,7 @@ export class FechamentoCaixaService {
         crm,
         uf,
         row.nome_medico,
+        pfcrm,
       );
     }
 
@@ -1288,6 +1295,10 @@ export class FechamentoCaixaService {
         ufCrmMedico:
           row.uf_crm_medico != null && String(row.uf_crm_medico).trim()
             ? String(row.uf_crm_medico).trim().toUpperCase()
+            : null,
+        pfcrm:
+          row.pfcrm != null && String(row.pfcrm).trim()
+            ? String(row.pfcrm).trim().toUpperCase()
             : null,
         orcamentoId:
           row.nr_orcamento != null
@@ -1380,11 +1391,16 @@ export class FechamentoCaixaService {
           f.uf_crm_medico != null && String(f.uf_crm_medico).trim()
             ? String(f.uf_crm_medico).trim().toUpperCase()
             : null;
+        const pfcrm =
+          f.pfcrm != null && String(f.pfcrm).trim()
+            ? String(f.pfcrm).trim().toUpperCase()
+            : null;
         await garantirPrescritorPorCrmUf(
           this.prescritorRepo,
           crmMedico,
           ufCrmMedico,
           f.nome_medico,
+          pfcrm,
         );
         entities.push(
           this.formulaRepo.create({
@@ -1398,6 +1414,7 @@ export class FechamentoCaixaService {
             valorRateado: Number(f.valor_rateado) || 0,
             crmMedico,
             ufCrmMedico,
+            pfcrm,
             atualizadoEm: new Date(),
           }),
         );
@@ -1485,7 +1502,7 @@ export class FechamentoCaixaService {
         c.crm_medico AS "crmMedico",
         ${sqlNomePrescritorJoin('pr_nome', 'NULL')} AS "nomeMedico"
       FROM caixa_requisicoes_pagas c
-      ${sqlLeftJoinPrescritores('c.crm_medico', 'c.uf_crm_medico')}
+      ${sqlLeftJoinPrescritores('c.crm_medico', 'c.uf_crm_medico', 'pr_nome', 'c.pfcrm')}
       WHERE c.unidade = $1
         AND c.data_pagamento = $2
         AND c.tipo_requisicao = 'C'

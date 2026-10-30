@@ -333,6 +333,7 @@ export class DatabaseService {
       : '';
     const sql = `
       SELECT 
+        TRIM(prescritor.pfcrm) AS pfcrm,
         prescritor.nrcrm AS nrcrm,
         prescritor.ufcrm AS ufcrm,
         ${this.sqlTextoOctets('prescritor.nomemed', 'nomemed', 120)},
@@ -499,6 +500,7 @@ export class DatabaseService {
     }
 
     return {
+      pfcrm: get('pfcrm') != null ? String(get('pfcrm')).trim().toUpperCase() : undefined,
       nrcrm: get('nrcrm') ? Number(get('nrcrm')) : undefined,
       ufcrm: get('ufcrm') ? String(get('ufcrm')).trim() : undefined,
       nomemed: this.textoCampoFirebird(get('nomemed')),
@@ -643,6 +645,7 @@ export class DatabaseService {
         ${this.sqlTextoOctets('cap.nomepa', 'nome_cliente', 120)},
         CAST(o.NRCRM AS VARCHAR(20)) AS crm_medico,
         TRIM(o.UFCRM) AS ufcrm_medico,
+        TRIM(o.pfcrm) AS pfcrm,
         ${this.sqlTextoOctets('med.NOMEMED', 'nome_medico', 120)}
       FROM fc15100 o
       JOIN fc15000 cap
@@ -700,6 +703,7 @@ export class DatabaseService {
         ${this.sqlTextoOctets('cap.nomepa', 'nome_cliente', 120)},
         CAST(o.NRCRM AS VARCHAR(20)) AS crm_medico,
         TRIM(o.UFCRM) AS ufcrm_medico,
+        TRIM(o.pfcrm) AS pfcrm,
         ${this.sqlTextoOctets('med.NOMEMED', 'nome_medico', 120)}
       FROM fc15100 o
       JOIN fc15000 cap
@@ -780,6 +784,12 @@ export class DatabaseService {
         ufcrmMedico !== null && ufcrmMedico !== undefined && String(ufcrmMedico).trim()
           ? String(ufcrmMedico).trim()
           : null,
+      pfcrm: (() => {
+        const raw = get('pfcrm');
+        return raw != null && String(raw).trim()
+          ? String(raw).trim().toUpperCase()
+          : null;
+      })(),
       nome_medico: (() => {
         const nome = this.textoCampoFirebird(nomeMedico);
         return nome || null;
@@ -1303,6 +1313,7 @@ export class DatabaseService {
           ) AS VARCHAR(20)
         ) AS crm_medico,
         TRIM(COALESCE(form.ufcrm, r.ufcrm)) AS uf_crm_medico,
+        TRIM(COALESCE(form.pfcrm, r.pfcrm)) AS pfcrm,
         ${this.sqlTextoOctets('m.nomemed', 'nome_medico', 120)}
       FROM fc17000 r
       INNER JOIN (
@@ -1436,6 +1447,12 @@ export class DatabaseService {
             r.ufcrm
           )
         ) AS uf_crm_medico,
+        TRIM(
+          COALESCE(
+            MAX(CASE WHEN COALESCE(f.nrcrm, 0) > 0 THEN f.pfcrm END),
+            r.pfcrm
+          )
+        ) AS pfcrm,
         ${this.sqlTextoOctets('m.nomemed', 'nome_medico', 120)}
       FROM fc17000 r
       INNER JOIN (
@@ -1620,6 +1637,10 @@ export class DatabaseService {
         get('uf_crm_medico') != null && String(get('uf_crm_medico')).trim()
           ? String(get('uf_crm_medico')).trim().toUpperCase()
           : null,
+      pfcrm:
+        get('pfcrm') != null && String(get('pfcrm')).trim()
+          ? String(get('pfcrm')).trim().toUpperCase()
+          : null,
       pagamento_cupom: Number(get('pagamento_cupom') ?? 0),
       chave_erp: `${filial}-${cdtml}-${data}-${operid}-${cupom}-${itemCupom}`,
     };
@@ -1684,6 +1705,10 @@ export class DatabaseService {
         get('uf_crm_medico') != null && String(get('uf_crm_medico')).trim()
           ? String(get('uf_crm_medico')).trim()
           : null,
+      pfcrm:
+        get('pfcrm') != null && String(get('pfcrm')).trim()
+          ? String(get('pfcrm')).trim().toUpperCase()
+          : null,
       nome_medico: (() => {
         const nome = this.textoCampoFirebird(get('nome_medico'));
         return nome || null;
@@ -1721,6 +1746,10 @@ export class DatabaseService {
         uf_crm_medico:
           get('uf_crm_medico') != null && String(get('uf_crm_medico')).trim()
             ? String(get('uf_crm_medico')).trim()
+            : null,
+        pfcrm:
+          get('pfcrm') != null && String(get('pfcrm')).trim()
+            ? String(get('pfcrm')).trim().toUpperCase()
             : null,
         nome_medico: (() => {
           const nome = this.textoCampoFirebird(get('nome_medico'));
@@ -1817,6 +1846,7 @@ export class DatabaseService {
         ${this.sqlTextoOctets('m.nomemed', 'nome_medico', 120)},
         TRIM(m.ufcrm)                   AS uf_crm_medico,
         CAST(m.nrcrm AS VARCHAR(20))    AS crm_medico,
+        TRIM(m.pfcrm)                   AS pfcrm,
         v.cdcon                         AS contrato_representante,
         v.cdfun                         AS codigo_representante,
         ${this.sqlTextoOctets('f.nomefun', 'nome_representante', 120)}
@@ -1846,6 +1876,10 @@ export class DatabaseService {
       nome_medico: this.textoCampoFirebird(get('nome_medico')),
       uf_crm_medico: String(get('uf_crm_medico') ?? '').trim(),
       crm_medico: String(get('crm_medico') ?? '').trim(),
+      pfcrm:
+        get('pfcrm') != null
+          ? String(get('pfcrm')).trim().toUpperCase()
+          : undefined,
       contrato_representante: Number(get('contrato_representante') ?? 0),
       codigo_representante: Number(get('codigo_representante') ?? 0),
       nome_representante: this.textoCampoFirebird(get('nome_representante')),

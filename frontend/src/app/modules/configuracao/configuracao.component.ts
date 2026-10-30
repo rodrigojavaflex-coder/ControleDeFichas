@@ -23,7 +23,10 @@ import { ImportarProducaoEtapasModalComponent } from '../../components/importar-
 import { LimparProducaoEtapasModalComponent } from '../../components/limpar-producao-etapas-modal/limpar-producao-etapas-modal';
 import { ImportarOrcamentosModalComponent } from '../../components/importar-orcamentos-modal/importar-orcamentos-modal';
 import { RepararNomesMedicosModalComponent } from '../../components/reparar-nomes-medicos-modal/reparar-nomes-medicos-modal';
+import { ImportarProfissaoPrescritoresModalComponent } from '../../components/importar-profissao-prescritores-modal/importar-profissao-prescritores-modal';
+import { BackfillPfcrmRetratosModalComponent } from '../../components/backfill-pfcrm-retratos-modal/backfill-pfcrm-retratos-modal';
 import { SincronizacaoLogsModalComponent } from '../../components/sincronizacao-logs-modal/sincronizacao-logs-modal';
+import { BackfillPfcrmRetratosResponse } from '../../models/sincronizacao.model';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
 import { Permission, Unidade } from '../../models/usuario.model';
 import {
@@ -48,6 +51,8 @@ type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
     LimparProducaoEtapasModalComponent,
     ImportarOrcamentosModalComponent,
     RepararNomesMedicosModalComponent,
+    ImportarProfissaoPrescritoresModalComponent,
+    BackfillPfcrmRetratosModalComponent,
     SincronizacaoLogsModalComponent,
   ],
   templateUrl: './configuracao.component.html',
@@ -68,6 +73,10 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   @ViewChild('orcamentosModal') orcamentosModal?: ImportarOrcamentosModalComponent;
   @ViewChild('repararNomesMedicosModal')
   repararNomesMedicosModal?: RepararNomesMedicosModalComponent;
+  @ViewChild('importarProfissaoPrescritoresModal')
+  importarProfissaoPrescritoresModal?: ImportarProfissaoPrescritoresModalComponent;
+  @ViewChild('backfillPfcrmRetratosModal')
+  backfillPfcrmRetratosModal?: BackfillPfcrmRetratosModalComponent;
   @ViewChild('sincronizacaoLogsModal')
   sincronizacaoLogsModal?: SincronizacaoLogsModalComponent;
   private progressSubscription?: Subscription;
@@ -326,6 +335,25 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     this.success =
       'Reparo de nomes de médicos aplicado. Valide a Visitação e rode a sync se necessário.';
     this.error = null;
+  }
+
+  abrirModalImportarProfissaoPrescritores(): void {
+    this.importarProfissaoPrescritoresModal?.abrir();
+  }
+
+  onImportacaoProfissaoConcluida(): void {
+    this.success =
+      'Profissão (PFCRM) aplicada nos prescritores. Depois rode o preenchimento dos retratos fechados se necessário.';
+    this.error = null;
+  }
+
+  abrirModalBackfillPfcrmRetratos(): void {
+    this.backfillPfcrmRetratosModal?.abrir();
+  }
+
+  onBackfillPfcrmRetratosConcluido(res: BackfillPfcrmRetratosResponse): void {
+    this.error = null;
+    this.success = `Retratos PFCRM (${res.unidadeFiltro || 'Todas'}): médicos ${res.medicosPreenchidos}/${res.medicosSemPfcrm}, carteira ${res.carteiraPreenchidos}/${res.carteiraSemPfcrm}. Padrão 1: ${res.fallbackPadrao ?? 0}, sem match ${res.semMatch}.`;
   }
 
   carregarSincronizacaoConfigs() {

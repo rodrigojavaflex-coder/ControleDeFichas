@@ -39,4 +39,20 @@ export class CreatePrescritorDto {
   @MaxLength(2, { message: 'UFCRM não pode ter mais que 2 caracteres' })
   @Transform(({ value }) => (value === '' ? null : value))
   UFCRM?: string;
+
+  @ApiProperty({
+    description: 'Profissão / PFCRM do ERP (1=MEDICO, 6=NUTRICIONISTA, …)',
+    example: '1',
+    maxLength: 3,
+    required: false,
+    default: '1',
+  })
+  @IsOptional()
+  @IsString({ message: 'pfcrm deve ser uma string' })
+  @MaxLength(3, { message: 'pfcrm não pode ter mais que 3 caracteres' })
+  @Transform(({ value }) => {
+    if (value == null || value === '') return undefined;
+    return String(value).trim().toUpperCase();
+  })
+  pfcrm?: string;
 }

@@ -95,6 +95,13 @@ export class Orcamento extends BaseEntity {
   @Column({ type: 'varchar', length: 2, nullable: true })
   ufcrmMedico?: string | null;
 
+  @ApiProperty({
+    required: false,
+    description: 'Profissão/prefixo CRM (PFCRM do ERP)',
+  })
+  @Column({ type: 'varchar', length: 3, nullable: true })
+  pfcrm?: string | null;
+
   @ApiProperty()
   @Column({ type: 'timestamp' })
   ultimaModificacao: Date;

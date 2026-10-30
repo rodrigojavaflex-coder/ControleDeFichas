@@ -39,6 +39,10 @@ export class VisitacaoFechamentoCarteira extends BaseEntity {
   @Column({ type: 'varchar', length: 2, name: 'uf_crm_medico' })
   ufCrmMedico: string;
 
+  @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 3, nullable: true, name: 'pfcrm' })
+  pfcrm?: string | null;
+
   @ApiProperty()
   @Column({ type: 'varchar', length: 500, name: 'nome_medico' })
   nomeMedico: string;

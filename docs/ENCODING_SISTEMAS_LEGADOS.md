@@ -33,7 +33,7 @@ Bancos Firebird/InterBase brasileiros costumam usar charset **`NONE`** com bytes
 | `padronizarNomeDeSistemaLegado` | Sync: só iconv se suspeito; maiúsculas pt-BR |
 | `POST /sincronizacao/reparar-nomes-medicos` | Dry-run/apply: CRM+UF × agentes `/api/v1/prescritores/cadastro` |
 
-Upsert de prescritor: busca por **CRM + UF** e atualiza o nome (não exige nome igual na busca). Índice único parcial `uq_prescritores_numero_crm_uf`.
+Upsert de prescritor: busca por **CRM + UF + PFCRM** e atualiza o nome. Índice único parcial `uq_prescritores_crm_uf_pfcrm`. Importação de profissão e backfill de retratos: ver Config → Importação.
 
 ### Nome canônico (arquitetura)
 

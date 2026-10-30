@@ -35,6 +35,13 @@ export class PainelMedicoRepresentante extends BaseEntity {
   @Column({ type: 'varchar', length: 20 })
   crmMedico: string;
 
+  @ApiProperty({
+    required: false,
+    description: 'Profissão/prefixo CRM (PFCRM do ERP)',
+  })
+  @Column({ type: 'varchar', length: 3, nullable: true })
+  pfcrm?: string | null;
+
   @ApiProperty()
   @Column({ type: 'integer' })
   contratoRepresentante: number;

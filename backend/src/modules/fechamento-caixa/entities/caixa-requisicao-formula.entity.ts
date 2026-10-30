@@ -108,6 +108,13 @@ export class CaixaRequisicaoFormula {
   @Column({ type: 'varchar', length: 2, nullable: true, name: 'uf_crm_medico' })
   ufCrmMedico?: string | null;
 
+  @ApiProperty({
+    required: false,
+    description: 'Profissão/prefixo CRM (PFCRM do ERP)',
+  })
+  @Column({ type: 'varchar', length: 3, nullable: true, name: 'pfcrm' })
+  pfcrm?: string | null;
+
   @ApiProperty()
   @Column({
     type: 'timestamptz',

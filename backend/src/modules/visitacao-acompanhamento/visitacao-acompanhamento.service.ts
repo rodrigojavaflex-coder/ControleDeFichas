@@ -494,7 +494,7 @@ export class VisitacaoAcompanhamentoService {
         ${sqlNomePrescritorJoin('pr_orc', `''`)} AS nome_medico
       FROM orcamentos o
       LEFT JOIN orcamento_motivo_rejeicao m ON m.id = o."motivoRejeicaoId"
-      ${sqlLeftJoinPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_orc')}
+      ${sqlLeftJoinPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_orc', 'o.pfcrm')}
       WHERE o.status = 'REJEITADO'
         AND o.unidade = $1
         AND BTRIM(o."crmMedico") = $2
@@ -626,7 +626,7 @@ export class VisitacaoAcompanhamentoService {
           UPPER(BTRIM(p."ufCrmMedico")) AS uf,
           ${sqlNomePrescritorJoin('pr_painel', `''`)} AS nome
         FROM painel_medicos_representantes p
-        ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel')}
+        ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel', 'p.pfcrm')}
         WHERE p.unidade = $1
         `,
         [unidade],
@@ -682,6 +682,7 @@ export class VisitacaoAcompanhamentoService {
             ) ?? null,
           crmMedico: p.crmMedico,
           ufCrmMedico: p.ufCrmMedico,
+          pfcrm: p.pfcrm?.trim()?.toUpperCase() || '1',
           nomeMedico,
           contratoRepresentante: p.contratoRepresentante,
           codigoRepresentante: p.codigoRepresentante,
@@ -803,6 +804,7 @@ export class VisitacaoAcompanhamentoService {
           movimentoForaCarteira: !!item.movimentoForaCarteira,
           crmMedico: item.crmMedico,
           ufCrmMedico: item.ufCrmMedico,
+          pfcrm: vinculo?.pfcrm?.trim()?.toUpperCase() || '1',
           nomeMedico: item.nomeMedico,
           nomeRepresentante: item.nomeRepresentante ?? null,
           recebidoLoja: item.valorRecebido,
@@ -1606,7 +1608,7 @@ export class VisitacaoAcompanhamentoService {
           SUM(o."precoVenda") AS valor_rejeitado,
           COUNT(*)::int AS qtd_rejeitado
         FROM orcamentos o
-        ${sqlLeftJoinPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_orc')}
+        ${sqlLeftJoinPrescritores('o."crmMedico"', 'o."ufcrmMedico"', 'pr_orc', 'o.pfcrm')}
         WHERE o.status = 'REJEITADO'
           AND o."crmMedico" IS NOT NULL AND BTRIM(o."crmMedico") <> ''
           AND o."ufcrmMedico" IS NOT NULL AND BTRIM(o."ufcrmMedico") <> ''
@@ -1647,7 +1649,7 @@ export class VisitacaoAcompanhamentoService {
           f.id AS funcionario_id,
           f.nome AS nome_funcionario
         FROM painel_medicos_representantes p
-        ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel')}
+        ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel', 'p.pfcrm')}
         LEFT JOIN funcionarios f
           ON f.unidade = p.unidade
           AND f."painelContratoRepresentante" = p."contratoRepresentante"
@@ -3147,6 +3149,7 @@ export class VisitacaoAcompanhamentoService {
             this.sqlCrmPrescritor(),
             this.sqlUfPrescritor(),
             'pr_vis',
+            this.sqlPfcrmPrescritor(),
           )}`;
   }
 
@@ -3159,7 +3162,11 @@ export class VisitacaoAcompanhamentoService {
     return `COALESCE(NULLIF(UPPER(BTRIM(f.uf_crm_medico)), ''), NULLIF(UPPER(BTRIM(c.uf_crm_medico)), ''))`;
   }
 
-  /** Nome canônico em prescritores (CRM+UF). */
+  private sqlPfcrmPrescritor(): string {
+    return `COALESCE(NULLIF(BTRIM(f.pfcrm), ''), NULLIF(BTRIM(c.pfcrm), ''))`;
+  }
+
+  /** Nome canônico em prescritores (CRM+UF+PFCRM). */
   private sqlNomePrescritor(): string {
     return sqlNomePrescritorJoin('pr_vis', `''`);
   }

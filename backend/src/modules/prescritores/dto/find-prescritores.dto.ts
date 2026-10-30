@@ -54,4 +54,13 @@ export class FindPrescritoresDto {
   @Type(() => Number)
   @IsInt()
   numeroCRM?: number;
+
+  @ApiProperty({
+    description: 'Filtrar por PFCRM (profissão)',
+    required: false,
+    example: '1',
+  })
+  @IsOptional()
+  @IsString()
+  pfcrm?: string;
 }

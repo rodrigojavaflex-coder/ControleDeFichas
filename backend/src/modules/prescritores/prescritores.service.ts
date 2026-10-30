@@ -26,19 +26,31 @@ export class PrescritoresService {
 
   async create(createPrescritorDto: CreatePrescritorDto): Promise<Prescritor> {
     try {
-      // Verificar se já existe prescritor com mesmo nome
-      const existing = await this.prescritorRepository.findOne({
-        where: {
-          nome: createPrescritorDto.nome,
-        },
-      });
-      if (existing) {
-        throw new ConflictException(
-          `Já existe um prescritor cadastrado com este nome: ${existing.nome}`,
-        );
+      const pfcrm =
+        createPrescritorDto.pfcrm?.trim()?.toUpperCase() || '1';
+
+      if (
+        createPrescritorDto.numeroCRM != null &&
+        createPrescritorDto.UFCRM
+      ) {
+        const mesmaTriade = await this.prescritorRepository.findOne({
+          where: {
+            numeroCRM: createPrescritorDto.numeroCRM,
+            UFCRM: createPrescritorDto.UFCRM,
+            pfcrm,
+          },
+        });
+        if (mesmaTriade) {
+          throw new ConflictException(
+            `Já existe prescritor com CRM ${createPrescritorDto.numeroCRM}/${createPrescritorDto.UFCRM} e profissão ${pfcrm}`,
+          );
+        }
       }
 
-      const prescritor = this.prescritorRepository.create(createPrescritorDto);
+      const prescritor = this.prescritorRepository.create({
+        ...createPrescritorDto,
+        pfcrm,
+      });
       return await this.prescritorRepository.save(prescritor);
     } catch (error) {
       this.logger.error('Error creating prescritor:', error);
@@ -52,7 +64,7 @@ export class PrescritoresService {
   async findAll(
     findPrescritoresDto: FindPrescritoresDto,
   ): Promise<PaginatedResponseDto<Prescritor>> {
-    const { page = 1, limit = 10, nome, numeroCRM } = findPrescritoresDto;
+    const { page = 1, limit = 10, nome, numeroCRM, pfcrm } = findPrescritoresDto;
 
     const queryBuilder =
       this.prescritorRepository.createQueryBuilder('prescritor');
@@ -65,6 +77,12 @@ export class PrescritoresService {
 
     if (numeroCRM) {
       queryBuilder.andWhere('prescritor.numeroCRM = :numeroCRM', { numeroCRM });
+    }
+
+    if (pfcrm?.trim()) {
+      queryBuilder.andWhere('UPPER(BTRIM(prescritor.pfcrm)) = :pfcrm', {
+        pfcrm: pfcrm.trim().toUpperCase(),
+      });
     }
 
     const [prescritores, total] = await queryBuilder
@@ -112,7 +130,40 @@ export class PrescritoresService {
       }
     }
 
-    Object.assign(prescritor, updatePrescritorDto);
+    const nextCrm =
+      updatePrescritorDto.numeroCRM !== undefined
+        ? updatePrescritorDto.numeroCRM
+        : prescritor.numeroCRM;
+    const nextUf =
+      updatePrescritorDto.UFCRM !== undefined
+        ? updatePrescritorDto.UFCRM
+        : prescritor.UFCRM;
+    const nextPf =
+      (
+        updatePrescritorDto.pfcrm !== undefined
+          ? updatePrescritorDto.pfcrm
+          : prescritor.pfcrm
+      )
+        ?.trim()
+        ?.toUpperCase() || '1';
+
+    if (nextCrm != null && nextUf) {
+      const conflito = await this.prescritorRepository.findOne({
+        where: { numeroCRM: nextCrm, UFCRM: nextUf, pfcrm: nextPf },
+      });
+      if (conflito && conflito.id !== id) {
+        throw new ConflictException(
+          `Já existe prescritor com CRM ${nextCrm}/${nextUf} e profissão ${nextPf}`,
+        );
+      }
+    }
+
+    Object.assign(prescritor, {
+      ...updatePrescritorDto,
+      ...(updatePrescritorDto.pfcrm !== undefined
+        ? { pfcrm: nextPf }
+        : {}),
+    });
 
     try {
       return await this.prescritorRepository.save(prescritor);

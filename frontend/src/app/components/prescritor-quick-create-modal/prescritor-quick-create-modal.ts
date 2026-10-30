@@ -6,6 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { ErrorModalService } from '../../services/error-modal.service';
 import { Prescritor, CreatePrescritorDto } from '../../models/prescritor.model';
 import { Permission } from '../../models/usuario.model';
+import { PF_CRM_OPCOES, PF_CRM_PADRAO } from '../../utils/pf-crm.util';
 
 @Component({
   selector: 'app-prescritor-quick-create-modal',
@@ -27,6 +28,7 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
 
   quickForm!: FormGroup;
   isLoading = false;
+  readonly pfCrmOpcoes = PF_CRM_OPCOES;
 
   ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
@@ -35,7 +37,8 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
     this.quickForm = this.fb.group({
       nome: [this.initialNome?.toUpperCase() || '', [Validators.required, Validators.maxLength(500)]],
       numeroCRM: [''],
-      UFCRM: ['']
+      UFCRM: [''],
+      pfcrm: [PF_CRM_PADRAO, [Validators.required]],
     });
   }
 
@@ -61,7 +64,8 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
       const createDto: CreatePrescritorDto = {
         nome: formValue.nome.trim().toUpperCase(),
         numeroCRM: formValue.numeroCRM ? Number(formValue.numeroCRM) : undefined,
-        UFCRM: formValue.UFCRM?.trim().toUpperCase() || undefined
+        UFCRM: formValue.UFCRM?.trim().toUpperCase() || undefined,
+        pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
       };
 
       this.prescritoresService.create(createDto).subscribe({

@@ -774,6 +774,35 @@
         </div>
       </div>
 
+      <div class="importacao-card">
+        <div class="importacao-header">
+          <div>
+            <h3 class="section-title">Profissão do prescritor (PFCRM)</h3>
+            <p class="section-description">
+              Identidade canônica: <strong>CRM + UF + PFCRM</strong> (profissão do ERP).
+              1) Importar profissões do cadastro (dry-run + checkbox).
+              2) Preencher PFCRM nos retratos de visitação já fechados (lote; só referência).
+            </p>
+          </div>
+          <div class="importacao-etapas-acoes">
+            <button
+              type="button"
+              class="btn-migracao"
+              (click)="abrirModalImportarProfissaoPrescritores()">
+              <i class="fas fa-id-badge"></i>
+              Importar profissão (ERP)
+            </button>
+            <button
+              type="button"
+              class="btn-migracao"
+              (click)="abrirModalBackfillPfcrmRetratos()">
+              <i class="fas fa-history"></i>
+              Preencher nos retratos fechados
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   }
 
@@ -874,3 +903,13 @@
   #repararNomesMedicosModal
   (reparoConcluido)="onReparoNomesMedicosConcluido()">
 </app-reparar-nomes-medicos-modal>
+
+<app-importar-profissao-prescritores-modal
+  #importarProfissaoPrescritoresModal
+  (importacaoConcluida)="onImportacaoProfissaoConcluida()">
+</app-importar-profissao-prescritores-modal>
+
+<app-backfill-pfcrm-retratos-modal
+  #backfillPfcrmRetratosModal
+  (concluido)="onBackfillPfcrmRetratosConcluido($event)">
+</app-backfill-pfcrm-retratos-modal>

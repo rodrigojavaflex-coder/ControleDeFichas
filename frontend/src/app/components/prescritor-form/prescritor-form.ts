@@ -8,6 +8,7 @@ import { Permission } from '../../models/usuario.model';
 import { ErrorModalService } from '../../services/error-modal.service';
 import { PageContextService } from '../../services/page-context.service';
 import { AuthService } from '../../services/auth.service';
+import { PF_CRM_OPCOES, PF_CRM_PADRAO } from '../../utils/pf-crm.util';
 
 @Component({
   selector: 'app-prescritor-form',
@@ -24,6 +25,8 @@ export class PrescritorFormComponent implements OnInit {
   private errorModalService = inject(ErrorModalService);
   private pageContextService = inject(PageContextService);
   private authService = inject(AuthService);
+
+  readonly pfCrmOpcoes = PF_CRM_OPCOES;
 
   prescritorForm: FormGroup;
   isEditMode = false;
@@ -64,7 +67,8 @@ export class PrescritorFormComponent implements OnInit {
     return this.fb.group({
       nome: ['', [Validators.required, Validators.maxLength(500)]],
       numeroCRM: [''],
-      UFCRM: ['', [Validators.maxLength(2)]]
+      UFCRM: ['', [Validators.maxLength(2)]],
+      pfcrm: [PF_CRM_PADRAO, [Validators.required, Validators.maxLength(3)]],
     });
   }
 
@@ -89,7 +93,8 @@ export class PrescritorFormComponent implements OnInit {
         this.prescritorForm.patchValue({
           nome: prescritor.nome,
           numeroCRM: prescritor.numeroCRM || '',
-          UFCRM: prescritor.UFCRM || ''
+          UFCRM: prescritor.UFCRM || '',
+          pfcrm: prescritor.pfcrm || PF_CRM_PADRAO,
         });
         this.loading = false;
       },
@@ -124,7 +129,8 @@ export class PrescritorFormComponent implements OnInit {
     const createPrescritorDto: CreatePrescritorDto = {
       nome: formValue.nome,
       numeroCRM: formValue.numeroCRM ? parseInt(formValue.numeroCRM) : undefined,
-      UFCRM: formValue.UFCRM || undefined
+      UFCRM: formValue.UFCRM || undefined,
+      pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
     };
 
     this.prescritoresService.create(createPrescritorDto).subscribe({
@@ -142,7 +148,8 @@ export class PrescritorFormComponent implements OnInit {
     const updatePrescritorDto: UpdatePrescritorDto = {
       nome: formValue.nome,
       numeroCRM: formValue.numeroCRM ? parseInt(formValue.numeroCRM) : undefined,
-      UFCRM: formValue.UFCRM || undefined
+      UFCRM: formValue.UFCRM || undefined,
+      pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
     };
 
     this.prescritoresService.update(this.prescritorId!, updatePrescritorDto).subscribe({
@@ -176,6 +183,10 @@ export class PrescritorFormComponent implements OnInit {
 
   get nome() {
     return this.prescritorForm.get('nome');
+  }
+
+  get pfcrm() {
+    return this.prescritorForm.get('pfcrm');
   }
 
   getErrorMessage(fieldName: string): string {

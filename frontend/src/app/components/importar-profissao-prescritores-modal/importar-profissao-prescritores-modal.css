@@ -1,0 +1,210 @@
+:host {
+  display: contents;
+}
+
+.modal-importar-pfcrm {
+  max-width: min(98vw, 1280px) !important;
+  width: min(98vw, 1280px);
+  max-height: 96vh;
+  height: 96vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-importar-pfcrm .modal-cabecalho {
+  flex-shrink: 0;
+  padding-bottom: 0.35rem;
+}
+
+.modal-importar-pfcrm .modal-titulo {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.modal-importar-pfcrm .modal-corpo {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  gap: 0.4rem;
+}
+
+.importar-pfcrm-topo {
+  flex-shrink: 0;
+}
+
+.importar-pfcrm-filtros {
+  display: grid;
+  grid-template-columns: minmax(140px, 180px) minmax(220px, 1fr);
+  gap: 0.5rem 0.75rem;
+  align-items: end;
+}
+
+.importar-pfcrm-filtros .label-campo {
+  font-size: 0.75rem;
+  margin-bottom: 0.15rem;
+  display: block;
+}
+
+.importar-pfcrm-filtros .campo {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.filter-group-motivo .campo {
+  min-width: 0;
+}
+
+.importar-pfcrm-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.35;
+}
+
+.importar-pfcrm-erro {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background: var(--danger-bg, #fef2f2);
+  border: 1px solid var(--danger-border, #fecaca);
+  color: var(--danger-text, #b91c1c);
+  font-size: 0.8rem;
+}
+
+.importar-pfcrm-resultado {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.35rem;
+}
+
+.importar-pfcrm-resumo {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+}
+
+.resumo-titulo {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+.importar-pfcrm-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.importar-pfcrm-stats b {
+  color: var(--text-primary, #0f172a);
+  font-weight: 600;
+}
+
+.importar-pfcrm-stats .stat-filtro b {
+  color: var(--link-color, #2563eb);
+}
+
+.importar-pfcrm-erros-lista {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--warning-text, #b45309);
+  line-height: 1.35;
+  max-height: 2.6em;
+  overflow: auto;
+}
+
+.importar-pfcrm-selecao-bar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.8rem;
+}
+
+.importar-pfcrm-paginacao {
+  color: var(--text-secondary, #64748b);
+}
+
+.link-acao {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--link-color, #2563eb);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+}
+
+.link-acao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.col-check {
+  width: 2.25rem;
+  text-align: center;
+}
+
+.importar-pfcrm-tabela-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+}
+
+.importar-pfcrm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.importar-pfcrm-table th,
+.importar-pfcrm-table td {
+  padding: 0.35rem 0.45rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  text-align: left;
+  vertical-align: top;
+}
+
+.importar-pfcrm-table th {
+  position: sticky;
+  top: 0;
+  background: var(--cor-superficie, #fff);
+  z-index: 1;
+  font-weight: 600;
+}
+
+.importar-pfcrm-table tr.linha-selecionavel {
+  cursor: pointer;
+}
+
+.importar-pfcrm-table tr.linha-marcada {
+  background: color-mix(in srgb, var(--primary, #2563eb) 12%, transparent);
+}
+
+.modal-importar-pfcrm .modal-rodape {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+body.theme-dark .importar-pfcrm-table th {
+  background: var(--cor-superficie, #1e293b);
+}

@@ -14,6 +14,10 @@ import {
   ImportarOrcamentosResponse,
   RepararNomesMedicosDto,
   RepararNomesMedicosResponse,
+  ImportarProfissaoPrescritoresDto,
+  ImportarProfissaoPrescritoresResponse,
+  BackfillPfcrmRetratosDto,
+  BackfillPfcrmRetratosResponse,
   ProducaoEtapaDisponivelLimpeza,
   LimparProducaoEtapasAntigasDto,
   LimparProducaoEtapasAntigasResponse,
@@ -136,6 +140,24 @@ export class SincronizacaoService {
   ): Observable<RepararNomesMedicosResponse> {
     return this.http.post<RepararNomesMedicosResponse>(
       `${this.syncApiUrl}/reparar-nomes-medicos`,
+      data,
+    );
+  }
+
+  importarProfissaoPrescritores(
+    data: ImportarProfissaoPrescritoresDto,
+  ): Observable<ImportarProfissaoPrescritoresResponse> {
+    return this.http.post<ImportarProfissaoPrescritoresResponse>(
+      `${this.syncApiUrl}/importar-profissao-prescritores`,
+      data,
+    );
+  }
+
+  backfillPfcrmRetratos(
+    data: BackfillPfcrmRetratosDto,
+  ): Observable<BackfillPfcrmRetratosResponse> {
+    return this.http.post<BackfillPfcrmRetratosResponse>(
+      `${this.syncApiUrl}/backfill-pfcrm-retratos`,
       data,
     );
   }

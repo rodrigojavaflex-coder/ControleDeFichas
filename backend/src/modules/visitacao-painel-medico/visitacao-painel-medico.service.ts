@@ -58,7 +58,12 @@ export class VisitacaoPainelMedicoService {
       .leftJoin(
         'prescritores',
         'pr_nome',
-        sqlOnPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_nome'),
+        sqlOnPrescritores(
+          'p."crmMedico"',
+          'p."ufCrmMedico"',
+          'pr_nome',
+          'p.pfcrm',
+        ),
       )
       .addSelect('pr_nome.nome', 'pr_nome_nome')
       .leftJoinAndMapOne(

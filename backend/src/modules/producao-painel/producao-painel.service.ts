@@ -470,7 +470,7 @@ export class ProducaoPainelService {
     }
     const prescritores = await this.prescritorRepo.find({
       where: { numeroCRM: In([...numeros]) },
-      select: { nome: true, numeroCRM: true, UFCRM: true },
+      select: { nome: true, numeroCRM: true, UFCRM: true, pfcrm: true },
     });
     for (const p of prescritores) {
       if (p.numeroCRM == null || !p.UFCRM?.trim()) {
@@ -480,7 +480,12 @@ export class ProducaoPainelService {
       if (!nome) {
         continue;
       }
-      map.set(`${p.UFCRM.trim().toUpperCase()}:${p.numeroCRM}`, nome);
+      const key = `${p.UFCRM.trim().toUpperCase()}:${p.numeroCRM}`;
+      const pf = (p.pfcrm || '1').trim().toUpperCase() || '1';
+      // Sem PFCRM no movimento de produção: preferir MEDICO (1); não sobrescrever com outra profissão.
+      if (!map.has(key) || pf === '1') {
+        map.set(key, nome);
+      }
     }
     return map;
   }

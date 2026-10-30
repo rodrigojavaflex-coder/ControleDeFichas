@@ -60,6 +60,20 @@
             </option>
           </select>
         </div>
+
+        <!-- Profissão -->
+        <div class="grupo-campo">
+          <label for="pfcrmQuick" class="label-campo obrigatorio">Profissão (PFCRM)</label>
+          <select
+            id="pfcrmQuick"
+            formControlName="pfcrm"
+            class="campo"
+            autocomplete="off">
+            <option *ngFor="let op of pfCrmOpcoes" [value]="op.codigo">
+              {{ op.codigo }} — {{ op.label }}
+            </option>
+          </select>
+        </div>
       </div>
     </form>
 

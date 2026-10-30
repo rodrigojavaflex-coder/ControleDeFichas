@@ -1,0 +1,203 @@
+<div class="modal-overlay" *ngIf="visible">
+  <div class="modal-conteudo modal-backfill-pfcrm">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Preencher PFCRM nos retratos fechados</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="loading"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <p class="backfill-hint">
+        Só grava a <strong>profissão (referência)</strong> onde o PFCRM do retrato
+        está vazio. <strong>Não recalcula</strong> valores do mês.
+        Contagens = <strong>linhas</strong> em <strong>todos os meses fechados</strong>
+        (mesmo CRM em 3 meses = 3). Match: <strong>nome</strong> → CRM+UF único →
+        dúvida = padrão <strong>1 (MEDICO)</strong>. Filtro = unidade do
+        <strong>fechamento</strong>.
+      </p>
+
+      <div class="backfill-filtros">
+        <div class="filter-group">
+          <label for="backfillUnidade" class="label-campo">Unidade</label>
+          @if (unidadeBloqueada) {
+            <input
+              id="backfillUnidade"
+              type="text"
+              class="campo"
+              [value]="unidade"
+              disabled
+              readonly />
+          } @else {
+            <select
+              id="backfillUnidade"
+              class="campo"
+              [(ngModel)]="unidade"
+              (ngModelChange)="onUnidadeChange()"
+              [disabled]="loading">
+              <option value="">Todas</option>
+              <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+            </select>
+          }
+        </div>
+      </div>
+
+      @if (error) {
+        <div class="backfill-erro">{{ error }}</div>
+      }
+
+      @if (loading) {
+        <div class="backfill-status">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>{{ statusMsg }}</span>
+        </div>
+      } @else if (statusMsg && !resumoAtivo) {
+        <p class="backfill-hint">{{ statusMsg }}</p>
+      }
+
+      @if (resumoAtivo; as res) {
+        <section class="backfill-resultado">
+          <div class="backfill-resumo-topo">
+            <span class="resumo-titulo">
+              {{ res.aplicar ? 'Aplicado' : 'Prévia' }}
+              · {{ res.unidadeFiltro || 'Todas' }}
+            </span>
+            <ul class="backfill-stats">
+              <li><b>{{ res.medicosTotal || 0 }}</b> médicos (linhas)</li>
+              <li><b>{{ res.carteiraTotal || 0 }}</b> carteira (linhas)</li>
+              <li><b>{{ res.medicosSemPfcrm }}</b> méd. sem PFCRM</li>
+              <li><b>{{ res.carteiraSemPfcrm }}</b> cart. sem PFCRM</li>
+              <li><b>{{ res.medicosPreenchidos }}</b> méd. ok</li>
+              <li><b>{{ res.carteiraPreenchidos }}</b> cart. ok</li>
+              <li><b>{{ res.fallbackPadrao || 0 }}</b> via padrão 1</li>
+              <li><b>{{ res.semMatch }}</b> sem match</li>
+            </ul>
+          </div>
+
+          @if (res.porUnidade.length) {
+            <h4 class="backfill-subtitulo">
+              Por unidade do fechamento
+              <span class="backfill-falhas-nota">
+                (linhas · todos os meses fechados)
+              </span>
+            </h4>
+            <div class="backfill-tabela-wrap">
+              <table class="backfill-table">
+                <thead>
+                  <tr>
+                    <th>Unidade</th>
+                    <th title="Linhas de médico em todos os meses fechados">Méd. total</th>
+                    <th title="Linhas de carteira em todos os meses fechados">Cart. total</th>
+                    <th>Méd. pend.</th>
+                    <th>Cart. pend.</th>
+                    <th>{{ res.aplicar ? 'Méd. ok' : 'Méd. resolv.' }}</th>
+                    <th>{{ res.aplicar ? 'Cart. ok' : 'Cart. resolv.' }}</th>
+                    <th>Padrão 1</th>
+                    <th>Sem match</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (u of res.porUnidade; track u.unidade) {
+                    <tr>
+                      <td>{{ u.unidade }}</td>
+                      <td>{{ u.medicosTotal || 0 }}</td>
+                      <td>{{ u.carteiraTotal || 0 }}</td>
+                      <td>{{ u.medicosSemPfcrm }}</td>
+                      <td>{{ u.carteiraSemPfcrm }}</td>
+                      <td>{{ u.medicosPreenchidos }}</td>
+                      <td>{{ u.carteiraPreenchidos }}</td>
+                      <td>{{ u.fallbackPadrao || 0 }}</td>
+                      <td>{{ u.semMatch }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+          @if (falhasTabela.length) {
+            <div class="backfill-falhas-bloco">
+              <h4 class="backfill-subtitulo">
+                Amostra de falhas ({{ falhasTabela.length }})
+                @if ((res.ambiguos + res.semMatch) > falhasTabela.length) {
+                  <span class="backfill-falhas-nota">
+                    — de {{ res.ambiguos + res.semMatch }} no total
+                  </span>
+                }
+              </h4>
+              <div class="backfill-tabela-wrap backfill-falhas-wrap">
+                <table class="backfill-table">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Unidade</th>
+                      <th>CRM</th>
+                      <th>UF</th>
+                      <th>Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (f of falhasTabela; track f.raw) {
+                      <tr>
+                        <td>{{ f.tipo }}</td>
+                        <td>{{ f.unidade }}</td>
+                        <td>{{ f.crm }}</td>
+                        <td>{{ f.uf }}</td>
+                        <td>
+                          <span
+                            class="backfill-badge"
+                            [class.badge-ambiguo]="f.motivo.toLowerCase().includes('ambíguo') || f.motivo.toLowerCase().includes('ambiguo')"
+                            [class.badge-sem-match]="f.motivo.toLowerCase().includes('sem match')">
+                            {{ f.motivo }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+
+          @if (result?.aplicar) {
+            <p class="backfill-hint backfill-ok">
+              <i class="fas fa-check-circle"></i>
+              Processamento finalizado — troque a unidade ou rode Prévia/Aplicar de novo.
+            </p>
+          }
+        </section>
+      }
+    </div>
+
+    <div class="modal-rodape">
+      <button
+        type="button"
+        class="botao botao-fantasma"
+        (click)="fechar()"
+        [disabled]="loading">
+        Fechar
+      </button>
+      <button
+        type="button"
+        class="botao botao-secundario"
+        (click)="executarPrevia()"
+        [disabled]="loading">
+        <i class="fas fa-search" [class.fa-spin]="fase === 'preview'"></i>
+        Prévia
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="executarAplicar()"
+        [disabled]="loading">
+        <i class="fas fa-history" [class.fa-spin]="fase === 'aplicando'"></i>
+        Aplicar
+      </button>
+    </div>
+  </div>
+</div>

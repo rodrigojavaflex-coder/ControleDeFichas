@@ -24,6 +24,10 @@ import { ProducaoEtapasLimpezaService } from './producao-etapas-limpeza.service'
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { FechamentoCaixaModule } from '../fechamento-caixa/fechamento-caixa.module';
 import { RepararNomesMedicosService } from './reparar-nomes-medicos.service';
+import { ImportarProfissaoPrescritoresService } from './importar-profissao-prescritores.service';
+import { BackfillPfcrmRetratosService } from './backfill-pfcrm-retratos.service';
+import { VisitacaoFechamentoMedico } from '../visitacao-acompanhamento/entities/visitacao-fechamento-medico.entity';
+import { VisitacaoFechamentoCarteira } from '../visitacao-acompanhamento/entities/visitacao-fechamento-carteira.entity';
 
 @Module({
   imports: [
@@ -37,6 +41,8 @@ import { RepararNomesMedicosService } from './reparar-nomes-medicos.service';
       PainelMedicoRepresentante,
       PainelMedicoRepresentanteHistorico,
       ProducaoEtapaResumo,
+      VisitacaoFechamentoMedico,
+      VisitacaoFechamentoCarteira,
     ]),
     JwtModule,
     ConfigModule,
@@ -53,6 +59,8 @@ import { RepararNomesMedicosService } from './reparar-nomes-medicos.service';
     ProducaoEtapasService,
     ProducaoEtapasLimpezaService,
     RepararNomesMedicosService,
+    ImportarProfissaoPrescritoresService,
+    BackfillPfcrmRetratosService,
     PermissionsGuard,
   ],
   exports: [SincronizacaoConfigService, SincronizacaoService],

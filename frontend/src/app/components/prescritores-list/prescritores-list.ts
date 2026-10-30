@@ -10,6 +10,7 @@ import { BaseListComponent } from '../base-list.component';
 import { PageContextService } from '../../services/page-context.service';
 import { AuthService } from '../../services/auth.service';
 import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-auditoria.component';
+import { PF_CRM_OPCOES, rotuloPfCrm } from '../../utils/pf-crm.util';
 
 @Component({
   selector: 'app-prescritores-list',
@@ -25,6 +26,7 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
   private authService = inject(AuthService);
 
   Permission = Permission;
+  readonly pfCrmOpcoes = PF_CRM_OPCOES;
 
   // Paginação
   currentPage = 1;
@@ -35,6 +37,7 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
   // Filtros
   nomeFilter = '';
   numeroCRMFilter = '';
+  pfcrmFilter = '';
 
   deleteModalTitle = 'Confirmação de Exclusão';
 
@@ -73,6 +76,10 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
       }
     }
 
+    if (this.pfcrmFilter.trim()) {
+      filters.pfcrm = this.pfcrmFilter.trim();
+    }
+
     this.prescritoresService.findAll(filters).subscribe({
       next: (response: PrescritorPaginatedResponse) => {
         this.items = response.data;
@@ -100,6 +107,7 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
   clearFilters(): void {
     this.nomeFilter = '';
     this.numeroCRMFilter = '';
+    this.pfcrmFilter = '';
     this.currentPage = 1;
     this.loadItems();
   }
@@ -140,6 +148,10 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
     return '-';
   }
 
+  formatProfissao(prescritor: Prescritor): string {
+    return rotuloPfCrm(prescritor.pfcrm);
+  }
+
   // Métodos para verificar permissões
   canCreatePrescritor(): boolean {
     return this.authService.hasPermission(Permission.PRESCRITOR_CREATE);
@@ -178,7 +190,8 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
     return {
       nome: 'Nome',
       numeroCRM: 'Número CRM',
-      UFCRM: 'UF CRM'
+      UFCRM: 'UF CRM',
+      pfcrm: 'Profissão (PFCRM)',
     };
   }
 }

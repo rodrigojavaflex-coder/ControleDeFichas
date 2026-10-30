@@ -215,6 +215,10 @@ export class CaixaItemErp {
   })
   ufCrmMedico?: string | null;
 
+  @ApiProperty({ required: false })
+  @Column({ type: 'varchar', length: 3, nullable: true, name: 'pfcrm' })
+  pfcrm?: string | null;
+
   @ApiProperty()
   @Column({
     type: 'numeric',

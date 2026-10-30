@@ -57,6 +57,7 @@ interface AgenteCliente {
 }
 
 interface AgentePrescritor {
+  pfcrm?: string;
   nrcrm?: number;
   ufcrm?: string;
   nomemed: string;
@@ -80,6 +81,7 @@ interface AgenteOrcamento {
   nome_vendedor?: string | null;
   crm_medico?: string | null;
   ufcrm_medico?: string | null;
+  pfcrm?: string | null;
   nome_medico?: string | null;
 }
 
@@ -2331,11 +2333,13 @@ export class SincronizacaoService {
     const crmMedico = orcamentoAgente.crm_medico?.trim() || null;
     const ufcrmMedico =
       orcamentoAgente.ufcrm_medico?.trim()?.toUpperCase() || null;
+    const pfcrm = orcamentoAgente.pfcrm?.trim()?.toUpperCase() || null;
     await garantirPrescritorPorCrmUf(
       this.prescritorRepository,
       crmMedico,
       ufcrmMedico,
       orcamentoAgente.nome_medico,
+      pfcrm,
     );
 
     const payload: Partial<Orcamento> = {
@@ -2355,6 +2359,7 @@ export class SincronizacaoService {
       nomeVendedor: padronizarNomeLegadoNullable(orcamentoAgente.nome_vendedor),
       crmMedico,
       ufcrmMedico,
+      pfcrm,
       ultimaModificacao: new Date(orcamentoAgente.ultima_modificacao),
     };
 
@@ -2597,8 +2602,10 @@ export class SincronizacaoService {
       Number(prescritorAgente.nrcrm) > 0
         ? Number(prescritorAgente.nrcrm)
         : undefined;
+    const pfcrm =
+      prescritorAgente.pfcrm?.trim()?.toUpperCase() || '1';
 
-    // Identidade estável: CRM + UF (nunca só nome; nome pode estar corrompido)
+    // Identidade estável: CRM + UF + PFCRM
     let prescritor: Prescritor | null = null;
 
     if (numeroCRM != null && ufcrmValido) {
@@ -2606,6 +2613,7 @@ export class SincronizacaoService {
         where: {
           numeroCRM,
           UFCRM: ufcrmValido,
+          pfcrm,
         },
       });
     }
@@ -2617,6 +2625,7 @@ export class SincronizacaoService {
         nome: nomePadronizado,
         numeroCRM,
         UFCRM: ufcrmValido,
+        pfcrm,
       });
     } else {
       if (nomePadronizado && prescritor.nome !== nomePadronizado) {

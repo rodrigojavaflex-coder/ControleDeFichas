@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 
 export interface PrescritorRow {
+  pfcrm?: string;
   nrcrm?: number;
   ufcrm?: string;
   nomemed: string;
