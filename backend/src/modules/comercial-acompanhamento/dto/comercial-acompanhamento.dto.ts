@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsDateString,
   IsEnum,
   IsInt,
   IsOptional,
@@ -598,7 +599,34 @@ export class ComercialAcompanhamentoUnidadeCardsResponseDto {
   dataFinal: string;
 }
 
-export class FindComercialAcompanhamentoUnidadeDetalheDto {
+/** Filtro opcional de dia/intervalo dentro da competência (modal de detalhe). */
+export class FindComercialAcompanhamentoFiltroDiaDto {
+  @ApiPropertyOptional({
+    example: '2026-10-15',
+    description:
+      'Filtrar movimentos a partir desta data (YYYY-MM-DD), dentro da competência.',
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' },
+  )
+  dataInicial?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-10-20',
+    description:
+      'Filtrar movimentos até esta data (YYYY-MM-DD), dentro da competência.',
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
+  )
+  dataFinal?: string;
+}
+
+export class FindComercialAcompanhamentoUnidadeDetalheDto extends FindComercialAcompanhamentoFiltroDiaDto {
   @ApiProperty({ enum: Unidade })
   @IsEnum(Unidade)
   unidade: Unidade;
@@ -640,6 +668,30 @@ export class FindComercialAcompanhamentoDetalheDto {
   @IsOptional()
   @IsUUID()
   funcionarioId?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-10-15',
+    description:
+      'Filtrar movimentos a partir desta data (YYYY-MM-DD), dentro da competência (ano/mês).',
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'Data inicial deve ter formato válido (YYYY-MM-DD)' },
+  )
+  dataInicial?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-10-20',
+    description:
+      'Filtrar movimentos até esta data (YYYY-MM-DD), dentro da competência (ano/mês).',
+  })
+  @IsOptional()
+  @IsDateString(
+    {},
+    { message: 'Data final deve ter formato válido (YYYY-MM-DD)' },
+  )
+  dataFinal?: string;
 }
 
 export class ComercialAcompanhamentoMovimentoRequisicaoDto {

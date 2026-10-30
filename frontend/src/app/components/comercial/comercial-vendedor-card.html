@@ -822,7 +822,8 @@
         <div>
           <h3 class="modal-titulo" id="home-detalhe-titulo">{{ titulo }}</h3>
           <p class="comercial-acomp-detalhe-sub">
-            {{ unidade ? unidade + ' · ' : '' }}{{ competencia ? competencia + ' · ' : '' }}Total vendido {{ formatarMoeda(valorTotalRecebido()) }}
+            {{ unidade ? unidade + ' · ' : '' }}{{ rotuloPeriodoDetalhe }}
+            · Total vendido {{ formatarMoeda(valorTotalRecebidoDetalhe) }}
           </p>
         </div>
         <button
@@ -834,6 +835,51 @@
         </button>
       </div>
       <div class="modal-corpo">
+        <div class="comercial-acomp-detalhe-filtro-dia">
+          <span class="comercial-acomp-detalhe-filtro-dia-label">
+            <i class="fas fa-calendar-day" aria-hidden="true"></i>
+            Filtrar por dia
+          </span>
+          <div class="comercial-acomp-detalhe-filtro-dia-campos">
+            <label class="sr-only" for="homeDetalheDataInicial">Data inicial</label>
+            <input
+              id="homeDetalheDataInicial"
+              type="date"
+              class="form-control campo"
+              [(ngModel)]="detalheDataInicialInput"
+              [min]="competenciaDataInicial"
+              [max]="competenciaDataFinal"
+              (keyup.enter)="aplicarFiltroDiaDetalhe()" />
+            <span class="comercial-acomp-detalhe-filtro-dia-sep" aria-hidden="true">até</span>
+            <label class="sr-only" for="homeDetalheDataFinal">Data final</label>
+            <input
+              id="homeDetalheDataFinal"
+              type="date"
+              class="form-control campo"
+              [(ngModel)]="detalheDataFinalInput"
+              [min]="competenciaDataInicial"
+              [max]="competenciaDataFinal"
+              (keyup.enter)="aplicarFiltroDiaDetalhe()" />
+            <button
+              type="button"
+              class="btn btn-sm btn-salvar"
+              (click)="aplicarFiltroDiaDetalhe()"
+              [disabled]="carregandoDetalhe"
+              title="Aplicar filtro de dia">
+              <i class="fas fa-filter"></i>
+              Aplicar
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-cancelar"
+              (click)="limparFiltroDiaDetalhe()"
+              [disabled]="carregandoDetalhe || (!detalheDataInicial && !detalheDataFinal && !detalheDataInicialInput && !detalheDataFinalInput)"
+              title="Limpar filtro de dia">
+              <i class="fas fa-eraser"></i>
+              Limpar
+            </button>
+          </div>
+        </div>
         @if (carregandoDetalhe) {
           <div class="loading-message">Carregando movimentos…</div>
         } @else if (detalhe) {
@@ -851,8 +897,8 @@
                   Manipulado (Requisições)
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
-                  <span class="qtd">{{ rotuloQtdManipulados(item.quantidadeRecebidoRequisicao, item.quantidadeFormulasRequisicao) }}</span>
-                  <span class="valor is-recebido">{{ formatarMoeda(item.valorRequisicaoPura) }}</span>
+                  <span class="qtd">{{ resumoQtdRequisicoesDetalhe() }}</span>
+                  <span class="valor is-recebido">{{ formatarMoeda(resumoValorRequisicoesDetalhe()) }}</span>
                 </span>
               </button>
               @if (detalheSecoesAbertas.requisicoes) {
@@ -910,8 +956,8 @@
                   {{ rotuloTituloSetor() }}
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
-                  <span class="qtd">{{ rotuloQtdSetorManipulado(item.quantidadeRevendaManipulados) }}</span>
-                  <span class="valor is-recebido">{{ formatarMoeda(item.valorRevendaManipulados) }}</span>
+                  <span class="qtd">{{ resumoQtdSetorDetalhe() }}</span>
+                  <span class="valor is-recebido">{{ formatarMoeda(resumoValorSetorDetalhe()) }}</span>
                 </span>
               </button>
               @if (detalheSecoesAbertas.setor) {
@@ -973,8 +1019,8 @@
                   Manipulado (Terceiros)
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
-                  <span class="qtd">{{ rotuloQtdTerceiros(item.quantidadeTerceirosManipulados) }}</span>
-                  <span class="valor is-recebido">{{ formatarMoeda(item.valorTerceirosManipulados) }}</span>
+                  <span class="qtd">{{ resumoQtdTerceirosDetalhe() }}</span>
+                  <span class="valor is-recebido">{{ formatarMoeda(resumoValorTerceirosDetalhe()) }}</span>
                 </span>
               </button>
               @if (detalheSecoesAbertas.terceiros) {
@@ -1034,8 +1080,8 @@
                   {{ rotuloTituloMarcaPropriaSetor() }}
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
-                  <span class="qtd">{{ item.quantidadeRecebidoMarcaPropriaSetores ?? 0 }} item(ns)</span>
-                  <span class="valor is-primary">{{ formatarMoeda(item.valorRecebidoMarcaPropriaSetores) }}</span>
+                  <span class="qtd">{{ resumoQtdMarcaSetorDetalhe() }}</span>
+                  <span class="valor is-primary">{{ formatarMoeda(resumoValorMarcaSetorDetalhe()) }}</span>
                 </span>
               </button>
               @if (detalheSecoesAbertas.marcaPropriaSetor) {
@@ -1097,8 +1143,8 @@
                   Marca própria (outros)
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
-                  <span class="qtd">{{ item.quantidadeRecebidoMarcaPropriaOutros ?? 0 }} item(ns)</span>
-                  <span class="valor is-primary">{{ formatarMoeda(item.valorRecebidoMarcaPropriaOutros) }}</span>
+                  <span class="qtd">{{ resumoQtdMarcaOutrosDetalhe() }}</span>
+                  <span class="valor is-primary">{{ formatarMoeda(resumoValorMarcaOutrosDetalhe()) }}</span>
                 </span>
               </button>
               @if (detalheSecoesAbertas.marcaPropriaOutros) {
@@ -1160,8 +1206,8 @@
                   Orçamentos rejeitados
                 </span>
                 <span class="comercial-acomp-detalhe-card-resumo">
-                  <span class="qtd">{{ item.quantidadeRejeitado }} orçamento(s)</span>
-                  <span class="valor is-rejeitado">{{ formatarMoeda(item.valorRejeitado) }}</span>
+                  <span class="qtd">{{ resumoQtdRejeitadoDetalhe() }}</span>
+                  <span class="valor is-rejeitado">{{ formatarMoeda(resumoValorRejeitadoDetalhe()) }}</span>
                 </span>
               </button>
               @if (detalheSecoesAbertas.orcamentos) {

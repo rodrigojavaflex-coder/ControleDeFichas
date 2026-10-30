@@ -168,6 +168,13 @@ export class ComercialAcompanhamentoPage implements OnInit {
   carregandoDetalhe = false;
   itemDetalhe: ComercialAcompanhamentoItem | null = null;
   detalhe: ComercialAcompanhamentoDetalhe | null = null;
+  /** Inputs do filtro de dia no modal (podem diferir do aplicado até clicar Aplicar). */
+  detalheDataInicialInput = '';
+  detalheDataFinalInput = '';
+  /** Filtro de dia efetivamente enviado à API. */
+  detalheDataInicial = '';
+  detalheDataFinal = '';
+  detalheFuncionarioIdAtual: string | undefined;
   detalheSecoesAbertas: Record<ComercialDetalheSecao, boolean> = {
     ...DETALHE_SECOES_PADRAO,
   };
@@ -620,6 +627,46 @@ export class ComercialAcompanhamentoPage implements OnInit {
     return `${nomeMesPt(this.mesFiltro)} ${this.anoFiltro}`;
   }
 
+  get competenciaDataInicial(): string {
+    const mm = String(this.mesFiltro).padStart(2, '0');
+    return `${this.anoFiltro}-${mm}-01`;
+  }
+
+  get competenciaDataFinal(): string {
+    const ultimo = new Date(this.anoFiltro, this.mesFiltro, 0).getDate();
+    const mm = String(this.mesFiltro).padStart(2, '0');
+    return `${this.anoFiltro}-${mm}-${String(ultimo).padStart(2, '0')}`;
+  }
+
+  get temFiltroDiaDetalhe(): boolean {
+    return !!(this.detalheDataInicial || this.detalheDataFinal);
+  }
+
+  get rotuloPeriodoDetalhe(): string {
+    if (!this.temFiltroDiaDetalhe) {
+      return this.rotuloCompetenciaLegenda || `${nomeMesPt(this.mesFiltro)} ${this.anoFiltro}`;
+    }
+    const ini = this.detalheDataInicial || this.competenciaDataInicial;
+    const fim = this.detalheDataFinal || this.competenciaDataFinal;
+    if (ini === fim) {
+      return this.formatarData(ini);
+    }
+    return `${this.formatarData(ini)} a ${this.formatarData(fim)}`;
+  }
+
+  get valorTotalRecebidoDetalhe(): number {
+    if (!this.detalhe || !this.temFiltroDiaDetalhe) {
+      return this.itemDetalhe ? this.valorTotalRecebido(this.itemDetalhe) : 0;
+    }
+    return (
+      this.totalDetalheManipulados +
+      this.totalDetalheSetor +
+      this.totalDetalheTerceiros +
+      this.totalDetalheMarcaPropriaSetores +
+      this.totalDetalheMarcaPropriaOutros
+    );
+  }
+
   get dataUltimoCaixaFormatada(): string {
     if (!this.unidadeFiltro || this.carregando) return '—';
     const data = this.totais.dataUltimoCaixaFechado;
@@ -946,6 +993,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
 
   private abrirDetalheUnidade(): void {
     if (!this.unidadeFiltro) return;
+    this.resetFiltroDiaDetalhe();
     this.itemDetalhe = this.itemFromTotais();
     this.carregarDetalhe(undefined);
   }
@@ -986,12 +1034,21 @@ export class ComercialAcompanhamentoPage implements OnInit {
     if (!funcionarioId || !this.unidadeFiltro) return;
     const item = this.itens.find((i) => i.funcionarioId === funcionarioId);
     if (!item) return;
+    this.resetFiltroDiaDetalhe();
     this.itemDetalhe = item;
     this.carregarDetalhe(funcionarioId);
   }
 
+  private resetFiltroDiaDetalhe(): void {
+    this.detalheDataInicialInput = '';
+    this.detalheDataFinalInput = '';
+    this.detalheDataInicial = '';
+    this.detalheDataFinal = '';
+  }
+
   private carregarDetalhe(funcionarioId: string | undefined): void {
     if (!this.unidadeFiltro) return;
+    this.detalheFuncionarioIdAtual = funcionarioId;
     this.detalheAberto = true;
     this.carregandoDetalhe = true;
     this.detalhe = null;
@@ -1003,6 +1060,8 @@ export class ComercialAcompanhamentoPage implements OnInit {
         ano: this.anoFiltro,
         mes: this.mesFiltro,
         funcionarioId,
+        dataInicial: this.detalheDataInicial || undefined,
+        dataFinal: this.detalheDataFinal || undefined,
       })
       .subscribe({
         next: (res) => {
@@ -1019,13 +1078,155 @@ export class ComercialAcompanhamentoPage implements OnInit {
       });
   }
 
+  aplicarFiltroDiaDetalhe(): void {
+    if (!this.validarFiltroDiaDetalhe()) {
+      return;
+    }
+    this.detalheDataInicial = this.detalheDataInicialInput.trim();
+    this.detalheDataFinal = this.detalheDataFinalInput.trim();
+    this.carregarDetalhe(this.detalheFuncionarioIdAtual);
+  }
+
+  limparFiltroDiaDetalhe(): void {
+    this.detalheDataInicialInput = '';
+    this.detalheDataFinalInput = '';
+    this.detalheDataInicial = '';
+    this.detalheDataFinal = '';
+    this.carregarDetalhe(this.detalheFuncionarioIdAtual);
+  }
+
+  private validarFiltroDiaDetalhe(): boolean {
+    const ini = this.detalheDataInicialInput.trim();
+    const fim = this.detalheDataFinalInput.trim();
+    if (!ini && !fim) {
+      return true;
+    }
+    const min = this.competenciaDataInicial;
+    const max = this.competenciaDataFinal;
+    if (ini && (ini < min || ini > max)) {
+      this.errors.show(
+        `Data inicial deve estar em ${this.formatarData(min)} a ${this.formatarData(max)}.`,
+        'Validação',
+      );
+      return false;
+    }
+    if (fim && (fim < min || fim > max)) {
+      this.errors.show(
+        `Data final deve estar em ${this.formatarData(min)} a ${this.formatarData(max)}.`,
+        'Validação',
+      );
+      return false;
+    }
+    const iniEfetiva = ini || min;
+    const fimEfetiva = fim || max;
+    if (iniEfetiva > fimEfetiva) {
+      this.errors.show(
+        'Data inicial não pode ser posterior à data final.',
+        'Validação',
+      );
+      return false;
+    }
+    return true;
+  }
+
   fecharDetalhe(): void {
     this.printDetalheAberto = false;
     this.detalheAberto = false;
     this.carregandoDetalhe = false;
     this.itemDetalhe = null;
     this.detalhe = null;
+    this.detalheFuncionarioIdAtual = undefined;
+    this.detalheDataInicialInput = '';
+    this.detalheDataFinalInput = '';
+    this.detalheDataInicial = '';
+    this.detalheDataFinal = '';
     this.detalheSecoesAbertas = { ...DETALHE_SECOES_PADRAO };
+  }
+
+  /** Resumo do cabeçalho das seções: usa movimentos filtrados quando há filtro de dia. */
+  resumoQtdRequisicoesDetalhe(): string {
+    if (this.temFiltroDiaDetalhe && this.detalhe) {
+      const n = this.detalhe.manipulados.length;
+      return `${n} Req${n === 1 ? '' : 's'}`;
+    }
+    if (!this.itemDetalhe) return '—';
+    return this.rotuloQtdManipulados(
+      this.itemDetalhe.quantidadeRecebidoRequisicao,
+      this.itemDetalhe.quantidadeFormulasRequisicao,
+    );
+  }
+
+  resumoValorRequisicoesDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheManipulados;
+    return Number(this.itemDetalhe?.valorRequisicaoPura || 0);
+  }
+
+  resumoQtdSetorDetalhe(): string {
+    if (this.temFiltroDiaDetalhe && this.detalhe) {
+      return this.rotuloQtdSetorManipulado(this.detalhe.setor.length);
+    }
+    return this.rotuloQtdSetorManipulado(
+      this.itemDetalhe?.quantidadeRevendaManipulados,
+    );
+  }
+
+  resumoValorSetorDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheSetor;
+    return Number(this.itemDetalhe?.valorRevendaManipulados || 0);
+  }
+
+  resumoQtdTerceirosDetalhe(): string {
+    if (this.temFiltroDiaDetalhe && this.detalhe) {
+      return this.rotuloQtdTerceiros(this.detalhe.terceiros.length);
+    }
+    return this.rotuloQtdTerceiros(
+      this.itemDetalhe?.quantidadeTerceirosManipulados,
+    );
+  }
+
+  resumoValorTerceirosDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheTerceiros;
+    return Number(this.itemDetalhe?.valorTerceirosManipulados || 0);
+  }
+
+  resumoQtdMarcaSetorDetalhe(): string {
+    if (this.temFiltroDiaDetalhe) {
+      return this.rotuloQtdSetorManipulado(this.detalheMarcaPropriaSetores.length);
+    }
+    return this.rotuloQtdSetorManipulado(
+      this.itemDetalhe?.quantidadeRecebidoMarcaPropriaSetores,
+    );
+  }
+
+  resumoValorMarcaSetorDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheMarcaPropriaSetores;
+    return Number(this.itemDetalhe?.valorRecebidoMarcaPropriaSetores || 0);
+  }
+
+  resumoQtdMarcaOutrosDetalhe(): string {
+    if (this.temFiltroDiaDetalhe) {
+      return this.rotuloQtdSetorManipulado(this.detalheMarcaPropriaOutros.length);
+    }
+    return this.rotuloQtdSetorManipulado(
+      this.itemDetalhe?.quantidadeRecebidoMarcaPropriaOutros,
+    );
+  }
+
+  resumoValorMarcaOutrosDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheMarcaPropriaOutros;
+    return Number(this.itemDetalhe?.valorRecebidoMarcaPropriaOutros || 0);
+  }
+
+  resumoQtdRejeitadoDetalhe(): string {
+    if (this.temFiltroDiaDetalhe && this.detalhe) {
+      return `${this.detalhe.rejeitados.length} orçamento(s)`;
+    }
+    return `${this.itemDetalhe?.quantidadeRejeitado ?? 0} orçamento(s)`;
+  }
+
+  resumoValorRejeitadoDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheRejeitado;
+    return Number(this.itemDetalhe?.valorRejeitado || 0);
   }
 
   toggleDetalheSecao(secao: ComercialDetalheSecao): void {
@@ -1233,22 +1434,53 @@ export class ComercialAcompanhamentoPage implements OnInit {
     const workbook = new ExcelJS.Workbook();
 
     const resumo = workbook.addWorksheet('Resumo');
+    const filtrado = this.temFiltroDiaDetalhe;
+    const valorReq = filtrado
+      ? this.totalDetalheManipulados
+      : Number(item.valorRequisicaoPura || 0);
+    const valorSetor = filtrado
+      ? this.totalDetalheSetor
+      : Number(item.valorRevendaManipulados || 0);
+    const valorTerc = filtrado
+      ? this.totalDetalheTerceiros
+      : Number(item.valorTerceirosManipulados || 0);
+    const valorMp =
+      filtrado
+        ? this.totalDetalheMarcaPropriaSetores + this.totalDetalheMarcaPropriaOutros
+        : Number(item.valorRecebidoMarcaPropria || 0);
     const resumoLinha: Record<string, string | number> = {
       Vendedor: this.rotuloVendedor(item),
       Unidade: this.unidadeFiltro || '',
-      Competência: this.rotuloCompetenciaLegenda,
-      Requisições: Number(item.valorRequisicaoPura || 0),
-      'Qtd reqs': Number(item.quantidadeRecebidoRequisicao || 0),
-      'Qtd fórmulas': Number(item.quantidadeFormulasRequisicao || 0),
-      [this.rotuloTituloSetor(item)]: Number(item.valorRevendaManipulados || 0),
-      'Qtd setor': Number(item.quantidadeRevendaManipulados || 0),
-      Terceiros: Number(item.valorTerceirosManipulados || 0),
-      'Qtd terceiros': Number(item.quantidadeTerceirosManipulados || 0),
-      'Total manip.': Number(item.valorRecebidoRequisicao || 0),
-      'Marca própria': Number(item.valorRecebidoMarcaPropria || 0),
-      'Qtd marca': Number(item.quantidadeRecebidoMarcaPropria || 0),
-      Rejeitado: Number(item.valorRejeitado || 0),
-      'Qtd rejeitado': Number(item.quantidadeRejeitado || 0),
+      Competência: this.rotuloPeriodoDetalhe,
+      Requisições: valorReq,
+      'Qtd reqs': filtrado
+        ? detalhe.manipulados.length
+        : Number(item.quantidadeRecebidoRequisicao || 0),
+      'Qtd fórmulas': filtrado
+        ? ''
+        : Number(item.quantidadeFormulasRequisicao || 0),
+      [this.rotuloTituloSetor(item)]: valorSetor,
+      'Qtd setor': filtrado
+        ? detalhe.setor.length
+        : Number(item.quantidadeRevendaManipulados || 0),
+      Terceiros: valorTerc,
+      'Qtd terceiros': filtrado
+        ? detalhe.terceiros.length
+        : Number(item.quantidadeTerceirosManipulados || 0),
+      'Total manip.': filtrado
+        ? valorReq + valorSetor + valorTerc
+        : Number(item.valorRecebidoRequisicao || 0),
+      'Marca própria': valorMp,
+      'Qtd marca': filtrado
+        ? this.detalheMarcaPropriaSetores.length +
+          this.detalheMarcaPropriaOutros.length
+        : Number(item.quantidadeRecebidoMarcaPropria || 0),
+      Rejeitado: filtrado
+        ? this.totalDetalheRejeitado
+        : Number(item.valorRejeitado || 0),
+      'Qtd rejeitado': filtrado
+        ? detalhe.rejeitados.length
+        : Number(item.quantidadeRejeitado || 0),
       'Meta Manip.': Number(item.valorMetaRequisicao || 0),
       '% Meta Manip.':
         item.percentualMetaRequisicao == null
@@ -1528,7 +1760,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
     const detalhe = this.detalhe!;
     const titulo = this.rotuloVendedor(item);
     const rotuloForma = forma === 'resumido' ? 'Resumido' : 'Detalhado';
-    const subtitulo = `${this.unidadeFiltro ?? ''} · ${this.rotuloCompetenciaLegenda} · ${rotuloForma}`;
+    const subtitulo = `${this.unidadeFiltro ?? ''} · ${this.rotuloPeriodoDetalhe} · ${rotuloForma}`;
     const usuario =
       this.auth.getCurrentUser()?.nome ||
       this.auth.getCurrentUser()?.email ||
@@ -1650,14 +1882,14 @@ export class ComercialAcompanhamentoPage implements OnInit {
   <h1>${this.escapeHtml(titulo)}</h1>
   <div class="subtitle">${this.escapeHtml(subtitulo)}</div>
   <section class="resumo">
-    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRequisicaoPura))}</strong><small>(requisições) · ${this.escapeHtml(this.rotuloQtdManipulados(item.quantidadeRecebidoRequisicao, item.quantidadeFormulasRequisicao))}</small></div>
-    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRevendaManipulados))}</strong><small>(${this.escapeHtml(this.rotuloManipuladoSetor(item))}) · ${this.escapeHtml(this.rotuloQtdSetorManipulado(item.quantidadeRevendaManipulados))}</small></div>
-    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorTerceirosManipulados))}</strong><small>(terceiros) · ${this.escapeHtml(this.rotuloQtdTerceiros(item.quantidadeTerceirosManipulados))}</small></div>
-    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoRequisicao))}</strong><small>(total)</small></div>
-    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropriaSetores))}</strong><small>(${this.escapeHtml(this.rotuloMarcaPropriaSetor(item))})</small></div>
-    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropriaOutros))}</strong><small>(outros)</small></div>
-    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRecebidoMarcaPropria))}</strong><small>(total)</small></div>
-    <div><span>Rejeitado</span><strong>${this.escapeHtml(this.formatarMoeda(item.valorRejeitado))}</strong></div>
+    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(this.resumoValorRequisicoesDetalhe()))}</strong><small>(requisições) · ${this.escapeHtml(this.resumoQtdRequisicoesDetalhe())}</small></div>
+    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(this.resumoValorSetorDetalhe()))}</strong><small>(${this.escapeHtml(this.rotuloManipuladoSetor(item))}) · ${this.escapeHtml(this.resumoQtdSetorDetalhe())}</small></div>
+    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(this.resumoValorTerceirosDetalhe()))}</strong><small>(terceiros) · ${this.escapeHtml(this.resumoQtdTerceirosDetalhe())}</small></div>
+    <div><span>Manipulado</span><strong>${this.escapeHtml(this.formatarMoeda(this.resumoValorRequisicoesDetalhe() + this.resumoValorSetorDetalhe() + this.resumoValorTerceirosDetalhe()))}</strong><small>(total)</small></div>
+    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(this.resumoValorMarcaSetorDetalhe()))}</strong><small>(${this.escapeHtml(this.rotuloMarcaPropriaSetor(item))})</small></div>
+    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(this.resumoValorMarcaOutrosDetalhe()))}</strong><small>(outros)</small></div>
+    <div><span>Marca própria</span><strong>${this.escapeHtml(this.formatarMoeda(this.resumoValorMarcaSetorDetalhe() + this.resumoValorMarcaOutrosDetalhe()))}</strong><small>(total)</small></div>
+    <div><span>Rejeitado</span><strong>${this.escapeHtml(this.formatarMoeda(this.resumoValorRejeitadoDetalhe()))}</strong></div>
     <div><span>% Meta manip.</span><strong>${this.escapeHtml(this.temMetaCadastrada(item.valorMetaRequisicao) ? this.formatarPercentualMeta(item.percentualMetaRequisicao) : 'Sem meta')}</strong></div>
     <div><span>% Meta marca</span><strong>${this.escapeHtml(this.temMetaCadastrada(item.valorMetaMarcaPropria) ? this.formatarPercentualMeta(item.percentualMetaMarcaPropria) : 'Sem meta')}</strong></div>
     ${comissaoHtml}

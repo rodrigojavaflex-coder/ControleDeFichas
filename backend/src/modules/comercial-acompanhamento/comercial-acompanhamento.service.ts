@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
 import { Funcionario } from '../folha/entities/funcionario.entity';
@@ -124,6 +129,7 @@ export class ComercialAcompanhamentoService {
 
   async findMeuDetalhe(
     usuario: Usuario,
+    filtroDia?: { dataInicial?: string; dataFinal?: string },
   ): Promise<ComercialAcompanhamentoDetalheDto> {
     const { usuarioCompleto, funcionario, ano, mes } =
       await this.resolverMeuFuncionario(usuario);
@@ -132,6 +138,8 @@ export class ComercialAcompanhamentoService {
       ano,
       mes,
       funcionarioId: funcionario.id,
+      dataInicial: filtroDia?.dataInicial,
+      dataFinal: filtroDia?.dataFinal,
     });
   }
 
@@ -173,6 +181,7 @@ export class ComercialAcompanhamentoService {
   async findUnidadeDetalhe(
     usuario: Usuario,
     unidade: Unidade,
+    filtroDia?: { dataInicial?: string; dataFinal?: string },
   ): Promise<ComercialAcompanhamentoDetalheDto> {
     const usuarioCompleto = await this.dataSource.getRepository(Usuario).findOne({
       where: { id: usuario.id },
@@ -186,6 +195,8 @@ export class ComercialAcompanhamentoService {
       unidade,
       ano: Number(anoStr),
       mes: Number(mesStr),
+      dataInicial: filtroDia?.dataInicial,
+      dataFinal: filtroDia?.dataFinal,
     });
   }
 
@@ -935,16 +946,13 @@ export class ComercialAcompanhamentoService {
     }
 
     const periodo = periodoCompetencia(dto.ano, dto.mes);
+    const janela = this.resolverJanelaDetalhe(dto, periodo);
     const codigo = funcionario.codigoVendedorErp;
-    const tetoManip = dataTetoPreviaAcompanhamento(
-      periodo.dataInicial,
-      periodo.dataFinal,
-      ymdHojeSp(),
-    );
+    const tetoManip = janela.dataFinalCaixa;
     const paramsMpRej = [
       dto.unidade,
-      periodo.dataInicial,
-      periodo.dataFinal,
+      janela.dataInicial,
+      janela.dataFinal,
       codigo,
     ];
     const politicaReq = await this.politicaRepo.findOne({
@@ -958,8 +966,8 @@ export class ComercialAcompanhamentoService {
       .filter((n) => Number.isInteger(n) && n > 0);
     const paramsMp = [
       dto.unidade,
-      periodo.dataInicial,
-      tetoManip ?? periodo.dataFinal,
+      janela.dataInicial,
+      tetoManip ?? janela.dataFinal,
       codigo,
     ];
 
@@ -1019,7 +1027,7 @@ export class ComercialAcompanhamentoService {
           ) t
           ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
         `,
-            [dto.unidade, periodo.dataInicial, tetoManip, codigo],
+            [dto.unidade, janela.dataInicial, tetoManip, codigo],
           ) as Promise<
             Array<{
               data: string | Date;
@@ -1119,7 +1127,7 @@ export class ComercialAcompanhamentoService {
             AND f."codigoVendedorErp" > 0
           ORDER BY b."dataBaixa" ASC, v.protocolo ASC
         `,
-            [dto.unidade, periodo.dataInicial, tetoManip, codigo],
+            [dto.unidade, janela.dataInicial, tetoManip, codigo],
           ) as Promise<
             Array<{
               data_baixa: string | Date;
@@ -1155,7 +1163,7 @@ export class ComercialAcompanhamentoService {
         `,
             [
               dto.unidade,
-              periodo.dataInicial,
+              janela.dataInicial,
               tetoManip,
               codigo,
               setoresRevenda,
@@ -1223,11 +1231,8 @@ export class ComercialAcompanhamentoService {
     dto: FindComercialAcompanhamentoDetalheDto,
   ): Promise<ComercialAcompanhamentoDetalheDto> {
     const periodo = periodoCompetencia(dto.ano, dto.mes);
-    const tetoManip = dataTetoPreviaAcompanhamento(
-      periodo.dataInicial,
-      periodo.dataFinal,
-      ymdHojeSp(),
-    );
+    const janela = this.resolverJanelaDetalhe(dto, periodo);
+    const tetoManip = janela.dataFinalCaixa;
     const politicaUnidade = await this.politicaUnidadeRepo.findOne({
       where: { unidade: dto.unidade },
     });
@@ -1245,8 +1250,8 @@ export class ComercialAcompanhamentoService {
     `;
     const paramsMp = [
       dto.unidade,
-      periodo.dataInicial,
-      tetoManip ?? periodo.dataFinal,
+      janela.dataInicial,
+      tetoManip ?? janela.dataFinal,
     ];
 
     const [reqRows, mpRows, rejRows, tercRows, setorRows] = await Promise.all([
@@ -1305,7 +1310,7 @@ export class ComercialAcompanhamentoService {
           ) t
           ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
         `,
-            [dto.unidade, periodo.dataInicial, tetoManip],
+            [dto.unidade, janela.dataInicial, tetoManip],
           ) as Promise<
             Array<{
               data: string | Date;
@@ -1370,7 +1375,7 @@ export class ComercialAcompanhamentoService {
             AND o."codigoVendedor" IS NOT NULL
           ORDER BY o."dataOrcamento" ASC, o."nrOrcamento" ASC
         `,
-        [dto.unidade, periodo.dataInicial, periodo.dataFinal],
+        [dto.unidade, janela.dataInicial, janela.dataFinal],
       ) as Promise<
         Array<{
           data_orcamento: string | Date;
@@ -1397,7 +1402,7 @@ export class ComercialAcompanhamentoService {
             AND b."dataBaixa" <= $3
           ORDER BY b."dataBaixa" ASC, v.protocolo ASC
         `,
-            [dto.unidade, periodo.dataInicial, tetoManip],
+            [dto.unidade, janela.dataInicial, tetoManip],
           ) as Promise<
             Array<{
               data_baixa: string | Date;
@@ -1430,7 +1435,7 @@ export class ComercialAcompanhamentoService {
             AND i.codigo_setor = ANY($4::int[])
           ORDER BY i.data_operacao ASC, i.numero_cupom ASC, i.sequencia_item ASC
         `,
-            [dto.unidade, periodo.dataInicial, tetoManip, setoresRevenda],
+            [dto.unidade, janela.dataInicial, tetoManip, setoresRevenda],
           ) as Promise<
             Array<{
               data: string | Date;
@@ -2894,6 +2899,61 @@ export class ComercialAcompanhamentoService {
     return (lista ?? [])
       .map((n) => Number(n))
       .filter((n) => Number.isInteger(n) && n > 0);
+  }
+
+  /**
+   * Janela do detalhe dentro da competência.
+   * `dataInicial`/`dataFinal` opcionais restringem o dia/intervalo (RN-COM-004).
+   * Caixa respeita o teto de prévia (min(hoje, fim)); rejeitados usam a janela plena.
+   */
+  private resolverJanelaDetalhe(
+    dto: Pick<FindComercialAcompanhamentoDetalheDto, 'dataInicial' | 'dataFinal'>,
+    periodo: ReturnType<typeof periodoCompetencia>,
+  ): {
+    dataInicial: string;
+    dataFinal: string;
+    dataFinalCaixa: string | null;
+  } {
+    const iniInformada = dto.dataInicial?.trim() || undefined;
+    const fimInformada = dto.dataFinal?.trim() || undefined;
+
+    const assertDentro = (data: string, rotulo: string): void => {
+      if (data < periodo.dataInicial || data > periodo.dataFinal) {
+        throw new BadRequestException(
+          `${rotulo} deve estar dentro da competência (${periodo.dataInicial} a ${periodo.dataFinal}).`,
+        );
+      }
+    };
+
+    if (iniInformada) {
+      assertDentro(iniInformada, 'Data inicial');
+    }
+    if (fimInformada) {
+      assertDentro(fimInformada, 'Data final');
+    }
+
+    const dataInicial = iniInformada ?? periodo.dataInicial;
+    const dataFinal = fimInformada ?? periodo.dataFinal;
+
+    if (dataInicial > dataFinal) {
+      throw new BadRequestException(
+        'Data inicial não pode ser posterior à data final.',
+      );
+    }
+
+    const teto = dataTetoPreviaAcompanhamento(
+      periodo.dataInicial,
+      periodo.dataFinal,
+      ymdHojeSp(),
+    );
+    if (teto == null) {
+      return { dataInicial, dataFinal, dataFinalCaixa: null };
+    }
+    const dataFinalCaixa = dataFinal < teto ? dataFinal : teto;
+    if (dataInicial > dataFinalCaixa) {
+      return { dataInicial, dataFinal, dataFinalCaixa: null };
+    }
+    return { dataInicial, dataFinal, dataFinalCaixa };
   }
 
   private toYmd(value: string | Date | null | undefined): string {

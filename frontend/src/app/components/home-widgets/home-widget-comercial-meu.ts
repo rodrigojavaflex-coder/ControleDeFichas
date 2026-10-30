@@ -35,6 +35,7 @@ export class HomeWidgetComercialMeuComponent implements OnInit, OnDestroy {
   cardCarregando = false;
   cardItem: ComercialAcompanhamentoItem | null = null;
   cardCompetencia = '';
+  cardAnoMes = '';
   cardUnidade = '';
   cardErro: string | null = null;
 
@@ -72,6 +73,7 @@ export class HomeWidgetComercialMeuComponent implements OnInit, OnDestroy {
         next: (res: ComercialAcompanhamentoMeuCard) => {
           this.cardItem = res.item;
           this.cardUnidade = res.unidade;
+          this.cardAnoMes = res.anoMes;
           const [ano, mes] = res.anoMes.split('-').map((n: string) => Number(n));
           this.cardCompetencia =
             Number.isFinite(mes) && Number.isFinite(ano)

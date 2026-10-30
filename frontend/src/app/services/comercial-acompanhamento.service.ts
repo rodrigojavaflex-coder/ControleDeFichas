@@ -35,8 +35,20 @@ export class ComercialAcompanhamentoService {
     return this.http.get<ComercialAcompanhamentoMeuCard>(`${base}/meu`);
   }
 
-  meuDetalhe(): Observable<ComercialAcompanhamentoDetalhe> {
-    return this.http.get<ComercialAcompanhamentoDetalhe>(`${base}/meu/detalhe`);
+  meuDetalhe(filtroDia?: {
+    dataInicial?: string;
+    dataFinal?: string;
+  }): Observable<ComercialAcompanhamentoDetalhe> {
+    let params = new HttpParams();
+    if (filtroDia?.dataInicial) {
+      params = params.set('dataInicial', filtroDia.dataInicial);
+    }
+    if (filtroDia?.dataFinal) {
+      params = params.set('dataFinal', filtroDia.dataFinal);
+    }
+    return this.http.get<ComercialAcompanhamentoDetalhe>(`${base}/meu/detalhe`, {
+      params,
+    });
   }
 
   unidadeCards(): Observable<ComercialAcompanhamentoUnidadeCardsResponse> {
@@ -45,8 +57,17 @@ export class ComercialAcompanhamentoService {
     );
   }
 
-  unidadeDetalhe(unidade: Unidade): Observable<ComercialAcompanhamentoDetalhe> {
-    const params = new HttpParams().set('unidade', unidade);
+  unidadeDetalhe(
+    unidade: Unidade,
+    filtroDia?: { dataInicial?: string; dataFinal?: string },
+  ): Observable<ComercialAcompanhamentoDetalhe> {
+    let params = new HttpParams().set('unidade', unidade);
+    if (filtroDia?.dataInicial) {
+      params = params.set('dataInicial', filtroDia.dataInicial);
+    }
+    if (filtroDia?.dataFinal) {
+      params = params.set('dataFinal', filtroDia.dataFinal);
+    }
     return this.http.get<ComercialAcompanhamentoDetalhe>(
       `${base}/unidade/detalhe`,
       { params },
@@ -72,6 +93,12 @@ export class ComercialAcompanhamentoService {
       .set('mes', String(dto.mes));
     if (dto.funcionarioId) {
       params = params.set('funcionarioId', dto.funcionarioId);
+    }
+    if (dto.dataInicial) {
+      params = params.set('dataInicial', dto.dataInicial);
+    }
+    if (dto.dataFinal) {
+      params = params.set('dataFinal', dto.dataFinal);
     }
     return this.http.get<ComercialAcompanhamentoDetalhe>(`${base}/detalhe`, {
       params,

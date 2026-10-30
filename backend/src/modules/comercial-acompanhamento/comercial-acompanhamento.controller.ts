@@ -15,6 +15,7 @@ import {
   ComercialAcompanhamentoVendedorOpcaoDto,
   FindComercialAcompanhamentoDetalheDto,
   FindComercialAcompanhamentoDto,
+  FindComercialAcompanhamentoFiltroDiaDto,
   FindComercialAcompanhamentoUnidadeDetalheDto,
 } from './dto/comercial-acompanhamento.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -70,8 +71,12 @@ export class ComercialAcompanhamentoController {
   @ApiResponse({ status: 200, type: ComercialAcompanhamentoDetalheDto })
   findMeuDetalhe(
     @Req() req: { user: Usuario },
+    @Query() query: FindComercialAcompanhamentoFiltroDiaDto,
   ): Promise<ComercialAcompanhamentoDetalheDto> {
-    return this.service.findMeuDetalhe(req.user);
+    return this.service.findMeuDetalhe(req.user, {
+      dataInicial: query.dataInicial,
+      dataFinal: query.dataFinal,
+    });
   }
 
   @Get('unidade')
@@ -101,7 +106,10 @@ export class ComercialAcompanhamentoController {
     @Req() req: { user: Usuario },
     @Query() query: FindComercialAcompanhamentoUnidadeDetalheDto,
   ): Promise<ComercialAcompanhamentoDetalheDto> {
-    return this.service.findUnidadeDetalhe(req.user, query.unidade);
+    return this.service.findUnidadeDetalhe(req.user, query.unidade, {
+      dataInicial: query.dataInicial,
+      dataFinal: query.dataFinal,
+    });
   }
 
   @Get('vendedores')

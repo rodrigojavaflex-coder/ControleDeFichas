@@ -5,6 +5,9 @@ export interface FindComercialAcompanhamentoDto {
   ano: number;
   mes: number;
   funcionarioId?: string;
+  /** Dia/intervalo dentro da competência (modal de detalhe). */
+  dataInicial?: string;
+  dataFinal?: string;
 }
 
 export interface ComercialAcompanhamentoItem {

@@ -38,6 +38,7 @@ export class HomeWidgetComercialUnidadeComponent implements OnInit, OnDestroy {
   carregando = false;
   erro: string | null = null;
   competencia = '';
+  anoMes = '';
   cards: ComercialAcompanhamentoUnidadeCard[] = [];
 
   modalAberto = false;
@@ -163,6 +164,7 @@ export class HomeWidgetComercialUnidadeComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (res) => {
           this.cards = res.itens ?? [];
+          this.anoMes = res.anoMes;
           const [ano, mes] = res.anoMes.split('-').map((n) => Number(n));
           this.competencia =
             Number.isFinite(mes) && Number.isFinite(ano)

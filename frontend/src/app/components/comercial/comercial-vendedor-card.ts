@@ -1,6 +1,7 @@
 import { Component, DestroyRef, Input, ViewEncapsulation, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -12,6 +13,7 @@ import {
   ComercialAcompanhamentoMovimentoProduto,
 } from '../../models/comercial-acompanhamento.model';
 import { Unidade } from '../../models/usuario.model';
+import { nomeMesPt } from '../folha/folha-meses';
 
 type ComercialDetalheSecao =
   | 'requisicoes'
@@ -42,7 +44,7 @@ const CARD_BLOCO_DEFAULT: Record<ComercialCardBloco, boolean> = {
 @Component({
   selector: 'app-comercial-vendedor-card',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './comercial-vendedor-card.html',
   styleUrls: ['./comercial-acompanhamento-page.css', './comercial-vendedor-card.css'],
   encapsulation: ViewEncapsulation.None,
@@ -63,6 +65,8 @@ export class ComercialVendedorCardComponent {
   /** Fonte do modal Detalhes: próprio vendedor ou total da unidade. */
   @Input() modoDetalhe: 'meu' | 'unidade' = 'meu';
   @Input() competencia = '';
+  /** Competência no formato YYYY-MM (limites do filtro de dia). */
+  @Input() anoMes = '';
   @Input() unidade = '';
 
   infoManipuladosAberto = false;
@@ -76,6 +80,10 @@ export class ComercialVendedorCardComponent {
   detalheAberto = false;
   carregandoDetalhe = false;
   detalhe: ComercialAcompanhamentoDetalhe | null = null;
+  detalheDataInicialInput = '';
+  detalheDataFinalInput = '';
+  detalheDataInicial = '';
+  detalheDataFinal = '';
   detalheSecoesAbertas: Record<ComercialDetalheSecao, boolean> = {
     ...DETALHE_SECOES_PADRAO,
   };
@@ -175,6 +183,68 @@ export class ComercialVendedorCardComponent {
       Number(this.item.valorRecebidoRequisicao || 0) +
       Number(this.item.valorRecebidoMarcaPropria || 0)
     );
+  }
+
+  get competenciaDataInicial(): string {
+    const { ano, mes } = this.resolverAnoMesCompetencia();
+    const mm = String(mes).padStart(2, '0');
+    return `${ano}-${mm}-01`;
+  }
+
+  get competenciaDataFinal(): string {
+    const { ano, mes } = this.resolverAnoMesCompetencia();
+    const ultimo = new Date(ano, mes, 0).getDate();
+    const mm = String(mes).padStart(2, '0');
+    return `${ano}-${mm}-${String(ultimo).padStart(2, '0')}`;
+  }
+
+  get temFiltroDiaDetalhe(): boolean {
+    return !!(this.detalheDataInicial || this.detalheDataFinal);
+  }
+
+  get rotuloPeriodoDetalhe(): string {
+    if (!this.temFiltroDiaDetalhe) {
+      return this.competencia || this.rotuloCompetenciaDeAnoMes();
+    }
+    const ini = this.detalheDataInicial || this.competenciaDataInicial;
+    const fim = this.detalheDataFinal || this.competenciaDataFinal;
+    if (ini === fim) {
+      return this.formatarData(ini);
+    }
+    return `${this.formatarData(ini)} a ${this.formatarData(fim)}`;
+  }
+
+  get valorTotalRecebidoDetalhe(): number {
+    if (!this.detalhe || !this.temFiltroDiaDetalhe) {
+      return this.valorTotalRecebido();
+    }
+    return (
+      this.totalDetalheManipulados +
+      this.totalDetalheSetor +
+      this.totalDetalheTerceiros +
+      this.totalDetalheMarcaPropriaSetores +
+      this.totalDetalheMarcaPropriaOutros
+    );
+  }
+
+  private resolverAnoMesCompetencia(): { ano: number; mes: number } {
+    const parts = (this.anoMes || '').split('-').map((n) => Number(n));
+    if (
+      parts.length >= 2 &&
+      Number.isFinite(parts[0]) &&
+      Number.isFinite(parts[1]) &&
+      parts[1] >= 1 &&
+      parts[1] <= 12
+    ) {
+      return { ano: parts[0], mes: parts[1] };
+    }
+    const agora = new Date();
+    return { ano: agora.getFullYear(), mes: agora.getMonth() + 1 };
+  }
+
+  private rotuloCompetenciaDeAnoMes(): string {
+    const { ano, mes } = this.resolverAnoMesCompetencia();
+    return `${nomeMesPt(mes)} ${ano}`;
   }
 
   rotuloVendedor(item: ComercialAcompanhamentoItem): string {
@@ -455,15 +525,24 @@ export class ComercialVendedorCardComponent {
   }
 
   abrirDetalhe(): void {
+    this.resetFiltroDiaDetalhe();
+    this.carregarDetalhe();
+  }
+
+  private carregarDetalhe(): void {
     this.detalheAberto = true;
     this.carregandoDetalhe = true;
     this.detalhe = null;
     this.detalheSecoesAbertas = { ...DETALHE_SECOES_PADRAO };
     this.detalheReq$.next();
+    const filtroDia = {
+      dataInicial: this.detalheDataInicial || undefined,
+      dataFinal: this.detalheDataFinal || undefined,
+    };
     const req$ =
       this.modoDetalhe === 'unidade' && this.unidade
-        ? this.service.unidadeDetalhe(this.unidade as Unidade)
-        : this.service.meuDetalhe();
+        ? this.service.unidadeDetalhe(this.unidade as Unidade, filtroDia)
+        : this.service.meuDetalhe(filtroDia);
     req$
       .pipe(takeUntil(this.detalheReq$), takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -481,11 +560,67 @@ export class ComercialVendedorCardComponent {
       });
   }
 
+  aplicarFiltroDiaDetalhe(): void {
+    if (!this.validarFiltroDiaDetalhe()) {
+      return;
+    }
+    this.detalheDataInicial = this.detalheDataInicialInput.trim();
+    this.detalheDataFinal = this.detalheDataFinalInput.trim();
+    this.carregarDetalhe();
+  }
+
+  limparFiltroDiaDetalhe(): void {
+    this.resetFiltroDiaDetalhe();
+    this.carregarDetalhe();
+  }
+
+  private resetFiltroDiaDetalhe(): void {
+    this.detalheDataInicialInput = '';
+    this.detalheDataFinalInput = '';
+    this.detalheDataInicial = '';
+    this.detalheDataFinal = '';
+  }
+
+  private validarFiltroDiaDetalhe(): boolean {
+    const ini = this.detalheDataInicialInput.trim();
+    const fim = this.detalheDataFinalInput.trim();
+    if (!ini && !fim) {
+      return true;
+    }
+    const min = this.competenciaDataInicial;
+    const max = this.competenciaDataFinal;
+    if (ini && (ini < min || ini > max)) {
+      this.errors.show(
+        `Data inicial deve estar em ${this.formatarData(min)} a ${this.formatarData(max)}.`,
+        'Validação',
+      );
+      return false;
+    }
+    if (fim && (fim < min || fim > max)) {
+      this.errors.show(
+        `Data final deve estar em ${this.formatarData(min)} a ${this.formatarData(max)}.`,
+        'Validação',
+      );
+      return false;
+    }
+    const iniEfetiva = ini || min;
+    const fimEfetiva = fim || max;
+    if (iniEfetiva > fimEfetiva) {
+      this.errors.show(
+        'Data inicial não pode ser posterior à data final.',
+        'Validação',
+      );
+      return false;
+    }
+    return true;
+  }
+
   fecharDetalhe(): void {
     this.detalheReq$.next();
     this.detalheAberto = false;
     this.carregandoDetalhe = false;
     this.detalhe = null;
+    this.resetFiltroDiaDetalhe();
     this.detalheSecoesAbertas = { ...DETALHE_SECOES_PADRAO };
   }
 
@@ -494,6 +629,86 @@ export class ComercialVendedorCardComponent {
       ...this.detalheSecoesAbertas,
       [secao]: !this.detalheSecoesAbertas[secao],
     };
+  }
+
+  resumoQtdRequisicoesDetalhe(): string {
+    if (this.temFiltroDiaDetalhe && this.detalhe) {
+      const n = this.detalhe.manipulados.length;
+      return `${n} Req${n === 1 ? '' : 's'}`;
+    }
+    return this.rotuloQtdManipulados(
+      this.item.quantidadeRecebidoRequisicao,
+      this.item.quantidadeFormulasRequisicao,
+    );
+  }
+
+  resumoValorRequisicoesDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheManipulados;
+    return Number(this.item.valorRequisicaoPura || 0);
+  }
+
+  resumoQtdSetorDetalhe(): string {
+    if (this.temFiltroDiaDetalhe && this.detalhe) {
+      return this.rotuloQtdSetorManipulado(this.detalhe.setor.length);
+    }
+    return this.rotuloQtdSetorManipulado(this.item.quantidadeRevendaManipulados);
+  }
+
+  resumoValorSetorDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheSetor;
+    return Number(this.item.valorRevendaManipulados || 0);
+  }
+
+  resumoQtdTerceirosDetalhe(): string {
+    if (this.temFiltroDiaDetalhe && this.detalhe) {
+      return this.rotuloQtdTerceiros(this.detalhe.terceiros.length);
+    }
+    return this.rotuloQtdTerceiros(this.item.quantidadeTerceirosManipulados);
+  }
+
+  resumoValorTerceirosDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheTerceiros;
+    return Number(this.item.valorTerceirosManipulados || 0);
+  }
+
+  resumoQtdMarcaSetorDetalhe(): string {
+    if (this.temFiltroDiaDetalhe) {
+      return this.rotuloQtdSetorManipulado(this.detalheMarcaPropriaSetores.length);
+    }
+    return this.rotuloQtdSetorManipulado(
+      this.item.quantidadeRecebidoMarcaPropriaSetores,
+    );
+  }
+
+  resumoValorMarcaSetorDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheMarcaPropriaSetores;
+    return Number(this.item.valorRecebidoMarcaPropriaSetores || 0);
+  }
+
+  resumoQtdMarcaOutrosDetalhe(): string {
+    if (this.temFiltroDiaDetalhe) {
+      return this.rotuloQtdSetorManipulado(this.detalheMarcaPropriaOutros.length);
+    }
+    return this.rotuloQtdSetorManipulado(
+      this.item.quantidadeRecebidoMarcaPropriaOutros,
+    );
+  }
+
+  resumoValorMarcaOutrosDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheMarcaPropriaOutros;
+    return Number(this.item.valorRecebidoMarcaPropriaOutros || 0);
+  }
+
+  resumoQtdRejeitadoDetalhe(): string {
+    if (this.temFiltroDiaDetalhe && this.detalhe) {
+      return `${this.detalhe.rejeitados.length} orçamento(s)`;
+    }
+    return `${this.item.quantidadeRejeitado ?? 0} orçamento(s)`;
+  }
+
+  resumoValorRejeitadoDetalhe(): number {
+    if (this.temFiltroDiaDetalhe) return this.totalDetalheRejeitado;
+    return Number(this.item.valorRejeitado || 0);
   }
 
   get totalDetalheManipulados(): number {
