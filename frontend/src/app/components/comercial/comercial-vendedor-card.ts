@@ -111,10 +111,10 @@ export class ComercialVendedorCardComponent {
   get titulo(): string {
     if (this.isTotal) {
       const unidade = (this.unidade || '').trim();
-      if (unidade) return unidade;
-      return String(this.item.nomeVendedor || '')
-        .replace(/^TOTAL\s+/i, '')
-        .trim();
+      if (unidade) return `TOTAL ${unidade}`;
+      const nome = String(this.item.nomeVendedor || '').trim();
+      if (/^TOTAL\s+/i.test(nome)) return nome;
+      return nome ? `TOTAL ${nome}` : 'TOTAL';
     }
     return this.rotuloVendedor(this.item);
   }
@@ -123,10 +123,8 @@ export class ComercialVendedorCardComponent {
     return this.formatarData(this.item.dataUltimoCaixaFechado);
   }
 
+  /** Igual ao card total do acompanhamento: mostra Vendido hoje / Falta hoje. */
   temAnaliseDoDia(): boolean {
-    if (this.isTotal) {
-      return false;
-    }
     return (
       this.item.mesAberto === true &&
       (this.item.valorRecebidoHojeRequisicao != null ||

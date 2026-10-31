@@ -386,6 +386,53 @@ export class ComercialAcompanhamentoService {
       valorRecebidoHojeMarcaPropria: null,
     };
 
+    // Mesmo recorte “hoje” do card total do acompanhamento (Vendido hoje / Falta hoje).
+    const incluirHoje = tetoLoja != null && tetoLoja === hoje;
+    if (incluirHoje) {
+      const [
+        reqHojeBase,
+        volumeLojaHoje,
+        tercLojaHoje,
+        convReqHoje,
+        convProdHoje,
+      ] = await Promise.all([
+        this.buscarRecebidoRequisicaoHoje(unidade, hoje, considerarTaxas),
+        this.buscarVolumeLoja(
+          unidade,
+          hoje,
+          hoje,
+          setoresUnidade,
+          setoresUnidadeRevenda,
+        ),
+        this.buscarRecebidoTerceiros(unidade, hoje, hoje),
+        considerarConvenios
+          ? this.buscarRecebidoConvenioRequisicao(unidade, hoje, hoje)
+          : Promise.resolve(new Map() as MapaMovimento),
+        considerarConvenios
+          ? this.buscarRecebidoConvenioProdutos(unidade, hoje, hoje)
+          : Promise.resolve(new Map() as MapaMovimento),
+      ]);
+      const reqHojeMap = this.mesclarMapaMovimento(reqHojeBase, convReqHoje);
+      let puraHoje = 0;
+      for (const f of vinculados) {
+        const codigo = f.codigoVendedorErp;
+        if (codigo == null || codigo <= 0) continue;
+        puraHoje += reqHojeMap.get(codigo)?.valor ?? 0;
+      }
+      puraHoje = this.round2(puraHoje);
+      totais.valorRecebidoHojeRequisicao = this.round2(
+        puraHoje +
+          volumeLojaHoje.revendaManipulados.valor +
+          tercLojaHoje.valor,
+      );
+      const convMpHoje = considerarConvenios
+        ? this.somarMapa(convProdHoje)
+        : { valor: 0, qtd: 0, qtdFormulas: 0 };
+      totais.valorRecebidoHojeMarcaPropria = this.round2(
+        volumeLojaHoje.marcaPropria.valor + convMpHoje.valor,
+      );
+    }
+
     await this.anexarDesempenhoSomenteTotais(
       totais,
       periodo,

@@ -63,6 +63,7 @@ app-home-widgets-host {
   }
 }
 
+/* Compactação só do card “Meu desempenho” na home — não no modal da unidade. */
 .home-widgets-host .comercial-acomp-mp-rejeitado-row {
   grid-template-columns: 1fr;
 }
@@ -77,6 +78,44 @@ app-home-widgets-host {
 
 .home-widgets-host .comercial-acomp-analise-grid.is-foco-dia {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Modal unidade = mesmo layout do card TOTAL do acompanhamento. */
+.home-widgets-host .home-unidade-modal-corpo .comercial-acomp-manip-grid.has-terceiros {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.home-widgets-host .home-unidade-modal-corpo .comercial-acomp-mp-rejeitado-row {
+  grid-template-columns: minmax(0, 3fr) minmax(7.25rem, 1fr);
+}
+
+.home-widgets-host .home-unidade-modal-corpo .comercial-acomp-mp-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.home-widgets-host .home-unidade-modal-corpo .comercial-acomp-bases,
+.home-widgets-host .home-unidade-modal-corpo .comercial-acomp-bases.has-total-geral {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.home-widgets-host .home-unidade-modal-corpo .comercial-acomp-meta-cols.has-projecao {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.home-widgets-host .home-unidade-modal-corpo .comercial-acomp-analise-grid.is-foco-dia {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .home-widgets-host .home-unidade-modal-corpo .comercial-acomp-manip-grid.has-terceiros {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-widgets-host .home-unidade-modal-corpo .comercial-acomp-bases,
+  .home-widgets-host .home-unidade-modal-corpo .comercial-acomp-bases.has-total-geral,
+  .home-widgets-host .home-unidade-modal-corpo .comercial-acomp-mp-rejeitado-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Cabeçalho do card completo: não forçar wrap aqui (quebra o modal). */

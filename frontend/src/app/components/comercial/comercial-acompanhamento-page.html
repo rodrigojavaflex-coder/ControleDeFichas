@@ -169,36 +169,6 @@
                           dataUltimoCaixaFormatada
                         }}</strong>
                       </div>
-                      @if (card.isTotal) {
-                        <div
-                          class="comercial-acomp-config-flags"
-                          aria-label="Configuração do acompanhamento da unidade">
-                          <span
-                            class="comercial-acomp-config-flag"
-                            [class.is-on]="card.considerarConvenios === true"
-                            [class.is-off]="card.considerarConvenios !== true"
-                            [title]="
-                              card.considerarConvenios === true
-                                ? 'Convênios entram no card'
-                                : 'Convênios fora do card'
-                            ">
-                            Convênios
-                            <strong>{{ card.considerarConvenios === true ? 'Sim' : 'Não' }}</strong>
-                          </span>
-                          <span
-                            class="comercial-acomp-config-flag"
-                            [class.is-on]="card.considerarTaxas === true"
-                            [class.is-off]="card.considerarTaxas !== true"
-                            [title]="
-                              card.considerarTaxas === true
-                                ? 'Taxas não abatidas na base'
-                                : 'Taxas abatidas na base'
-                            ">
-                            Taxas
-                            <strong>{{ card.considerarTaxas === true ? 'Sim' : 'Não' }}</strong>
-                          </span>
-                        </div>
-                      }
                       @if (!card.isTotal && (card.rankingManipulados != null || card.rankingMarcaPropria != null)) {
                         <div class="comercial-acomp-ranking-badges" aria-label="Ranking na unidade">
                           @if (card.rankingManipulados != null) {
