@@ -80,6 +80,8 @@ interface CardResumo {
   faltaMetaHoje100MarcaPropria?: number | null;
   faltaMetaHojeTopoMarcaPropria?: number | null;
   codigosSetorMarcaPropria?: number[];
+  considerarConvenios?: boolean;
+  considerarTaxas?: boolean;
 }
 
 const TOTAIS_VAZIOS: ComercialAcompanhamentoTotais = {
@@ -335,6 +337,8 @@ export class ComercialAcompanhamentoPage implements OnInit {
         faltaMetaHojeTopoMarcaPropria:
           this.totais.faltaMetaHojeTopoMarcaPropria ?? null,
         codigosSetorMarcaPropria: this.totais.codigosSetorMarcaPropria ?? [],
+        considerarConvenios: this.totais.considerarConvenios === true,
+        considerarTaxas: this.totais.considerarTaxas === true,
       },
     ];
     if (this.funcionarioIdFiltro === FILTRO_CARD_UNIDADE) {
@@ -1027,6 +1031,8 @@ export class ComercialAcompanhamentoPage implements OnInit {
       valorProjetadoMarcaPropria: t.valorProjetadoMarcaPropria,
       percentualProjecaoMarcaPropria: t.percentualProjecaoMarcaPropria,
       mesAberto: t.mesAberto === true,
+      considerarConvenios: t.considerarConvenios === true,
+      considerarTaxas: t.considerarTaxas === true,
     };
   }
 

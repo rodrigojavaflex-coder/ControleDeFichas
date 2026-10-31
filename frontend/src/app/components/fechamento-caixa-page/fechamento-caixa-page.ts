@@ -459,6 +459,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       .join('');
 
     const observacaoHtml = this.montarCardObservacaoRelatorio(consolidado);
+    const resumoTotalHtml = this.montarCardResumoTotalRelatorio(consolidado);
     const rodapeFechamento = this.montarRodapeFechamentoRelatorio(consolidado);
 
     return `
@@ -471,10 +472,53 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
           <div class="forma-blocos-stack">${blocosHtml}</div>
         </div>
         <div class="relatorio-caixa-col-observacao">
-          ${observacaoHtml}
+          <div class="forma-blocos-stack">
+            ${observacaoHtml}
+            ${resumoTotalHtml}
+          </div>
         </div>
       </div>
       ${rodapeFechamento}
+    `;
+  }
+
+  /** Mesma regra do Caixa Detalhado: soma de totalForma (baixas ERP + terceiro). */
+  private montarCardResumoTotalRelatorio(
+    consolidado: FechamentoConsolidado,
+  ): string {
+    const formas = ordenarFormasFechamentoCaixa(consolidado.formas);
+    let totalDia = 0;
+    const linhas = formas.map((bloco) => {
+      const valor = bloco.totalForma ?? 0;
+      totalDia += valor;
+      return this.renderLinhaValorRelatorio(
+        `Total ${this.getFormaTitulo(bloco.forma)}`,
+        this.formatCurrency(valor),
+      );
+    });
+
+    linhas.push(
+      this.renderLinhaValorRelatorio(
+        'Total do dia',
+        this.formatCurrency(Math.round(totalDia * 100) / 100),
+        'destaque',
+      ),
+    );
+
+    return `
+      <article class="forma-bloco forma-card-resumo">
+        <div class="forma-bloco-header">
+          <h2 class="forma-titulo">
+            <span class="forma-icone" aria-hidden="true">
+              <i class="fas fa-calculator"></i>
+            </span>
+            Resumo total
+          </h2>
+        </div>
+        <table class="forma-tabela">
+          <tbody>${linhas.join('')}</tbody>
+        </table>
+      </article>
     `;
   }
 
@@ -777,6 +821,10 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       formaBloco,
     );
     for (const [formaErp, pagamentos] of erpPorForma) {
+      if (formaErp === 'CONVENIO-DINHEIRO') {
+        secoes.push(this.montarSubsecaoConvenioDetalheRelatorio(pagamentos));
+        continue;
+      }
       secoes.push(
         this.montarSubsecaoDetalheRelatorio(
           formaErp,
@@ -850,6 +898,82 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
           </tr>
         </tfoot>
       </table>
+    `;
+  }
+
+  /**
+   * CONVENIO-DINHEIRO: lista o lote (req/cliente/valor). Total = valor do pagamento
+   * (totais do caixa inalterados).
+   */
+  private montarSubsecaoConvenioDetalheRelatorio(
+    pagamentos: CaixaErpPagamentoDetalhe[],
+  ): string {
+    const linhasHtml: string[] = [];
+    for (const pagamento of pagamentos) {
+      const lote = pagamento.loteConvenio ?? [];
+      if (!lote.length) {
+        linhasHtml.push(`
+          <tr>
+            <td>${this.escapeHtml(this.formatReferenciaErpPagamento(pagamento))}</td>
+            <td>${this.escapeHtml(pagamento.clienteNome || '-')}</td>
+            <td class="valor">${this.formatCurrency(pagamento.valorLiquido)}</td>
+          </tr>
+        `);
+        continue;
+      }
+      for (const item of lote) {
+        const ref =
+          item.tipoItem === 'REQUISICAO'
+            ? item.numeroRequisicao != null
+              ? String(item.numeroRequisicao)
+              : '-'
+            : item.descricaoProduto?.trim()
+              ? item.descricaoProduto.trim()
+              : item.numeroCupomOrigem != null
+                ? `Cupom ${item.numeroCupomOrigem}`
+                : '-';
+        linhasHtml.push(`
+          <tr>
+            <td>${this.escapeHtml(ref)}</td>
+            <td>${this.escapeHtml(item.clienteNome || '-')}</td>
+            <td class="valor">${this.formatCurrency(item.valor)}</td>
+          </tr>
+        `);
+      }
+    }
+
+    const totalPagamento =
+      Math.round(
+        pagamentos.reduce((acc, p) => acc + Number(p.valorLiquido ?? 0), 0) *
+          100,
+      ) / 100;
+
+    return `
+      <section class="detalhe-subsecao">
+        <h3>CONVENIO-DINHEIRO</h3>
+        <table class="detalhe-table">
+          <thead>
+            <tr>
+              <th>Requisição</th>
+              <th>Cliente</th>
+              <th class="valor">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              linhasHtml.length
+                ? linhasHtml.join('')
+                : `<tr class="no-data-row"><td colspan="3">Nenhum registro.</td></tr>`
+            }
+          </tbody>
+          <tfoot>
+            <tr class="subtotal">
+              <td colspan="2">Total</td>
+              <td class="valor">${this.formatCurrency(totalPagamento)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
     `;
   }
 
@@ -1112,7 +1236,8 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       .relatorio-caixa-layout { display: flex; align-items: stretch; gap: 0.9rem; }
       .relatorio-caixa-col-esquerda { flex: 0 0 38%; max-width: 38%; }
       .relatorio-caixa-col-observacao { flex: 1 1 auto; min-width: 0; }
-      .observacao-relatorio { height: 100%; min-height: 220px; display: flex; flex-direction: column; }
+      .relatorio-caixa-col-observacao .forma-blocos-stack { height: 100%; }
+      .observacao-relatorio { flex: 1 1 auto; min-height: 180px; display: flex; flex-direction: column; }
       .observacao-conteudo { flex: 1 1 auto; padding: 0.55rem 0.65rem; }
       .observacao-texto { margin: 0; white-space: pre-wrap; word-break: break-word; line-height: 1.45; color: #1e293b; font-size: 0.78rem; }
       .observacao-vazia { margin: 0; color: #64748b; font-style: italic; font-size: 0.76rem; }
@@ -1131,6 +1256,7 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       .forma-card-cartao .forma-icone { background: #eff6ff; color: #1d4ed8; }
       .forma-card-deposito .forma-icone { background: #f5f3ff; color: #6d28d9; }
       .forma-card-observacao .forma-icone { background: #fff7ed; color: #c2410c; }
+      .forma-card-resumo .forma-icone { background: #f0fdf4; color: #15803d; }
       .forma-tabela { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #d1d5db; }
       .forma-tabela td { padding: 0.12rem 0.4rem; font-size: 0.76rem; color: #1e293b; line-height: 1.4; vertical-align: middle; border: 1px solid #d1d5db; }
       .forma-tabela td:first-child { width: 62%; text-align: center; text-transform: uppercase; font-weight: 500; letter-spacing: 0.01em; }
@@ -1297,6 +1423,16 @@ export class FechamentoCaixaPageComponent implements OnInit, OnDestroy {
       return [];
     }
     return ordenarFormasFechamentoCaixa(this.consolidado.formas);
+  }
+
+  /** Soma das baixas do dia (ERP + terceiro), igual ao Resumo total do Caixa Detalhado. */
+  get totalDoDia(): number {
+    if (!this.consolidado) return 0;
+    const soma = this.consolidado.formas.reduce(
+      (acc, bloco) => acc + (bloco.totalForma ?? 0),
+      0,
+    );
+    return Math.round(soma * 100) / 100;
   }
 
   get totalEntradasDinheiro(): number {

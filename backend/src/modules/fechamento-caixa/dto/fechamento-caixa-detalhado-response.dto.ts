@@ -23,6 +23,45 @@ export class CaixaBaixaDetalheDto {
   dataBaixa: string;
 }
 
+export class CaixaErpConvenioLoteItemDto {
+  @ApiProperty({ enum: ['REQUISICAO', 'PRODUTO'] })
+  tipoItem: 'REQUISICAO' | 'PRODUTO';
+
+  @ApiProperty({ required: false, nullable: true })
+  numeroRequisicao?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  numeroCupomOrigem?: number | null;
+
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description: 'Nome do produto/revenda (linhas PRODUTO do lote)',
+  })
+  descricaoProduto?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  codigoCliente?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  clienteNome?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  codigoVendedor?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  nomeVendedor?: string | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  codigoSetor?: number | null;
+
+  @ApiProperty()
+  valor: number;
+
+  @ApiProperty({ required: false, nullable: true })
+  dataOrigem?: string | null;
+}
+
 export class CaixaErpPagamentoDetalheDto {
   @ApiProperty()
   numeroCupom: number;
@@ -72,6 +111,14 @@ export class CaixaErpPagamentoDetalheDto {
 
   @ApiProperty({ required: false, nullable: true })
   nomeOperadorCaixa?: string | null;
+
+  @ApiProperty({
+    required: false,
+    type: [CaixaErpConvenioLoteItemDto],
+    description:
+      'Composição do lote CONVENIO-DINHEIRO (reqs/produtos quitados). Não altera o total do pagamento.',
+  })
+  loteConvenio?: CaixaErpConvenioLoteItemDto[];
 }
 
 export class CaixaErpCortesiaDetalheDto {

@@ -23,6 +23,36 @@
           }}</strong>
         </div>
       }
+      @if (isTotal) {
+        <div
+          class="comercial-acomp-config-flags"
+          aria-label="Configuração do acompanhamento da unidade">
+          <span
+            class="comercial-acomp-config-flag"
+            [class.is-on]="item.considerarConvenios === true"
+            [class.is-off]="item.considerarConvenios !== true"
+            [title]="
+              item.considerarConvenios === true
+                ? 'Convênios entram no card'
+                : 'Convênios fora do card'
+            ">
+            Convênios
+            <strong>{{ item.considerarConvenios === true ? 'Sim' : 'Não' }}</strong>
+          </span>
+          <span
+            class="comercial-acomp-config-flag"
+            [class.is-on]="item.considerarTaxas === true"
+            [class.is-off]="item.considerarTaxas !== true"
+            [title]="
+              item.considerarTaxas === true
+                ? 'Taxas não abatidas na base'
+                : 'Taxas abatidas na base'
+            ">
+            Taxas
+            <strong>{{ item.considerarTaxas === true ? 'Sim' : 'Não' }}</strong>
+          </span>
+        </div>
+      }
       @if (!isTotal && (item.rankingManipulados != null || item.rankingMarcaPropria != null)) {
         <div class="comercial-acomp-ranking-badges" aria-label="Ranking na unidade">
           @if (item.rankingManipulados != null) {
@@ -55,12 +85,10 @@
       }
     </div>
     <div class="comercial-acomp-card-head-end">
-      @if (!isTotal) {
-        <div class="comercial-acomp-card-head-total">
-          <span class="label">Total vendido</span>
-          <strong>{{ formatarMoeda(valorTotalRecebido()) }}</strong>
-        </div>
-      }
+      <div class="comercial-acomp-card-head-total">
+        <span class="label">Total vendido</span>
+        <strong>{{ formatarMoeda(valorTotalRecebido()) }}</strong>
+      </div>
       <div class="comercial-acomp-card-head-acoes">
         <button
           type="button"

@@ -6,46 +6,48 @@
   } @else {
     <div class="results-card">
       <section class="comercial-metas-toolbar" aria-label="Unidade e competência">
-        <div class="filter-group">
-          <label class="form-label" for="cm-unidade">Unidade</label>
-          <select
-            id="cm-unidade"
-            class="form-control"
-            [(ngModel)]="unidadeFiltro"
-            [disabled]="unidadeDisabled"
-            (ngModelChange)="onFiltroChange()">
-            @if (!unidadeDisabled) {
-              <option [ngValue]="''">Selecione…</option>
-            }
-            @for (u of unidadesVisiveis; track u) {
-              <option [ngValue]="u">{{ u }}</option>
-            }
-          </select>
-        </div>
-        <div class="filter-group">
-          <label class="form-label" for="cm-mes">Mês</label>
-          <select
-            id="cm-mes"
-            class="form-control"
-            [(ngModel)]="mesFiltro"
-            (ngModelChange)="onFiltroChange()">
-            <option [ngValue]="0">Todos</option>
-            @for (m of MESES_PT; track m.numero) {
-              <option [ngValue]="m.numero">{{ m.nome }}</option>
-            }
-          </select>
-        </div>
-        <div class="filter-group">
-          <label class="form-label" for="cm-ano">Ano</label>
-          <select
-            id="cm-ano"
-            class="form-control"
-            [(ngModel)]="anoFiltro"
-            (ngModelChange)="onFiltroChange()">
-            @for (a of anosDisponiveis; track a) {
-              <option [ngValue]="a">{{ a }}</option>
-            }
-          </select>
+        <div class="comercial-metas-toolbar-filtros">
+          <div class="filter-group">
+            <label class="form-label" for="cm-unidade">Unidade</label>
+            <select
+              id="cm-unidade"
+              class="form-control"
+              [(ngModel)]="unidadeFiltro"
+              [disabled]="unidadeDisabled"
+              (ngModelChange)="onFiltroChange()">
+              @if (!unidadeDisabled) {
+                <option [ngValue]="''">Selecione…</option>
+              }
+              @for (u of unidadesVisiveis; track u) {
+                <option [ngValue]="u">{{ u }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="form-label" for="cm-mes">Mês</label>
+            <select
+              id="cm-mes"
+              class="form-control"
+              [(ngModel)]="mesFiltro"
+              (ngModelChange)="onFiltroChange()">
+              <option [ngValue]="0">Todos</option>
+              @for (m of MESES_PT; track m.numero) {
+                <option [ngValue]="m.numero">{{ m.nome }}</option>
+              }
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="form-label" for="cm-ano">Ano</label>
+            <select
+              id="cm-ano"
+              class="form-control"
+              [(ngModel)]="anoFiltro"
+              (ngModelChange)="onFiltroChange()">
+              @for (a of anosDisponiveis; track a) {
+                <option [ngValue]="a">{{ a }}</option>
+              }
+            </select>
+          </div>
         </div>
         @if (podeEditarMeta() && unidadeFiltro && mesFiltro > 0) {
           <div class="comercial-metas-toolbar-acoes">
@@ -68,8 +70,13 @@
       } @else {
         @if (mostrarMetaUnidade()) {
           <section class="comercial-meta-unidade-panel" aria-label="Meta da loja">
-            <div class="comercial-meta-unidade-titulo">
-              <h3>Meta da loja</h3>
+            <div class="comercial-meta-unidade-cab">
+              <div>
+                <h3 class="comercial-meta-unidade-titulo-txt">Meta da loja</h3>
+                <p class="comercial-meta-unidade-sub">
+                  {{ unidadeFiltro }} · {{ nomeMes(mesFiltro) }}/{{ anoFiltro }}
+                </p>
+              </div>
               @if (podeEditarMeta()) {
                 <div class="action-buttons comercial-meta-unidade-acoes">
                   @if (editandoUnidade) {
@@ -111,11 +118,10 @@
                 </div>
               }
             </div>
-            <div class="comercial-meta-unidade-campos">
-              <div class="comercial-meta-unidade-campo comercial-meta-unidade-campo-ranking">
-                <label class="form-label" for="cm-criterio-ranking">
-                  Critério de ranking
-                </label>
+
+            <div class="comercial-meta-unidade-cards">
+              <article class="comercial-meta-card">
+                <span class="comercial-meta-card-titulo">Critério de ranking</span>
                 @if (editandoUnidade) {
                   <select
                     id="cm-criterio-ranking"
@@ -130,13 +136,17 @@
                     </option>
                   </select>
                 } @else {
-                  <div class="comercial-meta-unidade-valor">
+                  <strong class="comercial-meta-card-valor">
                     {{ rotuloCriterioRanking(criterioRanking) }}
-                  </div>
+                  </strong>
                 }
-              </div>
-              <div class="comercial-meta-unidade-campo">
-                <label class="form-label" for="cm-meta-loja-req">Manipulados</label>
+                <span class="comercial-meta-card-explica">
+                  Define como os vendedores são ranqueados no acompanhamento.
+                </span>
+              </article>
+
+              <article class="comercial-meta-card">
+                <span class="comercial-meta-card-titulo">Manipulados</span>
                 @if (editandoUnidade) {
                   <input
                     id="cm-meta-loja-req"
@@ -149,13 +159,15 @@
                     [disabled]="salvandoUnidade"
                     placeholder="R$ 0,00" />
                 } @else {
-                  <div class="comercial-meta-unidade-valor">
+                  <strong class="comercial-meta-card-valor comercial-meta-card-valor-destaque">
                     {{ formatarMoeda(metaUnidadeRequisicao) }}
-                  </div>
+                  </strong>
                 }
-              </div>
-              <div class="comercial-meta-unidade-campo">
-                <label class="form-label" for="cm-meta-loja-mp">Marca própria</label>
+                <span class="comercial-meta-card-explica">Meta mensal da loja nesta base.</span>
+              </article>
+
+              <article class="comercial-meta-card">
+                <span class="comercial-meta-card-titulo">Marca própria</span>
                 @if (editandoUnidade) {
                   <input
                     id="cm-meta-loja-mp"
@@ -168,117 +180,132 @@
                     [disabled]="salvandoUnidade"
                     placeholder="R$ 0,00" />
                 } @else {
-                  <div class="comercial-meta-unidade-valor">
+                  <strong class="comercial-meta-card-valor comercial-meta-card-valor-destaque">
                     {{ formatarMoeda(metaUnidadeMarcaPropria) }}
-                  </div>
+                  </strong>
                 }
-              </div>
+                <span class="comercial-meta-card-explica">Meta mensal da loja nesta base.</span>
+              </article>
             </div>
           </section>
         }
-        <div class="table-container comercial-metas-table-wrap">
-          <table class="vendas-table">
-            <thead>
-              <tr>
-                <th>Vendedor</th>
-                <th>Unidade</th>
-                <th>Mês</th>
-                <th>Meta Manipulados</th>
-                <th>Meta Marca Própria</th>
-                @if (podeEditarMeta()) {
-                  <th>Ações</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of linhas; track row.funcionarioId + '-' + row.anoMes) {
-                <tr [class.editing]="row.editando">
-                  <td>{{ row.nome }} ({{ row.codigoVendedorErp }})</td>
-                  <td>{{ row.unidade }}</td>
-                  <td>{{ nomeMes(row.mes) }}</td>
-                  <td class="comercial-metas-valor-celula">
-                    @if (row.editando) {
-                      <input
-                        class="form-control comercial-metas-valor"
-                        type="text"
-                        inputmode="numeric"
-                        autocomplete="off"
-                        [(ngModel)]="row.draftRequisicao"
-                        (ngModelChange)="formatarDraftDigitacao(row, 'requisicao')"
-                        [disabled]="row.salvando"
-                        placeholder="R$ 0,00"
-                        [attr.aria-label]="'Meta manipulados de ' + row.nome" />
-                    } @else {
-                      {{ formatarMoeda(row.valorMetaRequisicao) }}
-                    }
-                  </td>
-                  <td class="comercial-metas-valor-celula">
-                    @if (row.editando) {
-                      <input
-                        class="form-control comercial-metas-valor"
-                        type="text"
-                        inputmode="numeric"
-                        autocomplete="off"
-                        [(ngModel)]="row.draftMarcaPropria"
-                        (ngModelChange)="formatarDraftDigitacao(row, 'marcaPropria')"
-                        [disabled]="row.salvando"
-                        placeholder="R$ 0,00"
-                        [attr.aria-label]="'Meta marca própria de ' + row.nome" />
-                    } @else {
-                      {{ formatarMoeda(row.valorMetaMarcaPropria) }}
-                    }
-                  </td>
+
+        <section class="comercial-metas-vendedores" aria-label="Metas dos vendedores">
+          <div class="comercial-metas-vendedores-cab">
+            <h3 class="comercial-metas-vendedores-titulo">Vendedores</h3>
+            <span class="comercial-metas-vendedores-count">
+              {{ linhas.length }} vendedor(es)
+            </span>
+          </div>
+          <div class="table-container comercial-metas-table-wrap">
+            <table class="vendas-table comercial-metas-table">
+              <thead>
+                <tr>
+                  <th>Vendedor</th>
+                  @if (mostrarColunaMes()) {
+                    <th>Mês</th>
+                  }
+                  <th class="comercial-metas-col-valor">Meta Manipulados</th>
+                  <th class="comercial-metas-col-valor">Meta Marca Própria</th>
                   @if (podeEditarMeta()) {
-                    <td class="action-buttons">
-                      @if (row.editando) {
-                        <button
-                          type="button"
-                          class="btn btn-salvar"
-                          [disabled]="row.salvando"
-                          (click)="salvarLinha(row)">
-                          <i class="fas fa-save" aria-hidden="true"></i>
-                          {{ row.salvando ? 'Salvando…' : 'Salvar' }}
-                        </button>
-                        <button
-                          type="button"
-                          class="btn btn-cancelar"
-                          [disabled]="row.salvando"
-                          (click)="cancelarEdicao(row)">
-                          <i class="fas fa-times" aria-hidden="true"></i>
-                          Cancelar
-                        </button>
-                      } @else if (!temMetasCadastradas(row)) {
-                        <button
-                          type="button"
-                          class="btn btn-salvar"
-                          [disabled]="temLinhaEmEdicao()"
-                          (click)="incluirLinha(row)">
-                          <i class="fas fa-plus" aria-hidden="true"></i>
-                          Incluir
-                        </button>
-                      } @else {
-                        <button
-                          type="button"
-                          class="btn btn-editar"
-                          [disabled]="temLinhaEmEdicao()"
-                          (click)="alterarLinha(row)">
-                          <i class="fas fa-pen" aria-hidden="true"></i>
-                          Alterar
-                        </button>
-                      }
-                    </td>
+                    <th class="comercial-metas-col-acoes">Ações</th>
                   }
                 </tr>
-              } @empty {
-                <tr class="no-data">
-                  <td [attr.colspan]="podeEditarMeta() ? 6 : 5">
-                    <i class="fas fa-inbox"></i> Nenhum vendedor com código ERP nesta unidade.
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                @for (row of linhas; track row.funcionarioId + '-' + row.anoMes) {
+                  <tr [class.editing]="row.editando">
+                    <td>
+                      <div class="comercial-metas-vendedor-nome">{{ row.nome }}</div>
+                      <div class="comercial-metas-vendedor-erp">ERP {{ row.codigoVendedorErp }}</div>
+                    </td>
+                    @if (mostrarColunaMes()) {
+                      <td>{{ nomeMes(row.mes) }}</td>
+                    }
+                    <td class="comercial-metas-valor-celula">
+                      @if (row.editando) {
+                        <input
+                          class="form-control comercial-metas-valor"
+                          type="text"
+                          inputmode="numeric"
+                          autocomplete="off"
+                          [(ngModel)]="row.draftRequisicao"
+                          (ngModelChange)="formatarDraftDigitacao(row, 'requisicao')"
+                          [disabled]="row.salvando"
+                          placeholder="R$ 0,00"
+                          [attr.aria-label]="'Meta manipulados de ' + row.nome" />
+                      } @else {
+                        {{ formatarMoeda(row.valorMetaRequisicao) }}
+                      }
+                    </td>
+                    <td class="comercial-metas-valor-celula">
+                      @if (row.editando) {
+                        <input
+                          class="form-control comercial-metas-valor"
+                          type="text"
+                          inputmode="numeric"
+                          autocomplete="off"
+                          [(ngModel)]="row.draftMarcaPropria"
+                          (ngModelChange)="formatarDraftDigitacao(row, 'marcaPropria')"
+                          [disabled]="row.salvando"
+                          placeholder="R$ 0,00"
+                          [attr.aria-label]="'Meta marca própria de ' + row.nome" />
+                      } @else {
+                        {{ formatarMoeda(row.valorMetaMarcaPropria) }}
+                      }
+                    </td>
+                    @if (podeEditarMeta()) {
+                      <td class="action-buttons">
+                        @if (row.editando) {
+                          <button
+                            type="button"
+                            class="btn btn-salvar"
+                            [disabled]="row.salvando"
+                            (click)="salvarLinha(row)">
+                            <i class="fas fa-save" aria-hidden="true"></i>
+                            {{ row.salvando ? 'Salvando…' : 'Salvar' }}
+                          </button>
+                          <button
+                            type="button"
+                            class="btn btn-cancelar"
+                            [disabled]="row.salvando"
+                            (click)="cancelarEdicao(row)">
+                            <i class="fas fa-times" aria-hidden="true"></i>
+                            Cancelar
+                          </button>
+                        } @else if (!temMetasCadastradas(row)) {
+                          <button
+                            type="button"
+                            class="btn btn-salvar"
+                            [disabled]="temLinhaEmEdicao()"
+                            (click)="incluirLinha(row)">
+                            <i class="fas fa-plus" aria-hidden="true"></i>
+                            Incluir
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            class="btn btn-editar"
+                            [disabled]="temLinhaEmEdicao()"
+                            (click)="alterarLinha(row)">
+                            <i class="fas fa-pen" aria-hidden="true"></i>
+                            Alterar
+                          </button>
+                        }
+                      </td>
+                    }
+                  </tr>
+                } @empty {
+                  <tr class="no-data">
+                    <td [attr.colspan]="colspanTabela()">
+                      <i class="fas fa-inbox"></i> Nenhum vendedor com código ERP nesta unidade.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
       }
     </div>
   }

@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { FechamentoCaixaController } from './fechamento-caixa.controller';
 import { FechamentoCaixaService } from './fechamento-caixa.service';
 import { CaixaPagamentoErp } from './entities/caixa-pagamento-erp.entity';
+import { CaixaPagamentoConvenioItem } from './entities/caixa-pagamento-convenio-item.entity';
 import { CaixaItemErp } from './entities/caixa-item-erp.entity';
 import { CaixaRequisicaoPaga } from './entities/caixa-requisicao-paga.entity';
 import { CaixaRequisicaoFormula } from './entities/caixa-requisicao-formula.entity';
@@ -23,6 +24,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
   imports: [
     TypeOrmModule.forFeature([
       CaixaPagamentoErp,
+      CaixaPagamentoConvenioItem,
       CaixaItemErp,
       CaixaRequisicaoPaga,
       CaixaRequisicaoFormula,

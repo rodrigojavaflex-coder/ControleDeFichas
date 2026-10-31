@@ -7,6 +7,7 @@ import { ErrorModalService } from '../../services/error-modal.service';
 import { ComercialComissaoService } from '../../services/comercial-comissao.service';
 import {
   ComercialComissaoFaixaItem,
+  ComercialComissaoRelatorioConfigResponse,
   ComercialComissaoVendedorItem,
 } from '../../models/comercial-comissao.model';
 import { Permission, Unidade } from '../../models/usuario.model';
@@ -42,10 +43,14 @@ interface FaixaGrade {
   percentualMinimoLoja: number | null;
   codigosSetor: number[];
   codigosSetorRevendaManipulados: number[];
+  considerarConvenios: boolean;
+  considerarTaxas: boolean;
   draftIncidencia: ComercialIncidenciaComissao;
   draftMinimoLoja: string;
   draftCodigosSetor: string;
   draftCodigosSetorRevendaManipulados: string;
+  draftConsiderarConvenios: boolean;
+  draftConsiderarTaxas: boolean;
   politicaSalvando: boolean;
 }
 
@@ -80,10 +85,14 @@ export class ComercialComissoesPage implements OnInit {
       percentualMinimoLoja: null,
       codigosSetor: [],
       codigosSetorRevendaManipulados: [],
+      considerarConvenios: false,
+      considerarTaxas: false,
       draftIncidencia: ComercialIncidenciaComissao.PROPRIAS,
       draftMinimoLoja: '',
       draftCodigosSetor: '',
       draftCodigosSetorRevendaManipulados: '',
+      draftConsiderarConvenios: false,
+      draftConsiderarTaxas: false,
       politicaSalvando: false,
     },
     {
@@ -96,10 +105,14 @@ export class ComercialComissoesPage implements OnInit {
       percentualMinimoLoja: null,
       codigosSetor: [],
       codigosSetorRevendaManipulados: [],
+      considerarConvenios: false,
+      considerarTaxas: false,
       draftIncidencia: ComercialIncidenciaComissao.PROPRIAS,
       draftMinimoLoja: '',
       draftCodigosSetor: '',
       draftCodigosSetorRevendaManipulados: '',
+      draftConsiderarConvenios: false,
+      draftConsiderarTaxas: false,
       politicaSalvando: false,
     },
   ];
@@ -113,12 +126,19 @@ export class ComercialComissoesPage implements OnInit {
   mensagemResultado = '';
   draftCodigosSetorUnidade = '';
   draftCodigosSetorRevendaUnidade = '';
+  draftConsiderarConvenios = false;
+  draftConsiderarTaxas = false;
   codigosSetorUnidade: number[] = [];
   codigosSetorRevendaUnidade: number[] = [];
+  considerarConveniosUnidade = false;
+  considerarTaxasUnidade = false;
   carregandoPoliticaUnidade = false;
   politicaUnidadeSalvando = false;
   modalSetoresUnidadeAberto = false;
   modalAplicarSetoresAberto = false;
+  modalRelatorioAberto = false;
+  carregandoRelatorio = false;
+  relatorioConfig: ComercialComissaoRelatorioConfigResponse | null = null;
   modalPoliticaGrade: FaixaGrade | null = null;
   modalFaixaGrade: FaixaGrade | null = null;
   modalFaixaRow: FaixaRow | null = null;
@@ -205,7 +225,13 @@ export class ComercialComissoesPage implements OnInit {
     this.draftCodigosSetorUnidade = '';
     this.codigosSetorRevendaUnidade = [];
     this.draftCodigosSetorRevendaUnidade = '';
+    this.considerarConveniosUnidade = false;
+    this.considerarTaxasUnidade = false;
+    this.draftConsiderarConvenios = false;
+    this.draftConsiderarTaxas = false;
     this.modalSetoresUnidadeAberto = false;
+    this.modalRelatorioAberto = false;
+    this.relatorioConfig = null;
     if (!this.unidadeFiltro) return;
     this.carregarVendedores();
     this.carregarPoliticaUnidade();
@@ -589,10 +615,14 @@ export class ComercialComissoesPage implements OnInit {
       grade.percentualMinimoLoja = null;
       grade.codigosSetor = [];
       grade.codigosSetorRevendaManipulados = [];
+      grade.considerarConvenios = false;
+      grade.considerarTaxas = false;
       grade.draftIncidencia = ComercialIncidenciaComissao.PROPRIAS;
       grade.draftMinimoLoja = '';
       grade.draftCodigosSetor = '';
       grade.draftCodigosSetorRevendaManipulados = '';
+      grade.draftConsiderarConvenios = false;
+      grade.draftConsiderarTaxas = false;
       grade.politicaSalvando = false;
     }
     this.modalPoliticaGrade = null;
@@ -628,6 +658,8 @@ export class ComercialComissoesPage implements OnInit {
     this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
       this.codigosSetorRevendaUnidade,
     );
+    this.draftConsiderarConvenios = this.considerarConveniosUnidade;
+    this.draftConsiderarTaxas = this.considerarTaxasUnidade;
     this.modalSetoresUnidadeAberto = true;
   }
 
@@ -706,30 +738,50 @@ export class ComercialComissoesPage implements OnInit {
 
   rotuloSetoresUnidadeMp(): string {
     if (!this.codigosSetorUnidade.length) {
-      return 'Todos os produtos de revenda';
+      return 'Todos';
     }
-    return `Vendas do(s) setor(es) ${this.formatarCodigosSetor(this.codigosSetorUnidade)}`;
+    return this.formatarCodigosSetor(this.codigosSetorUnidade);
   }
 
   explicaSetoresUnidadeMp(): string {
     if (!this.codigosSetorUnidade.length) {
-      return 'O TOTAL de marca própria da unidade soma qualquer setor de revenda.';
+      return 'TOTAL soma qualquer setor de revenda.';
     }
-    return 'O TOTAL de marca própria da unidade soma só esses setores.';
+    return 'TOTAL de Marca própria só com estes setores.';
   }
 
   rotuloSetoresUnidadeManip(): string {
     if (!this.codigosSetorRevendaUnidade.length) {
       return 'Só requisições';
     }
-    return `Vendas do(s) setor(es) ${this.formatarCodigosSetor(this.codigosSetorRevendaUnidade)} somam em Manipulados`;
+    return this.formatarCodigosSetor(this.codigosSetorRevendaUnidade);
   }
 
   explicaSetoresUnidadeManip(): string {
     if (!this.codigosSetorRevendaUnidade.length) {
-      return 'Nenhum setor de marca própria é contabilizado como manipulado no TOTAL.';
+      return 'Nenhum setor de marca própria no Manipulados do TOTAL.';
     }
-    return 'Produtos desses setores de marca própria entram no Manipulados do TOTAL.';
+    return 'Produtos destes setores entram no Manipulados.';
+  }
+
+  rotuloFlagsUnidade(): string {
+    const partes: string[] = [];
+    if (this.considerarConveniosUnidade) partes.push('Convênios');
+    if (this.considerarTaxasUnidade) partes.push('Taxas');
+    return partes.length ? partes.join(' · ') : 'Padrão';
+  }
+
+  explicaFlagsUnidade(): string {
+    if (!this.considerarConveniosUnidade && !this.considerarTaxasUnidade) {
+      return 'Convênios e taxas fora do comercial.';
+    }
+    if (this.considerarConveniosUnidade && this.considerarTaxasUnidade) {
+      return 'Lote de convênio e taxas na base.';
+    }
+    if (this.considerarConveniosUnidade) {
+      return 'Lote CONVENIO-DINHEIRO no acompanhamento.';
+    }
+    return 'Taxa não abatida na base comercial.';
   }
 
   private restaurarDraftPolitica(grade: FaixaGrade): void {
@@ -742,10 +794,12 @@ export class ComercialComissoesPage implements OnInit {
     grade.draftCodigosSetorRevendaManipulados = this.formatarCodigosSetor(
       grade.codigosSetorRevendaManipulados,
     );
+    grade.draftConsiderarConvenios = grade.considerarConvenios;
+    grade.draftConsiderarTaxas = grade.considerarTaxas;
   }
 
   fecharModalSetoresUnidade(): void {
-    if (this.politicaUnidadeSalvando) return;
+    if (this.politicaUnidadeSalvando || this.carregandoPendentes) return;
     this.modalAplicarSetoresAberto = false;
     this.draftCodigosSetorUnidade = this.formatarCodigosSetor(
       this.codigosSetorUnidade,
@@ -753,6 +807,8 @@ export class ComercialComissoesPage implements OnInit {
     this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
       this.codigosSetorRevendaUnidade,
     );
+    this.draftConsiderarConvenios = this.considerarConveniosUnidade;
+    this.draftConsiderarTaxas = this.considerarTaxasUnidade;
     this.modalSetoresUnidadeAberto = false;
   }
 
@@ -800,6 +856,10 @@ export class ComercialComissoesPage implements OnInit {
         this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
           this.codigosSetorRevendaUnidade,
         );
+        this.considerarConveniosUnidade = res.considerarConvenios === true;
+        this.considerarTaxasUnidade = res.considerarTaxas === true;
+        this.draftConsiderarConvenios = this.considerarConveniosUnidade;
+        this.draftConsiderarTaxas = this.considerarTaxasUnidade;
       },
       error: (e) => {
         if (this.unidadeFiltro !== unidade) return;
@@ -834,6 +894,8 @@ export class ComercialComissoesPage implements OnInit {
         unidade: this.unidadeFiltro,
         codigosSetor: draft.codigosSetor,
         codigosSetorRevendaManipulados: draft.codigosSetorRevendaManipulados,
+        considerarConvenios: draft.considerarConvenios,
+        considerarTaxas: draft.considerarTaxas,
       })
       .subscribe({
         next: (res) => {
@@ -847,7 +909,11 @@ export class ComercialComissoesPage implements OnInit {
           this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
             this.codigosSetorRevendaUnidade,
           );
-          this.mensagemResultado = 'Setores da unidade salvos.';
+          this.considerarConveniosUnidade = res.considerarConvenios === true;
+          this.considerarTaxasUnidade = res.considerarTaxas === true;
+          this.draftConsiderarConvenios = this.considerarConveniosUnidade;
+          this.draftConsiderarTaxas = this.considerarTaxasUnidade;
+          this.mensagemResultado = 'Configuração de comissões da unidade salva.';
           this.modalSetoresUnidadeAberto = false;
         },
         error: (e) => {
@@ -863,6 +929,8 @@ export class ComercialComissoesPage implements OnInit {
   private obterDraftSetoresUnidade(): {
     codigosSetor: number[];
     codigosSetorRevendaManipulados: number[];
+    considerarConvenios: boolean;
+    considerarTaxas: boolean;
   } | null {
     const parsed = this.parseCodigosSetor(this.draftCodigosSetorUnidade);
     const parsedRevenda = this.parseCodigosSetor(
@@ -874,6 +942,8 @@ export class ComercialComissoesPage implements OnInit {
     return {
       codigosSetor: parsed,
       codigosSetorRevendaManipulados: parsedRevenda,
+      considerarConvenios: this.draftConsiderarConvenios === true,
+      considerarTaxas: this.draftConsiderarTaxas === true,
     };
   }
 
@@ -890,6 +960,8 @@ export class ComercialComissoesPage implements OnInit {
         somenteSemConfiguracao,
         codigosSetor: draft.codigosSetor,
         codigosSetorRevendaManipulados: draft.codigosSetorRevendaManipulados,
+        considerarConvenios: draft.considerarConvenios,
+        considerarTaxas: draft.considerarTaxas,
       })
       .subscribe({
         next: (res) => {
@@ -902,13 +974,17 @@ export class ComercialComissoesPage implements OnInit {
           this.draftCodigosSetorRevendaUnidade = this.formatarCodigosSetor(
             this.codigosSetorRevendaUnidade,
           );
+          this.considerarConveniosUnidade = draft.considerarConvenios;
+          this.considerarTaxasUnidade = draft.considerarTaxas;
+          this.draftConsiderarConvenios = draft.considerarConvenios;
+          this.draftConsiderarTaxas = draft.considerarTaxas;
           const alcance = res.somenteSemConfiguracao
             ? 'somente vendedores sem lista'
             : 'todos os vendedores';
           this.mensagemResultado =
             res.vendedoresAfetados > 0
-              ? `Setores da unidade gravados e aplicados a ${res.vendedoresAfetados} vendedor(es) (${alcance}).`
-              : `Setores da unidade gravados. Nenhum vendedor precisava de atualização (${alcance}).`;
+              ? `Configuração da unidade gravada e aplicada a ${res.vendedoresAfetados} vendedor(es) (${alcance}).`
+              : `Configuração da unidade gravada. Nenhum vendedor precisava de atualização (${alcance}).`;
           this.modalAplicarSetoresAberto = false;
           this.modalSetoresUnidadeAberto = false;
           if (this.funcionarioId) {
@@ -973,6 +1049,8 @@ export class ComercialComissoesPage implements OnInit {
         tipoBase: grade.tipoBase,
         incidencia: grade.draftIncidencia,
         percentualMinimoLoja: minimo,
+        considerarConvenios: grade.draftConsiderarConvenios === true,
+        considerarTaxas: grade.draftConsiderarTaxas === true,
         ...(grade.tipoBase === ComercialTipoBase.MARCA_PROPRIA
           ? { codigosSetor }
           : { codigosSetorRevendaManipulados }),
@@ -1000,6 +1078,8 @@ export class ComercialComissoesPage implements OnInit {
       percentualMinimoLoja: number | null;
       codigosSetor?: number[];
       codigosSetorRevendaManipulados?: number[];
+      considerarConvenios?: boolean;
+      considerarTaxas?: boolean;
     }>,
   ): void {
     for (const grade of this.grades) {
@@ -1010,6 +1090,8 @@ export class ComercialComissoesPage implements OnInit {
       grade.codigosSetor = item?.codigosSetor ?? [];
       grade.codigosSetorRevendaManipulados =
         item?.codigosSetorRevendaManipulados ?? [];
+      grade.considerarConvenios = item?.considerarConvenios === true;
+      grade.considerarTaxas = item?.considerarTaxas === true;
       grade.draftIncidencia = grade.incidencia;
       grade.draftMinimoLoja =
         grade.percentualMinimoLoja == null
@@ -1019,8 +1101,63 @@ export class ComercialComissoesPage implements OnInit {
       grade.draftCodigosSetorRevendaManipulados = this.formatarCodigosSetor(
         grade.codigosSetorRevendaManipulados,
       );
+      grade.draftConsiderarConvenios = grade.considerarConvenios;
+      grade.draftConsiderarTaxas = grade.considerarTaxas;
       grade.politicaSalvando = false;
     }
+  }
+
+  abrirRelatorioConfig(): void {
+    if (!this.unidadeFiltro || this.carregandoRelatorio) return;
+    this.fecharModalSetoresUnidade();
+    this.fecharModalPolitica();
+    this.modalRelatorioAberto = true;
+    this.carregandoRelatorio = true;
+    this.relatorioConfig = null;
+    this.service.relatorioConfig(this.unidadeFiltro).subscribe({
+      next: (res) => {
+        this.carregandoRelatorio = false;
+        this.relatorioConfig = res;
+      },
+      error: (e) => {
+        this.carregandoRelatorio = false;
+        this.modalRelatorioAberto = false;
+        this.errors.show(
+          e?.error?.message ?? 'Erro ao carregar relatório de configurações.',
+          'Comissões Comercial',
+        );
+      },
+    });
+  }
+
+  fecharRelatorioConfig(): void {
+    if (this.carregandoRelatorio) return;
+    this.modalRelatorioAberto = false;
+  }
+
+  imprimirRelatorioConfig(): void {
+    window.print();
+  }
+
+  rotuloIncidenciaRelatorio(incidencia: ComercialIncidenciaComissao): string {
+    return incidencia === ComercialIncidenciaComissao.LOJA
+      ? 'Loja'
+      : 'Próprias';
+  }
+
+  rotuloTravaRelatorio(pct: number | null): string {
+    return pct == null ? 'Sempre' : `${this.formatNumero(pct)}%`;
+  }
+
+  rotuloFlagsRelatorio(convenios: boolean, taxas: boolean): string {
+    const partes: string[] = [];
+    if (convenios) partes.push('Convênios');
+    if (taxas) partes.push('Taxas');
+    return partes.length ? partes.join(' · ') : '—';
+  }
+
+  rotuloSetoresRelatorio(codigos: number[]): string {
+    return codigos.length ? this.formatarCodigosSetor(codigos) : '—';
   }
 
   private parseCodigosSetor(texto: string): number[] | null {

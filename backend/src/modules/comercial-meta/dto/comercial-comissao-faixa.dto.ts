@@ -178,6 +178,18 @@ export class ComercialComissaoPoliticaItemDto {
       'Setores de revenda que somam em Manipulados. Vazio = só requisições.',
   })
   codigosSetorRevendaManipulados: number[];
+
+  @ApiProperty({
+    description: 'Inclui lote CONVENIO-DINHEIRO (cópia/config do vendedor).',
+    default: false,
+  })
+  considerarConvenios: boolean;
+
+  @ApiProperty({
+    description: 'Não abate taxa na base (cópia/config do vendedor).',
+    default: false,
+  })
+  considerarTaxas: boolean;
 }
 
 export class ComercialComissaoPoliticaResponseDto {
@@ -243,6 +255,24 @@ export class SalvarComercialComissaoPoliticaDto {
   @IsInt({ each: true })
   @Min(1, { each: true })
   codigosSetorRevendaManipulados?: number[] | null;
+
+  @ApiPropertyOptional({
+    description: 'Inclui lote CONVENIO-DINHEIRO no acompanhamento do vendedor.',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  considerarConvenios?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Não abate taxa na base comercial do vendedor.',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  considerarTaxas?: boolean;
 }
 
 export class FindComercialComissaoPoliticaUnidadeDto {
@@ -275,6 +305,19 @@ export class ComercialComissaoPoliticaUnidadeResponseDto {
     default: 'PERCENTUAL',
   })
   criterioRanking: 'PERCENTUAL' | 'VALOR';
+
+  @ApiProperty({
+    description:
+      'Inclui lote CONVENIO-DINHEIRO no comercial (data do recebimento).',
+    default: false,
+  })
+  considerarConvenios: boolean;
+
+  @ApiProperty({
+    description: 'Não abate taxa na base comercial (Considera Taxa = Sim).',
+    default: false,
+  })
+  considerarTaxas: boolean;
 }
 
 export class SalvarComercialComissaoPoliticaUnidadeDto {
@@ -311,6 +354,25 @@ export class SalvarComercialComissaoPoliticaUnidadeDto {
   @IsInt({ each: true })
   @Min(1, { each: true })
   codigosSetorRevendaManipulados?: number[] | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Inclui lote CONVENIO-DINHEIRO no comercial (eixo data do recebimento).',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  considerarConvenios?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Não abate taxa na base comercial.',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  considerarTaxas?: boolean;
 }
 
 export class AplicarComercialComissaoPoliticaUnidadeVendedoresDto {
@@ -355,6 +417,26 @@ export class AplicarComercialComissaoPoliticaUnidadeVendedoresDto {
   @IsInt({ each: true })
   @Min(1, { each: true })
   codigosSetorRevendaManipulados?: number[] | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Flag de convênios a gravar na unidade e copiar. Omitido = usa a da unidade.',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  considerarConvenios?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Flag de taxas a gravar na unidade e copiar. Omitido = usa a da unidade.',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  considerarTaxas?: boolean;
 }
 
 export class AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto {
@@ -377,4 +459,73 @@ export class AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto {
     description: 'true se só preencheu quem estava sem lista.',
   })
   somenteSemConfiguracao: boolean;
+}
+
+export class ComercialComissaoRelatorioConfigUnidadeDto {
+  @ApiProperty({ enum: Unidade })
+  unidade: Unidade;
+
+  @ApiProperty({ type: [Number] })
+  codigosSetor: number[];
+
+  @ApiProperty({ type: [Number] })
+  codigosSetorRevendaManipulados: number[];
+
+  @ApiProperty()
+  considerarConvenios: boolean;
+
+  @ApiProperty()
+  considerarTaxas: boolean;
+
+  @ApiProperty({ enum: ['PERCENTUAL', 'VALOR'] })
+  criterioRanking: 'PERCENTUAL' | 'VALOR';
+}
+
+export class ComercialComissaoRelatorioConfigVendedorDto {
+  @ApiProperty()
+  funcionarioId: string;
+
+  @ApiProperty()
+  nome: string;
+
+  @ApiProperty()
+  codigoVendedorErp: number;
+
+  @ApiProperty({ enum: ComercialIncidenciaComissao })
+  incidenciaManipulados: ComercialIncidenciaComissao;
+
+  @ApiPropertyOptional({ nullable: true })
+  percentualMinimoLojaManipulados: number | null;
+
+  @ApiProperty({ type: [Number] })
+  codigosSetorRevendaManipulados: number[];
+
+  @ApiProperty({ enum: ComercialIncidenciaComissao })
+  incidenciaMarcaPropria: ComercialIncidenciaComissao;
+
+  @ApiPropertyOptional({ nullable: true })
+  percentualMinimoLojaMarcaPropria: number | null;
+
+  @ApiProperty({ type: [Number] })
+  codigosSetorMarcaPropria: number[];
+
+  @ApiProperty()
+  considerarConvenios: boolean;
+
+  @ApiProperty()
+  considerarTaxas: boolean;
+
+  @ApiProperty()
+  faixasManipulados: number;
+
+  @ApiProperty()
+  faixasMarcaPropria: number;
+}
+
+export class ComercialComissaoRelatorioConfigResponseDto {
+  @ApiProperty({ type: ComercialComissaoRelatorioConfigUnidadeDto })
+  unidade: ComercialComissaoRelatorioConfigUnidadeDto;
+
+  @ApiProperty({ type: [ComercialComissaoRelatorioConfigVendedorDto] })
+  vendedores: ComercialComissaoRelatorioConfigVendedorDto[];
 }

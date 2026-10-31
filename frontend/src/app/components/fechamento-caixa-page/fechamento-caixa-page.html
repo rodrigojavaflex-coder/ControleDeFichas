@@ -131,6 +131,10 @@
       <div class="consolidado-meta">
         <span><strong>Data:</strong> {{ formatDateDisplay(consolidado.data) }}</span>
         <span><strong>Unidade:</strong> {{ consolidado.unidade }}</span>
+        <span class="consolidado-meta-total">
+          <strong>Total do dia:</strong>
+          {{ formatCurrency(totalDoDia) }}
+        </span>
       </div>
 
       <div class="forma-blocos-grid">

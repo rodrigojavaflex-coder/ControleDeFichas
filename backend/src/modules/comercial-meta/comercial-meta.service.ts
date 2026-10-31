@@ -40,6 +40,7 @@ import {
   SalvarComercialComissaoPoliticaUnidadeDto,
   AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
   AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto,
+  ComercialComissaoRelatorioConfigResponseDto,
 } from './dto/comercial-comissao-faixa.dto';
 import { ComercialComissaoPoliticaUnidade } from './entities/comercial-comissao-politica-unidade.entity';
 
@@ -405,6 +406,8 @@ export class ComercialMetaService {
                   .map(Number)
                   .filter((n) => n > 0)
               : [],
+          considerarConvenios: row?.considerarConvenios === true,
+          considerarTaxas: row?.considerarTaxas === true,
         };
       }),
     };
@@ -428,6 +431,8 @@ export class ComercialMetaService {
       dto.tipoBase === ComercialTipoBase.REQUISICAO
         ? normalizarCodigosSetor(dto.codigosSetorRevendaManipulados)
         : [];
+    const considerarConvenios = dto.considerarConvenios === true;
+    const considerarTaxas = dto.considerarTaxas === true;
     let row = await this.politicaRepo.findOne({
       where: {
         funcionario: { id: funcionario.id },
@@ -443,6 +448,8 @@ export class ComercialMetaService {
         percentualMinimoLoja: minimo,
         codigosSetor,
         codigosSetorRevendaManipulados,
+        considerarConvenios,
+        considerarTaxas,
       });
     } else {
       row.incidencia = dto.incidencia;
@@ -453,8 +460,49 @@ export class ComercialMetaService {
       if (dto.tipoBase === ComercialTipoBase.REQUISICAO) {
         row.codigosSetorRevendaManipulados = codigosSetorRevendaManipulados;
       }
+      if (dto.considerarConvenios !== undefined) {
+        row.considerarConvenios = considerarConvenios;
+      }
+      if (dto.considerarTaxas !== undefined) {
+        row.considerarTaxas = considerarTaxas;
+      }
     }
     await this.politicaRepo.save(row);
+
+    // Mantém as flags iguais nas duas bases do vendedor.
+    if (
+      dto.considerarConvenios !== undefined ||
+      dto.considerarTaxas !== undefined
+    ) {
+      const outraBase =
+        dto.tipoBase === ComercialTipoBase.REQUISICAO
+          ? ComercialTipoBase.MARCA_PROPRIA
+          : ComercialTipoBase.REQUISICAO;
+      let outra = await this.politicaRepo.findOne({
+        where: {
+          funcionario: { id: funcionario.id },
+          tipoBase: outraBase,
+        },
+        relations: ['funcionario'],
+      });
+      if (!outra) {
+        outra = this.politicaRepo.create({
+          funcionario,
+          tipoBase: outraBase,
+          incidencia: ComercialIncidenciaComissao.PROPRIAS,
+          percentualMinimoLoja: null,
+          codigosSetor: [],
+          codigosSetorRevendaManipulados: [],
+          considerarConvenios: row.considerarConvenios === true,
+          considerarTaxas: row.considerarTaxas === true,
+        });
+      } else {
+        outra.considerarConvenios = row.considerarConvenios === true;
+        outra.considerarTaxas = row.considerarTaxas === true;
+      }
+      await this.politicaRepo.save(outra);
+    }
+
     return this.listarPolitica(usuario, funcionario.id);
   }
 
@@ -474,6 +522,8 @@ export class ComercialMetaService {
         .filter((n) => Number.isInteger(n) && n > 0),
       criterioRanking:
         row?.criterioRanking ?? ComercialCriterioRanking.PERCENTUAL,
+      considerarConvenios: row?.considerarConvenios === true,
+      considerarTaxas: row?.considerarTaxas === true,
     };
   }
 
@@ -494,10 +544,18 @@ export class ComercialMetaService {
         unidade: dto.unidade,
         codigosSetor,
         codigosSetorRevendaManipulados,
+        considerarConvenios: dto.considerarConvenios === true,
+        considerarTaxas: dto.considerarTaxas === true,
       });
     } else {
       row.codigosSetor = codigosSetor;
       row.codigosSetorRevendaManipulados = codigosSetorRevendaManipulados;
+      if (dto.considerarConvenios !== undefined) {
+        row.considerarConvenios = dto.considerarConvenios === true;
+      }
+      if (dto.considerarTaxas !== undefined) {
+        row.considerarTaxas = dto.considerarTaxas === true;
+      }
     }
     if (!row.criterioRanking) {
       row.criterioRanking = ComercialCriterioRanking.PERCENTUAL;
@@ -521,6 +579,14 @@ export class ComercialMetaService {
       dto.codigosSetorRevendaManipulados !== undefined
         ? normalizarCodigosSetor(dto.codigosSetorRevendaManipulados)
         : salva.codigosSetorRevendaManipulados;
+    const considerarConvenios =
+      dto.considerarConvenios !== undefined
+        ? dto.considerarConvenios === true
+        : salva.considerarConvenios === true;
+    const considerarTaxas =
+      dto.considerarTaxas !== undefined
+        ? dto.considerarTaxas === true
+        : salva.considerarTaxas === true;
 
     const vinculados = await this.listarVinculados(dto.unidade);
     let vendedoresAfetados = 0;
@@ -539,11 +605,15 @@ export class ComercialMetaService {
           codigosSetor,
           codigosSetorRevendaManipulados,
           criterioRanking: ComercialCriterioRanking.PERCENTUAL,
+          considerarConvenios,
+          considerarTaxas,
         });
       } else {
         unidadeRow.codigosSetor = codigosSetor;
         unidadeRow.codigosSetorRevendaManipulados =
           codigosSetorRevendaManipulados;
+        unidadeRow.considerarConvenios = considerarConvenios;
+        unidadeRow.considerarTaxas = considerarTaxas;
         if (!unidadeRow.criterioRanking) {
           unidadeRow.criterioRanking = ComercialCriterioRanking.PERCENTUAL;
         }
@@ -585,10 +655,14 @@ export class ComercialMetaService {
                 percentualMinimoLoja: null,
                 codigosSetor,
                 codigosSetorRevendaManipulados: [],
+                considerarConvenios,
+                considerarTaxas,
               }),
             );
           } else {
             mp.codigosSetor = codigosSetor;
+            mp.considerarConvenios = considerarConvenios;
+            mp.considerarTaxas = considerarTaxas;
             paraSalvar.push(mp);
           }
           funcionariosAfetados.add(funcionario.id);
@@ -604,13 +678,30 @@ export class ComercialMetaService {
                 percentualMinimoLoja: null,
                 codigosSetor: [],
                 codigosSetorRevendaManipulados,
+                considerarConvenios,
+                considerarTaxas,
               }),
             );
           } else {
             req.codigosSetorRevendaManipulados = codigosSetorRevendaManipulados;
+            req.considerarConvenios = considerarConvenios;
+            req.considerarTaxas = considerarTaxas;
             paraSalvar.push(req);
           }
           funcionariosAfetados.add(funcionario.id);
+        }
+
+        // Se só uma base entrou (somenteSem), ainda assim alinha flags na outra.
+        if (!somenteSem) {
+          continue;
+        }
+        if (funcionariosAfetados.has(funcionario.id)) {
+          for (const pol of [mp, req]) {
+            if (!pol || paraSalvar.includes(pol)) continue;
+            pol.considerarConvenios = considerarConvenios;
+            pol.considerarTaxas = considerarTaxas;
+            paraSalvar.push(pol);
+          }
         }
       }
 
@@ -622,7 +713,7 @@ export class ComercialMetaService {
     });
 
     this.logger.log(
-      `Setores da unidade ${dto.unidade} aplicados aos vendedores (${somenteSem ? 'somente sem lista' : 'todos'}): ${vendedoresAfetados} vendedor(es), ${politicasAtualizadas} política(s) de ${vinculados.length} vinculado(s).`,
+      `Política da unidade ${dto.unidade} aplicada aos vendedores (${somenteSem ? 'somente sem lista' : 'todos'}): ${vendedoresAfetados} vendedor(es), ${politicasAtualizadas} política(s) de ${vinculados.length} vinculado(s).`,
     );
 
     return {
@@ -630,6 +721,107 @@ export class ComercialMetaService {
       vendedoresAfetados,
       politicasAtualizadas,
       somenteSemConfiguracao: somenteSem,
+    };
+  }
+
+  async relatorioConfiguracao(
+    usuario: Usuario,
+    unidade: Unidade,
+  ): Promise<ComercialComissaoRelatorioConfigResponseDto> {
+    assertUnidadeFolha(usuario, unidade);
+    const politicaUnidade = await this.listarPoliticaUnidade(usuario, unidade);
+    const vinculados = await this.listarVinculados(unidade);
+    if (!vinculados.length) {
+      return {
+        unidade: {
+          unidade,
+          codigosSetor: politicaUnidade.codigosSetor,
+          codigosSetorRevendaManipulados:
+            politicaUnidade.codigosSetorRevendaManipulados,
+          considerarConvenios: politicaUnidade.considerarConvenios === true,
+          considerarTaxas: politicaUnidade.considerarTaxas === true,
+          criterioRanking: politicaUnidade.criterioRanking ?? 'PERCENTUAL',
+        },
+        vendedores: [],
+      };
+    }
+
+    const ids = vinculados.map((f) => f.id);
+    const [politicas, faixas] = await Promise.all([
+      this.politicaRepo.find({
+        where: { funcionario: { id: In(ids) } },
+        relations: ['funcionario'],
+      }),
+      this.faixaRepo.find({
+        where: { funcionario: { id: In(ids) } },
+        relations: ['funcionario'],
+      }),
+    ]);
+
+    const polPorChave = new Map(
+      politicas.map((p) => [`${p.funcionario.id}|${p.tipoBase}`, p]),
+    );
+    const faixaCount = new Map<string, { req: number; mp: number }>();
+    for (const f of faixas) {
+      const id = f.funcionario.id;
+      const atual = faixaCount.get(id) ?? { req: 0, mp: 0 };
+      if (f.tipoBase === ComercialTipoBase.REQUISICAO) {
+        atual.req += 1;
+      } else {
+        atual.mp += 1;
+      }
+      faixaCount.set(id, atual);
+    }
+
+    const vendedores = vinculados.map((f) => {
+      const req = polPorChave.get(
+        `${f.id}|${ComercialTipoBase.REQUISICAO}`,
+      );
+      const mp = polPorChave.get(
+        `${f.id}|${ComercialTipoBase.MARCA_PROPRIA}`,
+      );
+      const flags = req ?? mp;
+      const contagem = faixaCount.get(f.id) ?? { req: 0, mp: 0 };
+      return {
+        funcionarioId: f.id,
+        nome: f.nome,
+        codigoVendedorErp: f.codigoVendedorErp!,
+        incidenciaManipulados:
+          req?.incidencia ?? ComercialIncidenciaComissao.PROPRIAS,
+        percentualMinimoLojaManipulados:
+          req?.percentualMinimoLoja == null
+            ? null
+            : Number(req.percentualMinimoLoja),
+        codigosSetorRevendaManipulados: (req?.codigosSetorRevendaManipulados ?? [])
+          .map(Number)
+          .filter((n) => Number.isInteger(n) && n > 0),
+        incidenciaMarcaPropria:
+          mp?.incidencia ?? ComercialIncidenciaComissao.PROPRIAS,
+        percentualMinimoLojaMarcaPropria:
+          mp?.percentualMinimoLoja == null
+            ? null
+            : Number(mp.percentualMinimoLoja),
+        codigosSetorMarcaPropria: (mp?.codigosSetor ?? [])
+          .map(Number)
+          .filter((n) => Number.isInteger(n) && n > 0),
+        considerarConvenios: flags?.considerarConvenios === true,
+        considerarTaxas: flags?.considerarTaxas === true,
+        faixasManipulados: contagem.req,
+        faixasMarcaPropria: contagem.mp,
+      };
+    });
+
+    return {
+      unidade: {
+        unidade,
+        codigosSetor: politicaUnidade.codigosSetor,
+        codigosSetorRevendaManipulados:
+          politicaUnidade.codigosSetorRevendaManipulados,
+        considerarConvenios: politicaUnidade.considerarConvenios === true,
+        considerarTaxas: politicaUnidade.considerarTaxas === true,
+        criterioRanking: politicaUnidade.criterioRanking ?? 'PERCENTUAL',
+      },
+      vendedores,
     };
   }
 

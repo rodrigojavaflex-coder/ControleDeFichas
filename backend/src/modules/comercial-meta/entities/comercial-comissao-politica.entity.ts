@@ -75,4 +75,20 @@ export class ComercialComissaoPolitica extends BaseEntity {
     default: '{}',
   })
   codigosSetorRevendaManipulados: number[];
+
+  @ApiProperty({
+    description:
+      'Cópia da unidade: inclui lote CONVENIO-DINHEIRO no acompanhamento (eixo data do recebimento).',
+    default: false,
+  })
+  @Column({ type: 'boolean', default: false })
+  considerarConvenios: boolean;
+
+  @ApiProperty({
+    description:
+      'Cópia da unidade: não abate valor_taxa na base comercial (Considera Taxa = Sim).',
+    default: false,
+  })
+  @Column({ type: 'boolean', default: false })
+  considerarTaxas: boolean;
 }

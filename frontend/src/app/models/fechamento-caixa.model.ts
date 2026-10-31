@@ -111,6 +111,21 @@ export interface CaixaBaixaDetalhe {
   dataBaixa: string;
 }
 
+export interface CaixaErpConvenioLoteItem {
+  tipoItem: 'REQUISICAO' | 'PRODUTO';
+  numeroRequisicao?: number | null;
+  numeroCupomOrigem?: number | null;
+  /** Nome do produto/revenda (linhas PRODUTO). */
+  descricaoProduto?: string | null;
+  codigoCliente?: number | null;
+  clienteNome?: string | null;
+  codigoVendedor?: number | null;
+  nomeVendedor?: string | null;
+  codigoSetor?: number | null;
+  valor: number;
+  dataOrigem?: string | null;
+}
+
 export interface CaixaErpPagamentoDetalhe {
   numeroCupom: number;
   numeroRequisicao?: number | null;
@@ -125,6 +140,8 @@ export interface CaixaErpPagamentoDetalhe {
   codigoCliente?: number | null;
   clienteNome?: string | null;
   nomeOperadorCaixa?: string | null;
+  /** Composição do lote CONVENIO-DINHEIRO (não altera o total do pagamento). */
+  loteConvenio?: CaixaErpConvenioLoteItem[];
 }
 
 export interface CaixaErpCortesiaDetalhe {

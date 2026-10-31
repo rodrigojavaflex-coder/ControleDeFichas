@@ -53,4 +53,20 @@ export class ComercialComissaoPoliticaUnidade extends BaseEntity {
     default: ComercialCriterioRanking.PERCENTUAL,
   })
   criterioRanking: ComercialCriterioRanking;
+
+  @ApiProperty({
+    description:
+      'Se true, inclui no comercial as vendas do lote CONVENIO-DINHEIRO (eixo data do recebimento).',
+    default: false,
+  })
+  @Column({ type: 'boolean', default: false })
+  considerarConvenios: boolean;
+
+  @ApiProperty({
+    description:
+      'Se true, a base comercial não abate valor_taxa (Considera Taxa = Sim).',
+    default: false,
+  })
+  @Column({ type: 'boolean', default: false })
+  considerarTaxas: boolean;
 }

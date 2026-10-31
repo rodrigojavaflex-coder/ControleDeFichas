@@ -248,49 +248,75 @@ export class ComercialAcompanhamentoService {
     const setoresUnidadeRevenda = this.normalizarCodigosSetor(
       politicaUnidade?.codigosSetorRevendaManipulados,
     );
+    const considerarTaxas = politicaUnidade?.considerarTaxas === true;
+    const considerarConvenios = politicaUnidade?.considerarConvenios === true;
 
-    const [reqMap, rejMap, vinculados, volumeLoja, terceirosLoja] =
-      await Promise.all([
-        tetoLoja
-          ? this.buscarRecebidoRequisicao(
-              unidade,
-              periodo.dataInicial,
-              tetoLoja,
-            )
-          : Promise.resolve(new Map() as MapaMovimento),
-        this.buscarRejeitado(unidade, periodo.dataInicial, periodo.dataFinal),
-        this.funcionarioRepo
-          .createQueryBuilder('f')
-          .select(['f.id', 'f.codigoVendedorErp'])
-          .where('f.unidade = :unidade', { unidade })
-          .andWhere('f.codigoVendedorErp IS NOT NULL')
-          .andWhere('f.codigoVendedorErp > 0')
-          .getMany(),
-        tetoLoja
-          ? this.buscarVolumeLoja(
-              unidade,
-              periodo.dataInicial,
-              tetoLoja,
-              setoresUnidade,
-              setoresUnidadeRevenda,
-            )
-          : Promise.resolve({
-              marcaPropria: {
-                valor: 0,
-                qtd: 0,
-                valorSetores: 0,
-                qtdSetores: 0,
-              },
-              revendaManipulados: { valor: 0, qtd: 0 },
-            }),
-        tetoLoja
-          ? this.buscarRecebidoTerceiros(
-              unidade,
-              periodo.dataInicial,
-              tetoLoja,
-            )
-          : Promise.resolve({ valor: 0, qtd: 0 }),
-      ]);
+    const [
+      reqMapBase,
+      rejMap,
+      vinculados,
+      volumeLoja,
+      terceirosLoja,
+      convReqMap,
+      convProdMap,
+    ] = await Promise.all([
+      tetoLoja
+        ? this.buscarRecebidoRequisicao(
+            unidade,
+            periodo.dataInicial,
+            tetoLoja,
+            considerarTaxas,
+          )
+        : Promise.resolve(new Map() as MapaMovimento),
+      this.buscarRejeitado(unidade, periodo.dataInicial, periodo.dataFinal),
+      this.funcionarioRepo
+        .createQueryBuilder('f')
+        .select(['f.id', 'f.codigoVendedorErp'])
+        .where('f.unidade = :unidade', { unidade })
+        .andWhere('f.codigoVendedorErp IS NOT NULL')
+        .andWhere('f.codigoVendedorErp > 0')
+        .getMany(),
+      tetoLoja
+        ? this.buscarVolumeLoja(
+            unidade,
+            periodo.dataInicial,
+            tetoLoja,
+            setoresUnidade,
+            setoresUnidadeRevenda,
+          )
+        : Promise.resolve({
+            marcaPropria: {
+              valor: 0,
+              qtd: 0,
+              valorSetores: 0,
+              qtdSetores: 0,
+            },
+            revendaManipulados: { valor: 0, qtd: 0 },
+          }),
+      tetoLoja
+        ? this.buscarRecebidoTerceiros(
+            unidade,
+            periodo.dataInicial,
+            tetoLoja,
+          )
+        : Promise.resolve({ valor: 0, qtd: 0 }),
+      tetoLoja && considerarConvenios
+        ? this.buscarRecebidoConvenioRequisicao(
+            unidade,
+            periodo.dataInicial,
+            tetoLoja,
+          )
+        : Promise.resolve(new Map() as MapaMovimento),
+      tetoLoja && considerarConvenios
+        ? this.buscarRecebidoConvenioProdutos(
+            unidade,
+            periodo.dataInicial,
+            tetoLoja,
+          )
+        : Promise.resolve(new Map() as MapaMovimento),
+    ]);
+
+    const reqMap = this.mesclarMapaMovimento(reqMapBase, convReqMap);
 
     let puraLoja = 0;
     let qtdReq = 0;
@@ -306,7 +332,15 @@ export class ComercialAcompanhamentoService {
     }
     puraLoja = this.round2(puraLoja);
 
-    const lojaRecebidoMp = volumeLoja.marcaPropria;
+    const convMpLoja = considerarConvenios
+      ? this.somarMapa(convProdMap)
+      : { valor: 0, qtd: 0, qtdFormulas: 0 };
+    const lojaRecebidoMp = {
+      valor: this.round2(volumeLoja.marcaPropria.valor + convMpLoja.valor),
+      qtd: volumeLoja.marcaPropria.qtd + convMpLoja.qtd,
+      valorSetores: volumeLoja.marcaPropria.valorSetores,
+      qtdSetores: volumeLoja.marcaPropria.qtdSetores,
+    };
     const lojaRejeitado = this.somarMapa(rejMap);
     const lojaMpTotal = this.round2(lojaRecebidoMp.valor);
     const lojaMpQtdTotal = lojaRecebidoMp.qtd;
@@ -346,6 +380,8 @@ export class ComercialAcompanhamentoService {
       valorRejeitado: lojaRejeitado.valor,
       quantidadeRejeitado: lojaRejeitado.qtd,
       quantidadeVendedores: vinculados.length,
+      considerarConvenios,
+      considerarTaxas,
       valorRecebidoHojeRequisicao: null,
       valorRecebidoHojeMarcaPropria: null,
     };
@@ -572,6 +608,8 @@ export class ComercialAcompanhamentoService {
       diasRealizados: totais.diasRealizados,
       dataUltimoCaixaFechado: totais.dataUltimoCaixaFechado,
       mesAberto: totais.mesAberto,
+      considerarConvenios: totais.considerarConvenios === true,
+      considerarTaxas: totais.considerarTaxas === true,
     };
   }
 
@@ -658,10 +696,12 @@ export class ComercialAcompanhamentoService {
     const setoresUnidadeRevenda = this.normalizarCodigosSetor(
       politicaUnidade?.codigosSetorRevendaManipulados,
     );
+    const considerarTaxas = politicaUnidade?.considerarTaxas === true;
+    const considerarConvenios = politicaUnidade?.considerarConvenios === true;
 
     const [
-      reqMap,
-      mpMap,
+      reqMapBase,
+      mpMapBase,
       rejMap,
       vinculados,
       volumeLoja,
@@ -669,6 +709,8 @@ export class ComercialAcompanhamentoService {
       politicasVend,
       terceirosLoja,
       terceirosPorCodigo,
+      convReqMap,
+      convProdMap,
     ] =
       await Promise.all([
         tetoLoja
@@ -676,6 +718,7 @@ export class ComercialAcompanhamentoService {
               dto.unidade,
               periodo.dataInicial,
               tetoLoja,
+              considerarTaxas,
             )
           : Promise.resolve(new Map() as MapaMovimento),
         tetoLoja
@@ -742,7 +785,24 @@ export class ComercialAcompanhamentoService {
               tetoLoja,
             )
           : Promise.resolve(new Map() as Map<number, { valor: number; qtd: number }>),
+        tetoLoja && considerarConvenios
+          ? this.buscarRecebidoConvenioRequisicao(
+              dto.unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve(new Map() as MapaMovimento),
+        tetoLoja && considerarConvenios
+          ? this.buscarRecebidoConvenioProdutos(
+              dto.unidade,
+              periodo.dataInicial,
+              tetoLoja,
+            )
+          : Promise.resolve(new Map() as MapaMovimento),
       ]);
+
+    const reqMap = this.mesclarMapaMovimento(reqMapBase, convReqMap);
+    const mpMap = this.mesclarMapaMovimento(mpMapBase, convProdMap);
 
     const setoresRevendaPorCodigo = new Map<number, number[]>();
     const setoresMpPorCodigo = new Map<number, number[]>();
@@ -785,7 +845,15 @@ export class ComercialAcompanhamentoService {
       );
 
     const totais = this.somarTotais(todosItens);
-    const lojaRecebidoMp = volumeLoja.marcaPropria;
+    const convMpLoja = considerarConvenios
+      ? this.somarMapa(convProdMap)
+      : { valor: 0, qtd: 0, qtdFormulas: 0 };
+    const lojaRecebidoMp = {
+      valor: this.round2(volumeLoja.marcaPropria.valor + convMpLoja.valor),
+      qtd: volumeLoja.marcaPropria.qtd + convMpLoja.qtd,
+      valorSetores: volumeLoja.marcaPropria.valorSetores,
+      qtdSetores: volumeLoja.marcaPropria.qtdSetores,
+    };
     const lojaRejeitado = this.somarMapa(rejMap);
     const lojaMpTotal = this.round2(lojaRecebidoMp.valor);
     const lojaMpQtdTotal = lojaRecebidoMp.qtd;
@@ -820,6 +888,8 @@ export class ComercialAcompanhamentoService {
     totais.valorComissaoBaseMarcaPropria = lojaComissaoMp;
     totais.valorRejeitado = lojaRejeitado.valor;
     totais.quantidadeRejeitado = lojaRejeitado.qtd;
+    totais.considerarConvenios = considerarConvenios;
+    totais.considerarTaxas = considerarTaxas;
 
     const mapaVazio = () => new Map() as MapaMovimento;
     const tercVazio = () =>
@@ -833,14 +903,16 @@ export class ComercialAcompanhamentoService {
     const incluirHoje = tetoLoja != null && tetoLoja === hoje;
     if (incluirHoje) {
       const [
-        reqHojeMap,
-        mpHojeMap,
+        reqHojeBase,
+        mpHojeBase,
         revendaHojeMap,
         volumeLojaHoje,
         tercLojaHoje,
         tercPorCodHoje,
+        convReqHoje,
+        convProdHoje,
       ] = await Promise.all([
-        this.buscarRecebidoRequisicaoHoje(dto.unidade, hoje),
+        this.buscarRecebidoRequisicaoHoje(dto.unidade, hoje, considerarTaxas),
         this.buscarRecebidoMarcaPropria(dto.unidade, hoje, hoje),
         this.buscarRecebidoRevendaManipulados(dto.unidade, hoje, hoje),
         this.buscarVolumeLoja(
@@ -852,7 +924,15 @@ export class ComercialAcompanhamentoService {
         ),
         this.buscarRecebidoTerceiros(dto.unidade, hoje, hoje),
         this.buscarRecebidoTerceirosPorVendedor(dto.unidade, hoje, hoje),
+        considerarConvenios
+          ? this.buscarRecebidoConvenioRequisicao(dto.unidade, hoje, hoje)
+          : Promise.resolve(new Map() as MapaMovimento),
+        considerarConvenios
+          ? this.buscarRecebidoConvenioProdutos(dto.unidade, hoje, hoje)
+          : Promise.resolve(new Map() as MapaMovimento),
       ]);
+      const reqHojeMap = this.mesclarMapaMovimento(reqHojeBase, convReqHoje);
+      const mpHojeMap = this.mesclarMapaMovimento(mpHojeBase, convProdHoje);
       reqHoje = reqHojeMap;
       mpHoje = mpHojeMap;
       revendaHoje = revendaHojeMap;
@@ -869,7 +949,12 @@ export class ComercialAcompanhamentoService {
           volumeLojaHoje.revendaManipulados.valor +
           tercLojaHoje.valor,
       );
-      lojaRecebidoHojeMp = this.round2(volumeLojaHoje.marcaPropria.valor);
+      const convMpHoje = considerarConvenios
+        ? this.somarMapa(convProdHoje)
+        : { valor: 0, qtd: 0, qtdFormulas: 0 };
+      lojaRecebidoHojeMp = this.round2(
+        volumeLojaHoje.marcaPropria.valor + convMpHoje.valor,
+      );
       totais.valorRecebidoHojeRequisicao = lojaRecebidoHojeReq;
       totais.valorRecebidoHojeMarcaPropria = lojaRecebidoHojeMp;
     } else {
@@ -964,6 +1049,11 @@ export class ComercialAcompanhamentoService {
     const setoresRevenda = (politicaReq?.codigosSetorRevendaManipulados ?? [])
       .map((n) => Number(n))
       .filter((n) => Number.isInteger(n) && n > 0);
+    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
+      where: { unidade: dto.unidade },
+    });
+    const considerarTaxas = politicaUnidade?.considerarTaxas === true;
+    const considerarConvenios = politicaUnidade?.considerarConvenios === true;
     const paramsMp = [
       dto.unidade,
       janela.dataInicial,
@@ -971,7 +1061,8 @@ export class ComercialAcompanhamentoService {
       codigo,
     ];
 
-    const [reqRows, mpRows, rejRows, tercRows, setorRows] = await Promise.all([
+    const [reqRowsBase, mpRowsBase, rejRows, tercRows, setorRows, convReqRows, convProdRows] =
+      await Promise.all([
       tetoManip
         ? (this.dataSource.query(
             `
@@ -988,11 +1079,16 @@ export class ComercialAcompanhamentoService {
               GREATEST(
                 0,
                 LEAST(
-                  SUM(i.valor_liquido_item - COALESCE(i.valor_taxa, 0)),
+                  SUM(
+                    i.valor_liquido_item
+                    - CASE WHEN $5::boolean THEN 0 ELSE COALESCE(i.valor_taxa, 0) END
+                  ),
                   MAX(
                     COALESCE(
-                      c.valor_pago_requisicao - COALESCE(c.valor_taxa, 0),
-                      i.valor_liquido_item - COALESCE(i.valor_taxa, 0)
+                      c.valor_pago_requisicao
+                        - CASE WHEN $5::boolean THEN 0 ELSE COALESCE(c.valor_taxa, 0) END,
+                      i.valor_liquido_item
+                        - CASE WHEN $5::boolean THEN 0 ELSE COALESCE(i.valor_taxa, 0) END
                     )
                   )
                 )
@@ -1007,6 +1103,7 @@ export class ComercialAcompanhamentoService {
               AND i.data_operacao <= $3
               AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND c.codigo_vendedor = $4
+              AND ${this.sqlExcluiReqNoLoteConvenio('i')}
             GROUP BY i.numero_cupom, i.numero_requisicao
             UNION ALL
             SELECT
@@ -1015,7 +1112,8 @@ export class ComercialAcompanhamentoService {
               c.numero_requisicao,
               GREATEST(
                 0,
-                COALESCE(c.valor_pago_requisicao, 0) - COALESCE(c.valor_taxa, 0)
+                COALESCE(c.valor_pago_requisicao, 0)
+                  - CASE WHEN $5::boolean THEN 0 ELSE COALESCE(c.valor_taxa, 0) END
               ) AS valor
             FROM caixa_requisicoes_pagas c
             WHERE c.unidade = $1
@@ -1024,10 +1122,11 @@ export class ComercialAcompanhamentoService {
               AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND c.codigo_vendedor = $4
               AND ${this.sqlPagaSemItemComPagamento('c')}
+              AND ${this.sqlExcluiReqNoLoteConvenio('c')}
           ) t
           ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
         `,
-            [dto.unidade, janela.dataInicial, tetoManip, codigo],
+            [dto.unidade, janela.dataInicial, tetoManip, codigo, considerarTaxas],
           ) as Promise<
             Array<{
               data: string | Date;
@@ -1179,7 +1278,30 @@ export class ComercialAcompanhamentoService {
             }>
           >)
         : Promise.resolve([]),
+      tetoManip && considerarConvenios
+        ? this.buscarDetalheConvenioRequisicao(
+            dto.unidade,
+            janela.dataInicial,
+            tetoManip,
+            codigo,
+          )
+        : Promise.resolve([]),
+      tetoManip && considerarConvenios
+        ? this.buscarDetalheConvenioProdutos(
+            dto.unidade,
+            janela.dataInicial,
+            tetoManip,
+            codigo,
+          )
+        : Promise.resolve([]),
     ]);
+
+    const reqRows = [...reqRowsBase, ...convReqRows].sort((a, b) =>
+      this.toYmd(a.data).localeCompare(this.toYmd(b.data)),
+    );
+    const mpRows = [...mpRowsBase, ...convProdRows].sort((a, b) =>
+      this.toYmd(a.data).localeCompare(this.toYmd(b.data)),
+    );
 
     return {
       funcionarioId: funcionario.id,
@@ -1239,6 +1361,8 @@ export class ComercialAcompanhamentoService {
     const setoresRevenda = this.normalizarCodigosSetor(
       politicaUnidade?.codigosSetorRevendaManipulados,
     );
+    const considerarTaxas = politicaUnidade?.considerarTaxas === true;
+    const considerarConvenios = politicaUnidade?.considerarConvenios === true;
     const vinculoSql = `
       c.codigo_vendedor IN (
         SELECT f."codigoVendedorErp"
@@ -1254,7 +1378,8 @@ export class ComercialAcompanhamentoService {
       tetoManip ?? janela.dataFinal,
     ];
 
-    const [reqRows, mpRows, rejRows, tercRows, setorRows] = await Promise.all([
+    const [reqRowsBase, mpRowsBase, rejRows, tercRows, setorRows, convReqRows, convProdRows] =
+      await Promise.all([
       tetoManip
         ? (this.dataSource.query(
             `
@@ -1271,11 +1396,16 @@ export class ComercialAcompanhamentoService {
               GREATEST(
                 0,
                 LEAST(
-                  SUM(i.valor_liquido_item - COALESCE(i.valor_taxa, 0)),
+                  SUM(
+                    i.valor_liquido_item
+                    - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(i.valor_taxa, 0) END
+                  ),
                   MAX(
                     COALESCE(
-                      c.valor_pago_requisicao - COALESCE(c.valor_taxa, 0),
-                      i.valor_liquido_item - COALESCE(i.valor_taxa, 0)
+                      c.valor_pago_requisicao
+                        - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(c.valor_taxa, 0) END,
+                      i.valor_liquido_item
+                        - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(i.valor_taxa, 0) END
                     )
                   )
                 )
@@ -1290,6 +1420,7 @@ export class ComercialAcompanhamentoService {
               AND i.data_operacao <= $3
               AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND ${vinculoSql}
+              AND ${this.sqlExcluiReqNoLoteConvenio('i')}
             GROUP BY i.numero_cupom, i.numero_requisicao
             UNION ALL
             SELECT
@@ -1298,7 +1429,8 @@ export class ComercialAcompanhamentoService {
               c.numero_requisicao,
               GREATEST(
                 0,
-                COALESCE(c.valor_pago_requisicao, 0) - COALESCE(c.valor_taxa, 0)
+                COALESCE(c.valor_pago_requisicao, 0)
+                  - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(c.valor_taxa, 0) END
               ) AS valor
             FROM caixa_requisicoes_pagas c
             WHERE c.unidade = $1
@@ -1307,10 +1439,11 @@ export class ComercialAcompanhamentoService {
               AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND ${vinculoSql}
               AND ${this.sqlPagaSemItemComPagamento('c')}
+              AND ${this.sqlExcluiReqNoLoteConvenio('c')}
           ) t
           ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
         `,
-            [dto.unidade, janela.dataInicial, tetoManip],
+            [dto.unidade, janela.dataInicial, tetoManip, considerarTaxas],
           ) as Promise<
             Array<{
               data: string | Date;
@@ -1447,7 +1580,28 @@ export class ComercialAcompanhamentoService {
             }>
           >)
         : Promise.resolve([]),
+      tetoManip && considerarConvenios
+        ? this.buscarDetalheConvenioRequisicao(
+            dto.unidade,
+            janela.dataInicial,
+            tetoManip,
+          )
+        : Promise.resolve([]),
+      tetoManip && considerarConvenios
+        ? this.buscarDetalheConvenioProdutos(
+            dto.unidade,
+            janela.dataInicial,
+            tetoManip,
+          )
+        : Promise.resolve([]),
     ]);
+
+    const reqRows = [...reqRowsBase, ...convReqRows].sort((a, b) =>
+      this.toYmd(a.data).localeCompare(this.toYmd(b.data)),
+    );
+    const mpRows = [...mpRowsBase, ...convProdRows].sort((a, b) =>
+      this.toYmd(a.data).localeCompare(this.toYmd(b.data)),
+    );
 
     return {
       funcionarioId: null,
@@ -1629,7 +1783,9 @@ export class ComercialAcompanhamentoService {
     unidade: Unidade,
     dataInicial: string,
     dataFinal: string,
+    considerarTaxas = false,
   ): Promise<MapaMovimento> {
+    // $4 = considerarTaxas; trava: exclui reqs já no lote CONVENIO (anti-duplicidade).
     const sql = `
       WITH por_req AS (
         SELECT
@@ -1640,11 +1796,16 @@ export class ComercialAcompanhamentoService {
           GREATEST(
             0,
             LEAST(
-              SUM(i.valor_liquido_item - COALESCE(i.valor_taxa, 0)),
+              SUM(
+                i.valor_liquido_item
+                - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(i.valor_taxa, 0) END
+              ),
               MAX(
                 COALESCE(
-                  c.valor_pago_requisicao - COALESCE(c.valor_taxa, 0),
-                  i.valor_liquido_item - COALESCE(i.valor_taxa, 0)
+                  c.valor_pago_requisicao
+                    - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(c.valor_taxa, 0) END,
+                  i.valor_liquido_item
+                    - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(i.valor_taxa, 0) END
                 )
               )
             )
@@ -1664,6 +1825,7 @@ export class ComercialAcompanhamentoService {
           AND COALESCE(c.tipo_requisicao, '') <> 'C'
           AND c.codigo_vendedor IS NOT NULL
           AND c.codigo_vendedor > 0
+          AND ${this.sqlExcluiReqNoLoteConvenio('i')}
         GROUP BY c.codigo_vendedor, i.numero_cupom, i.numero_requisicao
         UNION ALL
         SELECT
@@ -1674,7 +1836,7 @@ export class ComercialAcompanhamentoService {
           GREATEST(
             0,
             COALESCE(MAX(c.valor_pago_requisicao), 0)
-              - COALESCE(MAX(c.valor_taxa), 0)
+              - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(MAX(c.valor_taxa), 0) END
           ) AS valor_recebido,
           GREATEST(COALESCE(MAX(c.quantidade_formulas), 0), 1)::int AS qtd_formulas
         FROM caixa_requisicoes_pagas c
@@ -1685,6 +1847,7 @@ export class ComercialAcompanhamentoService {
           AND c.codigo_vendedor IS NOT NULL
           AND c.codigo_vendedor > 0
           AND ${this.sqlPagaSemItemComPagamento('c')}
+          AND ${this.sqlExcluiReqNoLoteConvenio('c')}
         GROUP BY c.codigo_vendedor, c.numero_cupom, c.numero_requisicao
       )
       SELECT codigo_vendedor,
@@ -1699,8 +1862,190 @@ export class ComercialAcompanhamentoService {
       unidade,
       dataInicial,
       dataFinal,
+      considerarTaxas,
     ])) as MovimentoRow[];
     return this.mapMovimentoRows(rows);
+  }
+
+  /**
+   * Lote CONVENIO-DINHEIRO (reqs): eixo data_recebimento.
+   * Valor = linha do lote (VRLIQ), nunca o VRPAG repetido do FC17110.
+   */
+  private async buscarRecebidoConvenioRequisicao(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinal: string,
+  ): Promise<MapaMovimento> {
+    const rows = (await this.dataSource.query(
+      `
+        SELECT
+          ci.codigo_vendedor,
+          MAX(ci.nome_vendedor) AS nome_vendedor,
+          COALESCE(SUM(ci.valor), 0) AS valor,
+          COUNT(*)::int AS qtd,
+          COUNT(*)::int AS qtd_formulas
+        FROM caixa_pagamento_convenio_item ci
+        WHERE ci.unidade = $1
+          AND ci.tipo_item = 'REQUISICAO'
+          AND ci.data_recebimento >= $2
+          AND ci.data_recebimento <= $3
+          AND ci.codigo_vendedor IS NOT NULL
+          AND ci.codigo_vendedor > 0
+        GROUP BY ci.codigo_vendedor
+      `,
+      [unidade, dataInicial, dataFinal],
+    )) as MovimentoRow[];
+    return this.mapMovimentoRows(rows);
+  }
+
+  private async buscarRecebidoConvenioProdutos(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinal: string,
+  ): Promise<MapaMovimento> {
+    const rows = (await this.dataSource.query(
+      `
+        SELECT
+          ci.codigo_vendedor,
+          MAX(ci.nome_vendedor) AS nome_vendedor,
+          COALESCE(SUM(ci.valor), 0) AS valor,
+          COUNT(*)::int AS qtd,
+          0 AS qtd_formulas
+        FROM caixa_pagamento_convenio_item ci
+        WHERE ci.unidade = $1
+          AND ci.tipo_item = 'PRODUTO'
+          AND ci.data_recebimento >= $2
+          AND ci.data_recebimento <= $3
+          AND ci.codigo_vendedor IS NOT NULL
+          AND ci.codigo_vendedor > 0
+        GROUP BY ci.codigo_vendedor
+      `,
+      [unidade, dataInicial, dataFinal],
+    )) as MovimentoRow[];
+    return this.mapMovimentoRows(rows);
+  }
+
+  private async buscarDetalheConvenioRequisicao(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinal: string,
+    codigoVendedor?: number,
+  ): Promise<
+    Array<{
+      data: string | Date;
+      numero_cupom: string | number;
+      numero_requisicao: string | number;
+      valor: string | number;
+    }>
+  > {
+    const params: Array<string | number> = [unidade, dataInicial, dataFinal];
+    let filtroVend = '';
+    if (codigoVendedor != null && codigoVendedor > 0) {
+      filtroVend = 'AND ci.codigo_vendedor = $4';
+      params.push(codigoVendedor);
+    } else {
+      filtroVend = `
+          AND ci.codigo_vendedor IN (
+            SELECT f."codigoVendedorErp"
+            FROM funcionarios f
+            WHERE f.unidade = $1
+              AND f."codigoVendedorErp" IS NOT NULL
+              AND f."codigoVendedorErp" > 0
+          )`;
+    }
+    return (await this.dataSource.query(
+      `
+        SELECT
+          ci.data_recebimento AS data,
+          COALESCE(ci.numero_cupom_origem, 0) AS numero_cupom,
+          ci.numero_requisicao,
+          ci.valor
+        FROM caixa_pagamento_convenio_item ci
+        WHERE ci.unidade = $1
+          AND ci.tipo_item = 'REQUISICAO'
+          AND ci.data_recebimento >= $2
+          AND ci.data_recebimento <= $3
+          AND ci.numero_requisicao IS NOT NULL
+          ${filtroVend}
+        ORDER BY ci.data_recebimento ASC, ci.numero_requisicao ASC
+      `,
+      params,
+    )) as Array<{
+      data: string | Date;
+      numero_cupom: string | number;
+      numero_requisicao: string | number;
+      valor: string | number;
+    }>;
+  }
+
+  private async buscarDetalheConvenioProdutos(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinal: string,
+    codigoVendedor?: number,
+  ): Promise<
+    Array<{
+      data: string | Date;
+      numero_cupom: string | number;
+      descricao_item: string | null;
+      codigo_setor: string | number | null;
+      quantidade: string | number;
+      valor: string | number;
+    }>
+  > {
+    const params: Array<string | number> = [unidade, dataInicial, dataFinal];
+    let filtroVend = '';
+    if (codigoVendedor != null && codigoVendedor > 0) {
+      filtroVend = 'AND ci.codigo_vendedor = $4';
+      params.push(codigoVendedor);
+    } else {
+      filtroVend = `
+          AND ci.codigo_vendedor IN (
+            SELECT f."codigoVendedorErp"
+            FROM funcionarios f
+            WHERE f.unidade = $1
+              AND f."codigoVendedorErp" IS NOT NULL
+              AND f."codigoVendedorErp" > 0
+          )`;
+    }
+    return (await this.dataSource.query(
+      `
+        SELECT
+          ci.data_recebimento AS data,
+          COALESCE(ci.numero_cupom_origem, 0) AS numero_cupom,
+          COALESCE(ci.nome_cliente, 'Convênio') AS descricao_item,
+          ci.codigo_setor,
+          1 AS quantidade,
+          ci.valor
+        FROM caixa_pagamento_convenio_item ci
+        WHERE ci.unidade = $1
+          AND ci.tipo_item = 'PRODUTO'
+          AND ci.data_recebimento >= $2
+          AND ci.data_recebimento <= $3
+          ${filtroVend}
+        ORDER BY ci.data_recebimento ASC, ci.numero_cupom_origem ASC
+      `,
+      params,
+    )) as Array<{
+      data: string | Date;
+      numero_cupom: string | number;
+      descricao_item: string | null;
+      codigo_setor: string | number | null;
+      quantidade: string | number;
+      valor: string | number;
+    }>;
+  }
+
+  /** Trava anti-duplicidade: req já no lote convênio não entra pelo caminho normal. */
+  private sqlExcluiReqNoLoteConvenio(alias: string): string {
+    return `
+            NOT EXISTS (
+              SELECT 1
+              FROM caixa_pagamento_convenio_item ci_ex
+              WHERE ci_ex.unidade = ${alias}.unidade
+                AND ci_ex.tipo_item = 'REQUISICAO'
+                AND ci_ex.numero_requisicao = ${alias}.numero_requisicao
+            )`;
   }
 
   /**
@@ -1711,9 +2056,10 @@ export class ComercialAcompanhamentoService {
   private async buscarRecebidoRequisicaoHoje(
     unidade: Unidade,
     hoje: string,
+    considerarTaxas = false,
   ): Promise<MapaMovimento> {
     const [oficial, previa] = await Promise.all([
-      this.buscarRecebidoRequisicao(unidade, hoje, hoje),
+      this.buscarRecebidoRequisicao(unidade, hoje, hoje, considerarTaxas),
       this.buscarRecebidoRequisicaoPreviaCupom(unidade, hoje, hoje),
     ]);
     return this.mesclarMapaMovimento(oficial, previa);
@@ -1748,6 +2094,7 @@ export class ComercialAcompanhamentoService {
           AND i.data_operacao <= $3
           AND i.codigo_vendedor_erp IS NOT NULL
           AND i.codigo_vendedor_erp > 0
+          AND ${this.sqlExcluiReqNoLoteConvenio('i')}
           AND NOT EXISTS (
             SELECT 1
             FROM caixa_requisicoes_pagas c0
@@ -1790,7 +2137,7 @@ export class ComercialAcompanhamentoService {
         nome: atual.nome || mov.nome,
         valor: this.round2(atual.valor + mov.valor),
         qtd: atual.qtd + mov.qtd,
-        qtdFormulas: atual.qtdFormulas + mov.qtdFormulas,
+        qtdFormulas: (atual.qtdFormulas ?? 0) + (mov.qtdFormulas ?? 0),
         valorSetores: this.round2(
           (atual.valorSetores ?? 0) + (mov.valorSetores ?? 0),
         ),

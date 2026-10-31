@@ -3,6 +3,22 @@ export interface ValorCompraRow {
   valor_compra: number;
 }
 
+/** Linha do lote que o CONVENIO-DINHEIRO quitou (FC17110 req / FC14200 revenda). */
+export interface CaixaConvenioLoteItemRow {
+  tipo_item: 'REQUISICAO' | 'PRODUTO';
+  numero_requisicao: number | null;
+  numero_cupom_origem: number | null;
+  /** Nome do produto/revenda (FC03000) — só PRODUTO. */
+  descricao_item: string | null;
+  codigo_cliente: number | null;
+  nome_cliente: string | null;
+  codigo_vendedor: number | null;
+  nome_vendedor: string | null;
+  codigo_setor: number | null;
+  valor: number;
+  data_origem: string | null;
+}
+
 export interface CaixaPagamentoRow {
   filial: number;
   data: string;
@@ -21,6 +37,8 @@ export interface CaixaPagamentoRow {
   codigo_operador: number | null;
   operador_caixa: string | null;
   chave_erp: string;
+  /** Composição do lote (só CONVENIO-DINHEIRO). Não altera totais do caixa. */
+  lote_convenio?: CaixaConvenioLoteItemRow[];
 }
 
 export interface CaixaItemRow {

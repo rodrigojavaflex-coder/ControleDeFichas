@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { ConfigService } from '@nestjs/config';
 import { AgentDbConfig } from '../config/config.types';
 import {
+  CaixaConvenioLoteItemRow,
   CaixaFechamentoDiaRow,
   CaixaItemRow,
   CaixaPagamentoRow,
@@ -861,11 +862,17 @@ export class DatabaseService {
       end,
       filtrarFlagBaixa,
     );
-    return this.executarConsultaCaixa(
+    const pagamentos = await this.executarConsultaCaixa(
       sql,
       params,
       (row) => this.mapCaixaPagamentoRow(row),
       'pagamentos',
+    );
+    return this.enriquecerPagamentosComLoteConvenio(
+      pagamentos,
+      unit,
+      start,
+      end,
     );
   }
 
@@ -1542,6 +1549,320 @@ export class DatabaseService {
     `;
 
     return { sql, params: [unit, start, end] };
+  }
+
+  /**
+   * Enriquece CONVENIO-DINHEIRO com o lote (FC17110 req + FC14200 revenda).
+   * Casa pagamento↔lote por filial + data + valor (VRPAG do lote carimba o total).
+   * Valor por linha = VRLIQ da req/cupom — nunca SUM(FC17110.VRPAG).
+   */
+  private async enriquecerPagamentosComLoteConvenio(
+    pagamentos: CaixaPagamentoRow[],
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<CaixaPagamentoRow[]> {
+    const convenios = pagamentos.filter(
+      (p) =>
+        String(p.indrecconv ?? 'N').trim().toUpperCase() === 'S' ||
+        p.forma_pagamento === 'CONVENIO-DINHEIRO',
+    );
+    if (!convenios.length) {
+      return pagamentos;
+    }
+
+    const t0 = Date.now();
+    let reqs: Array<{
+      data_recebimento: string;
+      valor_lote: number;
+      linha: CaixaConvenioLoteItemRow;
+    }> = [];
+    let prods: Array<{
+      data_recebimento: string;
+      valor_lote: number;
+      linha: CaixaConvenioLoteItemRow;
+    }> = [];
+    try {
+      [reqs, prods] = await Promise.all([
+        this.buscarLoteConvenioRequisicoes(unit, start, end),
+        this.buscarLoteConvenioProdutos(unit, start, end),
+      ]);
+    } catch (err) {
+      // Não derruba a sync de pagamentos/caixa — só perde o detalhe do lote.
+      this.logger.error(
+        `Caixa lote convênio unit=${unit} ${start}..${end}: falhou após ${Date.now() - t0}ms — pagamentos seguem sem lote`,
+        err instanceof Error ? err.stack : err,
+      );
+      return pagamentos;
+    }
+
+    const porChave = new Map<string, CaixaConvenioLoteItemRow[]>();
+    const chaveLote = (data: string, valorLote: number) =>
+      `${data}|${valorLote.toFixed(2)}`;
+
+    for (const item of [...reqs, ...prods]) {
+      const key = chaveLote(item.data_recebimento, item.valor_lote);
+      const lista = porChave.get(key) ?? [];
+      lista.push(item.linha);
+      porChave.set(key, lista);
+    }
+
+    let anexados = 0;
+    const resultado = pagamentos.map((pag) => {
+      const isConv =
+        String(pag.indrecconv ?? 'N').trim().toUpperCase() === 'S' ||
+        pag.forma_pagamento === 'CONVENIO-DINHEIRO';
+      if (!isConv) {
+        return pag;
+      }
+      const lote =
+        porChave.get(chaveLote(pag.data, Number(pag.valor_liquido) || 0)) ??
+        [];
+      if (lote.length) {
+        anexados += 1;
+      }
+      return { ...pag, lote_convenio: lote };
+    });
+
+    this.logger.log(
+      `Caixa lote convênio unit=${unit} ${start}..${end}: ${reqs.length} req + ${prods.length} prod → ${anexados} pagamento(s) ${Date.now() - t0}ms`,
+    );
+    return resultado;
+  }
+
+  private async buscarLoteConvenioRequisicoes(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<
+    Array<{
+      data_recebimento: string;
+      valor_lote: number;
+      linha: CaixaConvenioLoteItemRow;
+    }>
+  > {
+    const sql = `
+      SELECT
+        l.dtope AS data_recebimento,
+        l.vrpag AS valor_lote,
+        r.nrrqu AS numero_requisicao,
+        r.nrcpm AS numero_cupom_origem,
+        r.cdcli AS codigo_cliente,
+        (
+          SELECT FIRST 1 TRIM(c.nomecli)
+          FROM fc07000 c
+          WHERE c.cdcli = r.cdcli
+          ORDER BY CASE WHEN c.cdfil = r.cdfil THEN 0 ELSE 1 END, c.cdfil
+        ) AS nome_cliente,
+        COALESCE(
+          (
+            SELECT FIRST 1 v.cdfun
+            FROM fc17200 v
+            WHERE v.cdfil = r.cdfil
+              AND v.nrrqu = r.nrrqu
+              AND TRIM(v.tptar) = 'R'
+          ),
+          r.cdfun
+        ) AS codigo_vendedor,
+        (
+          SELECT FIRST 1 TRIM(f.nomefun)
+          FROM fc08000 f
+          WHERE f.cdfun = COALESCE(
+            (
+              SELECT FIRST 1 v2.cdfun
+              FROM fc17200 v2
+              WHERE v2.cdfil = r.cdfil
+                AND v2.nrrqu = r.nrrqu
+                AND TRIM(v2.tptar) = 'R'
+            ),
+            r.cdfun
+          )
+        ) AS nome_vendedor,
+        r.vrliq AS valor,
+        r.dtefe AS data_origem
+      FROM fc17110 l
+      INNER JOIN fc17000 r
+        ON r.cdfil = l.cdfil
+       AND r.nrrqu = l.nrrqu
+      WHERE l.cdfil = ?
+        AND l.dtope BETWEEN ? AND ?
+        AND COALESCE(l.indrecconv, 'N') = 'S'
+      ORDER BY l.dtope, r.nrrqu
+    `;
+
+    const rows = await this.executarConsultaCaixa(
+      sql,
+      [unit, start, end],
+      (row) => row,
+      'lote-convenio-req',
+    );
+
+    return rows.map((row) => {
+      const get = (key: string) =>
+        row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+      const valor = Math.round(Number(get('valor') ?? 0) * 100) / 100;
+      const valorLote = Math.round(Number(get('valor_lote') ?? 0) * 100) / 100;
+      return {
+        data_recebimento: this.formatDateField(get('data_recebimento')),
+        valor_lote: valorLote,
+        linha: {
+          tipo_item: 'REQUISICAO' as const,
+          numero_requisicao:
+            get('numero_requisicao') != null
+              ? Number(get('numero_requisicao'))
+              : null,
+          numero_cupom_origem:
+            get('numero_cupom_origem') != null
+              ? Number(get('numero_cupom_origem'))
+              : null,
+          descricao_item: null,
+          codigo_cliente:
+            get('codigo_cliente') != null
+              ? Number(get('codigo_cliente'))
+              : null,
+          nome_cliente: get('nome_cliente')
+            ? String(get('nome_cliente')).trim()
+            : null,
+          codigo_vendedor:
+            get('codigo_vendedor') != null
+              ? Number(get('codigo_vendedor'))
+              : null,
+          nome_vendedor: get('nome_vendedor')
+            ? String(get('nome_vendedor')).trim()
+            : null,
+          codigo_setor: null,
+          valor,
+          data_origem: get('data_origem')
+            ? this.formatDateField(get('data_origem'))
+            : null,
+        },
+      };
+    });
+  }
+
+  private async buscarLoteConvenioProdutos(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<
+    Array<{
+      data_recebimento: string;
+      valor_lote: number;
+      linha: CaixaConvenioLoteItemRow;
+    }>
+  > {
+    // FC31200 não tem CDPRO — setor fica nulo; valor = VRLIQ da capa/venda.
+    // descricao_item = nome(s) da revenda (FC03000 via itens do cupom).
+    const sql = `
+      SELECT
+        l.dtope AS data_recebimento,
+        l.vrpag AS valor_lote,
+        l.nrcpm AS numero_cupom_origem,
+        COALESCE(
+          (
+            SELECT LIST(DISTINCT TRIM(COALESCE(prod.descr, prod.descrprd)), ', ')
+            FROM fc31110 item
+            LEFT JOIN fc03000 prod ON prod.cdpro = item.cdpro
+            WHERE item.cdfil = l.cdfil
+              AND item.nrcpm = l.nrcpm
+              AND COALESCE(prod.descr, prod.descrprd) IS NOT NULL
+          ),
+          (
+            SELECT LIST(DISTINCT TRIM(COALESCE(prod.descr, prod.descrprd)), ', ')
+            FROM fc14100 item
+            LEFT JOIN fc03000 prod ON prod.cdpro = item.cdpro
+            WHERE item.cdfil = l.cdfil
+              AND item.nrcpm = l.nrcpm
+              AND COALESCE(prod.descr, prod.descrprd) IS NOT NULL
+          )
+        ) AS descricao_item,
+        COALESCE(capa.cdcli, venda.cdcli) AS codigo_cliente,
+        (
+          SELECT FIRST 1 TRIM(c.nomecli)
+          FROM fc07000 c
+          WHERE c.cdcli = COALESCE(capa.cdcli, venda.cdcli)
+          ORDER BY CASE WHEN c.cdfil = l.cdfil THEN 0 ELSE 1 END, c.cdfil
+        ) AS nome_cliente,
+        COALESCE(capa.cdfunre, venda.cdfun) AS codigo_vendedor,
+        (
+          SELECT FIRST 1 TRIM(f.nomefun)
+          FROM fc08000 f
+          WHERE f.cdfun = COALESCE(capa.cdfunre, venda.cdfun)
+        ) AS nome_vendedor,
+        COALESCE(capa.vrliq, venda.vrliq, 0) AS valor,
+        COALESCE(capa.dtope, venda.dtsai) AS data_origem
+      FROM fc14200 l
+      LEFT JOIN fc31100 capa
+        ON capa.cdfil = l.cdfil
+       AND capa.nrcpm = l.nrcpm
+      LEFT JOIN fc14000 venda
+        ON venda.cdfil = l.cdfil
+       AND venda.nrcpm = l.nrcpm
+      WHERE l.cdfil = ?
+        AND l.dtope BETWEEN ? AND ?
+        AND COALESCE(l.indrecconv, 'N') = 'S'
+      ORDER BY l.dtope, l.nrcpm
+    `;
+
+    const rows = await this.executarConsultaCaixa(
+      sql,
+      [unit, start, end],
+      (row) => row,
+      'lote-convenio-prod',
+    );
+
+    const saida: Array<{
+      data_recebimento: string;
+      valor_lote: number;
+      linha: CaixaConvenioLoteItemRow;
+    }> = [];
+
+    for (const row of rows) {
+      const get = (key: string) =>
+        row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+      const dataRec = this.formatDateField(get('data_recebimento'));
+      const cupom =
+        get('numero_cupom_origem') != null
+          ? Number(get('numero_cupom_origem'))
+          : 0;
+      const valor = Math.round(Number(get('valor') ?? 0) * 100) / 100;
+      const valorLote = Math.round(Number(get('valor_lote') ?? 0) * 100) / 100;
+      saida.push({
+        data_recebimento: dataRec,
+        valor_lote: valorLote,
+        linha: {
+          tipo_item: 'PRODUTO',
+          numero_requisicao: null,
+          numero_cupom_origem: cupom || null,
+          descricao_item: (() => {
+            const raw = get('descricao_item');
+            if (!raw) return null;
+            const d = padronizarDescricaoLegado(String(raw).trim());
+            return d || null;
+          })(),
+          codigo_cliente:
+            get('codigo_cliente') != null
+              ? Number(get('codigo_cliente'))
+              : null,
+          nome_cliente: get('nome_cliente')
+            ? String(get('nome_cliente')).trim()
+            : null,
+          codigo_vendedor:
+            get('codigo_vendedor') != null
+              ? Number(get('codigo_vendedor'))
+              : null,
+          nome_vendedor: get('nome_vendedor')
+            ? String(get('nome_vendedor')).trim()
+            : null,
+          codigo_setor: null,
+          valor,
+          data_origem: get('data_origem')
+            ? this.formatDateField(get('data_origem'))
+            : null,
+        },
+      });
+    }
+    return saida;
   }
 
   private mapCaixaPagamentoRow(row: Record<string, unknown>): CaixaPagamentoRow {

@@ -364,6 +364,18 @@ export class ComercialAcompanhamentoItemDto extends ComercialDesempenhoBaseDto {
     description: 'Falta no dia para o topo (Marca própria).',
   })
   faltaMetaHojeTopoMarcaPropria?: number | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Política da unidade: inclui lote CONVENIO-DINHEIRO no card (só total/unidade).',
+  })
+  considerarConvenios?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Política da unidade: não abate valor_taxa na base de Manipulados (só total/unidade).',
+  })
+  considerarTaxas?: boolean;
 }
 
 export class ComercialAcompanhamentoTotaisDto extends ComercialDesempenhoBaseDto {
@@ -459,6 +471,18 @@ export class ComercialAcompanhamentoTotaisDto extends ComercialDesempenhoBaseDto
 
   @ApiProperty()
   quantidadeVendedores: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Política da unidade: inclui lote CONVENIO-DINHEIRO no acompanhamento.',
+  })
+  considerarConvenios?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Política da unidade: não abate valor_taxa na base de Manipulados.',
+  })
+  considerarTaxas?: boolean;
 
   @ApiPropertyOptional({ nullable: true })
   valorMetaRequisicao?: number | null;

@@ -78,6 +78,9 @@ export interface ComercialAcompanhamentoItem {
   diasRealizados?: number | null;
   dataUltimoCaixaFechado?: string | null;
   mesAberto?: boolean;
+  /** Política da unidade (só card total/unidade). */
+  considerarConvenios?: boolean;
+  considerarTaxas?: boolean;
 }
 
 export interface ComercialAcompanhamentoTotais {
@@ -130,6 +133,8 @@ export interface ComercialAcompanhamentoTotais {
   diasRealizados?: number | null;
   dataUltimoCaixaFechado?: string | null;
   mesAberto?: boolean;
+  considerarConvenios?: boolean;
+  considerarTaxas?: boolean;
 }
 
 export interface ComercialAcompanhamentoListResponse {

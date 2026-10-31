@@ -40,6 +40,34 @@
                 </span>
                 <strong>{{ formatarData(card.item.dataUltimoCaixaFechado) }}</strong>
               </span>
+              <div
+                class="comercial-acomp-config-flags home-unidade-resumo-flags"
+                aria-label="Configuração do acompanhamento da unidade">
+                <span
+                  class="comercial-acomp-config-flag"
+                  [class.is-on]="card.item.considerarConvenios === true"
+                  [class.is-off]="card.item.considerarConvenios !== true"
+                  [title]="
+                    card.item.considerarConvenios === true
+                      ? 'Convênios entram no card'
+                      : 'Convênios fora do card'
+                  ">
+                  Convênios
+                  <strong>{{ card.item.considerarConvenios === true ? 'Sim' : 'Não' }}</strong>
+                </span>
+                <span
+                  class="comercial-acomp-config-flag"
+                  [class.is-on]="card.item.considerarTaxas === true"
+                  [class.is-off]="card.item.considerarTaxas !== true"
+                  [title]="
+                    card.item.considerarTaxas === true
+                      ? 'Taxas não abatidas na base'
+                      : 'Taxas abatidas na base'
+                  ">
+                  Taxas
+                  <strong>{{ card.item.considerarTaxas === true ? 'Sim' : 'Não' }}</strong>
+                </span>
+              </div>
             </div>
             <div class="home-unidade-resumo-head-end">
               <button

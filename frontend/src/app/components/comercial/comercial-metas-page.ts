@@ -106,6 +106,17 @@ export class ComercialMetasPage implements OnInit {
     return this.mesFiltro > 0;
   }
 
+  mostrarColunaMes(): boolean {
+    return this.mesFiltro <= 0;
+  }
+
+  colspanTabela(): number {
+    let n = 3; // vendedor + 2 metas
+    if (this.mostrarColunaMes()) n += 1;
+    if (this.podeEditarMeta()) n += 1;
+    return n;
+  }
+
   temMetasCadastradas(row: MetaRow): boolean {
     return row.valorMetaRequisicao != null || row.valorMetaMarcaPropria != null;
   }

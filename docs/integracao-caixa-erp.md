@@ -156,6 +156,16 @@ A abertura do caixa no ERP pode **travar edição do dia anterior** no sistema l
 | FC31000 | Só auditoria operacional; **não** gate de import |
 | `movimentos_outubro.sql` | Legado; duplica linhas por item |
 
+### Lote CONVENIO-DINHEIRO (enriquecimento — não soma no caixa)
+
+| Tabela | Uso |
+|--------|-----|
+| FC17110 | Linhas de req quitadas no pagamento INDRECCONV=S; valor da linha = `FC17000.VRLIQ` (não `SUM(VRPAG)`) |
+| FC14200 | Cupons de revenda no mesmo lote; valor = VRLIQ da capa/venda |
+| FC03000 | Nome da revenda/produto (`descricao_item`) nas linhas PRODUTO — via itens `FC31110`/`FC14100` |
+
+Persistência Nest: `caixa_pagamento_convenio_item` (FK `pagamento_id`), com `descricao_item` para PRODUTO. No relatório CONVENIO-DINHEIRO a coluna Requisição exibe o **nome da revenda** (não “Cupom N”). Totais de `caixa_pagamentos_erp` / fechamento **inalterados**. Comercial só consome se a unidade ligar **Considerar convênios**.
+
 ---
 
 ## 7. Fluxo de negócio (orçamento → baixa)

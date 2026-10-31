@@ -37,6 +37,7 @@ import {
 import { ImportarCaixaErpDto } from './dto/importar-caixa-erp.dto';
 import { CaixaItemErp, CaixaTipoItem } from './entities/caixa-item-erp.entity';
 import { CaixaPagamentoErp } from './entities/caixa-pagamento-erp.entity';
+import { CaixaPagamentoConvenioItem } from './entities/caixa-pagamento-convenio-item.entity';
 import { CaixaRequisicaoPaga } from './entities/caixa-requisicao-paga.entity';
 import { CaixaRequisicaoFormula } from './entities/caixa-requisicao-formula.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
@@ -68,6 +69,20 @@ interface AgenteConfig {
   unit: number;
 }
 
+interface AgenteCaixaConvenioLoteItemRow {
+  tipo_item: 'REQUISICAO' | 'PRODUTO';
+  numero_requisicao: number | null;
+  numero_cupom_origem: number | null;
+  descricao_item?: string | null;
+  codigo_cliente: number | null;
+  nome_cliente: string | null;
+  codigo_vendedor: number | null;
+  nome_vendedor: string | null;
+  codigo_setor: number | null;
+  valor: number;
+  data_origem: string | null;
+}
+
 interface AgenteCaixaPagamentoRow {
   data: string;
   cupom: number;
@@ -83,6 +98,7 @@ interface AgenteCaixaPagamentoRow {
   cdcli: number | null;
   codigo_operador: number | null;
   operador_caixa: string | null;
+  lote_convenio?: AgenteCaixaConvenioLoteItemRow[];
 }
 
 interface AgenteCaixaItemRow {
@@ -163,6 +179,8 @@ export class FechamentoCaixaService {
     private readonly importacaoProgressService: ImportacaoManualProgressService,
     @InjectRepository(CaixaPagamentoErp)
     private readonly pagamentoRepo: Repository<CaixaPagamentoErp>,
+    @InjectRepository(CaixaPagamentoConvenioItem)
+    private readonly convenioItemRepo: Repository<CaixaPagamentoConvenioItem>,
     @InjectRepository(CaixaItemErp)
     private readonly itemRepo: Repository<CaixaItemErp>,
     @InjectRepository(CaixaRequisicaoPaga)
@@ -774,6 +792,18 @@ export class FechamentoCaixaService {
         () => this.carregarMapaPagamentos(pagamentoChaves),
       );
 
+      await this.cronometrarCaixa(
+        unidade,
+        'upsert lote convênio',
+        `${pagamentosRows.filter((p) => (p.lote_convenio?.length ?? 0) > 0).length} pagamento(s)`,
+        () =>
+          this.upsertLoteConvenioPagamentos(
+            pagamentosRows,
+            unidade,
+            pagamentoMap,
+          ),
+      );
+
       prog(
         'gravando_postgres',
         `Segmento ${segmentoAtual}/${segmentosTotal}: gravando ${qtdItens} itens no PostgreSQL...`,
@@ -1045,6 +1075,78 @@ export class FechamentoCaixaService {
       importados: chavesUnicas.filter((c) => !existentesSet.has(c)).length,
       atualizados: chavesUnicas.filter((c) => existentesSet.has(c)).length,
     };
+  }
+
+  /**
+   * Grava composição do lote CONVENIO-DINHEIRO. Não altera totais do pagamento.
+   * Substitui as linhas do pagamento a cada upsert (idempotente).
+   */
+  private async upsertLoteConvenioPagamentos(
+    rows: AgenteCaixaPagamentoRow[],
+    unidade: Unidade,
+    pagamentoMap: Map<string, string>,
+  ): Promise<void> {
+    const comLote = rows.filter((r) => (r.lote_convenio?.length ?? 0) > 0);
+    if (!comLote.length) {
+      return;
+    }
+
+    const pagamentoIds: string[] = [];
+    const entities: CaixaPagamentoConvenioItem[] = [];
+
+    for (const row of comLote) {
+      const chavePag = this.buildChavePagamento(unidade, row);
+      const pagamentoId = pagamentoMap.get(chavePag);
+      if (!pagamentoId || !row.lote_convenio?.length) {
+        continue;
+      }
+      pagamentoIds.push(pagamentoId);
+      let seq = 0;
+      for (const item of row.lote_convenio) {
+        seq += 1;
+        const tipo = item.tipo_item === 'PRODUTO' ? 'PRODUTO' : 'REQUISICAO';
+        const ref =
+          tipo === 'REQUISICAO'
+            ? `R${item.numero_requisicao ?? 0}`
+            : `P${item.numero_cupom_origem ?? 0}`;
+        const chaveErp = `${chavePag}-CONV-${tipo}-${ref}-${seq}`;
+        entities.push(
+          this.convenioItemRepo.create({
+            chaveErp,
+            pagamentoId,
+            unidade,
+            dataRecebimento: row.data,
+            tipoItem: tipo,
+            numeroRequisicao: item.numero_requisicao ?? null,
+            numeroCupomOrigem: item.numero_cupom_origem ?? null,
+            descricaoItem: item.descricao_item
+              ? normalizarTextoLegado(item.descricao_item)
+              : null,
+            codigoCliente: item.codigo_cliente ?? null,
+            nomeCliente: item.nome_cliente
+              ? padronizarNomeDeSistemaLegado(item.nome_cliente)
+              : null,
+            codigoVendedor: item.codigo_vendedor ?? null,
+            nomeVendedor: item.nome_vendedor
+              ? padronizarNomeDeSistemaLegado(item.nome_vendedor)
+              : null,
+            codigoSetor: item.codigo_setor ?? null,
+            valor: Number(item.valor) || 0,
+            dataOrigem: item.data_origem ?? null,
+            atualizadoEm: new Date(),
+          }),
+        );
+      }
+    }
+
+    if (pagamentoIds.length) {
+      await this.convenioItemRepo.delete({
+        pagamentoId: In([...new Set(pagamentoIds)]),
+      });
+    }
+    if (entities.length) {
+      await this.convenioItemRepo.save(entities);
+    }
   }
 
   private async carregarMapaPagamentos(
@@ -1596,6 +1698,10 @@ export class FechamentoCaixaService {
       rows,
     );
 
+    const lotePorPagamento = await this.carregarLoteConvenioPorPagamentos(
+      rows.map((r) => r.id),
+    );
+
     return rows.map((pagamento) => {
       const chaveCupom = this.buildChaveCupomOperacao(
         pagamento.numeroCupom,
@@ -1607,6 +1713,7 @@ export class FechamentoCaixaService {
       const numeroRequisicao = referenciaRequisicao
         ? Number(referenciaRequisicao.split(',')[0]?.trim())
         : null;
+      const loteConvenio = lotePorPagamento.get(pagamento.id) ?? [];
 
       return {
         numeroCupom: pagamento.numeroCupom,
@@ -1630,8 +1737,76 @@ export class FechamentoCaixaService {
             ? (nomesClientes.get(pagamento.codigoCliente) ?? null)
             : null,
         nomeOperadorCaixa: pagamento.nomeOperadorCaixa ?? null,
+        loteConvenio: loteConvenio.length ? loteConvenio : undefined,
       };
     });
+  }
+
+  private async carregarLoteConvenioPorPagamentos(
+    pagamentoIds: string[],
+  ): Promise<
+    Map<
+      string,
+      Array<{
+        tipoItem: 'REQUISICAO' | 'PRODUTO';
+        numeroRequisicao: number | null;
+        numeroCupomOrigem: number | null;
+        descricaoProduto: string | null;
+        codigoCliente: number | null;
+        clienteNome: string | null;
+        codigoVendedor: number | null;
+        nomeVendedor: string | null;
+        codigoSetor: number | null;
+        valor: number;
+        dataOrigem: string | null;
+      }>
+    >
+  > {
+    const map = new Map<
+      string,
+      Array<{
+        tipoItem: 'REQUISICAO' | 'PRODUTO';
+        numeroRequisicao: number | null;
+        numeroCupomOrigem: number | null;
+        descricaoProduto: string | null;
+        codigoCliente: number | null;
+        clienteNome: string | null;
+        codigoVendedor: number | null;
+        nomeVendedor: string | null;
+        codigoSetor: number | null;
+        valor: number;
+        dataOrigem: string | null;
+      }>
+    >();
+    if (!pagamentoIds.length) {
+      return map;
+    }
+    const itens = await this.convenioItemRepo.find({
+      where: { pagamentoId: In(pagamentoIds) },
+      order: {
+        tipoItem: 'ASC',
+        numeroRequisicao: 'ASC',
+        numeroCupomOrigem: 'ASC',
+      },
+    });
+    for (const item of itens) {
+      const lista = map.get(item.pagamentoId) ?? [];
+      lista.push({
+        tipoItem: item.tipoItem,
+        numeroRequisicao: item.numeroRequisicao,
+        numeroCupomOrigem: item.numeroCupomOrigem,
+        descricaoProduto: item.descricaoItem ?? null,
+        codigoCliente: item.codigoCliente,
+        clienteNome: item.nomeCliente,
+        codigoVendedor: item.codigoVendedor,
+        nomeVendedor: item.nomeVendedor,
+        codigoSetor: item.codigoSetor,
+        valor: Number(item.valor),
+        dataOrigem: item.dataOrigem,
+      });
+      map.set(item.pagamentoId, lista);
+    }
+    return map;
   }
 
   private buildChaveCupomOperacao(

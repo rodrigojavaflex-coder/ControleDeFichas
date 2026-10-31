@@ -15,6 +15,7 @@ import {
   SalvarComercialComissaoPoliticaUnidadeDto,
   AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
   AplicarComercialComissaoPoliticaUnidadeVendedoresResponse,
+  ComercialComissaoRelatorioConfigResponse,
 } from '../models/comercial-comissao.model';
 
 const base = `${environment.apiUrl}/comercial/comissoes`;
@@ -123,6 +124,16 @@ export class ComercialComissaoService {
     return this.http.post<AplicarComercialComissaoPoliticaUnidadeVendedoresResponse>(
       `${base}/politica-unidade/aplicar-vendedores`,
       dto,
+    );
+  }
+
+  relatorioConfig(
+    unidade: Unidade,
+  ): Observable<ComercialComissaoRelatorioConfigResponse> {
+    const params = new HttpParams().set('unidade', unidade);
+    return this.http.get<ComercialComissaoRelatorioConfigResponse>(
+      `${base}/relatorio-config`,
+      { params },
     );
   }
 }

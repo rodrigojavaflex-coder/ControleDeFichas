@@ -93,7 +93,8 @@
 .home-unidade-resumo-head-start {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.55rem;
   min-width: 0;
   flex: 1 1 auto;
 }
@@ -146,6 +147,71 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary, #1e293b);
+}
+
+.home-unidade-resumo-flags.comercial-acomp-config-flags {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.home-unidade-resumo-flags .comercial-acomp-config-flag {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.02rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-card, #fff);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.home-unidade-resumo-flags .comercial-acomp-config-flag strong {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-primary, #0f172a);
+}
+
+.home-unidade-resumo-flags .comercial-acomp-config-flag.is-on {
+  border-color: color-mix(in srgb, var(--cor-sucesso, #16a34a) 45%, transparent);
+  background: color-mix(in srgb, var(--cor-sucesso, #16a34a) 12%, transparent);
+}
+
+.home-unidade-resumo-flags .comercial-acomp-config-flag.is-on strong {
+  color: var(--cor-sucesso, #16a34a);
+}
+
+body.theme-dark .home-unidade-resumo-flags .comercial-acomp-config-flag,
+[data-theme='dark'] .home-unidade-resumo-flags .comercial-acomp-config-flag {
+  background: color-mix(in srgb, var(--bg-secondary, #1e293b) 80%, transparent);
+  border-color: var(--border-color, #334155);
+  color: var(--text-secondary, #94a3b8);
+}
+
+body.theme-dark .home-unidade-resumo-flags .comercial-acomp-config-flag strong,
+[data-theme='dark'] .home-unidade-resumo-flags .comercial-acomp-config-flag strong {
+  color: var(--text-primary, #e2e8f0);
+}
+
+body.theme-dark .home-unidade-resumo-flags .comercial-acomp-config-flag.is-on,
+[data-theme='dark'] .home-unidade-resumo-flags .comercial-acomp-config-flag.is-on {
+  border-color: color-mix(in srgb, var(--cor-sucesso, #22c55e) 50%, transparent);
+  background: color-mix(in srgb, var(--cor-sucesso, #22c55e) 16%, transparent);
+}
+
+body.theme-dark .home-unidade-resumo-flags .comercial-acomp-config-flag.is-on strong,
+[data-theme='dark'] .home-unidade-resumo-flags .comercial-acomp-config-flag.is-on strong {
+  color: var(--cor-sucesso, #4ade80);
 }
 
 .home-unidade-resumo-head-end {

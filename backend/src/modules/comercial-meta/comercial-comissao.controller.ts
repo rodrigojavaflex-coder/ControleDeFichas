@@ -36,6 +36,7 @@ import {
   SalvarComercialComissaoPoliticaUnidadeDto,
   AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
   AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto,
+  ComercialComissaoRelatorioConfigResponseDto,
 } from './dto/comercial-comissao-faixa.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -148,7 +149,7 @@ export class ComercialComissaoController {
   )
   @ApiOperation({
     summary:
-      'Copia os setores da unidade para os vendedores (todos ou só quem ainda não tem lista)',
+      'Copia setores e flags (convênios/taxas) da unidade para os vendedores',
   })
   @ApiResponse({
     status: 200,
@@ -159,6 +160,23 @@ export class ComercialComissaoController {
     @Body() dto: AplicarComercialComissaoPoliticaUnidadeVendedoresDto,
   ): Promise<AplicarComercialComissaoPoliticaUnidadeVendedoresResponseDto> {
     return this.service.aplicarPoliticaUnidadeAosVendedores(req.user, dto);
+  }
+
+  @Get('relatorio-config')
+  @Permissions(Permission.COMERCIAL_COMISSAO_READ)
+  @ApiOperation({
+    summary:
+      'Relatório das configurações de comissão da unidade e dos vendedores',
+  })
+  @ApiResponse({
+    status: 200,
+    type: ComercialComissaoRelatorioConfigResponseDto,
+  })
+  relatorioConfig(
+    @Req() req: { user: Usuario },
+    @Query() query: FindComercialComissaoPoliticaUnidadeDto,
+  ): Promise<ComercialComissaoRelatorioConfigResponseDto> {
+    return this.service.relatorioConfiguracao(req.user, query.unidade);
   }
 
   @Post('carregar-padrao')

@@ -6,8 +6,8 @@
   } @else {
     <div class="results-card">
       <section class="comercial-comissoes-toolbar comercial-comissoes-toolbar-unidade" aria-label="Unidade e setores">
-        <div class="comercial-comissoes-unidade-row">
-          <div class="filter-group">
+        <div class="comercial-comissoes-unidade-bar">
+          <div class="filter-group comercial-comissoes-unidade-select">
             <label class="form-label" for="cc-unidade">Unidade</label>
             <select
               id="cc-unidade"
@@ -25,50 +25,57 @@
           </div>
           @if (unidadeFiltro) {
             <div class="comercial-comissoes-toolbar-acoes">
-              @if (podeIncluirFaixa()) {
-                <button
-                  type="button"
-                  class="btn btn-imprimir"
-                  title="Carrega faixas padrão apenas nos vendedores da unidade que ainda não têm cadastro em Manipulados e/ou Marca própria. Não altera faixas já cadastradas."
-                  [disabled]="carregandoPendentes || carregandoVendedores || temLinhaEmEdicao()"
-                  (click)="pedirCarregarPendentes()">
-                  <i class="fas fa-download"></i>
-                  {{ carregandoPendentes ? 'Carregando…' : 'Carregar faixas pendentes' }}
-                </button>
-              }
               <button
                 type="button"
                 class="btn btn-editar"
-                title="Configurar setores da marca própria da unidade"
+                title="Configurar comissões da unidade (setores, convênios, taxas e faixas pendentes)"
                 [disabled]="carregandoPoliticaUnidade || temLinhaEmEdicao()"
                 (click)="abrirModalSetoresUnidade()">
-                <i class="fas fa-th-large"></i>
-                Setores da unidade
+                <i class="fas fa-cog"></i>
+                Configurar Comissões
               </button>
-            </div>
-            <div
-              class="comercial-info-cards comercial-info-cards-unidade"
-              aria-label="Resumo dos setores da unidade">
-              @if (carregandoPoliticaUnidade) {
-                <article class="comercial-info-card">
-                  <span class="comercial-info-card-titulo">Setores da unidade</span>
-                  <span class="comercial-info-card-explica">Carregando…</span>
-                </article>
-              } @else {
-                <article class="comercial-info-card">
-                  <span class="comercial-info-card-titulo">Marca própria da unidade</span>
-                  <strong class="comercial-info-card-valor">{{ rotuloSetoresUnidadeMp() }}</strong>
-                  <span class="comercial-info-card-explica">{{ explicaSetoresUnidadeMp() }}</span>
-                </article>
-                <article class="comercial-info-card">
-                  <span class="comercial-info-card-titulo">Somam em Manipulados</span>
-                  <strong class="comercial-info-card-valor">{{ rotuloSetoresUnidadeManip() }}</strong>
-                  <span class="comercial-info-card-explica">{{ explicaSetoresUnidadeManip() }}</span>
-                </article>
-              }
+              <button
+                type="button"
+                class="btn btn-imprimir"
+                title="Relatório das configurações da loja e dos vendedores"
+                [disabled]="carregandoRelatorio || carregandoPoliticaUnidade"
+                (click)="abrirRelatorioConfig()">
+                <i class="fas fa-file-alt"></i>
+                {{ carregandoRelatorio ? 'Carregando…' : 'Relatório' }}
+              </button>
             </div>
           }
         </div>
+        @if (unidadeFiltro) {
+          <div
+            class="comercial-info-cards comercial-info-cards-unidade"
+            aria-label="Resumo dos setores da unidade">
+            @if (carregandoPoliticaUnidade) {
+              <article class="comercial-info-card">
+                <span class="comercial-info-card-titulo">Resumo da unidade</span>
+                <span class="comercial-info-card-explica">Carregando…</span>
+              </article>
+            } @else {
+              <article class="comercial-info-card">
+                <span class="comercial-info-card-titulo">Marca própria</span>
+                <strong class="comercial-info-card-valor">{{ rotuloSetoresUnidadeMp() }}</strong>
+                <span class="comercial-info-card-explica">{{ explicaSetoresUnidadeMp() }}</span>
+              </article>
+              <article class="comercial-info-card">
+                <span class="comercial-info-card-titulo">Somam em Manipulados</span>
+                <strong class="comercial-info-card-valor">{{ rotuloSetoresUnidadeManip() }}</strong>
+                <span class="comercial-info-card-explica">{{ explicaSetoresUnidadeManip() }}</span>
+              </article>
+              <article class="comercial-info-card comercial-info-card-flags">
+                <span class="comercial-info-card-titulo">Acompanhamento</span>
+                <strong class="comercial-info-card-valor">
+                  {{ rotuloFlagsUnidade() }}
+                </strong>
+                <span class="comercial-info-card-explica">{{ explicaFlagsUnidade() }}</span>
+              </article>
+            }
+          </div>
+        }
       </section>
 
       @if (mensagemResultado) {
@@ -103,9 +110,17 @@
               }
             </select>
           </div>
+          @if (!funcionarioId) {
+            <p class="comercial-comissoes-vendedor-hint">
+              Selecione um vendedor para configurar as faixas e a regra de comissão.
+            </p>
+          }
         </section>
         @if (!funcionarioId) {
-          <div class="loading-message">Selecione um vendedor para configurar as faixas.</div>
+          <div class="comercial-comissoes-empty" role="status">
+            <i class="fas fa-user-tie" aria-hidden="true"></i>
+            <p>Escolha o vendedor acima para ver Manipulados e Marca própria.</p>
+          </div>
         } @else {
         <div class="comercial-faixas-split">
           @for (grade of grades; track grade.tipoBase) {
@@ -487,6 +502,32 @@
               </p>
             </div>
           }
+          <div class="cc-modal-opcoes-grid">
+            <label
+              class="cc-modal-opcao"
+              [class.cc-modal-opcao-ativa]="grade.draftConsiderarConvenios">
+              <input
+                type="checkbox"
+                [(ngModel)]="grade.draftConsiderarConvenios"
+                [disabled]="!podeEditarPolitica() || grade.politicaSalvando" />
+              <span class="cc-modal-opcao-texto">
+                <strong>Considerar convênios</strong>
+                <span>Configuração do vendedor (o acompanhamento da loja usa a flag da unidade).</span>
+              </span>
+            </label>
+            <label
+              class="cc-modal-opcao"
+              [class.cc-modal-opcao-ativa]="grade.draftConsiderarTaxas">
+              <input
+                type="checkbox"
+                [(ngModel)]="grade.draftConsiderarTaxas"
+                [disabled]="!podeEditarPolitica() || grade.politicaSalvando" />
+              <span class="cc-modal-opcao-texto">
+                <strong>Considerar taxas</strong>
+                <span>Configuração do vendedor (o acompanhamento da loja usa a flag da unidade).</span>
+              </span>
+            </label>
+          </div>
         </div>
         <div class="modal-rodape">
           <button
@@ -513,62 +554,127 @@
   @if (modalSetoresUnidadeAberto) {
     <div class="modal-overlay" (click)="fecharModalSetoresUnidade()">
       <div
-        class="modal-conteudo comercial-comissoes-modal-setores"
+        class="modal-conteudo comercial-comissoes-modal-setores comercial-comissoes-modal-unidade"
         (click)="$event.stopPropagation()"
         role="dialog"
         aria-modal="true"
         aria-labelledby="cc-setores-unidade-titulo">
         <div class="modal-cabecalho">
           <div>
-            <h3 class="modal-titulo" id="cc-setores-unidade-titulo">Setores da unidade</h3>
+            <h3 class="modal-titulo" id="cc-setores-unidade-titulo">Configurar Comissões</h3>
             <p class="comercial-politica-hint">{{ unidadeFiltro }}</p>
           </div>
           <button
             type="button"
             class="modal-fechar"
             (click)="fecharModalSetoresUnidade()"
-            [disabled]="politicaUnidadeSalvando"
+            [disabled]="politicaUnidadeSalvando || carregandoPendentes"
             aria-label="Fechar">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="modal-corpo">
-          <div class="filter-group comercial-politica-setores-field">
-            <label class="form-label" for="cc-setores-unidade">Marca própria</label>
-            <input
-              id="cc-setores-unidade"
-              class="form-control"
-              type="text"
-              autocomplete="off"
-              [(ngModel)]="draftCodigosSetorUnidade"
-              [disabled]="!podeEditarPolitica() || politicaUnidadeSalvando || carregandoPoliticaUnidade"
-              placeholder="ex.: 276, 330 — vazio = todos" />
-            <p class="comercial-politica-hint">
-              Defina aqui os setores que vão somar o total de Marca própria da unidade.
-            </p>
-          </div>
-          <div class="filter-group comercial-politica-setores-field">
-            <label class="form-label" for="cc-setores-revenda-unidade">
-              Setores de venda de marca própria que somam em Manipulados
-            </label>
-            <input
-              id="cc-setores-revenda-unidade"
-              class="form-control"
-              type="text"
-              autocomplete="off"
-              [(ngModel)]="draftCodigosSetorRevendaUnidade"
-              [disabled]="!podeEditarPolitica() || politicaUnidadeSalvando || carregandoPoliticaUnidade"
-              placeholder="ex.: 400 — vazio = só requisições" />
-            <p class="comercial-politica-hint">
-              Produtos desses setores entram no Manipulados do TOTAL. Vazio = só requisições.
-            </p>
-          </div>
+          @if (podeIncluirFaixa()) {
+            <section class="cc-modal-secao" aria-labelledby="cc-secao-faixas">
+              <div class="cc-modal-secao-cab">
+                <h4 class="cc-modal-secao-titulo" id="cc-secao-faixas">Faixas padrão</h4>
+                <p class="comercial-politica-hint">
+                  Aplica o padrão só a vendedores sem faixa. Não altera quem já tem.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="btn btn-imprimir cc-modal-acao-faixas"
+                title="Carrega faixas padrão apenas nos vendedores da unidade que ainda não têm cadastro em Manipulados e/ou Marca própria. Não altera faixas já cadastradas."
+                [disabled]="carregandoPendentes || carregandoVendedores || temLinhaEmEdicao() || politicaUnidadeSalvando"
+                (click)="pedirCarregarPendentes()">
+                <i class="fas fa-download"></i>
+                {{ carregandoPendentes ? 'Carregando…' : 'Carregar faixas pendentes' }}
+              </button>
+            </section>
+          }
+
+          <section class="cc-modal-secao" aria-labelledby="cc-secao-setores">
+            <div class="cc-modal-secao-cab">
+              <h4 class="cc-modal-secao-titulo" id="cc-secao-setores">Setores da unidade</h4>
+              <p class="comercial-politica-hint">
+                Códigos ERP separados por vírgula. Vazio = regra padrão da base.
+              </p>
+            </div>
+            <div class="cc-modal-setores-grid">
+              <div class="filter-group comercial-politica-setores-field">
+                <label class="form-label" for="cc-setores-unidade">Marca própria</label>
+                <input
+                  id="cc-setores-unidade"
+                  class="form-control"
+                  type="text"
+                  autocomplete="off"
+                  [(ngModel)]="draftCodigosSetorUnidade"
+                  [disabled]="!podeEditarPolitica() || politicaUnidadeSalvando || carregandoPoliticaUnidade"
+                  placeholder="ex.: 276, 330" />
+                <p class="comercial-politica-hint">
+                  Setores que somam no TOTAL de Marca própria. Vazio = todos.
+                </p>
+              </div>
+              <div class="filter-group comercial-politica-setores-field">
+                <label class="form-label" for="cc-setores-revenda-unidade">
+                  Somam em Manipulados
+                </label>
+                <input
+                  id="cc-setores-revenda-unidade"
+                  class="form-control"
+                  type="text"
+                  autocomplete="off"
+                  [(ngModel)]="draftCodigosSetorRevendaUnidade"
+                  [disabled]="!podeEditarPolitica() || politicaUnidadeSalvando || carregandoPoliticaUnidade"
+                  placeholder="ex.: 521" />
+                <p class="comercial-politica-hint">
+                  Produtos desses setores entram no Manipulados. Vazio = só requisições.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="cc-modal-secao" aria-labelledby="cc-secao-opcoes">
+            <div class="cc-modal-secao-cab">
+              <h4 class="cc-modal-secao-titulo" id="cc-secao-opcoes">Acompanhamento</h4>
+              <p class="comercial-politica-hint">
+                Não alteram totais do fechamento de caixa.
+              </p>
+            </div>
+            <div class="cc-modal-opcoes-grid">
+              <label
+                class="cc-modal-opcao"
+                [class.cc-modal-opcao-ativa]="draftConsiderarConvenios">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="draftConsiderarConvenios"
+                  [disabled]="!podeEditarPolitica() || politicaUnidadeSalvando || carregandoPoliticaUnidade" />
+                <span class="cc-modal-opcao-texto">
+                  <strong>Considerar convênios</strong>
+                  <span>Inclui o lote CONVENIO-DINHEIRO (data do recebimento) com vendedor.</span>
+                </span>
+              </label>
+              <label
+                class="cc-modal-opcao"
+                [class.cc-modal-opcao-ativa]="draftConsiderarTaxas">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="draftConsiderarTaxas"
+                  [disabled]="!podeEditarPolitica() || politicaUnidadeSalvando || carregandoPoliticaUnidade" />
+                <span class="cc-modal-opcao-texto">
+                  <strong>Considerar taxas</strong>
+                  <span>Não abate a taxa na base (Considera Taxa = Sim).</span>
+                </span>
+              </label>
+            </div>
+          </section>
         </div>
         <div class="modal-rodape">
           <button
             type="button"
             class="btn btn-cancelar"
-            [disabled]="politicaUnidadeSalvando"
+            [disabled]="politicaUnidadeSalvando || carregandoPendentes"
             (click)="fecharModalSetoresUnidade()">
             Cancelar
           </button>
@@ -576,16 +682,16 @@
             <button
               type="button"
               class="btn btn-editar"
-              [disabled]="politicaUnidadeSalvando || carregandoPoliticaUnidade || temLinhaEmEdicao()"
+              [disabled]="politicaUnidadeSalvando || carregandoPoliticaUnidade || carregandoPendentes || temLinhaEmEdicao()"
               (click)="pedirAplicarSetoresAosVendedores()">
               Aplicar aos vendedores
             </button>
             <button
               type="button"
               class="btn btn-salvar"
-              [disabled]="politicaUnidadeSalvando || carregandoPoliticaUnidade || temLinhaEmEdicao()"
+              [disabled]="politicaUnidadeSalvando || carregandoPoliticaUnidade || carregandoPendentes || temLinhaEmEdicao()"
               (click)="salvarPoliticaUnidade()">
-              {{ politicaUnidadeSalvando ? 'Salvando…' : 'Salvar setores' }}
+              {{ politicaUnidadeSalvando ? 'Salvando…' : 'Salvar' }}
             </button>
           }
         </div>
@@ -604,7 +710,7 @@
         <div class="modal-cabecalho">
           <div>
             <h3 class="modal-titulo" id="cc-aplicar-setores-titulo">
-              Aplicar setores aos vendedores
+              Aplicar configuração aos vendedores
             </h3>
             <p class="comercial-politica-hint">{{ unidadeFiltro }}</p>
           </div>
@@ -619,13 +725,14 @@
         </div>
         <div class="modal-corpo">
           <p class="comercial-politica-hint">
-            Os valores atuais do formulário serão gravados na unidade e copiados
-            para Marca própria e Manipulados de cada vendedor vinculado.
+            Grava na unidade e copia para os vendedores: setores de Marca própria,
+            setores de Manipulados, <strong>Considerar convênios</strong> e
+            <strong>Considerar taxas</strong>.
           </p>
           <p class="comercial-politica-hint">
             <strong>Somente quem não tem</strong> preenche listas vazias e não altera
             vendedor que já tem setores. <strong>Aplicar a todos</strong> substitui
-            as listas já cadastradas.
+            as listas e as flags já cadastradas.
           </p>
         </div>
         <div class="modal-rodape">
@@ -649,6 +756,124 @@
             [disabled]="politicaUnidadeSalvando"
             (click)="confirmarAplicarSetores(false)">
             {{ politicaUnidadeSalvando ? 'Aplicando…' : 'Aplicar a todos' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (modalRelatorioAberto) {
+    <div class="modal-overlay" (click)="fecharRelatorioConfig()">
+      <div
+        class="modal-conteudo comercial-comissoes-modal-relatorio"
+        (click)="$event.stopPropagation()"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cc-relatorio-titulo">
+        <div class="modal-cabecalho">
+          <div>
+            <h3 class="modal-titulo" id="cc-relatorio-titulo">
+              Relatório de configurações
+            </h3>
+            <p class="comercial-politica-hint">{{ unidadeFiltro }}</p>
+          </div>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharRelatorioConfig()"
+            [disabled]="carregandoRelatorio"
+            aria-label="Fechar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-corpo">
+          @if (carregandoRelatorio || !relatorioConfig) {
+            <div class="loading-message">Carregando relatório…</div>
+          } @else {
+            <section class="cc-relatorio-unidade" aria-label="Configuração da loja">
+              <h4 class="cc-modal-secao-titulo">Loja</h4>
+              <div class="comercial-info-cards comercial-info-cards-unidade">
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Marca própria</span>
+                  <strong class="comercial-info-card-valor">
+                    {{ rotuloSetoresRelatorio(relatorioConfig.unidade.codigosSetor) }}
+                  </strong>
+                </article>
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Somam em Manipulados</span>
+                  <strong class="comercial-info-card-valor">
+                    {{ rotuloSetoresRelatorio(relatorioConfig.unidade.codigosSetorRevendaManipulados) }}
+                  </strong>
+                </article>
+                <article class="comercial-info-card">
+                  <span class="comercial-info-card-titulo">Acompanhamento</span>
+                  <strong class="comercial-info-card-valor">
+                    {{ rotuloFlagsRelatorio(relatorioConfig.unidade.considerarConvenios, relatorioConfig.unidade.considerarTaxas) }}
+                  </strong>
+                </article>
+              </div>
+            </section>
+
+            <section class="cc-relatorio-vendedores" aria-label="Configuração dos vendedores">
+              <h4 class="cc-modal-secao-titulo">Vendedores</h4>
+              @if (relatorioConfig.vendedores.length === 0) {
+                <p class="comercial-politica-hint">Nenhum vendedor vinculado nesta unidade.</p>
+              } @else {
+                <div class="table-container cc-relatorio-table-wrap">
+                  <table class="vendas-table cc-relatorio-table">
+                    <thead>
+                      <tr>
+                        <th>Vendedor</th>
+                        <th>ERP</th>
+                        <th>Manipulados</th>
+                        <th>Marca própria</th>
+                        <th>Convênios / Taxas</th>
+                        <th>Faixas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (v of relatorioConfig.vendedores; track v.funcionarioId) {
+                        <tr>
+                          <td>{{ v.nome }}</td>
+                          <td>{{ v.codigoVendedorErp }}</td>
+                          <td>
+                            <div>{{ rotuloIncidenciaRelatorio(v.incidenciaManipulados) }} · {{ rotuloTravaRelatorio(v.percentualMinimoLojaManipulados) }}</div>
+                            <div class="comercial-politica-hint">Setor: {{ rotuloSetoresRelatorio(v.codigosSetorRevendaManipulados) }}</div>
+                          </td>
+                          <td>
+                            <div>{{ rotuloIncidenciaRelatorio(v.incidenciaMarcaPropria) }} · {{ rotuloTravaRelatorio(v.percentualMinimoLojaMarcaPropria) }}</div>
+                            <div class="comercial-politica-hint">Setor: {{ rotuloSetoresRelatorio(v.codigosSetorMarcaPropria) }}</div>
+                          </td>
+                          <td>{{ rotuloFlagsRelatorio(v.considerarConvenios, v.considerarTaxas) }}</td>
+                          <td>{{ v.faixasManipulados }} / {{ v.faixasMarcaPropria }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </section>
+            <p class="comercial-politica-hint">
+              O acompanhamento comercial usa as flags da <strong>unidade</strong>.
+              As flags do vendedor são a cópia aplicada (e editáveis na regra).
+            </p>
+          }
+        </div>
+        <div class="modal-rodape">
+          <button
+            type="button"
+            class="btn btn-cancelar"
+            [disabled]="carregandoRelatorio"
+            (click)="fecharRelatorioConfig()">
+            Fechar
+          </button>
+          <button
+            type="button"
+            class="btn btn-imprimir"
+            [disabled]="carregandoRelatorio || !relatorioConfig"
+            (click)="imprimirRelatorioConfig()">
+            <i class="fas fa-print"></i>
+            Imprimir
           </button>
         </div>
       </div>
