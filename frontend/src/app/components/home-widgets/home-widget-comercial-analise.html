@@ -36,6 +36,7 @@
                 <a
                   class="btn btn-sm btn-primary home-analise-btn-abrir"
                   routerLink="/comercial/analise"
+                  [queryParams]="{ unidade: card.unidade }"
                   title="Abrir análise comercial"
                   [attr.aria-label]="'Abrir análise de ' + card.unidade">
                   <i class="fas fa-chart-line" aria-hidden="true"></i>

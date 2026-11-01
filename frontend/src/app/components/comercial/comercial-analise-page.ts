@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, Subscription, of } from 'rxjs';
 import { catchError, debounceTime, finalize, switchMap } from 'rxjs/operators';
 import ExcelJS from 'exceljs';
@@ -73,6 +74,8 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private pageContextService = inject(PageContextService);
   private errorModal = inject(ErrorModalService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   loading = false;
@@ -1187,11 +1190,34 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       this.unidadeFilter = match;
       this.unidadeDisabled = true;
       this.unidadesMultiFiltro = [match];
-    } else {
-      this.unidadeFilter = '';
-      this.unidadeDisabled = false;
-      this.unidadesMultiFiltro = [...this.unidadesDisponiveis];
+      return;
     }
+    this.unidadeDisabled = false;
+    this.unidadesMultiFiltro = [...this.unidadesDisponiveis];
+    // Card da home: /comercial/analise?unidade=INHUMAS (gestão).
+    const daUrl = this.unidadeDaQuery();
+    this.unidadeFilter = daUrl ?? '';
+    if (daUrl) {
+      this.limparQueryUnidade();
+    }
+  }
+
+  /** Unidade vinda do query param (card da home); só se existir no enum. */
+  private unidadeDaQuery(): Unidade | null {
+    const raw = String(this.route.snapshot.queryParamMap.get('unidade') ?? '')
+      .trim()
+      .toUpperCase();
+    if (!raw) return null;
+    return this.unidadesDisponiveis.find((u) => u === raw) ?? null;
+  }
+
+  private limparQueryUnidade(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { unidade: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   private anoDe(periodo: ComercialAnalisePeriodo | undefined): number {
