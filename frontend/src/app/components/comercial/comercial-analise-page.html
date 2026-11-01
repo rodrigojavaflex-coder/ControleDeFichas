@@ -8,16 +8,15 @@
     <div class="filters-inline visitacao-analise-filters">
       <section class="filters-panel-top visitacao-analise-toolbar" aria-label="Filtros da análise">
         <div class="filters-controls">
-          <div class="filter-group visitacao-analise-unidade">
+          <!-- Escopo fixo: unidade primeiro. Gestão: Dimensão antes; unidade simples/multi depois. -->
+          <div class="filter-group visitacao-analise-unidade" *ngIf="unidadeDisabled">
             <label class="form-label" for="ca-unidade">Unidade</label>
             <select
               id="ca-unidade"
               class="form-control"
               [ngModel]="unidadeFilter"
-              [disabled]="unidadeDisabled"
-              (ngModelChange)="onUnidadeChange($event)">
-              <option *ngIf="!unidadeDisabled" [ngValue]="''">Selecione…</option>
-              <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+              [disabled]="true">
+              <option *ngFor="let u of unidadesDisponiveis" [ngValue]="u">{{ u }}</option>
             </select>
           </div>
 
@@ -25,7 +24,7 @@
             <label class="form-label">Ano</label>
             <app-multi-select-dropdown
               [options]="anosOptions"
-              [disabled]="!unidadeFilter || loadingOpcoes || isSemanas || !anosOptions.length"
+              [disabled]="!podeEditarFiltrosBase || isSemanas || !anosOptions.length"
               placeholder="Anos…"
               [ngModel]="anosFiltro"
               (ngModelChange)="onAnosChange($event)">
@@ -38,7 +37,7 @@
               id="ca-modo"
               class="form-control"
               [ngModel]="modo"
-              [disabled]="!unidadeFilter || loadingOpcoes"
+              [disabled]="!podeEditarFiltrosBase"
               (ngModelChange)="onModoChange($event)">
               <option value="comparar">Comparar</option>
               <option value="ranking">Ranking</option>
@@ -53,11 +52,35 @@
               id="ca-dimensao"
               class="form-control"
               [ngModel]="dimensao"
-              [disabled]="!unidadeFilter || loadingOpcoes"
+              [disabled]="!podeEditarFiltrosBase"
               (ngModelChange)="onDimensaoChange($event)">
               <option value="vendedor">Vendedor</option>
               <option value="unidade">Unidade</option>
             </select>
+          </div>
+
+          <div class="filter-group visitacao-analise-unidade" *ngIf="isGestaoUnidades && mostraUnidadeSimples">
+            <label class="form-label" for="ca-unidade-gestao">Unidade</label>
+            <select
+              id="ca-unidade-gestao"
+              class="form-control"
+              [ngModel]="unidadeFilter"
+              [disabled]="loadingOpcoes"
+              (ngModelChange)="onUnidadeChange($event)">
+              <option [ngValue]="''">Selecione…</option>
+              <option *ngFor="let u of unidadesDisponiveis" [ngValue]="u">{{ u }}</option>
+            </select>
+          </div>
+
+          <div class="filter-group comercial-analise-unidades" *ngIf="mostraUnidadesMulti">
+            <label class="form-label">Unidades</label>
+            <app-multi-select-dropdown
+              [options]="unidadesOptions"
+              [disabled]="loadingOpcoes || !unidadesOptions.length"
+              placeholder="Unidades…"
+              [ngModel]="unidadesMultiFiltro"
+              (ngModelChange)="onUnidadesMultiChange($event)">
+            </app-multi-select-dropdown>
           </div>
 
           <div class="filter-group visitacao-analise-exibicao">
@@ -66,7 +89,7 @@
               id="ca-exibicao"
               class="form-control"
               [ngModel]="exibicao"
-              [disabled]="!unidadeFilter || loadingOpcoes"
+              [disabled]="!podeEditarFiltrosBase"
               (ngModelChange)="onExibicaoChange($event)">
               <option value="dados">Dados</option>
               <option value="graficos">Gráficos</option>
@@ -79,7 +102,7 @@
               id="ca-metrica"
               class="form-control"
               [ngModel]="metrica"
-              [disabled]="!unidadeFilter || loadingOpcoes"
+              [disabled]="!podeEditarFiltrosBase"
               (ngModelChange)="onMetricaChange($event)">
               <option value="valor">Valor</option>
               <option value="quantidade">Quantidade</option>
@@ -93,7 +116,7 @@
               id="ca-base"
               class="form-control"
               [ngModel]="base"
-              [disabled]="!unidadeFilter || loadingOpcoes"
+              [disabled]="!podeEditarFiltrosBase"
               (ngModelChange)="onBaseChange($event)">
               <option value="manipuladosRequisicoes">Manipulado (requisições)</option>
               <option value="manipuladosSetor">Manipulado (setor)</option>
@@ -112,7 +135,7 @@
               id="ca-leitura"
               class="form-control"
               [ngModel]="leitura"
-              [disabled]="!unidadeFilter || loadingOpcoes"
+              [disabled]="!podeEditarFiltrosBase"
               (ngModelChange)="onLeituraChange($event)">
               <option value="comparar">Comparar semanas</option>
               <option value="evolucao">Evolução do mês</option>
@@ -122,14 +145,14 @@
           <ng-container *ngIf="isCompararMes">
             <div class="filter-group visitacao-analise-competencia">
               <label class="form-label" for="ca-c1">Competência 1</label>
-              <select id="ca-c1" class="form-control" [ngModel]="c1" [disabled]="!unidadeFilter || loadingOpcoes" (ngModelChange)="onC1Change($event)">
+              <select id="ca-c1" class="form-control" [ngModel]="c1" [disabled]="!podeEditarFiltrosBase" (ngModelChange)="onC1Change($event)">
                 <option [ngValue]="null">Selecione…</option>
                 <option *ngFor="let c of competenciasFiltradas" [ngValue]="c.key">{{ c.label }}</option>
               </select>
             </div>
             <div class="filter-group visitacao-analise-competencia">
               <label class="form-label" for="ca-c2">Competência 2</label>
-              <select id="ca-c2" class="form-control" [ngModel]="c2" [disabled]="!unidadeFilter || loadingOpcoes" (ngModelChange)="onC2Change($event)">
+              <select id="ca-c2" class="form-control" [ngModel]="c2" [disabled]="!podeEditarFiltrosBase" (ngModelChange)="onC2Change($event)">
                 <option [ngValue]="null">Selecione…</option>
                 <option *ngFor="let c of competenciasFiltradas" [ngValue]="c.key">{{ c.label }}</option>
               </select>
@@ -140,7 +163,7 @@
             <label class="form-label">Competências</label>
             <app-multi-select-dropdown
               [options]="competenciasOptions"
-              [disabled]="!unidadeFilter || loadingOpcoes || !competenciasFiltradas.length"
+              [disabled]="!podeEditarFiltrosBase || !competenciasFiltradas.length"
               placeholder="Competências…"
               [ngModel]="competenciasRanking"
               (ngModelChange)="onCompetenciasChange($event)">
@@ -150,14 +173,14 @@
           <ng-container *ngIf="isSemanas && leitura === 'comparar'">
             <div class="filter-group visitacao-analise-competencia">
               <label class="form-label" for="ca-s1">Semana 1</label>
-              <select id="ca-s1" class="form-control" [ngModel]="s1" [disabled]="!unidadeFilter || loadingOpcoes" (ngModelChange)="onS1Change($event)">
+              <select id="ca-s1" class="form-control" [ngModel]="s1" [disabled]="!podeEditarFiltrosBase" (ngModelChange)="onS1Change($event)">
                 <option [ngValue]="null">Selecione…</option>
                 <option *ngFor="let s of semanas" [ngValue]="s.key">{{ s.label }}</option>
               </select>
             </div>
             <div class="filter-group visitacao-analise-competencia">
               <label class="form-label" for="ca-s2">Semana 2</label>
-              <select id="ca-s2" class="form-control" [ngModel]="s2" [disabled]="!unidadeFilter || loadingOpcoes" (ngModelChange)="onS2Change($event)">
+              <select id="ca-s2" class="form-control" [ngModel]="s2" [disabled]="!podeEditarFiltrosBase" (ngModelChange)="onS2Change($event)">
                 <option [ngValue]="null">Selecione…</option>
                 <option *ngFor="let s of semanas" [ngValue]="s.key">{{ s.label }}</option>
               </select>

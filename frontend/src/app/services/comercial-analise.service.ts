@@ -56,11 +56,17 @@ export class ComercialAnaliseService {
       if (filters.c2) params = params.set('c2', filters.c2);
     }
 
-    if (filters.unidade) {
-      params = params.set('unidade', filters.unidade);
-    }
-    if (dimensao === 'vendedor' && filters.funcionarioIds != null) {
-      params = params.set('funcionarioIds', filters.funcionarioIds.join(','));
+    if (dimensao === 'unidade') {
+      if (filters.unidades != null) {
+        params = params.set('unidades', filters.unidades.join(','));
+      }
+    } else {
+      if (filters.unidade) {
+        params = params.set('unidade', filters.unidade);
+      }
+      if (filters.funcionarioIds != null) {
+        params = params.set('funcionarioIds', filters.funcionarioIds.join(','));
+      }
     }
     return this.http.get<ComercialAnaliseResponse>(this.apiUrl, { params });
   }

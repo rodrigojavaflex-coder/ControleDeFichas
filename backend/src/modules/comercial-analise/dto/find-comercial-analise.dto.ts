@@ -168,10 +168,44 @@ export class FindComercialAnaliseDto {
   })
   s2?: string;
 
-  @ApiPropertyOptional({ enum: Unidade })
+  @ApiPropertyOptional({
+    enum: Unidade,
+    description: 'Unidade única (obrigatória em dimensao=vendedor).',
+  })
+  @ValidateIf(
+    (o: FindComercialAnaliseDto) => (o.dimensao ?? 'vendedor') === 'vendedor',
+  )
   @IsOptional()
   @IsEnum(Unidade)
   unidade?: Unidade;
+
+  @ApiPropertyOptional({
+    enum: Unidade,
+    isArray: true,
+    description:
+      'Só dimensao=unidade. Marcadas no filtro. Vazio = nenhuma. Omitido = todas do escopo.',
+  })
+  @ValidateIf(
+    (o: FindComercialAnaliseDto) => (o.dimensao ?? 'vendedor') === 'unidade',
+  )
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return undefined;
+    const raw = Array.isArray(value) ? value : String(value).split(',');
+    const valores = new Set(Object.values(Unidade));
+    return [
+      ...new Set(
+        raw
+          .map((item) => String(item ?? '').trim())
+          .filter((item): item is Unidade =>
+            valores.has(item as Unidade),
+          ),
+      ),
+    ];
+  })
+  @IsArray()
+  @IsEnum(Unidade, { each: true })
+  unidades?: Unidade[];
 
   @ApiPropertyOptional({
     type: [String],

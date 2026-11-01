@@ -30,7 +30,9 @@ export interface ComercialAnaliseVendedorOpcao {
 }
 
 export interface ComercialAnaliseOpcoes {
-  unidade: Unidade;
+  unidade: Unidade | null;
+  unidadesDisponiveis: Unidade[];
+  escopoFixo: boolean;
   anoCorrente: number;
   competencias: ComercialAnalisePeriodo[];
   semanas: ComercialAnalisePeriodo[];
@@ -53,6 +55,8 @@ export interface FindComercialAnaliseDto {
   s1?: string;
   s2?: string;
   unidade?: Unidade;
+  /** Só dimensao=unidade (gestão). Omitido = todas; vazio = nenhuma. */
+  unidades?: Unidade[];
   /** Só dimensao=vendedor. Omitido = todos; vazio = nenhum. */
   funcionarioIds?: string[];
 }
@@ -71,7 +75,7 @@ export interface ComercialAnaliseLinha {
 }
 
 export interface ComercialAnaliseResponse {
-  unidade: Unidade;
+  unidade: Unidade | null;
   modo: ComercialAnaliseModo;
   periodos: ComercialAnalisePeriodo[];
   periodo1: ComercialAnalisePeriodo | null;
@@ -79,6 +83,7 @@ export interface ComercialAnaliseResponse {
   agregacao: 'soma' | null;
   filtrosAplicados: {
     dimensao: ComercialAnaliseDimensao;
+    unidades: Unidade[];
     funcionarioIds: string[];
     metrica: ComercialAnaliseMetrica;
     base: ComercialAnaliseBase;

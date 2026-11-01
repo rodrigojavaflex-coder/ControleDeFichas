@@ -80,8 +80,14 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   dados: ComercialAnaliseResponse | null = null;
 
   unidadeFilter: Unidade | '' = '';
-  unidades = Object.values(Unidade);
+  /** Unidades do escopo (enum ou só a do usuário). */
+  unidadesDisponiveis: Unidade[] = Object.values(Unidade);
   unidadeDisabled = false;
+  /**
+   * Gestão + dimensao=unidade: lojas marcadas no multi-select.
+   * Padrão = todas disponíveis.
+   */
+  unidadesMultiFiltro: Unidade[] = [];
 
   modo: ComercialAnaliseModo = 'evolucao';
   dimensao: ComercialAnaliseDimensao = 'vendedor';
@@ -180,9 +186,8 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
         }
         this.cdr.markForCheck();
       });
-    if (this.unidadeFilter) {
-      this.carregarOpcoes(true);
-    }
+    // Escopo fixo ou gestão: carrega calendário (e vendedores se já houver unidade).
+    this.carregarOpcoes(true);
   }
 
   ngOnDestroy(): void {
@@ -256,6 +261,25 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       value: v.funcionarioId,
       label: v.nome,
     }));
+  }
+
+  get unidadesOptions(): MultiSelectOption[] {
+    return this.unidadesDisponiveis.map((u) => ({ value: u, label: u }));
+  }
+
+  /** Gestão (sem unidade fixa): Dimensão vem antes do filtro de unidade(s). */
+  get isGestaoUnidades(): boolean {
+    return !this.unidadeDisabled;
+  }
+
+  /** Multi-select de lojas (só gestão + dimensao unidade). */
+  get mostraUnidadesMulti(): boolean {
+    return this.isGestaoUnidades && this.dimensao === 'unidade';
+  }
+
+  /** Select único de unidade (escopo fixo ou gestão em dimensao vendedor). */
+  get mostraUnidadeSimples(): boolean {
+    return this.unidadeDisabled || this.dimensao === 'vendedor';
   }
 
   get labelPeriodo1(): string {
@@ -355,10 +379,35 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     return this.podeAnalisar();
   }
 
+  /** Ano/modo/dimensão/métrica liberados após /opcoes (não exigem unidade na gestão). */
+  get podeEditarFiltrosBase(): boolean {
+    return (
+      !this.loadingOpcoes &&
+      (this.unidadeDisabled ||
+        this.competenciasDisponiveis.length > 0 ||
+        this.semanas.length > 0)
+    );
+  }
+
+  private rotuloArquivoUnidades(): string {
+    const uns =
+      this.dados?.filtrosAplicados?.unidades ??
+      (this.dados?.unidade ? [this.dados.unidade] : []);
+    return uns.length ? uns.join('-') : 'unidades';
+  }
+
   onUnidadeChange(unidade: Unidade | ''): void {
     this.unidadeFilter = unidade;
     this.dados = null;
-    this.carregarOpcoes(true);
+    this.carregarOpcoes(false);
+  }
+
+  onUnidadesMultiChange(values: Unidade[]): void {
+    const validas = new Set(this.unidadesDisponiveis);
+    this.unidadesMultiFiltro = [
+      ...new Set((values ?? []).filter((u) => validas.has(u))),
+    ];
+    this.onFiltroChange();
   }
 
   onAnosChange(values: number[]): void {
@@ -387,6 +436,15 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     this.dados = null;
     this.resetFiltrosFaixa();
     this.atualizarPageContext();
+    if (dimensao === 'unidade' && this.isGestaoUnidades) {
+      if (!this.unidadesMultiFiltro.length) {
+        this.unidadesMultiFiltro = [...this.unidadesDisponiveis];
+      }
+    }
+    if (dimensao === 'vendedor' && this.isGestaoUnidades && this.unidadeFilter) {
+      this.carregarOpcoes(false);
+      return;
+    }
     this.onFiltroChange();
   }
 
@@ -645,7 +703,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     sheet.getRow(1).font = { bold: true };
     await this.baixar(
       workbook,
-      `${alvo.arquivo}_${this.dados.unidade}_${this.dados.periodo1?.key ?? 'p1'}_${this.dados.periodo2?.key ?? 'p2'}`,
+      `${alvo.arquivo}_${this.rotuloArquivoUnidades()}_${this.dados.periodo1?.key ?? 'p1'}_${this.dados.periodo2?.key ?? 'p2'}`,
     );
   }
 
@@ -667,7 +725,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     sheet.getRow(1).font = { bold: true };
     await this.baixar(
       workbook,
-      `comercial_analise_${vendas ? 'vendas' : 'rejeitados'}_${this.dados.unidade}`,
+      `comercial_analise_${vendas ? 'vendas' : 'rejeitados'}_${this.rotuloArquivoUnidades()}`,
     );
   }
 
@@ -693,7 +751,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     sheet.getRow(1).font = { bold: true };
     await this.baixar(
       workbook,
-      `comercial_analise_serie_${vendas ? 'vendas' : 'rejeitados'}_${this.dados.unidade}`,
+      `comercial_analise_serie_${vendas ? 'vendas' : 'rejeitados'}_${this.rotuloArquivoUnidades()}`,
     );
   }
 
@@ -782,7 +840,15 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
 
   private podeAnalisar(): boolean {
-    if (!this.unidadeFilter) return false;
+    if (this.dimensao === 'unidade') {
+      if (this.unidadeDisabled) {
+        if (!this.unidadeFilter) return false;
+      } else if (!this.unidadesMultiFiltro.length) {
+        return false;
+      }
+    } else if (!this.unidadeFilter) {
+      return false;
+    }
     if (this.modo === 'comparar') return !!this.c1 && !!this.c2 && this.c1 !== this.c2;
     if (this.modo === 'ranking') return this.competenciasRanking.length >= 1;
     if (this.modo === 'evolucao') return this.competenciasRanking.length >= 2;
@@ -796,9 +862,15 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       dimensao: this.dimensao,
       metrica: this.metrica,
       base: this.base,
-      unidade: this.unidadeFilter as Unidade,
     };
-    if (this.dimensao === 'vendedor') {
+    if (this.dimensao === 'unidade') {
+      filtros.unidades = this.unidadeDisabled
+        ? this.unidadeFilter
+          ? [this.unidadeFilter as Unidade]
+          : []
+        : [...this.unidadesMultiFiltro];
+    } else {
+      filtros.unidade = this.unidadeFilter as Unidade;
       filtros.funcionarioIds = [...this.funcionarioIdsFiltro];
     }
     if (this.modo === 'comparar') {
@@ -817,19 +889,16 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
 
   private carregarOpcoes(selecionarPadrao: boolean): void {
-    if (!this.unidadeFilter) {
-      this.competenciasDisponiveis = [];
-      this.semanas = [];
-      this.vendedores = [];
-      this.anosFiltro = [];
-      this.loadingOpcoes = false;
-      this.cdr.markForCheck();
-      return;
-    }
     this.loadingOpcoes = true;
     this.opcoesSub?.unsubscribe();
+    const unidade =
+      this.unidadeFilter && this.dimensao === 'vendedor'
+        ? (this.unidadeFilter as Unidade)
+        : this.unidadeDisabled && this.unidadeFilter
+          ? (this.unidadeFilter as Unidade)
+          : undefined;
     this.opcoesSub = this.service
-      .opcoes({ unidade: this.unidadeFilter as Unidade })
+      .opcoes(unidade ? { unidade } : {})
       .pipe(
         catchError((err: unknown) => {
           this.errorModal.show(
@@ -867,6 +936,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   private aplicarOpcoes(
     opcoes: {
       anoCorrente: number;
+      unidadesDisponiveis?: Unidade[];
       competencias: ComercialAnalisePeriodo[];
       semanas: ComercialAnalisePeriodo[];
       vendedores: ComercialAnaliseVendedorOpcao[];
@@ -877,9 +947,14 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     this.competenciasDisponiveis = opcoes.competencias ?? [];
     this.semanas = opcoes.semanas ?? [];
     this.vendedores = opcoes.vendedores ?? [];
+    if (opcoes.unidadesDisponiveis?.length) {
+      this.unidadesDisponiveis = [...opcoes.unidadesDisponiveis];
+    }
     const idsValidos = new Set(this.vendedores.map((v) => v.funcionarioId));
+    const unidadesValidas = new Set(this.unidadesDisponiveis);
     if (selecionarPadrao) {
       this.funcionarioIdsFiltro = this.vendedores.map((v) => v.funcionarioId);
+      this.unidadesMultiFiltro = [...this.unidadesDisponiveis];
       const ano = this.competenciasDisponiveis.some((c) => this.anoDe(c) === this.anoCorrente)
         ? this.anoCorrente
         : this.anoDe(
@@ -894,6 +969,9 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     } else {
       this.funcionarioIdsFiltro = this.funcionarioIdsFiltro.filter((id) =>
         idsValidos.has(id),
+      );
+      this.unidadesMultiFiltro = this.unidadesMultiFiltro.filter((u) =>
+        unidadesValidas.has(u),
       );
       this.podarSelecao();
     }
@@ -984,13 +1062,15 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
 
   private initializeUnidadeFilter(): void {
     const raw = this.authService.getCurrentUser()?.unidade?.trim() ?? '';
-    const match = this.unidades.find((u) => u === raw);
+    const match = this.unidadesDisponiveis.find((u) => u === raw);
     if (match) {
       this.unidadeFilter = match;
       this.unidadeDisabled = true;
+      this.unidadesMultiFiltro = [match];
     } else {
       this.unidadeFilter = '';
       this.unidadeDisabled = false;
+      this.unidadesMultiFiltro = [...this.unidadesDisponiveis];
     }
   }
 

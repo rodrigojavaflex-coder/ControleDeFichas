@@ -1,3 +1,15 @@
+/* Unidades (multi) na gestão + dimensao=unidade. */
+.comercial-analise-page .comercial-analise-unidades {
+  flex: 1 1 14rem;
+  width: 14rem;
+  min-width: 12rem;
+  max-width: 20rem;
+}
+
+.comercial-analise-page .comercial-analise-unidades .multi-select-dropdown {
+  width: 100%;
+}
+
 /* Base: rótulos longos das parcelas do RESULTADOS. */
 .comercial-analise-page .comercial-analise-base {
   flex: 1 1 14rem;

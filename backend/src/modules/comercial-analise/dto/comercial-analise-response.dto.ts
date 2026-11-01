@@ -47,8 +47,24 @@ export class ComercialAnaliseVendedorOpcaoDto {
 }
 
 export class ComercialAnaliseOpcoesResponseDto {
-  @ApiProperty({ enum: Unidade })
-  unidade: Unidade;
+  @ApiPropertyOptional({
+    enum: Unidade,
+    nullable: true,
+    description: 'Unidade resolvida (escopo fixo ou filtro). Null se gestão sem filtro.',
+  })
+  unidade: Unidade | null;
+
+  @ApiProperty({
+    enum: Unidade,
+    isArray: true,
+    description: 'Unidades que o usuário pode marcar (escopo).',
+  })
+  unidadesDisponiveis: Unidade[];
+
+  @ApiProperty({
+    description: 'True quando usuario.unidade (ou vendedor) trava o filtro.',
+  })
+  escopoFixo: boolean;
 
   @ApiProperty({ example: 2026 })
   anoCorrente: number;
@@ -109,6 +125,13 @@ export class ComercialAnaliseFiltrosAplicadosDto {
   dimensao: ComercialAnaliseDimensao;
 
   @ApiProperty({
+    enum: Unidade,
+    isArray: true,
+    description: 'Unidades efetivas da grade (1 em vendedor; N em dimensao=unidade).',
+  })
+  unidades: Unidade[];
+
+  @ApiProperty({
     type: [String],
     description:
       'Vendedores marcados (só dimensao=vendedor; vazio = nenhum).',
@@ -126,8 +149,12 @@ export class ComercialAnaliseFiltrosAplicadosDto {
 }
 
 export class ComercialAnaliseResponseDto {
-  @ApiProperty({ enum: Unidade })
-  unidade: Unidade;
+  @ApiPropertyOptional({
+    enum: Unidade,
+    nullable: true,
+    description: 'Primeira unidade do recorte (compat). Preferir filtrosAplicados.unidades.',
+  })
+  unidade: Unidade | null;
 
   @ApiProperty({ enum: COMERCIAL_ANALISE_MODOS })
   modo: ComercialAnaliseModo;

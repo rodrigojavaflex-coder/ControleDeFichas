@@ -41,9 +41,6 @@ type Recorte = {
 
 type MapaItens = Map<string, ComercialAcompanhamentoItemDto>;
 
-/** Chave sintética da linha TOTAL da loja (dimensao=unidade). */
-const ID_UNIDADE = '__unidade__';
-
 @Injectable()
 export class ComercialAnaliseService {
   private readonly logger = new Logger(ComercialAnaliseService.name);
@@ -56,15 +53,19 @@ export class ComercialAnaliseService {
     usuario: Usuario,
     unidadeFiltro?: Unidade,
   ): Promise<ComercialAnaliseOpcoesResponseDto> {
-    const unidade = this.resolverUnidade(usuario, unidadeFiltro);
+    const escopo = unidadeEscopoUsuarioFolha(usuario);
+    const unidadesDisponiveis = this.unidadesDoEscopo(usuario);
+    const unidade = escopo ?? unidadeFiltro ?? null;
+    if (unidade) assertUnidadeFolha(usuario, unidade);
     const hoje = ymdHojeSp();
-    const vendedores = await this.acompanhamento.listarVendedoresOpcoes(
-      usuario,
-      unidade,
-    );
+    const vendedores = unidade
+      ? await this.acompanhamento.listarVendedoresOpcoes(usuario, unidade)
+      : [];
     const semanas = semanasMesCorrente(hoje);
     return {
       unidade,
+      unidadesDisponiveis,
+      escopoFixo: !!escopo,
       anoCorrente: Number(hoje.slice(0, 4)),
       competencias: listarCompetenciasAnalise(hoje).map((c) =>
         this.paraPeriodo(c),
@@ -78,20 +79,20 @@ export class ComercialAnaliseService {
     usuario: Usuario,
     dto: FindComercialAnaliseDto,
   ): Promise<ComercialAnaliseResponseDto> {
-    const unidade = this.resolverUnidade(usuario, dto.unidade);
     const modo = dto.modo ?? 'comparar';
     const dimensao: ComercialAnaliseDimensao = dto.dimensao ?? 'vendedor';
     const metrica = dto.metrica ?? 'valor';
     const base = dto.base ?? 'totalVendido';
     const hoje = ymdHojeSp();
     const iniciouEm = Date.now();
+    const unidades = this.resolverUnidadesAnalise(usuario, dto, dimensao);
     const funcionarioIds =
       dimensao === 'unidade' ? undefined : dto.funcionarioIds;
 
     let resposta: ComercialAnaliseResponseDto;
     if (modo === 'semanas') {
       resposta = await this.analisarSemanas(
-        unidade,
+        unidades,
         hoje,
         dto,
         dimensao,
@@ -101,7 +102,7 @@ export class ComercialAnaliseService {
       );
     } else if (modo === 'ranking' || modo === 'evolucao') {
       resposta = await this.analisarPeriodo(
-        unidade,
+        unidades,
         hoje,
         modo,
         dto.competencias ?? [],
@@ -112,7 +113,7 @@ export class ComercialAnaliseService {
       );
     } else {
       resposta = await this.analisarComparar(
-        unidade,
+        unidades,
         hoje,
         dto.c1,
         dto.c2,
@@ -124,13 +125,13 @@ export class ComercialAnaliseService {
     }
 
     this.logger.log(
-      `Análise comercial ${unidade} modo=${modo} dimensao=${dimensao} metrica=${metrica} base=${base} em ${Date.now() - iniciouEm}ms`,
+      `Análise comercial unidades=${unidades.join('|') || '-'} modo=${modo} dimensao=${dimensao} metrica=${metrica} base=${base} em ${Date.now() - iniciouEm}ms`,
     );
     return resposta;
   }
 
   private async analisarComparar(
-    unidade: Unidade,
+    unidades: Unidade[],
     hoje: string,
     c1: string | undefined,
     c2: string | undefined,
@@ -147,8 +148,8 @@ export class ComercialAnaliseService {
       );
     }
     const [mapa1, mapa2] = await Promise.all([
-      this.carregar(unidade, this.recorteMes(p1), dimensao, funcionarioIds),
-      this.carregar(unidade, this.recorteMes(p2), dimensao, funcionarioIds),
+      this.carregar(unidades, this.recorteMes(p1), dimensao, funcionarioIds),
+      this.carregar(unidades, this.recorteMes(p2), dimensao, funcionarioIds),
     ]);
     const ids = this.idsDe(mapa1, mapa2);
     const vendas = ids.map((id) =>
@@ -160,7 +161,7 @@ export class ComercialAnaliseService {
     const periodo1 = this.paraPeriodo(p1);
     const periodo2 = this.paraPeriodo(p2);
     return {
-      unidade,
+      unidade: unidades[0] ?? null,
       modo: 'comparar',
       periodos: [periodo1, periodo2],
       periodo1,
@@ -168,6 +169,7 @@ export class ComercialAnaliseService {
       agregacao: null,
       filtrosAplicados: this.filtros(
         dimensao,
+        unidades,
         funcionarioIds,
         metrica,
         base,
@@ -181,7 +183,7 @@ export class ComercialAnaliseService {
   }
 
   private async analisarPeriodo(
-    unidade: Unidade,
+    unidades: Unidade[],
     hoje: string,
     modo: 'ranking' | 'evolucao',
     keys: string[],
@@ -200,7 +202,7 @@ export class ComercialAnaliseService {
     }
     const mapas = await Promise.all(
       periodos.map((p) =>
-        this.carregar(unidade, this.recorteMes(p), dimensao, funcionarioIds),
+        this.carregar(unidades, this.recorteMes(p), dimensao, funcionarioIds),
       ),
     );
     const ids = this.idsDe(...mapas);
@@ -211,7 +213,7 @@ export class ComercialAnaliseService {
       this.linhaSerie(id, mapas, 'rejeitado', metrica, modo === 'ranking'),
     );
     return {
-      unidade,
+      unidade: unidades[0] ?? null,
       modo,
       periodos: periodos.map((p) => this.paraPeriodo(p)),
       periodo1: null,
@@ -219,6 +221,7 @@ export class ComercialAnaliseService {
       agregacao: 'soma',
       filtrosAplicados: this.filtros(
         dimensao,
+        unidades,
         funcionarioIds,
         metrica,
         base,
@@ -232,7 +235,7 @@ export class ComercialAnaliseService {
   }
 
   private async analisarSemanas(
-    unidade: Unidade,
+    unidades: Unidade[],
     hoje: string,
     dto: FindComercialAnaliseDto,
     dimensao: ComercialAnaliseDimensao,
@@ -249,7 +252,7 @@ export class ComercialAnaliseService {
     }
     if (leitura === 'evolucao') {
       return this.evolucaoSemanas(
-        unidade,
+        unidades,
         semanas,
         dimensao,
         funcionarioIds,
@@ -268,8 +271,8 @@ export class ComercialAnaliseService {
       throw new BadRequestException('Selecione duas semanas diferentes.');
     }
     const [mapa1, mapa2] = await Promise.all([
-      this.carregar(unidade, this.recorteSemana(s1), dimensao, funcionarioIds),
-      this.carregar(unidade, this.recorteSemana(s2), dimensao, funcionarioIds),
+      this.carregar(unidades, this.recorteSemana(s1), dimensao, funcionarioIds),
+      this.carregar(unidades, this.recorteSemana(s2), dimensao, funcionarioIds),
     ]);
     const ids = this.idsDe(mapa1, mapa2);
     const vendas = ids.map((id) =>
@@ -281,7 +284,7 @@ export class ComercialAnaliseService {
     const periodo1 = this.paraSemana(s1);
     const periodo2 = this.paraSemana(s2);
     return {
-      unidade,
+      unidade: unidades[0] ?? null,
       modo: 'semanas',
       periodos: [periodo1, periodo2],
       periodo1,
@@ -289,6 +292,7 @@ export class ComercialAnaliseService {
       agregacao: null,
       filtrosAplicados: this.filtros(
         dimensao,
+        unidades,
         funcionarioIds,
         metrica,
         base,
@@ -302,7 +306,7 @@ export class ComercialAnaliseService {
   }
 
   private async evolucaoSemanas(
-    unidade: Unidade,
+    unidades: Unidade[],
     semanas: SemanaAnalise[],
     dimensao: ComercialAnaliseDimensao,
     funcionarioIds: string[] | undefined,
@@ -311,11 +315,11 @@ export class ComercialAnaliseService {
   ): Promise<ComercialAnaliseResponseDto> {
     const mapas = await Promise.all(
       semanas.map((s) =>
-        this.carregar(unidade, this.recorteSemana(s), dimensao, funcionarioIds),
+        this.carregar(unidades, this.recorteSemana(s), dimensao, funcionarioIds),
       ),
     );
     const envelope = await this.carregar(
-      unidade,
+      unidades,
       {
         inicio: semanas[0].inicio,
         fimRecebido: semanas[semanas.length - 1].fim,
@@ -332,7 +336,7 @@ export class ComercialAnaliseService {
       this.linhaSerieComEnvelope(id, mapas, envelope, 'rejeitado', metrica),
     );
     return {
-      unidade,
+      unidade: unidades[0] ?? null,
       modo: 'semanas',
       periodos: semanas.map((s) => this.paraSemana(s)),
       periodo1: null,
@@ -340,6 +344,7 @@ export class ComercialAnaliseService {
       agregacao: 'soma',
       filtrosAplicados: this.filtros(
         dimensao,
+        unidades,
         funcionarioIds,
         metrica,
         base,
@@ -353,24 +358,33 @@ export class ComercialAnaliseService {
   }
 
   /**
-   * dimensao=vendedor: `funcionarioIds` omitido = todos; array vazio = nenhum.
-   * dimensao=unidade: uma linha TOTAL da loja (RN-COM-003); ignora funcionarioIds.
+   * dimensao=vendedor: uma unidade; funcionarioIds omitido = todos; [] = nenhum.
+   * dimensao=unidade: uma linha TOTAL por unidade marcada (RN-COM-003).
    */
   private async carregar(
-    unidade: Unidade,
+    unidades: Unidade[],
     recorte: Recorte,
     dimensao: ComercialAnaliseDimensao,
     funcionarioIds?: string[],
   ): Promise<MapaItens> {
     if (dimensao === 'unidade') {
-      const item = await this.acompanhamento.obterItemTotalLojaNoIntervalo(
-        unidade,
-        recorte.inicio,
-        recorte.fimRecebido,
-        recorte.fimRejeitado,
+      if (!unidades.length) return new Map();
+      const itens = await Promise.all(
+        unidades.map((u) =>
+          this.acompanhamento.obterItemTotalLojaNoIntervalo(
+            u,
+            recorte.inicio,
+            recorte.fimRecebido,
+            recorte.fimRejeitado,
+          ),
+        ),
       );
-      return new Map([[ID_UNIDADE, item]]);
+      const mapa: MapaItens = new Map();
+      unidades.forEach((u, i) => mapa.set(u, itens[i]));
+      return mapa;
     }
+    const unidade = unidades[0];
+    if (!unidade) return new Map();
     if (funcionarioIds && funcionarioIds.length === 0) {
       return new Map();
     }
@@ -421,7 +435,7 @@ export class ComercialAnaliseService {
     const m2 = this.metricaDe(p2, metrica);
     const delta = (m2 ?? 0) - (m1 ?? 0);
     return {
-      ...this.identidade(a!),
+      ...this.identidade(a!, id),
       valorMes1: m1,
       valorMes2: m2,
       valorPeriodo: null,
@@ -440,7 +454,7 @@ export class ComercialAnaliseService {
   ): ComercialAnaliseLinhaDto {
     const item = mapas.map((m) => m.get(id)).find((i) => i != null);
     const pares = mapas.map((m) => this.par(m.get(id), base));
-    return this.montarSerie(item!, pares, metrica, comMedia);
+    return this.montarSerie(item!, id, pares, metrica, comMedia);
   }
 
   private linhaSerieComEnvelope(
@@ -453,7 +467,7 @@ export class ComercialAnaliseService {
     const item =
       envelope.get(id) ?? mapas.map((m) => m.get(id)).find((i) => i != null);
     const pares = mapas.map((m) => this.par(m.get(id), base));
-    const linha = this.montarSerie(item!, pares, metrica, false);
+    const linha = this.montarSerie(item!, id, pares, metrica, false);
     const total = this.metricaDe(this.par(envelope.get(id), base), metrica);
     linha.valorPeriodo = total;
     return linha;
@@ -461,6 +475,7 @@ export class ComercialAnaliseService {
 
   private montarSerie(
     item: ComercialAcompanhamentoItemDto,
+    id: string,
     pares: Par[],
     metrica: ComercialAnaliseMetrica,
     comMedia: boolean,
@@ -472,7 +487,7 @@ export class ComercialAnaliseService {
     const valorPeriodo = this.metricaDe(soma, metrica);
     const n = pares.length;
     return {
-      ...this.identidade(item),
+      ...this.identidade(item, id),
       valorMes1: null,
       valorMes2: null,
       valorPeriodo,
@@ -560,12 +575,14 @@ export class ComercialAnaliseService {
 
   private identidade(
     item: ComercialAcompanhamentoItemDto,
+    idLinha: string,
   ): Pick<
     ComercialAnaliseLinhaDto,
     'funcionarioId' | 'nomeVendedor' | 'codigoVendedorErp'
   > {
     return {
-      funcionarioId: item.funcionarioId ?? ID_UNIDADE,
+      // Em dimensao=unidade o id da linha é a própria Unidade (TOTAL sem funcionarioId).
+      funcionarioId: item.funcionarioId ?? idLinha,
       nomeVendedor: item.nomeVendedor,
       codigoVendedorErp: item.codigoVendedorErp ?? 0,
     };
@@ -665,6 +682,7 @@ export class ComercialAnaliseService {
 
   private filtros(
     dimensao: ComercialAnaliseDimensao,
+    unidades: Unidade[],
     funcionarioIds: string[] | undefined,
     metrica: ComercialAnaliseMetrica,
     base: ComercialAnaliseBase,
@@ -672,6 +690,7 @@ export class ComercialAnaliseService {
   ): ComercialAnaliseFiltrosAplicadosDto {
     return {
       dimensao,
+      unidades,
       funcionarioIds: dimensao === 'unidade' ? [] : (funcionarioIds ?? []),
       metrica,
       base,
@@ -701,16 +720,49 @@ export class ComercialAnaliseService {
     };
   }
 
-  private resolverUnidade(usuario: Usuario, unidade?: Unidade): Unidade {
+  /** Unidades que o usuário pode analisar (escopo fixo ou enum completo). */
+  private unidadesDoEscopo(usuario: Usuario): Unidade[] {
     const escopo = unidadeEscopoUsuarioFolha(usuario);
-    const efetiva = escopo ?? unidade;
-    if (!efetiva) {
-      throw new BadRequestException(
-        'Informe a unidade para a análise comercial.',
-      );
+    return escopo ? [escopo] : (Object.values(Unidade) as Unidade[]);
+  }
+
+  /**
+   * vendedor → exatamente 1 unidade (escopo ou `unidade`).
+   * unidade → lista marcada (`unidades`); omitido = todas do escopo; [] = nenhuma.
+   */
+  private resolverUnidadesAnalise(
+    usuario: Usuario,
+    dto: FindComercialAnaliseDto,
+    dimensao: ComercialAnaliseDimensao,
+  ): Unidade[] {
+    const permitidas = this.unidadesDoEscopo(usuario);
+    const escopo = unidadeEscopoUsuarioFolha(usuario);
+
+    if (dimensao === 'vendedor') {
+      const efetiva = escopo ?? dto.unidade;
+      if (!efetiva) {
+        throw new BadRequestException(
+          'Informe a unidade para a análise por vendedor.',
+        );
+      }
+      assertUnidadeFolha(usuario, efetiva);
+      return [efetiva];
     }
-    assertUnidadeFolha(usuario, efetiva);
-    return efetiva;
+
+    // dimensao=unidade
+    if (escopo) {
+      return [escopo];
+    }
+    if (dto.unidades === undefined) {
+      // Compat: `unidade` singular ainda vale como única marcada.
+      if (dto.unidade) {
+        assertUnidadeFolha(usuario, dto.unidade);
+        return [dto.unidade];
+      }
+      return [...permitidas];
+    }
+    const setPermitidas = new Set(permitidas);
+    return dto.unidades.filter((u) => setPermitidas.has(u));
   }
 
   private round2(n: number): number {
