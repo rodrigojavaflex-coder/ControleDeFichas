@@ -22,7 +22,8 @@
               [disabled]="!podeEditarFiltrosBase || !anosOptions.length"
               placeholder="Anos…"
               [ngModel]="anosFiltro"
-              (ngModelChange)="onAnosChange($event)">
+              (ngModelChange)="onAnosChange($event)"
+              (panelClosed)="onAnosPanelClosed()">
             </app-multi-select-dropdown>
           </div>
 
@@ -74,7 +75,8 @@
               [disabled]="buscando || !unidadesOptions.length"
               placeholder="Unidades…"
               [ngModel]="unidadesMultiFiltro"
-              (ngModelChange)="onUnidadesMultiChange($event)">
+              (ngModelChange)="onUnidadesMultiChange($event)"
+              (panelClosed)="onMultiSelectClosed()">
             </app-multi-select-dropdown>
           </div>
 
@@ -174,7 +176,8 @@
               [disabled]="!podeEditarFiltrosBase || !competenciasFiltradas.length"
               placeholder="Competências…"
               [ngModel]="competenciasRanking"
-              (ngModelChange)="onCompetenciasChange($event)">
+              (ngModelChange)="onCompetenciasChange($event)"
+              (panelClosed)="onMultiSelectClosed()">
             </app-multi-select-dropdown>
           </div>
 
@@ -202,7 +205,8 @@
               [disabled]="!unidadeFilter || buscando || !vendedoresOptions.length"
               placeholder="Vendedores…"
               [ngModel]="funcionarioIdsFiltro"
-              (ngModelChange)="onVendedoresChange($event)">
+              (ngModelChange)="onVendedoresChange($event)"
+              (panelClosed)="onMultiSelectClosed()">
             </app-multi-select-dropdown>
           </div>
 

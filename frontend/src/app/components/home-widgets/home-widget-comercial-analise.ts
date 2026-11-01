@@ -82,8 +82,66 @@ export class HomeWidgetComercialAnaliseComponent implements OnInit, OnDestroy {
     return this.resumo?.temComparacao === true;
   }
 
+  /** Ex.: "Comparativo Semanal: 19 a 25 vs. 26 a 31 de Out". */
+  get tituloComparativo(): string {
+    if (!this.resumo) return 'Comparativo Semanal';
+    if (!this.temComparacao || !this.resumo.semanaAnterior) {
+      return 'Comparativo Semanal: sem semana anterior';
+    }
+    const ant = this.resumo.semanaAnterior;
+    const atu = this.resumo.semanaAtual;
+    const diasAnt = this.rotuloDias(ant.inicio, ant.fim);
+    const diasAtu = this.rotuloDias(atu.inicio, atu.fim);
+    const mesAnt = this.mesCurto(ant.fim);
+    const mesAtu = this.mesCurto(atu.fim);
+    if (mesAnt === mesAtu) {
+      return `Comparativo Semanal: ${diasAnt} vs. ${diasAtu} de ${mesAtu}`;
+    }
+    return `Comparativo Semanal: ${diasAnt} de ${mesAnt} vs. ${diasAtu} de ${mesAtu}`;
+  }
+
   atualizar(): void {
     this.carregar();
+  }
+
+  private rotuloDias(inicio: string, fim: string): string {
+    const diaIni = Number(inicio?.slice(8, 10));
+    const diaFim = Number(fim?.slice(8, 10));
+    if (!Number.isFinite(diaIni) || !Number.isFinite(diaFim)) return '—';
+    return `${diaIni} a ${diaFim}`;
+  }
+
+  private mesCurto(ymd: string): string {
+    const meses = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+    const mes = Number(ymd?.slice(5, 7));
+    return meses[mes - 1] ?? String(mes);
+  }
+
+  /**
+   * 1º e 2º nome; com 2 partes devolve em duas linhas
+   * (ex.: GABRIELA\nGARCIA) para caber na coluna do card.
+   */
+  nomeCurto(nome: string | null | undefined): string {
+    const partes = String(nome || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (partes.length === 0) return '—';
+    if (partes.length === 1) return partes[0];
+    return `${partes[0]}\n${partes[1]}`;
   }
 
   formatarMoeda(valor: number | null | undefined): string {

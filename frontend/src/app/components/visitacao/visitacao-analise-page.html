@@ -30,10 +30,11 @@
             <label class="form-label">Ano</label>
             <app-multi-select-dropdown
               [options]="anosOptions"
-              [disabled]="!unidadeFilter || loadingOpcoes || !anosOptions.length"
+              [disabled]="!unidadeFilter || loading || loadingOpcoes || !anosOptions.length"
               placeholder="Anos…"
               [ngModel]="anosFiltro"
-              (ngModelChange)="onAnosChange($event)">
+              (ngModelChange)="onAnosChange($event)"
+              (panelClosed)="onMultiSelectClosed()">
             </app-multi-select-dropdown>
           </div>
 
@@ -132,10 +133,11 @@
             <label class="form-label">Competências</label>
             <app-multi-select-dropdown
               [options]="competenciasOptions"
-              [disabled]="!unidadeFilter || loadingOpcoes || !competenciasFiltradas.length"
+              [disabled]="!unidadeFilter || loading || loadingOpcoes || !competenciasFiltradas.length"
               placeholder="Competências…"
               [ngModel]="competenciasRanking"
-              (ngModelChange)="onCompetenciasRankingChange($event)">
+              (ngModelChange)="onCompetenciasRankingChange($event)"
+              (panelClosed)="onMultiSelectClosed()">
             </app-multi-select-dropdown>
           </div>
 

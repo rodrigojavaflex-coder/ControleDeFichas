@@ -1,4 +1,16 @@
-import { Component, Input, Output, EventEmitter, forwardRef, HostListener, ElementRef, Renderer2, OnDestroy } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  forwardRef,
+  HostListener,
+  ElementRef,
+  Renderer2,
+  OnChanges,
+  OnDestroy,
+  SimpleChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
@@ -22,7 +34,9 @@ export interface MultiSelectOption {
   templateUrl: './multi-select-dropdown.html',
   styleUrls: ['./multi-select-dropdown.css']
 })
-export class MultiSelectDropdownComponent implements ControlValueAccessor, OnDestroy {
+export class MultiSelectDropdownComponent
+  implements ControlValueAccessor, OnChanges, OnDestroy
+{
   @Input() options: MultiSelectOption[] = [];
   @Input() placeholder: string = 'Selecione...';
   @Input() disabled: boolean = false;
@@ -30,6 +44,8 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor, OnDes
   @Input() deselectAllLabel: string = 'Desmarcar todos';
 
   @Output() selectionChange = new EventEmitter<any[]>();
+  /** Disparado ao fechar o painel (clique fora, trigger ou disable) — use para buscar 1x. */
+  @Output() panelClosed = new EventEmitter<void>();
 
   selectedValues: any[] = [];
   isOpen = false;
@@ -45,6 +61,12 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor, OnDes
     // Isso previne que dropdowns deixados no body após reiniciar a aplicação bloqueiem a interface
     const orphanDropdowns = document.body.querySelectorAll('.multi-select-dropdown-body');
     orphanDropdowns.forEach(dropdown => dropdown.remove());
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['disabled']?.currentValue === true && this.isOpen) {
+      this.closeDropdown();
+    }
   }
 
   @HostListener('document:click', ['$event'])
@@ -184,10 +206,12 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor, OnDes
   }
 
   private closeDropdown(): void {
+    if (!this.isOpen) return;
     this.isOpen = false;
     this.removeDropdownFromBody();
     this.removeModalScrollListener();
     this.onTouched();
+    this.panelClosed.emit();
   }
 
   private createDropdownInBody(): void {
@@ -501,6 +525,7 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor, OnDes
   }
 
   toggleSelectAll(): void {
+    if (this.disabled) return;
     if (this.allSelected) {
       this.selectedValues = [];
     } else {
@@ -511,6 +536,7 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor, OnDes
   }
 
   toggleOption(value: any): void {
+    if (this.disabled) return;
     const index = this.selectedValues.indexOf(value);
     if (index > -1) {
       this.selectedValues.splice(index, 1);
@@ -579,5 +605,8 @@ export class MultiSelectDropdownComponent implements ControlValueAccessor, OnDes
 
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
+    if (isDisabled && this.isOpen) {
+      this.closeDropdown();
+    }
   }
 }

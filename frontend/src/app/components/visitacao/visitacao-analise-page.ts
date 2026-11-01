@@ -441,6 +441,7 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
   }
 
   onAnosChange(values: number[]): void {
+    // Só atualiza o modelo; a busca dispara em onMultiSelectClosed.
     this.anosFiltro = [...values]
       .map(Number)
       .filter((n) => Number.isInteger(n))
@@ -458,7 +459,6 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
     } finally {
       this.silenciarFiltroChange = false;
     }
-    this.onFiltroChange();
   }
 
   onModoChange(modo: VisitacaoAnaliseModo): void {
@@ -539,12 +539,16 @@ export class VisitacaoAnalisePageComponent implements OnInit, OnDestroy {
 
   onCompetenciasRankingChange(values: string[]): void {
     this.competenciasRanking = this.ordenarKeys([...values]);
+  }
+
+  /** Multi-select: busca só ao fechar o painel (evita fila a cada checkbox). */
+  onMultiSelectClosed(): void {
     this.onFiltroChange();
   }
 
   /** Busca automática ao mudar filtro (como antes). */
   onFiltroChange(): void {
-    if (this.silenciarFiltroChange || this.loadingOpcoes) {
+    if (this.silenciarFiltroChange || this.loadingOpcoes || this.loading) {
       return;
     }
     this.reload$.next();

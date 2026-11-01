@@ -417,17 +417,20 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     this.unidadesMultiFiltro = [
       ...new Set((values ?? []).filter((u) => validas.has(u))),
     ];
-    this.onFiltroChange();
   }
 
   onAnosChange(values: number[]): void {
+    // Só atualiza o modelo; a busca dispara em onMultiSelectClosed (1x ao fechar).
     this.anosFiltro = [...new Set(values.map(Number))].sort((a, b) => b - a);
     this.podarSelecao();
     if (this.isCompararMes) this.aplicarSelecaoComparar(false);
     if (this.modo === 'evolucao') this.aplicarSelecaoEvolucao(false);
     if (this.modo === 'ranking') this.aplicarSelecaoRanking(false);
+    if (this.isSemanas) this.aplicarCompetenciaSemanasPadrao(false);
+  }
+
+  onAnosPanelClosed(): void {
     if (this.isSemanas) {
-      this.aplicarCompetenciaSemanasPadrao(false);
       this.carregarOpcoes(false);
       return;
     }
@@ -508,7 +511,6 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
   onCompetenciasChange(values: string[]): void {
     this.competenciasRanking = this.ordenarKeys(values);
-    this.onFiltroChange();
   }
   onCompetenciaSemanasChange(competencia: string | null): void {
     this.competenciaSemanas = competencia;
@@ -527,6 +529,10 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
   onVendedoresChange(ids: string[]): void {
     this.funcionarioIdsFiltro = [...new Set((ids ?? []).map(String).filter(Boolean))];
+  }
+
+  /** Multi-select: busca só ao fechar o painel (evita fila a cada checkbox). */
+  onMultiSelectClosed(): void {
     this.onFiltroChange();
   }
 

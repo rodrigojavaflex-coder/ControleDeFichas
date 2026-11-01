@@ -48,14 +48,7 @@
 
           <section class="home-analise-resumo-corpo" aria-label="Comparativo da semana">
             <div class="home-analise-resumo-corpo-head">
-              <h4>Comparativo</h4>
-              <p>
-                @if (temComparacao) {
-                  vs semana anterior
-                } @else {
-                  sem semana anterior
-                }
-              </p>
+              <h4>{{ tituloComparativo }}</h4>
             </div>
 
             <div class="home-analise-metricas">
@@ -65,7 +58,11 @@
                   Crescimento
                 </span>
                 @if (temComparacao && card.maiorCrescimento) {
-                  <span class="value">{{ card.maiorCrescimento.nomeVendedor }}</span>
+                  <span
+                    class="value"
+                    [title]="card.maiorCrescimento.nomeVendedor">
+                    {{ nomeCurto(card.maiorCrescimento.nomeVendedor) }}
+                  </span>
                   <span class="sub" [class]="classeDelta(card.maiorCrescimento)">
                     {{ formatarDelta(card.maiorCrescimento.delta) }}
                     · {{ formatarPercentual(card.maiorCrescimento.percentual) }}
@@ -82,7 +79,11 @@
                   Queda
                 </span>
                 @if (temComparacao && card.maiorQueda) {
-                  <span class="value">{{ card.maiorQueda.nomeVendedor }}</span>
+                  <span
+                    class="value"
+                    [title]="card.maiorQueda.nomeVendedor">
+                    {{ nomeCurto(card.maiorQueda.nomeVendedor) }}
+                  </span>
                   <span class="sub" [class]="classeDelta(card.maiorQueda)">
                     {{ formatarDelta(card.maiorQueda.delta) }}
                     · {{ formatarPercentual(card.maiorQueda.percentual) }}
@@ -99,7 +100,11 @@
                   Rejeitados
                 </span>
                 @if (card.maiorRejeitado) {
-                  <span class="value">{{ card.maiorRejeitado.nomeVendedor }}</span>
+                  <span
+                    class="value"
+                    [title]="card.maiorRejeitado.nomeVendedor">
+                    {{ nomeCurto(card.maiorRejeitado.nomeVendedor) }}
+                  </span>
                   <span class="sub is-rejeitado">
                     {{ formatarMoeda(card.maiorRejeitado.valor) }}
                   </span>
