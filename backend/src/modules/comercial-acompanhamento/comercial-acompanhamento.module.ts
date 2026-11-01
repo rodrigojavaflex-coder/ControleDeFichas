@@ -35,5 +35,6 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
   ],
   controllers: [ComercialAcompanhamentoController],
   providers: [ComercialAcompanhamentoService, PermissionsGuard],
+  exports: [ComercialAcompanhamentoService],
 })
 export class ComercialAcompanhamentoModule {}

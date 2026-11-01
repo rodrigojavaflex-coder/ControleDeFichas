@@ -1,5 +1,9 @@
 <div class="multi-select-dropdown" [class.disabled]="disabled">
-  <div class="multi-select-trigger" (click)="toggleDropdown()" [class.has-selection]="selectedValues.length > 0">
+  <div
+    class="multi-select-trigger"
+    (click)="toggleDropdown()"
+    [class.has-selection]="selectedValues.length > 0"
+    [class.disabled]="disabled">
     <span class="multi-select-display">{{ displayText }}</span>
     <i class="fas" [class.fa-chevron-down]="!isOpen" [class.fa-chevron-up]="isOpen"></i>
   </div>

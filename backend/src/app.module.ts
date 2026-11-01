@@ -31,6 +31,7 @@ import { VisitacaoAcompanhamentoModule } from './modules/visitacao-acompanhament
 import { VisitacaoMetaModule } from './modules/visitacao-meta/visitacao-meta.module';
 import { ComercialMetaModule } from './modules/comercial-meta/comercial-meta.module';
 import { ComercialAcompanhamentoModule } from './modules/comercial-acompanhamento/comercial-acompanhamento.module';
+import { ComercialAnaliseModule } from './modules/comercial-analise/comercial-analise.module';
 import { ImportacaoManualProgressModule } from './common/importacao-manual/importacao-manual-progress.module';
 import databaseConfig from './config/database.config';
 import appConfig from './config/app.config';
@@ -82,6 +83,7 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     VisitacaoMetaModule,
     ComercialMetaModule,
     ComercialAcompanhamentoModule,
+    ComercialAnaliseModule,
     TypeOrmModule.forFeature([Configuracao]),
   ],
   controllers: [AppController],

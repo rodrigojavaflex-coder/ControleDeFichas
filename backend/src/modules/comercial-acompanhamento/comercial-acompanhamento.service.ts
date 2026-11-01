@@ -717,6 +717,247 @@ export class ComercialAcompanhamentoService {
     }));
   }
 
+  /**
+   * Cards de vendedor (codigoVendedorErp > 0) num intervalo, com o mesmo
+   * cálculo de findAll (RN-COM-003). Sem meta, comissão, projeção nem TOTAL da loja.
+   * Recebido respeita o teto de prévia (min(fim, hoje)). Rejeitados usam
+   * dataFinalRejeitado inteiro — no mês cheio, o fim da competência.
+   */
+  async listarItensVendedoresNoIntervalo(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinalRecebido: string,
+    dataFinalRejeitado: string,
+  ): Promise<ComercialAcompanhamentoItemDto[]> {
+    const hoje = ymdHojeSp();
+    const teto = dataTetoPreviaAcompanhamento(
+      dataInicial,
+      dataFinalRecebido,
+      hoje,
+    );
+    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
+      where: { unidade },
+    });
+    const considerarTaxas = politicaUnidade?.considerarTaxas === true;
+    const considerarConvenios = politicaUnidade?.considerarConvenios === true;
+    const mapaVazio = () => new Map() as MapaMovimento;
+
+    const [
+      reqMapBase,
+      mpMapBase,
+      rejMap,
+      vinculados,
+      revendaMap,
+      politicasVend,
+      terceirosPorCodigo,
+      convReqMap,
+      convProdMap,
+    ] = await Promise.all([
+      teto
+        ? this.buscarRecebidoRequisicao(
+            unidade,
+            dataInicial,
+            teto,
+            considerarTaxas,
+          )
+        : Promise.resolve(mapaVazio()),
+      teto
+        ? this.buscarRecebidoMarcaPropria(unidade, dataInicial, teto)
+        : Promise.resolve(mapaVazio()),
+      dataInicial <= dataFinalRejeitado
+        ? this.buscarRejeitado(unidade, dataInicial, dataFinalRejeitado)
+        : Promise.resolve(mapaVazio()),
+      this.funcionarioRepo
+        .createQueryBuilder('f')
+        .where('f.unidade = :unidade', { unidade })
+        .andWhere('f.codigoVendedorErp IS NOT NULL')
+        .andWhere('f.codigoVendedorErp > 0')
+        .orderBy('f.nome', 'ASC')
+        .getMany(),
+      teto
+        ? this.buscarRecebidoRevendaManipulados(unidade, dataInicial, teto)
+        : Promise.resolve(mapaVazio()),
+      this.politicaRepo
+        .createQueryBuilder('p')
+        .innerJoinAndSelect('p.funcionario', 'f')
+        .where('f.unidade = :unidade', { unidade })
+        .andWhere('p.tipoBase IN (:...tipos)', {
+          tipos: [
+            ComercialTipoBase.REQUISICAO,
+            ComercialTipoBase.MARCA_PROPRIA,
+          ],
+        })
+        .getMany(),
+      teto
+        ? this.buscarRecebidoTerceirosPorVendedor(unidade, dataInicial, teto)
+        : Promise.resolve(
+            new Map() as Map<number, { valor: number; qtd: number }>,
+          ),
+      teto && considerarConvenios
+        ? this.buscarRecebidoConvenioRequisicao(unidade, dataInicial, teto)
+        : Promise.resolve(mapaVazio()),
+      teto && considerarConvenios
+        ? this.buscarRecebidoConvenioProdutos(unidade, dataInicial, teto)
+        : Promise.resolve(mapaVazio()),
+    ]);
+
+    const reqMap = this.mesclarMapaMovimento(reqMapBase, convReqMap);
+    const mpMap = this.mesclarMapaMovimento(mpMapBase, convProdMap);
+    const setoresRevendaPorCodigo = new Map<number, number[]>();
+    const setoresMpPorCodigo = new Map<number, number[]>();
+    for (const p of politicasVend) {
+      const codigo = p.funcionario?.codigoVendedorErp;
+      if (codigo == null || codigo <= 0) continue;
+      if (p.tipoBase === ComercialTipoBase.REQUISICAO) {
+        setoresRevendaPorCodigo.set(
+          codigo,
+          this.normalizarCodigosSetor(p.codigosSetorRevendaManipulados),
+        );
+      } else if (p.tipoBase === ComercialTipoBase.MARCA_PROPRIA) {
+        setoresMpPorCodigo.set(
+          codigo,
+          this.normalizarCodigosSetor(p.codigosSetor),
+        );
+      }
+    }
+
+    return vinculados.map((f) =>
+      this.montarItem(
+        f.id,
+        f.nome,
+        f.codigoVendedorErp!,
+        reqMap,
+        mpMap,
+        rejMap,
+        revendaMap,
+        setoresRevendaPorCodigo.get(f.codigoVendedorErp!) ?? [],
+        setoresMpPorCodigo.get(f.codigoVendedorErp!) ?? [],
+        terceirosPorCodigo,
+      ),
+    );
+  }
+
+  /**
+   * Card TOTAL da loja num intervalo — mesmos números do acompanhamento
+   * (RN-COM-003). Não é a soma dos vendedores (setor/terceiros da unidade).
+   */
+  async obterItemTotalLojaNoIntervalo(
+    unidade: Unidade,
+    dataInicial: string,
+    dataFinalRecebido: string,
+    dataFinalRejeitado: string,
+  ): Promise<ComercialAcompanhamentoItemDto> {
+    const hoje = ymdHojeSp();
+    const teto = dataTetoPreviaAcompanhamento(
+      dataInicial,
+      dataFinalRecebido,
+      hoje,
+    );
+    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
+      where: { unidade },
+    });
+    const setoresUnidade = this.normalizarCodigosSetor(
+      politicaUnidade?.codigosSetor,
+    );
+    const setoresUnidadeRevenda = this.normalizarCodigosSetor(
+      politicaUnidade?.codigosSetorRevendaManipulados,
+    );
+    const considerarConvenios = politicaUnidade?.considerarConvenios === true;
+    const mapaVazio = () => new Map() as MapaMovimento;
+
+    const [itens, volumeLoja, terceirosLoja, rejMap, convProdMap] =
+      await Promise.all([
+        this.listarItensVendedoresNoIntervalo(
+          unidade,
+          dataInicial,
+          dataFinalRecebido,
+          dataFinalRejeitado,
+        ),
+        teto
+          ? this.buscarVolumeLoja(
+              unidade,
+              dataInicial,
+              teto,
+              setoresUnidade,
+              setoresUnidadeRevenda,
+            )
+          : Promise.resolve({
+              marcaPropria: {
+                valor: 0,
+                qtd: 0,
+                valorSetores: 0,
+                qtdSetores: 0,
+              },
+              revendaManipulados: { valor: 0, qtd: 0 },
+            }),
+        teto
+          ? this.buscarRecebidoTerceiros(unidade, dataInicial, teto)
+          : Promise.resolve({ valor: 0, qtd: 0 }),
+        dataInicial <= dataFinalRejeitado
+          ? this.buscarRejeitado(unidade, dataInicial, dataFinalRejeitado)
+          : Promise.resolve(mapaVazio()),
+        teto && considerarConvenios
+          ? this.buscarRecebidoConvenioProdutos(unidade, dataInicial, teto)
+          : Promise.resolve(mapaVazio()),
+      ]);
+
+    const totais = this.somarTotais(itens);
+    const convMpLoja = considerarConvenios
+      ? this.somarMapa(convProdMap)
+      : { valor: 0, qtd: 0, qtdFormulas: 0 };
+    const lojaRecebidoMp = {
+      valor: this.round2(volumeLoja.marcaPropria.valor + convMpLoja.valor),
+      qtd: volumeLoja.marcaPropria.qtd + convMpLoja.qtd,
+      valorSetores: volumeLoja.marcaPropria.valorSetores,
+      qtdSetores: volumeLoja.marcaPropria.qtdSetores,
+    };
+    const lojaRejeitado = this.somarMapa(rejMap);
+    const lojaMpTotal = this.round2(lojaRecebidoMp.valor);
+    const lojaMpQtdTotal = lojaRecebidoMp.qtd;
+    const lojaMpSetores = this.round2(
+      setoresUnidade.length > 0 ? lojaRecebidoMp.valorSetores : 0,
+    );
+    const lojaMpQtdSetores =
+      setoresUnidade.length > 0 ? lojaRecebidoMp.qtdSetores : 0;
+    const lojaMpOutros = this.round2(lojaMpTotal - lojaMpSetores);
+    const lojaMpQtdOutros = Math.max(0, lojaMpQtdTotal - lojaMpQtdSetores);
+    const lojaComissaoMp =
+      setoresUnidade.length > 0 ? lojaMpSetores : lojaMpTotal;
+    const puraLoja = this.round2(totais.valorRequisicaoPura);
+    const extraLoja = volumeLoja.revendaManipulados;
+    const terceirosValor = this.round2(terceirosLoja.valor);
+    const lojaComissaoReq = this.round2(puraLoja + extraLoja.valor);
+    const valorRecebidoRequisicao = this.round2(
+      lojaComissaoReq + terceirosValor,
+    );
+
+    return {
+      funcionarioId: null,
+      nomeVendedor: `TOTAL ${unidade}`,
+      codigoVendedorErp: null,
+      valorRequisicaoPura: puraLoja,
+      valorRevendaManipulados: extraLoja.valor,
+      quantidadeRevendaManipulados: extraLoja.qtd,
+      codigosSetorRevendaManipulados: setoresUnidadeRevenda,
+      valorTerceirosManipulados: terceirosValor,
+      quantidadeTerceirosManipulados: terceirosLoja.qtd,
+      valorComissaoBaseRequisicao: lojaComissaoReq,
+      valorRecebidoRequisicao,
+      quantidadeRecebidoRequisicao: totais.quantidadeRecebidoRequisicao,
+      quantidadeFormulasRequisicao: totais.quantidadeFormulasRequisicao,
+      valorRecebidoMarcaPropria: lojaMpTotal,
+      quantidadeRecebidoMarcaPropria: lojaMpQtdTotal,
+      valorRecebidoMarcaPropriaSetores: lojaMpSetores,
+      quantidadeRecebidoMarcaPropriaSetores: lojaMpQtdSetores,
+      valorRecebidoMarcaPropriaOutros: lojaMpOutros,
+      quantidadeRecebidoMarcaPropriaOutros: lojaMpQtdOutros,
+      valorComissaoBaseMarcaPropria: lojaComissaoMp,
+      codigosSetorMarcaPropria: setoresUnidade,
+      valorRejeitado: lojaRejeitado.valor,
+      quantidadeRejeitado: lojaRejeitado.qtd,
+    };
+  }
+
   async findAll(
     usuario: Usuario,
     dto: FindComercialAcompanhamentoDto,

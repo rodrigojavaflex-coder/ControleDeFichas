@@ -1,0 +1,34 @@
+/* Base: rótulos longos das parcelas do RESULTADOS. */
+.comercial-analise-page .comercial-analise-base {
+  flex: 1 1 14rem;
+  width: 14rem;
+  min-width: 12rem;
+  max-width: 18rem;
+}
+
+/* Vendedor: mais largo que Ano; cabe nomes longos no resumo do multi-select. */
+.comercial-analise-page .comercial-analise-vendedor {
+  flex: 1 1 16rem;
+  width: 16rem;
+  min-width: 14rem;
+  max-width: 22rem;
+}
+
+.comercial-analise-page .comercial-analise-vendedor .multi-select-dropdown {
+  width: 100%;
+}
+
+.comercial-analise-page .comercial-analise-vendedor .multi-select-trigger {
+  min-height: 2.375rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 900px) {
+  .comercial-analise-page .comercial-analise-vendedor {
+    flex: 1 1 calc(50% - 0.5rem);
+    width: auto;
+    min-width: calc(50% - 0.5rem);
+    max-width: none;
+  }
+}

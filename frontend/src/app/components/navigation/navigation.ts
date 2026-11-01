@@ -380,6 +380,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
           requiredPermissions: [Permission.COMERCIAL_ACOMPANHAMENTO_READ],
         },
         {
+          label: 'Análise',
+          route: '/comercial/analise',
+          icon: 'feather-bar-chart-2',
+          requiredPermissions: [Permission.COMERCIAL_ANALISE_READ],
+        },
+        {
           label: 'Configuração Metas',
           route: '/comercial/configuracao-metas',
           icon: 'feather-target',

@@ -1,0 +1,91 @@
+import { Unidade } from './usuario.model';
+
+export type ComercialAnaliseModo = 'comparar' | 'ranking' | 'evolucao' | 'semanas';
+export type ComercialAnaliseDimensao = 'vendedor' | 'unidade';
+export type ComercialAnaliseMetrica = 'valor' | 'quantidade' | 'ticketMedio';
+export type ComercialAnaliseBase =
+  | 'manipuladosRequisicoes'
+  | 'manipuladosSetor'
+  | 'manipuladosTerceiros'
+  | 'manipulados'
+  | 'marcaPropriaSetores'
+  | 'marcaPropriaOutros'
+  | 'marcaPropria'
+  | 'totalVendido';
+export type ComercialAnaliseLeitura = 'comparar' | 'evolucao';
+
+export interface ComercialAnalisePeriodo {
+  key: string;
+  label: string;
+  labelCurto: string;
+  previa: boolean;
+  inicio: string;
+  fim: string;
+}
+
+export interface ComercialAnaliseVendedorOpcao {
+  funcionarioId: string;
+  nome: string;
+  codigoVendedorErp: number;
+}
+
+export interface ComercialAnaliseOpcoes {
+  unidade: Unidade;
+  anoCorrente: number;
+  competencias: ComercialAnalisePeriodo[];
+  semanas: ComercialAnalisePeriodo[];
+  vendedores: ComercialAnaliseVendedorOpcao[];
+}
+
+export interface FindComercialAnaliseOpcoesDto {
+  unidade?: Unidade;
+}
+
+export interface FindComercialAnaliseDto {
+  modo?: ComercialAnaliseModo;
+  dimensao?: ComercialAnaliseDimensao;
+  metrica?: ComercialAnaliseMetrica;
+  base?: ComercialAnaliseBase;
+  leitura?: ComercialAnaliseLeitura;
+  c1?: string;
+  c2?: string;
+  competencias?: string[];
+  s1?: string;
+  s2?: string;
+  unidade?: Unidade;
+  /** Só dimensao=vendedor. Omitido = todos; vazio = nenhum. */
+  funcionarioIds?: string[];
+}
+
+export interface ComercialAnaliseLinha {
+  funcionarioId: string;
+  nomeVendedor: string;
+  codigoVendedorErp: number;
+  valorMes1: number | null;
+  valorMes2: number | null;
+  valorPeriodo: number | null;
+  valorMedia: number | null;
+  serie?: Array<number | null>;
+  delta: number;
+  percentual: number | null;
+}
+
+export interface ComercialAnaliseResponse {
+  unidade: Unidade;
+  modo: ComercialAnaliseModo;
+  periodos: ComercialAnalisePeriodo[];
+  periodo1: ComercialAnalisePeriodo | null;
+  periodo2: ComercialAnalisePeriodo | null;
+  agregacao: 'soma' | null;
+  filtrosAplicados: {
+    dimensao: ComercialAnaliseDimensao;
+    funcionarioIds: string[];
+    metrica: ComercialAnaliseMetrica;
+    base: ComercialAnaliseBase;
+    leitura: ComercialAnaliseLeitura | null;
+  };
+  crescimento: ComercialAnaliseLinha[];
+  queda: ComercialAnaliseLinha[];
+  maioresVendas: ComercialAnaliseLinha[];
+  maioresRejeitados: ComercialAnaliseLinha[];
+}

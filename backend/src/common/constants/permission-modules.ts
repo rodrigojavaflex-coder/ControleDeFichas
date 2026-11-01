@@ -83,6 +83,7 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
     label: 'Comercial',
     groupKeys: [
       'Comercial — Acompanhamento',
+      'Comercial — Análise',
       'Comercial — Configuração Metas',
       'Comercial — Configuração Comissões',
     ],

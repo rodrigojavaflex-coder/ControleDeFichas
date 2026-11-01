@@ -388,6 +388,14 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     requiredPermissions: [Permission.COMERCIAL_ACOMPANHAMENTO_READ],
   },
   {
+    id: 'comercial-analise',
+    label: 'Análise Comercial',
+    route: '/comercial/analise',
+    icon: 'feather-bar-chart-2',
+    category: 'Comercial',
+    requiredPermissions: [Permission.COMERCIAL_ANALISE_READ],
+  },
+  {
     id: 'comercial-metas',
     label: 'Configuração Metas',
     route: '/comercial/configuracao-metas',

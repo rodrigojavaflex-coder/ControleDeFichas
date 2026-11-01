@@ -139,6 +139,7 @@ const PERMS = {
   visitacaoMetas: [Permission.VISITACAO_META_READ],
   visitacaoComissoes: [Permission.VISITACAO_COMISSAO_READ],
   comercialAcompanhamento: [Permission.COMERCIAL_ACOMPANHAMENTO_READ],
+  comercialAnalise: [Permission.COMERCIAL_ANALISE_READ],
   comercialMetas: [Permission.COMERCIAL_META_READ],
   comercialComissoes: [Permission.COMERCIAL_COMISSAO_READ],
   feriados: [Permission.FERIADO_READ],
@@ -607,6 +608,15 @@ export const routes: Routes = [
       ),
     canActivate: guarded,
     data: { permissions: [...PERMS.comercialAcompanhamento] },
+  },
+  {
+    path: 'comercial/analise',
+    loadComponent: () =>
+      import('./components/comercial/comercial-analise-page').then(
+        (m) => m.ComercialAnalisePage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.comercialAnalise] },
   },
   {
     path: 'comercial/configuracao-metas',

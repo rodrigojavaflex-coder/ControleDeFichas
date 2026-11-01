@@ -209,6 +209,8 @@ export enum Permission {
   COMERCIAL_ACOMPANHAMENTO_HOME = 'comercial-acompanhamento:home',
   /** Card resumo TOTAL da unidade na home (1 loja ou todas se sem vínculo). */
   COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE = 'comercial-acompanhamento:home-unidade',
+  /** Comercial — análise por vendedor (comparar, ranking, evolução, semanas). */
+  COMERCIAL_ANALISE_READ = 'comercial-analise:read',
   /** Comercial — configuração de metas mensais. */
   COMERCIAL_META_READ = 'comercial-meta:read',
   COMERCIAL_META_UPDATE = 'comercial-meta:update',
@@ -655,6 +657,12 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.COMERCIAL_ACOMPANHAMENTO_COMISSAO,
       label: 'Visualizar faixa e valor de comissão no acompanhamento',
+    },
+  ],
+  'Comercial — Análise': [
+    {
+      key: Permission.COMERCIAL_ANALISE_READ,
+      label: 'Visualizar análise comercial por vendedor',
     },
   ],
   'Comercial — Configuração Metas': [
