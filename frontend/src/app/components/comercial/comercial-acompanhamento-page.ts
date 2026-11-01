@@ -15,6 +15,10 @@ import {
   ComercialAcompanhamentoVendedorOpcao,
 } from '../../models/comercial-acompanhamento.model';
 import { MESES_PT, nomeMesPt } from '../folha/folha-meses';
+import {
+  MultiSelectDropdownComponent,
+  MultiSelectOption,
+} from '../multi-select-dropdown/multi-select-dropdown';
 
 interface CardResumo {
   titulo: string;
@@ -137,7 +141,7 @@ const FILTRO_CARD_UNIDADE = '__unidade__';
 @Component({
   selector: 'app-comercial-acompanhamento-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MultiSelectDropdownComponent],
   templateUrl: './comercial-acompanhamento-page.html',
   styleUrls: ['../vendas-list/vendas-list.css', './comercial-acompanhamento-page.css'],
   encapsulation: ViewEncapsulation.None,
@@ -149,14 +153,18 @@ export class ComercialAcompanhamentoPage implements OnInit {
   private service = inject(ComercialAcompanhamentoService);
 
   MESES_PT = MESES_PT;
+  nomeMesPt = nomeMesPt;
   readonly FILTRO_CARD_UNIDADE = FILTRO_CARD_UNIDADE;
 
   unidadeFiltro: Unidade | '' = '';
   unidadeDisabled = false;
   anoFiltro = 2026;
   mesFiltro = new Date().getMonth() + 1;
-  /** '' = todos; `__unidade__` = só total; uuid = só aquele vendedor. */
-  funcionarioIdFiltro = '';
+  /**
+   * Multi-select: vazio = todos (TOTAL + vendedores).
+   * Pode incluir `FILTRO_CARD_UNIDADE` e/ou ids de funcionário.
+   */
+  funcionarioIdsFiltro: string[] = [];
   anosDisponiveis: number[] = [];
 
   vendedores: ComercialAcompanhamentoVendedorOpcao[] = [];
@@ -182,6 +190,7 @@ export class ComercialAcompanhamentoPage implements OnInit {
   };
   printDetalheAberto = false;
   printFormaDetalhe: ComercialPrintForma = 'resumido';
+  relatorioComissaoAberto = false;
   infoMarcaPropriaAberto = false;
   infoManipuladosAberto = false;
   infoManipuladosCard: CardResumo | null = null;
@@ -266,6 +275,57 @@ export class ComercialAcompanhamentoPage implements OnInit {
     return Object.values(Unidade);
   }
 
+  get vendedoresOptions(): MultiSelectOption[] {
+    const opts: MultiSelectOption[] = [];
+    if (this.unidadeFiltro) {
+      opts.push({
+        value: FILTRO_CARD_UNIDADE,
+        label: `TOTAL ${this.unidadeFiltro}`,
+      });
+    }
+    for (const v of this.vendedores) {
+      opts.push({
+        value: v.funcionarioId,
+        label: `${v.nome} (${v.codigoVendedorErp})`,
+      });
+    }
+    return opts;
+  }
+
+  /** Vazio ou todas as opções marcadas = sem recorte. */
+  get filtroVendedorAtivo(): boolean {
+    const ids = this.funcionarioIdsFiltro;
+    if (!ids.length) return false;
+    const opts = this.vendedoresOptions;
+    if (!opts.length) return false;
+    if (ids.length !== opts.length) return true;
+    const set = new Set(ids);
+    return opts.some((o) => !set.has(String(o.value)));
+  }
+
+  get mostrarCardTotal(): boolean {
+    if (!this.filtroVendedorAtivo) return true;
+    return this.funcionarioIdsFiltro.includes(FILTRO_CARD_UNIDADE);
+  }
+
+  /** Vendedores da grade/relatório conforme o multi-select. */
+  get itensFiltrados(): ComercialAcompanhamentoItem[] {
+    if (!this.filtroVendedorAtivo) return this.itens;
+    const set = new Set(
+      this.funcionarioIdsFiltro.filter((id) => id !== FILTRO_CARD_UNIDADE),
+    );
+    if (!set.size) return [];
+    return this.itens.filter(
+      (item) => !!item.funcionarioId && set.has(item.funcionarioId),
+    );
+  }
+
+  onVendedoresFiltroChange(ids: string[]): void {
+    this.funcionarioIdsFiltro = [
+      ...new Set((ids ?? []).map(String).filter(Boolean)),
+    ];
+  }
+
   get cardsResumo(): CardResumo[] {
     if (!this.itens.length && !this.totais.quantidadeVendedores) {
       return [];
@@ -341,17 +401,11 @@ export class ComercialAcompanhamentoPage implements OnInit {
         considerarTaxas: this.totais.considerarTaxas === true,
       },
     ];
-    if (this.funcionarioIdFiltro === FILTRO_CARD_UNIDADE) {
-      return cards;
+    if (!this.mostrarCardTotal) {
+      cards.length = 0;
     }
-    for (const item of this.itens) {
+    for (const item of this.itensFiltrados) {
       if (!item.funcionarioId) continue;
-      if (
-        this.funcionarioIdFiltro &&
-        item.funcionarioId !== this.funcionarioIdFiltro
-      ) {
-        continue;
-      }
       cards.push({
         titulo: this.rotuloVendedor(item),
         isTotal: false,
@@ -430,9 +484,6 @@ export class ComercialAcompanhamentoPage implements OnInit {
         faltaMetaHojeTopoMarcaPropria: item.faltaMetaHojeTopoMarcaPropria ?? null,
       });
     }
-    if (this.funcionarioIdFiltro && this.funcionarioIdFiltro !== FILTRO_CARD_UNIDADE) {
-      return cards.filter((c) => !c.isTotal);
-    }
     return cards;
   }
 
@@ -485,6 +536,13 @@ export class ComercialAcompanhamentoPage implements OnInit {
     const n = this.numeroLugar(posicao);
     if (n < 1) return '';
     return `${n}º Lugar`;
+  }
+
+  /** Posição curta no relatório de comissão (ex.: 1º). */
+  rotuloLugarRelatorio(posicao: number | null | undefined): string {
+    const n = this.numeroLugar(posicao);
+    if (n < 1) return '—';
+    return `${n}º`;
   }
 
   classeRankingBadge(posicao: number | null | undefined): string {
@@ -567,6 +625,16 @@ export class ComercialAcompanhamentoPage implements OnInit {
       return item.nomeVendedor;
     }
     return `${item.nomeVendedor} (${item.codigoVendedorErp})`;
+  }
+
+  /** Primeiro e segundo nome (sem código ERP) — lista de classificação. */
+  rotuloVendedorCurto(item: { nomeVendedor: string }): string {
+    const partes = String(item.nomeVendedor || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!partes.length) return '—';
+    return partes.slice(0, 2).join(' ');
   }
 
   rotuloQtdManipulados(reqs: number | null | undefined, formulas: number | null | undefined): string {
@@ -675,6 +743,23 @@ export class ComercialAcompanhamentoPage implements OnInit {
     if (!this.unidadeFiltro || this.carregando) return '—';
     const data = this.totais.dataUltimoCaixaFechado;
     return data ? this.formatarData(data) : '—';
+  }
+
+  /** Último dia civil da competência filtrada (YYYY-MM-DD). */
+  get dataFimCompetencia(): string {
+    const ultimoDia = new Date(this.anoFiltro, this.mesFiltro, 0).getDate();
+    return `${this.anoFiltro}-${String(this.mesFiltro).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
+  }
+
+  /**
+   * Mês ainda não fechado: último caixa CONFIRMADO da unidade
+   * é anterior ao último dia da competência (ou inexistente).
+   */
+  get competenciaMesAberto(): boolean {
+    if (!this.unidadeFiltro) return false;
+    const ultimo = (this.totais.dataUltimoCaixaFechado || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ultimo)) return true;
+    return ultimo < this.dataFimCompetencia;
   }
 
   get rotuloDiasUteis(): string {
@@ -832,8 +917,11 @@ export class ComercialAcompanhamentoPage implements OnInit {
     if (!this.unidadeFiltro) {
       this.itens = [];
       this.totais = { ...TOTAIS_VAZIOS };
+      this.vendedores = [];
+      this.funcionarioIdsFiltro = [];
       return;
     }
+    this.funcionarioIdsFiltro = [];
     this.carregarVendedores();
     this.carregarDados();
   }
@@ -877,6 +965,10 @@ export class ComercialAcompanhamentoPage implements OnInit {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.relatorioComissaoAberto) {
+      this.fecharRelatorioComissao();
+      return;
+    }
     if (this.printDetalheAberto) {
       this.fecharImpressaoDetalhe();
     }
@@ -1329,21 +1421,349 @@ export class ComercialAcompanhamentoPage implements OnInit {
 
   totalComissaoItem(item: ComercialAcompanhamentoItem): number {
     return (
+      this.comissaoVendedor(item) + this.bonusVendedor(item)
+    );
+  }
+
+  /** Comissão % (Manipulados + Marca própria), sem bônus. */
+  comissaoVendedor(item: {
+    valorComissaoRequisicao?: number | null;
+    valorComissaoMarcaPropria?: number | null;
+  }): number {
+    return (
       Number(item.valorComissaoRequisicao || 0) +
+      Number(item.valorComissaoMarcaPropria || 0)
+    );
+  }
+
+  /** Bônus das faixas (Manipulados + Marca própria). */
+  bonusVendedor(item: {
+    valorBonusRequisicao?: number | null;
+    valorBonusMarcaPropria?: number | null;
+  }): number {
+    return (
       Number(item.valorBonusRequisicao || 0) +
-      Number(item.valorComissaoMarcaPropria || 0) +
       Number(item.valorBonusMarcaPropria || 0)
     );
   }
 
+  get totalComissaoMarcaRelatorio(): number {
+    return this.itensFiltrados.reduce(
+      (acc, item) => acc + Number(item.valorComissaoMarcaPropria || 0),
+      0,
+    );
+  }
+
+  get totalBonusMarcaRelatorio(): number {
+    return this.itensFiltrados.reduce(
+      (acc, item) => acc + Number(item.valorBonusMarcaPropria || 0),
+      0,
+    );
+  }
+
+  get totalComissaoManipRelatorio(): number {
+    return this.itensFiltrados.reduce(
+      (acc, item) => acc + Number(item.valorComissaoRequisicao || 0),
+      0,
+    );
+  }
+
+  get totalBonusManipRelatorio(): number {
+    return this.itensFiltrados.reduce(
+      (acc, item) => acc + Number(item.valorBonusRequisicao || 0),
+      0,
+    );
+  }
+
+  get totalGeralComissaoRelatorio(): number {
+    return this.itensFiltrados.reduce(
+      (acc, item) => acc + this.totalComissaoItem(item),
+      0,
+    );
+  }
+
+  abrirRelatorioComissao(): void {
+    if (
+      !this.podeVerComissao() ||
+      !this.unidadeFiltro ||
+      !this.itensFiltrados.length
+    ) {
+      this.errors.show('Não há dados de comissão para exibir.', 'Aviso');
+      return;
+    }
+    this.relatorioComissaoAberto = true;
+  }
+
+  fecharRelatorioComissao(): void {
+    this.relatorioComissaoAberto = false;
+  }
+
+  imprimirRelatorioComissao(): void {
+    if (!this.podeVerComissao() || !this.itensFiltrados.length) return;
+    const html = this.montarHtmlRelatorioComissao();
+    const win = globalThis.window.open('', '_blank');
+    if (!win) {
+      this.errors.show('Permita pop-ups para imprimir o relatório.', 'Impressão');
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.document.title = `Comissão comercial ${this.getReportTimestamp()}`;
+    win.focus();
+    globalThis.window.setTimeout(() => win.print(), 200);
+  }
+
+  async exportarExcelComissao(): Promise<void> {
+    if (
+      !this.podeVerComissao() ||
+      !this.unidadeFiltro ||
+      !this.itensFiltrados.length
+    ) {
+      this.errors.show('Não há dados de comissão para exportar.', 'Aviso');
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+
+    const linhasComissao = this.itensFiltrados.map((item) => ({
+      Vendedor: this.rotuloVendedor(item),
+      'Comissão Marca própria': Number(item.valorComissaoMarcaPropria || 0),
+      'Bônus Marca própria': Number(item.valorBonusMarcaPropria || 0),
+      'Comissão Manipulados': Number(item.valorComissaoRequisicao || 0),
+      'Bônus Manipulados': Number(item.valorBonusRequisicao || 0),
+      'Total comissão': this.totalComissaoItem(item),
+    }));
+    linhasComissao.push({
+      Vendedor: 'Total',
+      'Comissão Marca própria': this.totalComissaoMarcaRelatorio,
+      'Bônus Marca própria': this.totalBonusMarcaRelatorio,
+      'Comissão Manipulados': this.totalComissaoManipRelatorio,
+      'Bônus Manipulados': this.totalBonusManipRelatorio,
+      'Total comissão': this.totalGeralComissaoRelatorio,
+    });
+
+    const sheetComissao = workbook.addWorksheet('Comissões');
+    const headersComissao = Object.keys(
+      linhasComissao[0],
+    ) as (keyof (typeof linhasComissao)[0])[];
+    sheetComissao.columns = headersComissao.map((header) => ({
+      header,
+      key: header,
+      width: header === 'Vendedor' ? 36 : 18,
+    }));
+    linhasComissao.forEach((row) => sheetComissao.addRow(row));
+    sheetComissao.getRow(1).font = { bold: true };
+    sheetComissao.getRow(linhasComissao.length + 1).font = { bold: true };
+
+    const linhasClassif = this.itensFiltrados.map((item) => ({
+      Vendedor: this.rotuloVendedorCurto(item),
+      'Marca — Posição': this.rotuloLugarRelatorio(item.rankingMarcaPropria),
+      'Marca — % Meta':
+        item.percentualMetaMarcaPropria == null
+          ? ''
+          : Number(item.percentualMetaMarcaPropria),
+      'Marca — % Comiss.':
+        item.percentualComissaoFaixaMarcaPropria == null
+          ? ''
+          : Number(item.percentualComissaoFaixaMarcaPropria),
+      'Manip. — Posição': this.rotuloLugarRelatorio(item.rankingManipulados),
+      'Manip. — % Meta':
+        item.percentualMetaRequisicao == null
+          ? ''
+          : Number(item.percentualMetaRequisicao),
+      'Manip. — % Comiss.':
+        item.percentualComissaoFaixaRequisicao == null
+          ? ''
+          : Number(item.percentualComissaoFaixaRequisicao),
+    }));
+
+    const sheetClassif = workbook.addWorksheet('Classificação');
+    const headersClassif = Object.keys(
+      linhasClassif[0],
+    ) as (keyof (typeof linhasClassif)[0])[];
+    sheetClassif.columns = headersClassif.map((header) => ({
+      header,
+      key: header,
+      width: header === 'Vendedor' ? 36 : 14,
+    }));
+    linhasClassif.forEach((row) => sheetClassif.addRow(row));
+    sheetClassif.getRow(1).font = { bold: true };
+
+    try {
+      const competencia = `${this.anoFiltro}-${String(this.mesFiltro).padStart(2, '0')}`;
+      const nomeArquivo = `Comissao_Comercial_${this.unidadeFiltro}_${competencia}.xlsx`;
+      await this.baixarWorkbook(workbook, nomeArquivo);
+    } catch {
+      this.errors.show('Erro ao exportar relatório de comissão.', 'Erro');
+    }
+  }
+
+  private htmlBadgeRankingRelatorio(
+    posicao: number | null | undefined,
+    categoria: 'Manipulados' | 'Marca própria',
+  ): string {
+    const n = this.numeroLugar(posicao);
+    if (n < 1) return '—';
+    const classe = this.classeRankingBadge(n);
+    const tipo = categoria === 'Manipulados' ? 'is-manip' : 'is-marca';
+    return `<span class="ranking-badge ${tipo} ${classe}">
+      <span class="ranking-badge-body">
+        <span class="cat">${this.escapeHtml(categoria)}</span>
+        <strong>${this.escapeHtml(this.rotuloLugar(n))}</strong>
+      </span>
+      <span class="ranking-badge-medal">${n}º</span>
+    </span>`;
+  }
+
+  private montarHtmlRelatorioComissao(): string {
+    const linhasComissao = this.itensFiltrados
+      .map(
+        (item) => `<tr>
+          <td>${this.escapeHtml(this.rotuloVendedor(item))}</td>
+          <td class="num">${this.escapeHtml(this.formatarMoeda(item.valorComissaoMarcaPropria || 0))}</td>
+          <td class="num">${this.escapeHtml(this.formatarMoeda(item.valorBonusMarcaPropria || 0))}</td>
+          <td class="num">${this.escapeHtml(this.formatarMoeda(item.valorComissaoRequisicao || 0))}</td>
+          <td class="num">${this.escapeHtml(this.formatarMoeda(item.valorBonusRequisicao || 0))}</td>
+          <td class="num">${this.escapeHtml(this.formatarMoeda(this.totalComissaoItem(item)))}</td>
+        </tr>`,
+      )
+      .join('');
+    const linhasClassif = this.itensFiltrados
+      .map(
+        (item) => `<tr>
+          <td>${this.escapeHtml(this.rotuloVendedorCurto(item))}</td>
+          <td class="pos">${this.htmlBadgeRankingRelatorio(item.rankingMarcaPropria, 'Marca própria')}</td>
+          <td class="num">${this.escapeHtml(this.formatarPercentualMeta(item.percentualMetaMarcaPropria))}</td>
+          <td class="num">${this.escapeHtml(this.formatarPercentualFaixa(item.percentualComissaoFaixaMarcaPropria))}</td>
+          <td class="pos">${this.htmlBadgeRankingRelatorio(item.rankingManipulados, 'Manipulados')}</td>
+          <td class="num">${this.escapeHtml(this.formatarPercentualMeta(item.percentualMetaRequisicao))}</td>
+          <td class="num">${this.escapeHtml(this.formatarPercentualFaixa(item.percentualComissaoFaixaRequisicao))}</td>
+        </tr>`,
+      )
+      .join('');
+    const competencia = `${this.nomeMesPt(this.mesFiltro)} ${this.anoFiltro}`;
+    const badgeMes = this.competenciaMesAberto
+      ? `<span class="aviso-mes" title="Último caixa confirmado: ${this.escapeHtml(this.dataUltimoCaixaFormatada)}">Mês ainda não fechado</span>`
+      : '';
+    return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>${this.escapeHtml(`Comissão comercial ${this.getReportTimestamp()}`)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #0f172a; margin: 24px; }
+    h1 { font-size: 18px; margin: 0 0 4px; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    h2 { font-size: 14px; margin: 1.25rem 0 0.55rem; }
+    p { margin: 0 0 12px; color: #475569; font-size: 13px; }
+    .aviso-mes {
+      display: inline-flex; align-items: center;
+      padding: 0.15em 0.55em; border-radius: 999px;
+      background: rgba(185, 28, 28, 0.1); border: 1px solid rgba(185, 28, 28, 0.28);
+      color: #991b1b; font-size: 11px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.02em; white-space: nowrap;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: middle; }
+    th { background: #f1f5f9; }
+    th.group { text-align: center; }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    td.pos { text-align: center; }
+    tfoot td { font-weight: 700; background: #f8fafc; }
+    .ranking-badge {
+      display: inline-flex; align-items: stretch; border-radius: 6px; overflow: hidden;
+      border: 1px solid transparent; font-size: 11px; vertical-align: middle;
+    }
+    .ranking-badge-body {
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 0.15rem 0.35rem; text-align: left;
+    }
+    .ranking-badge-body .cat {
+      font-size: 8px; font-weight: 800; letter-spacing: 0.03em;
+      text-transform: uppercase; line-height: 1.05; opacity: 0.85;
+    }
+    .ranking-badge-body strong { font-size: 11px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+    .ranking-badge-medal {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 1.5rem; padding: 0 0.25rem; font-size: 10px; font-weight: 800;
+      border-left: 1px solid rgba(15, 23, 42, 0.15);
+    }
+    .ranking-badge.is-ouro { background: linear-gradient(135deg, #fef08a, #facc15); border-color: #eab308; color: #713f12; }
+    .ranking-badge.is-prata { background: linear-gradient(135deg, #f1f5f9, #cbd5e1); border-color: #94a3b8; color: #334155; }
+    .ranking-badge.is-bronze { background: linear-gradient(135deg, #fde68a, #fbbf24); border-color: #d97706; color: #92400e; }
+    .ranking-badge.is-manip.is-demais { background: #ecfdf5; border-color: #86efac; color: #14532d; }
+    .ranking-badge.is-marca.is-demais { background: #eff6ff; border-color: #93c5fd; color: #1e3a8a; }
+    @media print {
+      .ranking-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .aviso-mes { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Relatório de comissão ${badgeMes}</h1>
+  <p>${this.escapeHtml(String(this.unidadeFiltro))} · ${this.escapeHtml(competencia)}</p>
+  <h2>Comissões</h2>
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2">Vendedor</th>
+        <th class="group" colspan="2">Marca própria</th>
+        <th class="group" colspan="2">Manipulados</th>
+        <th class="num" rowspan="2">Total comissão</th>
+      </tr>
+      <tr>
+        <th class="num">Comissão</th>
+        <th class="num">Bônus</th>
+        <th class="num">Comissão</th>
+        <th class="num">Bônus</th>
+      </tr>
+    </thead>
+    <tbody>${linhasComissao}</tbody>
+    <tfoot>
+      <tr>
+        <td>Total</td>
+        <td class="num">${this.escapeHtml(this.formatarMoeda(this.totalComissaoMarcaRelatorio))}</td>
+        <td class="num">${this.escapeHtml(this.formatarMoeda(this.totalBonusMarcaRelatorio))}</td>
+        <td class="num">${this.escapeHtml(this.formatarMoeda(this.totalComissaoManipRelatorio))}</td>
+        <td class="num">${this.escapeHtml(this.formatarMoeda(this.totalBonusManipRelatorio))}</td>
+        <td class="num">${this.escapeHtml(this.formatarMoeda(this.totalGeralComissaoRelatorio))}</td>
+      </tr>
+    </tfoot>
+  </table>
+  <h2>Classificação e %</h2>
+  <table>
+    <thead>
+      <tr>
+        <th rowspan="2">Vendedor</th>
+        <th class="group" colspan="3">Marca própria</th>
+        <th class="group" colspan="3">Manipulados</th>
+      </tr>
+      <tr>
+        <th class="num">Posição</th>
+        <th class="num">% Meta</th>
+        <th class="num">% Comiss.</th>
+        <th class="num">Posição</th>
+        <th class="num">% Meta</th>
+        <th class="num">% Comiss.</th>
+      </tr>
+    </thead>
+    <tbody>${linhasClassif}</tbody>
+  </table>
+</body>
+</html>`;
+  }
+
   async exportarExcel(): Promise<void> {
-    if (!this.podeLer() || !this.unidadeFiltro || !this.itens.length) {
+    if (
+      !this.podeLer() ||
+      !this.unidadeFiltro ||
+      (!this.itensFiltrados.length && !this.mostrarCardTotal)
+    ) {
       this.errors.show('Não há dados para exportar.', 'Aviso');
       return;
     }
 
     const comissao = this.podeVerComissao();
-    const linhas = this.itens.map((item) => {
+    const linhas = this.itensFiltrados.map((item) => {
       const linha: Record<string, string | number> = {
         Vendedor: this.rotuloVendedor(item),
         Manipulados: Number(item.valorRecebidoRequisicao || 0),
@@ -1371,31 +1791,33 @@ export class ComercialAcompanhamentoPage implements OnInit {
       return linha;
     });
 
-    const total: Record<string, string | number> = {
-      Vendedor: this.rotuloCardTotal(),
-      Manipulados: Number(this.totais.valorRecebidoRequisicao || 0),
-      'Qtd reqs': Number(this.totais.quantidadeRecebidoRequisicao || 0),
-      'Qtd fórmulas': Number(this.totais.quantidadeFormulasRequisicao || 0),
-      'Marca própria': Number(this.totais.valorRecebidoMarcaPropria || 0),
-      Rejeitado: Number(this.totais.valorRejeitado || 0),
-      'Meta Manip.': Number(this.totais.valorMetaRequisicao || 0),
-      '% Meta Manip.':
-        this.totais.percentualMetaRequisicao == null
-          ? ''
-          : Number(this.totais.percentualMetaRequisicao),
-      'Meta Marca Própria': Number(this.totais.valorMetaMarcaPropria || 0),
-      '% Meta Marca Própria':
-        this.totais.percentualMetaMarcaPropria == null
-          ? ''
-          : Number(this.totais.percentualMetaMarcaPropria),
-    };
-    if (comissao) {
-      total['Comissão Manip.'] = '';
-      total['Bônus Manip.'] = '';
-      total['Comissão Marca'] = '';
-      total['Bônus Marca'] = '';
+    if (this.mostrarCardTotal) {
+      const total: Record<string, string | number> = {
+        Vendedor: this.rotuloCardTotal(),
+        Manipulados: Number(this.totais.valorRecebidoRequisicao || 0),
+        'Qtd reqs': Number(this.totais.quantidadeRecebidoRequisicao || 0),
+        'Qtd fórmulas': Number(this.totais.quantidadeFormulasRequisicao || 0),
+        'Marca própria': Number(this.totais.valorRecebidoMarcaPropria || 0),
+        Rejeitado: Number(this.totais.valorRejeitado || 0),
+        'Meta Manip.': Number(this.totais.valorMetaRequisicao || 0),
+        '% Meta Manip.':
+          this.totais.percentualMetaRequisicao == null
+            ? ''
+            : Number(this.totais.percentualMetaRequisicao),
+        'Meta Marca Própria': Number(this.totais.valorMetaMarcaPropria || 0),
+        '% Meta Marca Própria':
+          this.totais.percentualMetaMarcaPropria == null
+            ? ''
+            : Number(this.totais.percentualMetaMarcaPropria),
+      };
+      if (comissao) {
+        total['Comissão Manip.'] = '';
+        total['Bônus Manip.'] = '';
+        total['Comissão Marca'] = '';
+        total['Bônus Marca'] = '';
+      }
+      linhas.push(total);
     }
-    linhas.push(total);
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Acompanhamento');
@@ -1949,19 +2371,20 @@ export class ComercialAcompanhamentoPage implements OnInit {
   private carregarVendedores(): void {
     if (!this.unidadeFiltro) {
       this.vendedores = [];
+      this.funcionarioIdsFiltro = [];
       return;
     }
     this.carregandoVendedores = true;
     this.service.listarVendedores(this.unidadeFiltro).subscribe({
       next: (rows) => {
         this.vendedores = rows;
-        if (
-          this.funcionarioIdFiltro &&
-          this.funcionarioIdFiltro !== FILTRO_CARD_UNIDADE &&
-          !rows.some((v) => v.funcionarioId === this.funcionarioIdFiltro)
-        ) {
-          this.funcionarioIdFiltro = '';
-        }
+        const idsValidos = new Set([
+          FILTRO_CARD_UNIDADE,
+          ...rows.map((v) => v.funcionarioId),
+        ]);
+        this.funcionarioIdsFiltro = this.funcionarioIdsFiltro.filter((id) =>
+          idsValidos.has(id),
+        );
         this.carregandoVendedores = false;
       },
       error: () => {
@@ -1979,11 +2402,6 @@ export class ComercialAcompanhamentoPage implements OnInit {
         unidade: this.unidadeFiltro,
         ano: this.anoFiltro,
         mes: this.mesFiltro,
-        funcionarioId:
-          this.funcionarioIdFiltro &&
-          this.funcionarioIdFiltro !== FILTRO_CARD_UNIDADE
-            ? this.funcionarioIdFiltro
-            : undefined,
       })
       .subscribe({
         next: (res) => {

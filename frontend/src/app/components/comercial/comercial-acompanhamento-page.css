@@ -50,8 +50,20 @@
 }
 
 .comercial-acomp-toolbar .filter-group.comercial-acomp-vendedor {
-  flex: 1 1 280px;
-  max-width: 36rem;
+  flex: 1 1 16rem;
+  width: 16rem;
+  min-width: 14rem;
+  max-width: 22rem;
+}
+
+.comercial-acomp-toolbar .comercial-acomp-vendedor .multi-select-dropdown {
+  width: 100%;
+}
+
+.comercial-acomp-toolbar .comercial-acomp-vendedor .multi-select-trigger {
+  min-height: 2.375rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.875rem;
 }
 
 .comercial-acomp-toolbar .comercial-acomp-competencia-nav {
@@ -110,26 +122,169 @@
   display: flex;
   align-items: flex-end;
   flex: 0 0 auto;
+  gap: 0.5rem;
 }
 
-.comercial-acomp-toolbar-acoes .btn-exportar {
+.comercial-acomp-toolbar-acoes .btn-exportar,
+.comercial-acomp-toolbar-acoes .btn-imprimir {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   min-height: 2.375rem;
   padding: 0 0.85rem;
+  border: none;
+}
+
+.comercial-acomp-toolbar-acoes .btn-exportar {
   background: var(--cor-sucesso, var(--color-success, #16a34a));
   color: #fff;
-  border: none;
 }
 
 .comercial-acomp-toolbar-acoes .btn-exportar:hover:not(:disabled) {
   background: color-mix(in srgb, var(--cor-sucesso, #16a34a) 85%, #000);
 }
 
-.comercial-acomp-toolbar-acoes .btn-exportar:disabled {
+.comercial-acomp-toolbar-acoes .btn-exportar:disabled,
+.comercial-acomp-toolbar-acoes .btn-imprimir:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Ganha do max-width: 600px de .modal-conteudo no design system. */
+.modal-conteudo.comercial-acomp-modal-comissao {
+  width: min(1120px, 94vw);
+  max-width: 94vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.comercial-acomp-modal-comissao .modal-corpo,
+.comercial-acomp-comissao-corpo {
+  overflow: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.comercial-acomp-comissao-secao-titulo {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  letter-spacing: 0.01em;
+}
+
+.comercial-acomp-comissao-table {
+  width: 100%;
+  table-layout: auto;
+}
+
+.comercial-acomp-comissao-table thead th {
+  vertical-align: middle;
+  font-size: 0.78rem;
+}
+
+.comercial-acomp-comissao-table thead th[colspan] {
+  text-align: center;
+  background: var(--bg-secondary, #f1f5f9);
+  font-weight: 800;
+}
+
+.comercial-acomp-comissao-table tbody td {
+  font-size: 0.84rem;
+  vertical-align: middle;
+}
+
+.comercial-acomp-comissao-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.comercial-acomp-comissao-aviso-mes {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #b91c1c 35%, transparent);
+  background: color-mix(in srgb, #b91c1c 12%, transparent);
+  color: #991b1b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.comercial-acomp-comissao-aviso-mes i {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+}
+
+.comercial-acomp-comissao-table th.text-right,
+.comercial-acomp-comissao-table td.text-right {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.comercial-acomp-comissao-table th.text-center {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.comercial-acomp-comissao-pos {
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.comercial-acomp-comissao-rank.comercial-acomp-ranking-badge {
+  max-width: 9.5rem;
+}
+
+.comercial-acomp-comissao-rank .comercial-acomp-ranking-badge-body {
+  padding: 0.12rem 0.32rem;
+}
+
+.comercial-acomp-comissao-rank .comercial-acomp-ranking-badge-body .cat {
+  font-size: 0.48rem;
+}
+
+.comercial-acomp-comissao-rank .comercial-acomp-ranking-badge-body strong {
+  font-size: 0.68rem;
+}
+
+.comercial-acomp-comissao-rank .comercial-acomp-ranking-badge-medal {
+  min-width: 1.45rem;
+  font-size: 0.6rem;
+}
+
+body.theme-dark .comercial-acomp-comissao-table thead th[colspan],
+[data-theme='dark'] .comercial-acomp-comissao-table thead th[colspan] {
+  background: color-mix(in srgb, var(--bg-secondary, #1e293b) 90%, transparent);
+}
+
+.comercial-acomp-comissao-table tfoot td {
+  font-weight: 700;
+  background: var(--bg-secondary, #f8fafc);
+}
+
+body.theme-dark .comercial-acomp-comissao-aviso-mes,
+[data-theme='dark'] .comercial-acomp-comissao-aviso-mes {
+  background: color-mix(in srgb, #f87171 16%, transparent);
+  border-color: color-mix(in srgb, #f87171 40%, transparent);
+  color: #fecaca;
+}
+
+body.theme-dark .comercial-acomp-comissao-table tfoot td,
+[data-theme='dark'] .comercial-acomp-comissao-table tfoot td {
+  background: color-mix(in srgb, var(--bg-secondary, #1e293b) 88%, transparent);
 }
 
 .comercial-acomp-toolbar .form-label {

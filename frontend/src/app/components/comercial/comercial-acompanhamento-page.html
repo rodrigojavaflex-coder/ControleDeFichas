@@ -71,30 +71,32 @@
           </div>
         </div>
         <div class="filter-group comercial-acomp-vendedor">
-          <label class="form-label" for="ca-vendedor">Vendedor</label>
-          <select
-            id="ca-vendedor"
-            class="form-control"
-            [(ngModel)]="funcionarioIdFiltro"
-            [disabled]="!unidadeFiltro || carregandoVendedores"
-            (ngModelChange)="onFiltroChange()">
-            <option [ngValue]="''">Todos</option>
-            <option [ngValue]="FILTRO_CARD_UNIDADE">
-              {{ unidadeFiltro ? 'TOTAL ' + unidadeFiltro : 'Unidade' }}
-            </option>
-            @for (v of vendedores; track v.funcionarioId) {
-              <option [ngValue]="v.funcionarioId">
-                {{ v.nome }} ({{ v.codigoVendedorErp }})
-              </option>
-            }
-          </select>
+          <label class="form-label">Vendedor</label>
+          <app-multi-select-dropdown
+            [options]="vendedoresOptions"
+            [disabled]="!unidadeFiltro || carregandoVendedores || !vendedoresOptions.length"
+            placeholder="Todos"
+            [ngModel]="funcionarioIdsFiltro"
+            (ngModelChange)="onVendedoresFiltroChange($event)">
+          </app-multi-select-dropdown>
         </div>
         <div class="comercial-acomp-toolbar-acoes">
+          @if (podeVerComissao()) {
+            <button
+              type="button"
+              class="btn btn-imprimir"
+              (click)="abrirRelatorioComissao()"
+              [disabled]="!unidadeFiltro || carregando || !itensFiltrados.length"
+              title="Fechamento de comissão dos vendedores">
+              <i class="fas fa-file-invoice-dollar"></i>
+              Fechamento Comissão
+            </button>
+          }
           <button
             type="button"
             class="btn btn-exportar"
             (click)="exportarExcel()"
-            [disabled]="!unidadeFiltro || carregando || !itens.length"
+            [disabled]="!unidadeFiltro || carregando || (!itensFiltrados.length && !mostrarCardTotal)"
             title="Exportar planilha para Excel">
             <i class="fas fa-file-excel"></i>
             Excel
@@ -1259,6 +1261,193 @@
             </article>
           </div>
         }
+      </div>
+    </div>
+  </div>
+}
+
+@if (relatorioComissaoAberto) {
+  <div
+    class="modal-overlay comercial-acomp-modal-comissao-overlay"
+    (click)="fecharRelatorioComissao()">
+    <div
+      class="modal-conteudo comercial-acomp-modal-comissao"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ca-comissao-titulo">
+      <div class="modal-cabecalho">
+        <div>
+          <h3 class="modal-titulo comercial-acomp-comissao-titulo" id="ca-comissao-titulo">
+            Relatório de comissão
+            @if (competenciaMesAberto) {
+              <span
+                class="comercial-acomp-comissao-aviso-mes"
+                role="status"
+                title="Último dia da competência ({{ formatarData(dataFimCompetencia) }}) sem caixa confirmado. Último caixa: {{ dataUltimoCaixaFormatada }}.">
+                <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                Mês ainda não fechado
+              </span>
+            }
+          </h3>
+          <p class="comercial-acomp-detalhe-sub">
+            {{ unidadeFiltro }} · {{ nomeMesPt(mesFiltro) }} {{ anoFiltro }}
+          </p>
+        </div>
+        <div class="comercial-acomp-detalhe-header-actions">
+          <button
+            type="button"
+            class="btn btn-imprimir"
+            (click)="imprimirRelatorioComissao()"
+            [disabled]="!itensFiltrados.length"
+            title="Imprimir relatório de comissão">
+            <i class="fas fa-print"></i>
+            Imprimir
+          </button>
+          <button
+            type="button"
+            class="btn btn-exportar"
+            (click)="exportarExcelComissao()"
+            [disabled]="!itensFiltrados.length"
+            title="Exportar relatório de comissão para Excel">
+            <i class="fas fa-file-excel"></i>
+            Excel
+          </button>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharRelatorioComissao()"
+            aria-label="Fechar">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      <div class="modal-corpo comercial-acomp-comissao-corpo">
+        <section class="comercial-acomp-comissao-secao" aria-label="Comissões">
+          <h4 class="comercial-acomp-comissao-secao-titulo">Comissões</h4>
+          <div class="table-container">
+            <table class="vendas-table comercial-acomp-comissao-table">
+              <thead>
+                <tr>
+                  <th rowspan="2">Vendedor</th>
+                  <th class="text-center" colspan="2">Marca própria</th>
+                  <th class="text-center" colspan="2">Manipulados</th>
+                  <th class="text-right" rowspan="2">Total comissão</th>
+                </tr>
+                <tr>
+                  <th class="text-right">Comissão</th>
+                  <th class="text-right">Bônus</th>
+                  <th class="text-right">Comissão</th>
+                  <th class="text-right">Bônus</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of itensFiltrados; track item.funcionarioId) {
+                  <tr>
+                    <td>{{ rotuloVendedor(item) }}</td>
+                    <td class="text-right">{{ formatarMoeda(item.valorComissaoMarcaPropria || 0) }}</td>
+                    <td class="text-right">{{ formatarMoeda(item.valorBonusMarcaPropria || 0) }}</td>
+                    <td class="text-right">{{ formatarMoeda(item.valorComissaoRequisicao || 0) }}</td>
+                    <td class="text-right">{{ formatarMoeda(item.valorBonusRequisicao || 0) }}</td>
+                    <td class="text-right">{{ formatarMoeda(totalComissaoItem(item)) }}</td>
+                  </tr>
+                } @empty {
+                  <tr class="no-data">
+                    <td colspan="6">
+                      <i class="fas fa-inbox"></i> Nenhum vendedor encontrado
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              @if (itensFiltrados.length) {
+                <tfoot>
+                  <tr>
+                    <td>Total</td>
+                    <td class="text-right">{{ formatarMoeda(totalComissaoMarcaRelatorio) }}</td>
+                    <td class="text-right">{{ formatarMoeda(totalBonusMarcaRelatorio) }}</td>
+                    <td class="text-right">{{ formatarMoeda(totalComissaoManipRelatorio) }}</td>
+                    <td class="text-right">{{ formatarMoeda(totalBonusManipRelatorio) }}</td>
+                    <td class="text-right">{{ formatarMoeda(totalGeralComissaoRelatorio) }}</td>
+                  </tr>
+                </tfoot>
+              }
+            </table>
+          </div>
+        </section>
+
+        <section class="comercial-acomp-comissao-secao" aria-label="Classificação e percentuais">
+          <h4 class="comercial-acomp-comissao-secao-titulo">Classificação e %</h4>
+          <div class="table-container">
+            <table class="vendas-table comercial-acomp-comissao-table">
+              <thead>
+                <tr>
+                  <th rowspan="2">Vendedor</th>
+                  <th class="text-center" colspan="3">Marca própria</th>
+                  <th class="text-center" colspan="3">Manipulados</th>
+                </tr>
+                <tr>
+                  <th class="text-center" title="Posição em Marca própria">Posição</th>
+                  <th class="text-right" title="% da meta atingida — Marca própria">% Meta</th>
+                  <th class="text-right" title="% da faixa aplicada — Marca própria">% Comiss.</th>
+                  <th class="text-center" title="Posição em Manipulados">Posição</th>
+                  <th class="text-right" title="% da meta atingida — Manipulados">% Meta</th>
+                  <th class="text-right" title="% da faixa aplicada — Manipulados">% Comiss.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of itensFiltrados; track item.funcionarioId) {
+                  <tr>
+                    <td>{{ rotuloVendedorCurto(item) }}</td>
+                    <td class="comercial-acomp-comissao-pos">
+                      @if (numeroLugar(item.rankingMarcaPropria) > 0) {
+                        <span
+                          class="comercial-acomp-ranking-badge is-marca comercial-acomp-comissao-rank"
+                          [ngClass]="classeRankingBadge(item.rankingMarcaPropria)">
+                          <span class="comercial-acomp-ranking-badge-body">
+                            <span class="cat">Marca própria</span>
+                            <strong>{{ rotuloLugar(item.rankingMarcaPropria) }}</strong>
+                          </span>
+                          <span class="comercial-acomp-ranking-badge-medal" aria-hidden="true">
+                            {{ numeroLugar(item.rankingMarcaPropria) }}º
+                          </span>
+                        </span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td class="text-right">{{ formatarPercentualMeta(item.percentualMetaMarcaPropria) }}</td>
+                    <td class="text-right">{{ formatarPercentualFaixa(item.percentualComissaoFaixaMarcaPropria) }}</td>
+                    <td class="comercial-acomp-comissao-pos">
+                      @if (numeroLugar(item.rankingManipulados) > 0) {
+                        <span
+                          class="comercial-acomp-ranking-badge is-manip comercial-acomp-comissao-rank"
+                          [ngClass]="classeRankingBadge(item.rankingManipulados)">
+                          <span class="comercial-acomp-ranking-badge-body">
+                            <span class="cat">Manipulados</span>
+                            <strong>{{ rotuloLugar(item.rankingManipulados) }}</strong>
+                          </span>
+                          <span class="comercial-acomp-ranking-badge-medal" aria-hidden="true">
+                            {{ numeroLugar(item.rankingManipulados) }}º
+                          </span>
+                        </span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td class="text-right">{{ formatarPercentualMeta(item.percentualMetaRequisicao) }}</td>
+                    <td class="text-right">{{ formatarPercentualFaixa(item.percentualComissaoFaixaRequisicao) }}</td>
+                  </tr>
+                } @empty {
+                  <tr class="no-data">
+                    <td colspan="7">
+                      <i class="fas fa-inbox"></i> Nenhum vendedor encontrado
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
   </div>
