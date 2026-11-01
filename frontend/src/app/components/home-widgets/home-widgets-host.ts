@@ -10,6 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { HOME_WIDGETS, HomeWidgetId } from '../../config/home-widgets.registry';
 import { HomeWidgetComercialMeuComponent } from './home-widget-comercial-meu';
 import { HomeWidgetComercialUnidadeComponent } from './home-widget-comercial-unidade';
+import { HomeWidgetComercialAnaliseComponent } from './home-widget-comercial-analise';
 
 export type HomeWidgetsProcessamentoEstado = {
   ativo: boolean;
@@ -24,6 +25,7 @@ export type HomeWidgetsProcessamentoEstado = {
     CommonModule,
     HomeWidgetComercialMeuComponent,
     HomeWidgetComercialUnidadeComponent,
+    HomeWidgetComercialAnaliseComponent,
   ],
   templateUrl: './home-widgets-host.html',
   styleUrls: ['./home-widgets-host.css'],

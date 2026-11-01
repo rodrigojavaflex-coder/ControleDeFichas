@@ -1,5 +1,5 @@
 ---
-description: Regras operacionais para mudancas de interface, experiencia e temas
+description: Regras operacionais para mudancas de interface, experiencia, temas, feedback e modal
 globs:
   # Frontend (Angular) — UI alinhada à árvore src/app/components e módulos
   - "frontend/src/app/components/**/*.{html,css,scss}"
@@ -35,10 +35,16 @@ alwaysApply: true
 - Elementos clicaveis devem ter foco visivel.
 - Evitar depender apenas de cor para comunicar estado.
 
+## Feedback e modal
+- Erro, aviso, sucesso e confirmacao usam modal: `ErrorModalService` (`frontend/src/app/services/error-modal.service.ts`) ou o modal padrao da tela.
+- Proibido toast, snackbar, `alert()`, `confirm()` e mensagem que desaparece sozinha.
+- Overlay com classe `nao-clicavel` (`.modal-overlay.nao-clicavel` em `frontend/src/styles/componentes/_modais.css`). Clique no fundo nao fecha. Fecha no X, em botao explicito (Cancelar, Salvar, Fechar) ou, como excecao, ao terminar um processamento ou uma atualizacao. O conteudo (`.modal-conteudo`) nao propaga o clique ao overlay.
+
 ## Checklist obrigatorio por mudanca visual
 - O layout se manteve consistente em desktop e mobile (quando aplicavel)?
 - O componente funciona em tema claro e escuro?
-- Estados de loading, vazio, erro e sucesso foram considerados?
+- Estados de loading e vazio foram considerados? Erro, aviso, sucesso e confirmacao estao em modal (sem toast, snackbar, `alert()` ou `confirm()`)?
+- Se abriu modal, o overlay e `nao-clicavel` e so fecha no X, em botao explicito ou ao terminar processamento/atualizacao?
 - Nao houve regressao em componentes compartilhados?
 
 ## Quando pedir confirmacao
@@ -50,3 +56,4 @@ alwaysApply: true
 - Informar impacto visual da mudanca.
 - Informar validacao de tema claro/escuro.
 - Informar riscos de regressao visual.
+- Se houve card ou modal, informar a fonte do indicador e que o feedback usa modal `nao-clicavel`.

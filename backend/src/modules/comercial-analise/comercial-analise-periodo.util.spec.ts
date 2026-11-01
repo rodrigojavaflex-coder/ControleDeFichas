@@ -1,6 +1,8 @@
 import { periodoCompetencia } from '../visitacao-acompanhamento/utils/visitacao-dias-uteis.util';
 import {
   listarCompetenciasAnalise,
+  semanasCandidatasHome,
+  semanasDaCompetencia,
   semanasMesCorrente,
 } from './comercial-analise-periodo.util';
 
@@ -75,5 +77,28 @@ describe('comercial-analise-periodo', () => {
         mes.dataFinal,
       ),
     ).toBe(true);
+  });
+
+  it('mês passado fecha todas as semanas sem prévia', () => {
+    const hoje = '2026-11-01';
+    const semanas = semanasDaCompetencia('2026-10', hoje);
+    const mes = periodoCompetencia(2026, 10);
+    expect(semanas.every((s) => !s.previa)).toBe(true);
+    expect(semanas[semanas.length - 1].fim).toBe('2026-10-31');
+    expect(
+      uniaoCobre(
+        semanas.map((s) => ({ inicio: s.inicio, fim: s.fim })),
+        mes.dataInicial,
+        mes.dataFinal,
+      ),
+    ).toBe(true);
+  });
+
+  it('candidatas da home incluem mês anterior + prévia do corrente', () => {
+    const hoje = '2026-11-01';
+    const semanas = semanasCandidatasHome(hoje);
+    expect(semanas[0].inicio).toBe('2026-10-01');
+    expect(semanas[semanas.length - 1].label).toBe('1 a 1 de Nov (prévia)');
+    expect(semanas.some((s) => s.fim === '2026-10-31')).toBe(true);
   });
 });

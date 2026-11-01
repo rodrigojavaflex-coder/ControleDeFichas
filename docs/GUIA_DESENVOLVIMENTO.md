@@ -59,6 +59,21 @@ Sem `data.permissions` (ou lista vazia), o `permissionGuard` libera qualquer aut
 - Endpoints de **consulta** (GET) de dados sensíveis também precisam de permissão — não só POST/PUT/DELETE.
 - Várias permissões no decorator = OR (basta uma).
 
+## Mesma fonte para o mesmo indicador
+
+Se um número ou card aparece em mais de uma tela (ex.: home e a tela de origem), as duas leem o mesmo cálculo e o mesmo contrato.
+
+- Reutilizar o serviço e o endpoint já usados pela primeira superfície (ex.: `ComercialAcompanhamentoService`).
+- Proibido recalcular no componente, copiar a fórmula no template ou manter uma query parecida só para a segunda tela.
+
+## Feedback e modal
+
+Erro, aviso, sucesso e confirmação usam modal.
+
+- Serviço: `ErrorModalService` (`frontend/src/app/services/error-modal.service.ts`) ou o modal já usado na tela.
+- Proibido toast, snackbar, `alert()`, `confirm()` e mensagem que desaparece sozinha.
+- O overlay usa a classe `nao-clicavel` (`.modal-overlay.nao-clicavel` em `frontend/src/styles/componentes/_modais.css`). Clique no fundo não fecha. Fecha no X, em botão explícito (Cancelar, Salvar, Fechar) ou, como exceção, ao terminar um processamento ou uma atualização. O conteúdo (`.modal-conteudo`) não propaga o clique para o overlay.
+
 ## Versão do frontend (anti-cache)
 
 Objetivo: usuário não ficar preso em JS/CSS antigos após deploy.
@@ -78,4 +93,6 @@ Objetivo: usuário não ficar preso em JS/CSS antigos após deploy.
 - Rotas: `frontend/src/app/app.routes.ts`
 - Menu: `frontend/src/app/components/navigation/navigation.ts`
 - Versão: `frontend/src/app/services/app-version.service.ts`
-- Checklist de atalhos: `docs/GUIA_OPERACAO_AGENTE.md`
+- Modal de erro: `frontend/src/app/services/error-modal.service.ts`
+- Overlay: `frontend/src/styles/componentes/_modais.css` (`.modal-overlay.nao-clicavel`)
+- Checklist de atalhos, card e modal: `docs/GUIA_OPERACAO_AGENTE.md`

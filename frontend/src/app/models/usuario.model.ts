@@ -184,6 +184,7 @@ export enum Permission {
   COMERCIAL_ACOMPANHAMENTO_HOME = 'comercial-acompanhamento:home',
   COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE = 'comercial-acompanhamento:home-unidade',
   COMERCIAL_ANALISE_READ = 'comercial-analise:read',
+  COMERCIAL_ANALISE_HOME = 'comercial-analise:home',
   COMERCIAL_META_READ = 'comercial-meta:read',
   COMERCIAL_META_UPDATE = 'comercial-meta:update',
   COMERCIAL_COMISSAO_READ = 'comercial-comissao:read',

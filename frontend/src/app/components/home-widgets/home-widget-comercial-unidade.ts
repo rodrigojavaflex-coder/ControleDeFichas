@@ -4,6 +4,7 @@ import {
   OnDestroy,
   OnInit,
   Output,
+  ViewChild,
   ViewEncapsulation,
   inject,
 } from '@angular/core';
@@ -34,6 +35,7 @@ export class HomeWidgetComercialUnidadeComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   @Output() carregandoChange = new EventEmitter<boolean>();
+  @ViewChild('cardModal') cardModal?: ComercialVendedorCardComponent;
 
   carregando = false;
   erro: string | null = null;
@@ -72,6 +74,10 @@ export class HomeWidgetComercialUnidadeComponent implements OnInit, OnDestroy {
   fecharCompleto(): void {
     this.modalAberto = false;
     this.modalCard = null;
+  }
+
+  abrirDetalhesModal(): void {
+    this.cardModal?.abrirDetalhe();
   }
 
   formatarMoeda(valor: number | null | undefined): string {

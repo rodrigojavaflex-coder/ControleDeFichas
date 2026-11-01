@@ -68,6 +68,8 @@ export class ComercialVendedorCardComponent {
   /** Competência no formato YYYY-MM (limites do filtro de dia). */
   @Input() anoMes = '';
   @Input() unidade = '';
+  /** Esconde o cabeçalho do card (ex.: dados já vão no título do modal da home). */
+  @Input() ocultarCabecalho = false;
 
   infoManipuladosAberto = false;
   infoProjecaoAberto = false;

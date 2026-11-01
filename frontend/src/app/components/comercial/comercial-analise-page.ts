@@ -104,6 +104,8 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   c1: string | null = null;
   c2: string | null = null;
   competenciasRanking: string[] = [];
+  /** Competência do modo semanas (padrão = última com movimento). */
+  competenciaSemanas: string | null = null;
   s1: string | null = null;
   s2: string | null = null;
   /** Vendedores marcados; padrão = todos ao carregar o combo. */
@@ -376,13 +378,18 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     return this.maxSerie(this.rejeitadosRankingVisivel);
   }
   get podeAtualizar(): boolean {
-    return this.podeAnalisar();
+    return this.podeAnalisar() && !this.buscando;
+  }
+
+  /** Opções ou análise em voo — bloqueia nova disparada e edições. */
+  get buscando(): boolean {
+    return this.loading || this.loadingOpcoes;
   }
 
   /** Ano/modo/dimensão/métrica liberados após /opcoes (não exigem unidade na gestão). */
   get podeEditarFiltrosBase(): boolean {
     return (
-      !this.loadingOpcoes &&
+      !this.buscando &&
       (this.unidadeDisabled ||
         this.competenciasDisponiveis.length > 0 ||
         this.semanas.length > 0)
@@ -416,6 +423,11 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     if (this.isCompararMes) this.aplicarSelecaoComparar(false);
     if (this.modo === 'evolucao') this.aplicarSelecaoEvolucao(false);
     if (this.modo === 'ranking') this.aplicarSelecaoRanking(false);
+    if (this.isSemanas) {
+      this.aplicarCompetenciaSemanasPadrao(false);
+      this.carregarOpcoes(false);
+      return;
+    }
     this.onFiltroChange();
   }
 
@@ -427,7 +439,11 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     if (modo === 'ranking') this.aplicarSelecaoRanking(true);
     else if (modo === 'evolucao') this.aplicarSelecaoEvolucao(true);
     else if (modo === 'comparar') this.aplicarSelecaoComparar(true);
-    else this.aplicarSemanasPadrao(false);
+    else {
+      this.aplicarCompetenciaSemanasPadrao(true);
+      this.carregarOpcoes(false);
+      return;
+    }
     this.onFiltroChange();
   }
 
@@ -440,10 +456,18 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       if (!this.unidadesMultiFiltro.length) {
         this.unidadesMultiFiltro = [...this.unidadesDisponiveis];
       }
-    }
-    if (dimensao === 'vendedor' && this.isGestaoUnidades && this.unidadeFilter) {
-      this.carregarOpcoes(false);
+      this.onFiltroChange();
       return;
+    }
+    if (dimensao === 'vendedor') {
+      // Gestão: primeira unidade da combo; depois /opcoes marca todos os vendedores.
+      if (this.isGestaoUnidades) {
+        this.unidadeFilter = this.unidadesDisponiveis[0] ?? '';
+      }
+      if (this.unidadeFilter) {
+        this.carregarOpcoes(false, true);
+        return;
+      }
     }
     this.onFiltroChange();
   }
@@ -483,6 +507,13 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     this.competenciasRanking = this.ordenarKeys(values);
     this.onFiltroChange();
   }
+  onCompetenciaSemanasChange(competencia: string | null): void {
+    this.competenciaSemanas = competencia;
+    this.s1 = null;
+    this.s2 = null;
+    this.dados = null;
+    this.carregarOpcoes(false);
+  }
   onS1Change(s1: string | null): void {
     this.s1 = s1;
     this.onFiltroChange();
@@ -497,12 +528,13 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
 
   atualizarAnalise(): void {
-    if (!this.podeAnalisar() || this.loading || this.loadingOpcoes) return;
+    if (!this.podeAnalisar() || this.buscando) return;
     this.reload$.next();
   }
 
   onFiltroChange(): void {
-    if (this.silenciarFiltroChange || this.loadingOpcoes) return;
+    // Em busca: ignora — controles ficam disabled; evita fila de requests.
+    if (this.silenciarFiltroChange || this.buscando) return;
     this.reload$.next();
   }
 
@@ -852,6 +884,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     if (this.modo === 'comparar') return !!this.c1 && !!this.c2 && this.c1 !== this.c2;
     if (this.modo === 'ranking') return this.competenciasRanking.length >= 1;
     if (this.modo === 'evolucao') return this.competenciasRanking.length >= 2;
+    if (!this.competenciaSemanas) return false;
     if (this.leitura === 'evolucao') return this.semanas.length >= 1;
     return !!this.s1 && !!this.s2 && this.s1 !== this.s2;
   }
@@ -880,6 +913,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       filtros.competencias = [...this.competenciasRanking];
     } else {
       filtros.leitura = this.leitura;
+      filtros.competencia = this.competenciaSemanas ?? undefined;
       if (this.leitura === 'comparar') {
         filtros.s1 = this.s1 ?? undefined;
         filtros.s2 = this.s2 ?? undefined;
@@ -888,7 +922,10 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     return filtros;
   }
 
-  private carregarOpcoes(selecionarPadrao: boolean): void {
+  private carregarOpcoes(
+    selecionarPadrao: boolean,
+    marcarTodosVendedores = false,
+  ): void {
     this.loadingOpcoes = true;
     this.opcoesSub?.unsubscribe();
     const unidade =
@@ -897,8 +934,16 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
         : this.unidadeDisabled && this.unidadeFilter
           ? (this.unidadeFilter as Unidade)
           : undefined;
+    const query: {
+      unidade?: Unidade;
+      competenciaSemanas?: string;
+    } = {};
+    if (unidade) query.unidade = unidade;
+    if (this.competenciaSemanas) {
+      query.competenciaSemanas = this.competenciaSemanas;
+    }
     this.opcoesSub = this.service
-      .opcoes(unidade ? { unidade } : {})
+      .opcoes(query)
       .pipe(
         catchError((err: unknown) => {
           this.errorModal.show(
@@ -921,28 +966,46 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
           return;
         }
         this.silenciarFiltroChange = true;
+        let precisaVendedores = false;
         try {
-          this.aplicarOpcoes(opcoes, selecionarPadrao);
+          precisaVendedores = this.aplicarOpcoes(
+            opcoes,
+            selecionarPadrao,
+            marcarTodosVendedores,
+            !!query.unidade,
+          );
         } finally {
           this.silenciarFiltroChange = false;
         }
         this.cdr.markForCheck();
+        // Gestão + vendedor: 1ª /opcoes sem unidade → escolhe a 1ª loja e
+        // recarrega para popular o combo de vendedores (todos marcados).
+        if (precisaVendedores) {
+          this.carregarOpcoes(selecionarPadrao, true);
+          return;
+        }
         // Direto no Subject: onFiltroChange ainda vê loadingOpcoes=true
         // (finalize corre depois do next do HTTP).
         this.reload$.next();
       });
   }
 
+  /**
+   * @returns true se precisa de outro /opcoes com unidade para trazer vendedores.
+   */
   private aplicarOpcoes(
     opcoes: {
       anoCorrente: number;
       unidadesDisponiveis?: Unidade[];
       competencias: ComercialAnalisePeriodo[];
+      competenciaSemanas?: string | null;
       semanas: ComercialAnalisePeriodo[];
       vendedores: ComercialAnaliseVendedorOpcao[];
     },
     selecionarPadrao: boolean,
-  ): void {
+    marcarTodosVendedores = false,
+    requestTeveUnidade = false,
+  ): boolean {
     this.anoCorrente = opcoes.anoCorrente;
     this.competenciasDisponiveis = opcoes.competencias ?? [];
     this.semanas = opcoes.semanas ?? [];
@@ -952,14 +1015,39 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     }
     const idsValidos = new Set(this.vendedores.map((v) => v.funcionarioId));
     const unidadesValidas = new Set(this.unidadesDisponiveis);
+
+    // Dimensão vendedor (gestão): sempre ter uma loja — padrão = 1ª da combo.
+    let precisaVendedores = false;
+    if (this.dimensao === 'vendedor' && this.isGestaoUnidades) {
+      if (
+        !this.unidadeFilter ||
+        !unidadesValidas.has(this.unidadeFilter as Unidade)
+      ) {
+        this.unidadeFilter = this.unidadesDisponiveis[0] ?? '';
+      }
+      // Pediu /opcoes sem unidade → API não manda vendedores; 2ª chamada.
+      if (this.unidadeFilter && !requestTeveUnidade) {
+        precisaVendedores = true;
+      }
+    }
+
     if (selecionarPadrao) {
       this.funcionarioIdsFiltro = this.vendedores.map((v) => v.funcionarioId);
       this.unidadesMultiFiltro = [...this.unidadesDisponiveis];
-      const ano = this.competenciasDisponiveis.some((c) => this.anoDe(c) === this.anoCorrente)
-        ? this.anoCorrente
-        : this.anoDe(
-            this.competenciasDisponiveis[this.competenciasDisponiveis.length - 1],
-          ) || this.anoCorrente;
+      const ultima =
+        opcoes.competenciaSemanas ??
+        this.competenciasDisponiveis[this.competenciasDisponiveis.length - 1]
+          ?.key ??
+        null;
+      this.competenciaSemanas = ultima;
+      const anoUltima = this.anoDeKey(ultima) || this.anoCorrente;
+      const ano = this.competenciasDisponiveis.some((c) => this.anoDe(c) === anoUltima)
+        ? anoUltima
+        : this.competenciasDisponiveis.some((c) => this.anoDe(c) === this.anoCorrente)
+          ? this.anoCorrente
+          : this.anoDe(
+              this.competenciasDisponiveis[this.competenciasDisponiveis.length - 1],
+            ) || this.anoCorrente;
       this.anosFiltro = [ano];
       this.aplicarSelecaoComparar(true);
       this.aplicarSelecaoRanking(true);
@@ -967,14 +1055,21 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       this.aplicarSelecaoEvolucao(true);
       this.aplicarSemanasPadrao(true);
     } else {
-      this.funcionarioIdsFiltro = this.funcionarioIdsFiltro.filter((id) =>
-        idsValidos.has(id),
-      );
+      this.funcionarioIdsFiltro = marcarTodosVendedores
+        ? this.vendedores.map((v) => v.funcionarioId)
+        : this.funcionarioIdsFiltro.filter((id) => idsValidos.has(id));
       this.unidadesMultiFiltro = this.unidadesMultiFiltro.filter((u) =>
         unidadesValidas.has(u),
       );
       this.podarSelecao();
+      if (opcoes.competenciaSemanas) {
+        this.competenciaSemanas = opcoes.competenciaSemanas;
+      } else {
+        this.aplicarCompetenciaSemanasPadrao(false);
+      }
+      this.aplicarSemanasPadrao(false);
     }
+    return precisaVendedores;
   }
 
   private aplicarSelecaoComparar(forcar: boolean): void {
@@ -1014,7 +1109,10 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
 
   private aplicarSemanasPadrao(forcar: boolean): void {
-    if (!forcar && this.s1 && this.s2 && this.s1 !== this.s2) return;
+    if (!forcar && this.s1 && this.s2 && this.s1 !== this.s2) {
+      const keys = new Set(this.semanas.map((s) => s.key));
+      if (keys.has(this.s1) && keys.has(this.s2)) return;
+    }
     if (this.semanas.length >= 2) {
       this.s1 = this.semanas[this.semanas.length - 2].key;
       this.s2 = this.semanas[this.semanas.length - 1].key;
@@ -1027,11 +1125,33 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     }
   }
 
+  /** Padrão do mês em Semanas = última competência com movimento (no ano filtrado). */
+  private aplicarCompetenciaSemanasPadrao(forcar: boolean): void {
+    const disponiveis = this.competenciasFiltradas.length
+      ? this.competenciasFiltradas
+      : this.competenciasDisponiveis;
+    if (!disponiveis.length) {
+      this.competenciaSemanas = null;
+      return;
+    }
+    if (
+      !forcar &&
+      this.competenciaSemanas &&
+      disponiveis.some((c) => c.key === this.competenciaSemanas)
+    ) {
+      return;
+    }
+    this.competenciaSemanas = disponiveis[disponiveis.length - 1].key;
+  }
+
   private podarSelecao(): void {
     const keys = new Set(this.competenciasFiltradas.map((c) => c.key));
     if (this.c1 && !keys.has(this.c1)) this.c1 = null;
     if (this.c2 && !keys.has(this.c2)) this.c2 = null;
     this.competenciasRanking = this.competenciasRanking.filter((k) => keys.has(k));
+    if (this.competenciaSemanas && !keys.has(this.competenciaSemanas)) {
+      this.competenciaSemanas = null;
+    }
   }
 
   private ordenarKeys(keys: string[]): string[] {
@@ -1048,7 +1168,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     const eixo =
       this.dimensao === 'unidade' ? 'pelo total da loja' : 'por vendedor';
     const description = this.isSemanas
-      ? `Semanas do mês corrente ${eixo}. A semana em curso vai até hoje e fica como prévia.`
+      ? `Semanas da competência escolhida ${eixo}. Padrão = último mês com movimento; a semana em curso (mês atual) vai até hoje e fica como prévia.`
       : this.modo === 'ranking'
         ? `Ranking de vendas e rejeitados ${eixo} no período selecionado.`
         : this.modo === 'evolucao'
@@ -1075,7 +1195,11 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
 
   private anoDe(periodo: ComercialAnalisePeriodo | undefined): number {
-    const match = /^(\d{4})-/.exec(periodo?.key ?? '');
+    return this.anoDeKey(periodo?.key);
+  }
+
+  private anoDeKey(key: string | null | undefined): number {
+    const match = /^(\d{4})-/.exec(key ?? '');
     return match ? Number(match[1]) : 0;
   }
 

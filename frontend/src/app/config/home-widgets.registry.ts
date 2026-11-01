@@ -1,6 +1,9 @@
 import { Permission } from '../models/usuario.model';
 
-export type HomeWidgetId = 'comercial-meu' | 'comercial-unidade';
+export type HomeWidgetId =
+  | 'comercial-meu'
+  | 'comercial-unidade'
+  | 'comercial-analise';
 
 export interface HomeWidgetDef {
   id: HomeWidgetId;
@@ -20,5 +23,10 @@ export const HOME_WIDGETS: HomeWidgetDef[] = [
     id: 'comercial-unidade',
     permission: Permission.COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE,
     order: 20,
+  },
+  {
+    id: 'comercial-analise',
+    permission: Permission.COMERCIAL_ANALISE_HOME,
+    order: 30,
   },
 ];

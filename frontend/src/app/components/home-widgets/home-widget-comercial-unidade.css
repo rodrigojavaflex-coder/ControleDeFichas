@@ -307,7 +307,7 @@
 /* —— Modal completo —— */
 .home-unidade-modal-overlay {
   z-index: 1100;
-  padding: 0.75rem;
+  padding: 0.5rem;
 }
 
 .home-unidade-modal-overlay .modal-overlay {
@@ -316,17 +316,127 @@
 
 /* Ganha do max-width: 600px de .modal-conteudo no design system. */
 .modal-conteudo.home-unidade-modal {
-  width: min(1420px, 97vw);
-  max-width: 97vw;
-  max-height: 94vh;
+  width: min(1420px, 98vw);
+  max-width: 98vw;
+  height: min(98vh, 1100px);
+  max-height: 98vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+.home-unidade-modal-cabecalho {
+  align-items: flex-start;
+  gap: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.home-unidade-modal-titulo-bloco {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.home-unidade-modal-titulo-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 1rem;
+  min-width: 0;
+}
+
+.home-unidade-modal-cabecalho .modal-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.home-unidade-modal-cabecalho .modal-titulo i {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #64748b);
+}
+
+.home-unidade-modal-caixa {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.home-unidade-modal-caixa-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.home-unidade-modal-caixa strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-primary, #1e293b);
+}
+
+.home-unidade-modal-titulo-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+  flex-shrink: 0;
+}
+
+.home-unidade-modal-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+}
+
+.home-unidade-modal-total .label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #64748b);
+}
+
+.home-unidade-modal-total strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--text-primary, #1e293b);
+}
+
+.home-unidade-modal-acoes {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.home-unidade-modal-acoes .btn {
+  white-space: nowrap;
+}
+
 .home-unidade-modal-corpo {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 0.65rem 1rem 1rem;
+  padding: 0.5rem 1rem 1rem;
 }
 
 .home-unidade-modal-corpo .comercial-acomp-card {
@@ -337,35 +447,26 @@
   max-width: none;
 }
 
-.home-unidade-modal-corpo .comercial-acomp-card-head {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 0.75rem 1rem;
-}
-
-.home-unidade-modal-corpo .comercial-acomp-card-head-start {
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.home-unidade-modal-corpo .comercial-acomp-card-head-end {
-  flex-wrap: nowrap;
-  flex-shrink: 0;
-  gap: 0.65rem;
-}
-
-.home-unidade-modal-corpo .comercial-acomp-card-head-total strong {
-  white-space: nowrap;
-}
-
-.home-unidade-modal-corpo .comercial-acomp-card-detalhe-btn {
-  flex-shrink: 0;
-  white-space: nowrap;
+.home-unidade-modal-corpo .comercial-acomp-card.sem-cabecalho {
+  padding-top: 0;
 }
 
 /* Metas / rejeitado: layout vem do acompanhamento (não empilhar Realizado/Projetado). */
 .home-unidade-modal-corpo .comercial-acomp-meta-col .value {
   white-space: nowrap;
+}
+
+body.theme-dark .home-unidade-modal-caixa,
+[data-theme='dark'] .home-unidade-modal-caixa {
+  background: var(--bg-secondary, #1e293b);
+  border-color: var(--border-color, #334155);
+}
+
+body.theme-dark .home-unidade-modal-caixa strong,
+[data-theme='dark'] .home-unidade-modal-caixa strong,
+body.theme-dark .home-unidade-modal-total strong,
+[data-theme='dark'] .home-unidade-modal-total strong {
+  color: var(--text-primary, #e2e8f0);
 }
 
 body.theme-dark .home-unidade-resumo-card,
@@ -408,7 +509,17 @@ body.theme-dark .home-unidade-ring-pct,
   .modal-conteudo.home-unidade-modal {
     width: 100vw;
     max-width: 100vw;
+    height: 100vh;
     max-height: 100vh;
     border-radius: 0;
+  }
+
+  .home-unidade-modal-titulo-end {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .home-unidade-modal-total {
+    align-items: flex-start;
   }
 }

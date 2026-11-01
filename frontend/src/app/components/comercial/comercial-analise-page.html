@@ -1,10 +1,5 @@
 <div class="vendas-page visitacao-analise-page comercial-analise-page">
   <section class="results-card">
-    <div class="inline-loading" *ngIf="loading">
-      <div class="spinner"></div>
-      <span>Atualizando análise...</span>
-    </div>
-
     <div class="filters-inline visitacao-analise-filters">
       <section class="filters-panel-top visitacao-analise-toolbar" aria-label="Filtros da análise">
         <div class="filters-controls">
@@ -24,7 +19,7 @@
             <label class="form-label">Ano</label>
             <app-multi-select-dropdown
               [options]="anosOptions"
-              [disabled]="!podeEditarFiltrosBase || isSemanas || !anosOptions.length"
+              [disabled]="!podeEditarFiltrosBase || !anosOptions.length"
               placeholder="Anos…"
               [ngModel]="anosFiltro"
               (ngModelChange)="onAnosChange($event)">
@@ -65,7 +60,7 @@
               id="ca-unidade-gestao"
               class="form-control"
               [ngModel]="unidadeFilter"
-              [disabled]="loadingOpcoes"
+              [disabled]="buscando"
               (ngModelChange)="onUnidadeChange($event)">
               <option [ngValue]="''">Selecione…</option>
               <option *ngFor="let u of unidadesDisponiveis" [ngValue]="u">{{ u }}</option>
@@ -76,7 +71,7 @@
             <label class="form-label">Unidades</label>
             <app-multi-select-dropdown
               [options]="unidadesOptions"
-              [disabled]="loadingOpcoes || !unidadesOptions.length"
+              [disabled]="buscando || !unidadesOptions.length"
               placeholder="Unidades…"
               [ngModel]="unidadesMultiFiltro"
               (ngModelChange)="onUnidadesMultiChange($event)">
@@ -126,6 +121,19 @@
               <option value="marcaPropriaOutros">Marca própria (outros)</option>
               <option value="marcaPropria">Marca própria (total)</option>
               <option value="totalVendido">Total vendido</option>
+            </select>
+          </div>
+
+          <div class="filter-group visitacao-analise-competencia" *ngIf="isSemanas">
+            <label class="form-label" for="ca-mes-semanas">Mês</label>
+            <select
+              id="ca-mes-semanas"
+              class="form-control"
+              [ngModel]="competenciaSemanas"
+              [disabled]="!podeEditarFiltrosBase || !competenciasFiltradas.length"
+              (ngModelChange)="onCompetenciaSemanasChange($event)">
+              <option [ngValue]="null">Selecione…</option>
+              <option *ngFor="let c of competenciasFiltradas" [ngValue]="c.key">{{ c.label }}</option>
             </select>
           </div>
 
@@ -191,7 +199,7 @@
             <label class="form-label">Vendedor</label>
             <app-multi-select-dropdown
               [options]="vendedoresOptions"
-              [disabled]="!unidadeFilter || loadingOpcoes || !vendedoresOptions.length"
+              [disabled]="!unidadeFilter || buscando || !vendedoresOptions.length"
               placeholder="Vendedores…"
               [ngModel]="funcionarioIdsFiltro"
               (ngModelChange)="onVendedoresChange($event)">
@@ -204,8 +212,8 @@
               type="button"
               class="btn btn-atualizar"
               (click)="atualizarAnalise()"
-              [disabled]="!podeAtualizar || loading || loadingOpcoes">
-              <i class="fas fa-sync-alt" [class.fa-spin]="loading"></i>
+              [disabled]="!podeAtualizar">
+              <i class="fas fa-sync-alt" [class.fa-spin]="buscando"></i>
               Atualizar
             </button>
           </div>
@@ -219,8 +227,8 @@
     <p class="visitacao-analise-hint" *ngIf="modo === 'evolucao' && competenciasRanking.length < 2 && unidadeFilter && !loadingOpcoes">
       A evolução precisa de ao menos duas competências.
     </p>
-    <p class="visitacao-analise-hint" *ngIf="isSemanas && leitura === 'comparar' && semanas.length < 2 && unidadeFilter && !loadingOpcoes">
-      O mês corrente ainda não tem duas semanas para comparar.
+    <p class="visitacao-analise-hint" *ngIf="isSemanas && leitura === 'comparar' && semanas.length < 2 && !loadingOpcoes">
+      A competência selecionada ainda não tem duas semanas para comparar.
     </p>
 
     <ng-container *ngIf="dados as d">
@@ -701,4 +709,21 @@
       </div>
     </ng-container>
   </section>
+
+  <!-- Status bloqueante: impede nova busca/filtros enquanto carrega (RN UI modal). -->
+  <div
+    class="modal-overlay nao-clicavel comercial-analise-busca-overlay"
+    *ngIf="buscando"
+    role="alertdialog"
+    aria-modal="true"
+    aria-busy="true"
+    aria-labelledby="ca-busca-titulo">
+    <div class="modal-conteudo comercial-analise-busca-modal" (click)="$event.stopPropagation()">
+      <div class="comercial-analise-busca-corpo">
+        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+        <h3 id="ca-busca-titulo">{{ loadingOpcoes ? 'Carregando opções…' : 'Atualizando análise…' }}</h3>
+        <p>Aguarde; a busca em andamento bloqueia novos disparos.</p>
+      </div>
+    </div>
+  </div>
 </div>

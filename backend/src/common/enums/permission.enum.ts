@@ -211,6 +211,8 @@ export enum Permission {
   COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE = 'comercial-acompanhamento:home-unidade',
   /** Comercial — análise por vendedor (comparar, ranking, evolução, semanas). */
   COMERCIAL_ANALISE_READ = 'comercial-analise:read',
+  /** Resumo da análise comercial (semana atual × anterior) na home. */
+  COMERCIAL_ANALISE_HOME = 'comercial-analise:home',
   /** Comercial — configuração de metas mensais. */
   COMERCIAL_META_READ = 'comercial-meta:read',
   COMERCIAL_META_UPDATE = 'comercial-meta:update',
@@ -647,6 +649,10 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.COMERCIAL_ACOMPANHAMENTO_HOME_UNIDADE,
       label: 'Resumo Unidade (comercial)',
+    },
+    {
+      key: Permission.COMERCIAL_ANALISE_HOME,
+      label: 'Análise comercial (resumo da semana)',
     },
   ],
   'Comercial — Acompanhamento': [

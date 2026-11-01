@@ -35,12 +35,16 @@ export interface ComercialAnaliseOpcoes {
   escopoFixo: boolean;
   anoCorrente: number;
   competencias: ComercialAnalisePeriodo[];
+  /** Competência usada para montar as semanas (última com movimento se omitida). */
+  competenciaSemanas: string | null;
   semanas: ComercialAnalisePeriodo[];
   vendedores: ComercialAnaliseVendedorOpcao[];
 }
 
 export interface FindComercialAnaliseOpcoesDto {
   unidade?: Unidade;
+  /** Competência das semanas (YYYY-MM). Omitido = última com movimento. */
+  competenciaSemanas?: string;
 }
 
 export interface FindComercialAnaliseDto {
@@ -49,6 +53,8 @@ export interface FindComercialAnaliseDto {
   metrica?: ComercialAnaliseMetrica;
   base?: ComercialAnaliseBase;
   leitura?: ComercialAnaliseLeitura;
+  /** Competência do modo semanas (YYYY-MM). */
+  competencia?: string;
   c1?: string;
   c2?: string;
   competencias?: string[];
@@ -93,4 +99,33 @@ export interface ComercialAnaliseResponse {
   queda: ComercialAnaliseLinha[];
   maioresVendas: ComercialAnaliseLinha[];
   maioresRejeitados: ComercialAnaliseLinha[];
+}
+
+/** Resumo enxuto do widget da home (GET /comercial/analise/home). */
+export interface ComercialAnaliseHomeDestaque {
+  funcionarioId: string;
+  nomeVendedor: string;
+  delta: number;
+  percentual: number | null;
+  valorSemanaAtual: number;
+}
+
+export interface ComercialAnaliseHomeRejeitado {
+  funcionarioId: string;
+  nomeVendedor: string;
+  valor: number;
+}
+
+export interface ComercialAnaliseHomeUnidadeCard {
+  unidade: Unidade;
+  maiorCrescimento: ComercialAnaliseHomeDestaque | null;
+  maiorQueda: ComercialAnaliseHomeDestaque | null;
+  maiorRejeitado: ComercialAnaliseHomeRejeitado | null;
+}
+
+export interface ComercialAnaliseHomeResponse {
+  semanaAtual: ComercialAnalisePeriodo;
+  semanaAnterior: ComercialAnalisePeriodo | null;
+  temComparacao: boolean;
+  itens: ComercialAnaliseHomeUnidadeCard[];
 }

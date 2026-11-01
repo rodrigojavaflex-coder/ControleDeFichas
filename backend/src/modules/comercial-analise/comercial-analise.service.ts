@@ -14,6 +14,8 @@ import {
   COMERCIAL_ANALISE_ANO_MIN,
   listarCompetenciasAnalise,
   parseCompetenciaKey,
+  semanasCandidatasHome,
+  semanasDaCompetencia,
   semanasMesCorrente,
 } from './comercial-analise-periodo.util';
 import {
@@ -30,6 +32,12 @@ import {
   ComercialAnalisePeriodoDto,
   ComercialAnaliseResponseDto,
 } from './dto/comercial-analise-response.dto';
+import {
+  ComercialAnaliseHomeDestaqueDto,
+  ComercialAnaliseHomeResponseDto,
+  ComercialAnaliseHomeRejeitadoDto,
+  ComercialAnaliseHomeUnidadeCardDto,
+} from './dto/comercial-analise-home.dto';
 
 type Par = { valor: number; qtd: number };
 
@@ -52,6 +60,7 @@ export class ComercialAnaliseService {
   async opcoes(
     usuario: Usuario,
     unidadeFiltro?: Unidade,
+    competenciaSemanasFiltro?: string,
   ): Promise<ComercialAnaliseOpcoesResponseDto> {
     const escopo = unidadeEscopoUsuarioFolha(usuario);
     const unidadesDisponiveis = this.unidadesDoEscopo(usuario);
@@ -61,17 +70,171 @@ export class ComercialAnaliseService {
     const vendedores = unidade
       ? await this.acompanhamento.listarVendedoresOpcoes(usuario, unidade)
       : [];
-    const semanas = semanasMesCorrente(hoje);
+    // Só competências com movimento nas lojas do escopo (ou na unidade filtrada).
+    const unidadesMovimento = unidade ? [unidade] : unidadesDisponiveis;
+    const calendario = listarCompetenciasAnalise(hoje);
+    const comMovimento = unidadesMovimento.length
+      ? await this.acompanhamento.listarAnoMesComMovimento(
+          unidadesMovimento,
+          calendario[0]?.inicio ?? `${COMERCIAL_ANALISE_ANO_MIN}-01-01`,
+          hoje,
+        )
+      : new Set<string>();
+    const competenciasRaw = calendario.filter((c) => comMovimento.has(c.key));
+    const competencias = competenciasRaw.map((c) => this.paraPeriodo(c));
+    const competenciaSemanas = this.resolverCompetenciaSemanas(
+      competenciasRaw.map((c) => c.key),
+      competenciaSemanasFiltro,
+    );
+    const semanas = competenciaSemanas
+      ? semanasDaCompetencia(competenciaSemanas, hoje)
+      : [];
     return {
       unidade,
       unidadesDisponiveis,
       escopoFixo: !!escopo,
       anoCorrente: Number(hoje.slice(0, 4)),
-      competencias: listarCompetenciasAnalise(hoje).map((c) =>
-        this.paraPeriodo(c),
-      ),
+      competencias,
+      competenciaSemanas,
       semanas: semanas.map((s) => this.paraSemana(s)),
       vendedores,
+    };
+  }
+
+  /**
+   * Resumo da home: última semana **com movimento** × a anterior
+   * (Total vendido / valor / vendedor). Escopo fixo → 1 card; sem unidade →
+   * um card por loja. Reusa `carregar` + `linhaComparar` — sem fórmula paralela.
+   */
+  async resumoHome(usuario: Usuario): Promise<ComercialAnaliseHomeResponseDto> {
+    const unidades = this.unidadesDoEscopo(usuario);
+    if (!unidades.length) {
+      throw new BadRequestException(
+        'Nenhuma unidade disponível para o resumo da análise.',
+      );
+    }
+    for (const u of unidades) {
+      assertUnidadeFolha(usuario, u);
+    }
+
+    const hoje = ymdHojeSp();
+    const semanas = semanasCandidatasHome(hoje);
+    if (!semanas.length) {
+      throw new BadRequestException(
+        'Não há semanas no período para analisar.',
+      );
+    }
+
+    const { semanaAtual, semanaAnterior } =
+      await this.resolverSemanasHomeComMovimento(unidades, semanas);
+
+    const itens = await Promise.all(
+      unidades.map((unidade) =>
+        this.montarCardHomeUnidade(unidade, semanaAtual, semanaAnterior),
+      ),
+    );
+
+    this.logger.debug(
+      `resumoHome unidades=${unidades.join(',')} sAtual=${semanaAtual.key} temComparacao=${!!semanaAnterior}`,
+    );
+
+    return {
+      semanaAtual: this.paraSemana(semanaAtual),
+      semanaAnterior: semanaAnterior ? this.paraSemana(semanaAnterior) : null,
+      temComparacao: !!semanaAnterior,
+      itens,
+    };
+  }
+
+  /**
+   * Percorre as semanas do fim para o início e escolhe a última com
+   * Total vendido ou rejeitado > 0 em qualquer unidade do escopo.
+   */
+  private async resolverSemanasHomeComMovimento(
+    unidades: Unidade[],
+    semanas: SemanaAnalise[],
+  ): Promise<{
+    semanaAtual: SemanaAnalise;
+    semanaAnterior: SemanaAnalise | null;
+  }> {
+    const dimensao: ComercialAnaliseDimensao = 'vendedor';
+    for (let i = semanas.length - 1; i >= 0; i -= 1) {
+      const candidata = semanas[i];
+      const mapas = await Promise.all(
+        unidades.map(async (unidade) => {
+          const [mapa] = await this.carregarVarios(
+            [unidade],
+            [this.recorteSemana(candidata)],
+            dimensao,
+          );
+          return mapa;
+        }),
+      );
+      if (mapas.some((m) => this.mapaTemMovimentoHome(m))) {
+        return {
+          semanaAtual: candidata,
+          semanaAnterior: i > 0 ? semanas[i - 1] : null,
+        };
+      }
+    }
+    // Nenhuma semana com movimento: mantém a mais recente (comportamento anterior).
+    const ultimo = semanas.length - 1;
+    return {
+      semanaAtual: semanas[ultimo],
+      semanaAnterior: ultimo > 0 ? semanas[ultimo - 1] : null,
+    };
+  }
+
+  private mapaTemMovimentoHome(mapa: MapaItens): boolean {
+    for (const item of mapa.values()) {
+      const vendido = this.par(item, 'totalVendido').valor;
+      const rejeitado = this.par(item, 'rejeitado').valor;
+      if (vendido > 0 || rejeitado > 0) return true;
+    }
+    return false;
+  }
+
+  private async montarCardHomeUnidade(
+    unidade: Unidade,
+    semanaAtual: SemanaAnalise,
+    semanaAnterior: SemanaAnalise | null,
+  ): Promise<ComercialAnaliseHomeUnidadeCardDto> {
+    const dimensao: ComercialAnaliseDimensao = 'vendedor';
+    const metrica: ComercialAnaliseMetrica = 'valor';
+    const base: ComercialAnaliseBase = 'totalVendido';
+    const unidades: Unidade[] = [unidade];
+
+    if (!semanaAnterior) {
+      const [mapa] = await this.carregarVarios(
+        unidades,
+        [this.recorteSemana(semanaAtual)],
+        dimensao,
+      );
+      return {
+        unidade,
+        maiorCrescimento: null,
+        maiorQueda: null,
+        maiorRejeitado: this.destaqueRejeitadoSemana(mapa),
+      };
+    }
+
+    const [mapa1, mapa2] = await this.carregarVarios(
+      unidades,
+      [this.recorteSemana(semanaAnterior), this.recorteSemana(semanaAtual)],
+      dimensao,
+    );
+    const ids = this.idsDe(mapa1, mapa2);
+    const vendas = ids.map((id) =>
+      this.linhaComparar(id, mapa1, mapa2, base, metrica),
+    );
+    const crescimento = this.ordenarCrescimento(vendas);
+    const queda = this.ordenarQueda(vendas);
+
+    return {
+      unidade,
+      maiorCrescimento: this.destaqueDeLinha(crescimento[0] ?? null),
+      maiorQueda: this.destaqueDeLinha(queda[0] ?? null),
+      maiorRejeitado: this.destaqueRejeitadoSemana(mapa2),
     };
   }
 
@@ -147,10 +310,12 @@ export class ComercialAnaliseService {
         'Selecione duas competências diferentes.',
       );
     }
-    const [mapa1, mapa2] = await Promise.all([
-      this.carregar(unidades, this.recorteMes(p1), dimensao, funcionarioIds),
-      this.carregar(unidades, this.recorteMes(p2), dimensao, funcionarioIds),
-    ]);
+    const [mapa1, mapa2] = await this.carregarVarios(
+      unidades,
+      [this.recorteMes(p1), this.recorteMes(p2)],
+      dimensao,
+      funcionarioIds,
+    );
     const ids = this.idsDe(mapa1, mapa2);
     const vendas = ids.map((id) =>
       this.linhaComparar(id, mapa1, mapa2, base, metrica),
@@ -200,10 +365,11 @@ export class ComercialAnaliseService {
         'A evolução precisa de ao menos duas competências.',
       );
     }
-    const mapas = await Promise.all(
-      periodos.map((p) =>
-        this.carregar(unidades, this.recorteMes(p), dimensao, funcionarioIds),
-      ),
+    const mapas = await this.carregarVarios(
+      unidades,
+      periodos.map((p) => this.recorteMes(p)),
+      dimensao,
+      funcionarioIds,
     );
     const ids = this.idsDe(...mapas);
     const vendas = ids.map((id) =>
@@ -244,10 +410,15 @@ export class ComercialAnaliseService {
     base: ComercialAnaliseBase,
   ): Promise<ComercialAnaliseResponseDto> {
     const leitura: ComercialAnaliseLeitura = dto.leitura ?? 'comparar';
-    const semanas = semanasMesCorrente(hoje);
+    const competenciaKey = await this.resolverCompetenciaSemanasAnalise(
+      unidades,
+      hoje,
+      dto.competencia,
+    );
+    const semanas = semanasDaCompetencia(competenciaKey, hoje);
     if (!semanas.length) {
       throw new BadRequestException(
-        'Não há semanas no mês corrente para analisar.',
+        'Não há semanas na competência selecionada para analisar.',
       );
     }
     if (leitura === 'evolucao') {
@@ -264,16 +435,18 @@ export class ComercialAnaliseService {
     const s2 = this.resolverSemana(semanas, dto.s2, 1);
     if (!s1 || !s2) {
       throw new BadRequestException(
-        'O mês corrente ainda não tem duas semanas para comparar.',
+        'A competência ainda não tem duas semanas para comparar.',
       );
     }
     if (s1.key === s2.key) {
       throw new BadRequestException('Selecione duas semanas diferentes.');
     }
-    const [mapa1, mapa2] = await Promise.all([
-      this.carregar(unidades, this.recorteSemana(s1), dimensao, funcionarioIds),
-      this.carregar(unidades, this.recorteSemana(s2), dimensao, funcionarioIds),
-    ]);
+    const [mapa1, mapa2] = await this.carregarVarios(
+      unidades,
+      [this.recorteSemana(s1), this.recorteSemana(s2)],
+      dimensao,
+      funcionarioIds,
+    );
     const ids = this.idsDe(mapa1, mapa2);
     const vendas = ids.map((id) =>
       this.linhaComparar(id, mapa1, mapa2, base, metrica),
@@ -313,21 +486,22 @@ export class ComercialAnaliseService {
     metrica: ComercialAnaliseMetrica,
     base: ComercialAnaliseBase,
   ): Promise<ComercialAnaliseResponseDto> {
-    const mapas = await Promise.all(
-      semanas.map((s) =>
-        this.carregar(unidades, this.recorteSemana(s), dimensao, funcionarioIds),
-      ),
-    );
-    const envelope = await this.carregar(
-      unidades,
+    const recortes: Recorte[] = [
+      ...semanas.map((s) => this.recorteSemana(s)),
       {
         inicio: semanas[0].inicio,
         fimRecebido: semanas[semanas.length - 1].fim,
         fimRejeitado: semanas[semanas.length - 1].fimRejeitado,
       },
+    ];
+    const carregados = await this.carregarVarios(
+      unidades,
+      recortes,
       dimensao,
       funcionarioIds,
     );
+    const envelope = carregados[carregados.length - 1];
+    const mapas = carregados.slice(0, -1);
     const ids = this.idsDe(envelope, ...mapas);
     const vendas = ids.map((id) =>
       this.linhaSerieComEnvelope(id, mapas, envelope, base, metrica),
@@ -358,51 +532,58 @@ export class ComercialAnaliseService {
   }
 
   /**
-   * dimensao=vendedor: uma unidade; funcionarioIds omitido = todos; [] = nenhum.
-   * dimensao=unidade: uma linha TOTAL por unidade marcada (RN-COM-003).
+   * Vários recortes: reutiliza cadastro/política por unidade (1×) e busca
+   * movimentos em paralelo — evita N× a mesma base estática na análise.
    */
-  private async carregar(
+  private async carregarVarios(
     unidades: Unidade[],
-    recorte: Recorte,
+    recortes: Recorte[],
     dimensao: ComercialAnaliseDimensao,
     funcionarioIds?: string[],
-  ): Promise<MapaItens> {
+  ): Promise<MapaItens[]> {
+    if (!recortes.length) return [];
+
     if (dimensao === 'unidade') {
-      if (!unidades.length) return new Map();
-      const itens = await Promise.all(
+      if (!unidades.length) {
+        return recortes.map(() => new Map());
+      }
+      const porUnidade = await Promise.all(
         unidades.map((u) =>
-          this.acompanhamento.obterItemTotalLojaNoIntervalo(
-            u,
-            recorte.inicio,
-            recorte.fimRecebido,
-            recorte.fimRejeitado,
-          ),
+          this.acompanhamento.obterItensTotalLojaEmRecortes(u, recortes),
         ),
       );
-      const mapa: MapaItens = new Map();
-      unidades.forEach((u, i) => mapa.set(u, itens[i]));
-      return mapa;
+      return recortes.map((_, idxRecorte) => {
+        const mapa: MapaItens = new Map();
+        unidades.forEach((u, idxUnidade) => {
+          mapa.set(u, porUnidade[idxUnidade][idxRecorte]);
+        });
+        return mapa;
+      });
     }
+
     const unidade = unidades[0];
-    if (!unidade) return new Map();
+    if (!unidade) {
+      return recortes.map(() => new Map());
+    }
     if (funcionarioIds && funcionarioIds.length === 0) {
-      return new Map();
+      return recortes.map(() => new Map());
     }
     const filtro =
       funcionarioIds == null ? null : new Set(funcionarioIds);
-    const itens = await this.acompanhamento.listarItensVendedoresNoIntervalo(
-      unidade,
-      recorte.inicio,
-      recorte.fimRecebido,
-      recorte.fimRejeitado,
-    );
-    const mapa: MapaItens = new Map();
-    for (const item of itens) {
-      if (!item.funcionarioId) continue;
-      if (filtro && !filtro.has(item.funcionarioId)) continue;
-      mapa.set(item.funcionarioId, item);
-    }
-    return mapa;
+    const porRecorte =
+      await this.acompanhamento.listarItensVendedoresEmRecortes(
+        unidade,
+        recortes,
+      );
+    return porRecorte.map((itens) => {
+      const mapa: MapaItens = new Map();
+      for (const item of itens) {
+        if (!item.funcionarioId) continue;
+        if (filtro && !filtro.has(item.funcionarioId)) continue;
+        mapa.set(item.funcionarioId, item);
+      }
+      return mapa;
+    });
   }
 
   private recorteMes(periodo: PeriodoAnalise): Recorte {
@@ -588,6 +769,43 @@ export class ComercialAnaliseService {
     };
   }
 
+  private destaqueDeLinha(
+    linha: ComercialAnaliseLinhaDto | null,
+  ): ComercialAnaliseHomeDestaqueDto | null {
+    if (!linha) return null;
+    return {
+      funcionarioId: linha.funcionarioId,
+      nomeVendedor: linha.nomeVendedor,
+      delta: linha.delta,
+      percentual: linha.percentual,
+      valorSemanaAtual: linha.valorMes2 ?? 0,
+    };
+  }
+
+  /** Maior valor rejeitado na semana atual (não usa Δ). */
+  private destaqueRejeitadoSemana(
+    mapaSemanaAtual: MapaItens,
+  ): ComercialAnaliseHomeRejeitadoDto | null {
+    let melhor: ComercialAnaliseHomeRejeitadoDto | null = null;
+    for (const [id, item] of mapaSemanaAtual) {
+      const valor = this.round2(item.valorRejeitado ?? 0);
+      if (valor <= 0) continue;
+      if (
+        !melhor ||
+        valor > melhor.valor ||
+        (valor === melhor.valor &&
+          item.nomeVendedor.localeCompare(melhor.nomeVendedor, 'pt-BR') < 0)
+      ) {
+        melhor = {
+          funcionarioId: item.funcionarioId ?? id,
+          nomeVendedor: item.nomeVendedor,
+          valor,
+        };
+      }
+    }
+    return melhor;
+  }
+
   private ordenarCrescimento(
     linhas: ComercialAnaliseLinhaDto[],
   ): ComercialAnaliseLinhaDto[] {
@@ -662,6 +880,49 @@ export class ComercialAnaliseService {
     return encontrada;
   }
 
+  /**
+   * Competência das semanas em /opcoes: filtro válido na lista com movimento,
+   * senão a última com movimento (ex.: out/2026 se nov estiver zerado).
+   */
+  private resolverCompetenciaSemanas(
+    keysComMovimento: string[],
+    filtro?: string,
+  ): string | null {
+    if (!keysComMovimento.length) return null;
+    if (filtro) {
+      const parsed = parseCompetenciaKey(filtro);
+      if (parsed && keysComMovimento.includes(parsed.key)) {
+        return parsed.key;
+      }
+    }
+    return keysComMovimento[keysComMovimento.length - 1] ?? null;
+  }
+
+  /** Competência do modo semanas na análise (omite = última com movimento). */
+  private async resolverCompetenciaSemanasAnalise(
+    unidades: Unidade[],
+    hoje: string,
+    competencia?: string,
+  ): Promise<string> {
+    const calendario = listarCompetenciasAnalise(hoje);
+    if (competencia) {
+      return this.exigirCompetencia(competencia, hoje, 'competencia').key;
+    }
+    if (!unidades.length) {
+      return `${hoje.slice(0, 4)}-${hoje.slice(5, 7)}`;
+    }
+    const comMovimento = await this.acompanhamento.listarAnoMesComMovimento(
+      unidades,
+      calendario[0]?.inicio ?? `${COMERCIAL_ANALISE_ANO_MIN}-01-01`,
+      hoje,
+    );
+    const keys = calendario
+      .filter((c) => comMovimento.has(c.key))
+      .map((c) => c.key);
+    if (keys.length) return keys[keys.length - 1];
+    return `${hoje.slice(0, 4)}-${hoje.slice(5, 7)}`;
+  }
+
   private resolverSemana(
     semanas: SemanaAnalise[],
     key: string | undefined,
@@ -671,7 +932,7 @@ export class ComercialAnaliseService {
       const encontrada = semanas.find((s) => s.key === key);
       if (!encontrada) {
         throw new BadRequestException(
-          'Semana fora do mês corrente. Atualize as opções e escolha de novo.',
+          'Semana fora da competência selecionada. Atualize as opções e escolha de novo.',
         );
       }
       return encontrada;

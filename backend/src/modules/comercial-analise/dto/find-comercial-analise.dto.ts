@@ -71,6 +71,18 @@ export class FindComercialAnaliseOpcoesDto {
   @IsOptional()
   @IsEnum(Unidade)
   unidade?: Unidade;
+
+  @ApiPropertyOptional({
+    example: '2026-10',
+    description:
+      'Competência das semanas (YYYY-MM). Omitido = última com movimento.',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(COMPETENCIA_KEY_REGEX, {
+    message: 'competenciaSemanas deve estar no formato YYYY-MM.',
+  })
+  competenciaSemanas?: string;
 }
 
 export class FindComercialAnaliseDto {
@@ -110,6 +122,19 @@ export class FindComercialAnaliseDto {
   @IsOptional()
   @IsIn(COMERCIAL_ANALISE_LEITURAS)
   leitura?: ComercialAnaliseLeitura;
+
+  @ApiPropertyOptional({
+    example: '2026-10',
+    description:
+      'Competência do modo semanas (YYYY-MM). Omitido = última com movimento no escopo.',
+  })
+  @ValidateIf((o: FindComercialAnaliseDto) => o.modo === 'semanas')
+  @IsOptional()
+  @IsString()
+  @Matches(COMPETENCIA_KEY_REGEX, {
+    message: 'competencia deve estar no formato YYYY-MM.',
+  })
+  competencia?: string;
 
   @ApiPropertyOptional({ example: '2026-09' })
   @ValidateIf((o: FindComercialAnaliseDto) => (o.modo ?? 'comparar') === 'comparar')

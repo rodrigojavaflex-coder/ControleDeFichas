@@ -72,9 +72,17 @@ export class ComercialAnaliseOpcoesResponseDto {
   @ApiProperty({ type: [ComercialAnalisePeriodoDto] })
   competencias: ComercialAnalisePeriodoDto[];
 
+  @ApiPropertyOptional({
+    example: '2026-10',
+    nullable: true,
+    description: 'Competência usada para montar as semanas (última com movimento se omitida).',
+  })
+  competenciaSemanas: string | null;
+
   @ApiProperty({
     type: [ComercialAnalisePeriodoDto],
-    description: 'Semanas do mês corrente (segunda–domingo, cortadas no mês).',
+    description:
+      'Semanas da competência selecionada (segunda–domingo, cortadas no mês).',
   })
   semanas: ComercialAnalisePeriodoDto[];
 

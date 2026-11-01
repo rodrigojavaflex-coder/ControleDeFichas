@@ -1,3 +1,39 @@
+/* Modal de status da busca (tema claro/escuro via tokens). */
+.comercial-analise-busca-overlay {
+  z-index: 1100;
+}
+
+.comercial-analise-busca-modal {
+  max-width: 22rem;
+  padding: 0;
+}
+
+.comercial-analise-busca-corpo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+}
+
+.comercial-analise-busca-corpo i {
+  font-size: 1.75rem;
+  color: var(--cor-primaria, var(--cor-texto-primario));
+}
+
+.comercial-analise-busca-corpo h3 {
+  margin: 0;
+  font: var(--texto-titulo-4, inherit);
+  color: var(--cor-texto-primario);
+}
+
+.comercial-analise-busca-corpo p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--cor-texto-secundario);
+}
+
 /* Unidades (multi) na gestão + dimensao=unidade. */
 .comercial-analise-page .comercial-analise-unidades {
   flex: 1 1 14rem;

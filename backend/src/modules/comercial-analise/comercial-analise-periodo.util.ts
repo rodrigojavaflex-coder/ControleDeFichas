@@ -131,30 +131,35 @@ export function rotuloIntervalo(inicio: string, fim: string): string {
 }
 
 /**
- * Semanas segunda–domingo do mês de `hoje`, cortadas no mês.
- * A semana que contém hoje termina hoje (prévia). Semanas seguintes não entram.
- * Rejeitados da semana prévia seguem até o fim do mês.
+ * Semanas segunda–domingo da competência `YYYY-MM`, cortadas no mês.
+ * Mês corrente (contém `hoje`): semana de hoje termina em hoje (prévia); semanas
+ * futuras do mês não entram; rejeitados da prévia vão até o fim do mês.
+ * Mês passado: todas as semanas até o fim do mês, sem prévia.
+ * Mês futuro: lista vazia.
  */
-export function semanasMesCorrente(hoje: string): SemanaAnalise[] {
-  const ano = Number(hoje.slice(0, 4));
-  const mes = Number(hoje.slice(5, 7));
-  if (!Number.isInteger(ano) || mes < 1 || mes > 12) {
-    return [];
-  }
-  const periodo = periodoCompetencia(ano, mes);
-  if (hoje < periodo.dataInicial || hoje > periodo.dataFinal) {
-    return [];
-  }
+export function semanasDaCompetencia(
+  competenciaKey: string,
+  hoje: string,
+): SemanaAnalise[] {
+  const parsed = parseCompetenciaKey(competenciaKey);
+  if (!parsed) return [];
+  const periodo = periodoCompetencia(parsed.ano, parsed.mes);
+  if (periodo.dataInicial > hoje) return [];
+
+  const mesCorrente =
+    hoje >= periodo.dataInicial && hoje <= periodo.dataFinal;
+  const limiteVenda = mesCorrente ? hoje : periodo.dataFinal;
+
   const semanas: SemanaAnalise[] = [];
   let cursor = periodo.dataInicial;
-  while (cursor <= periodo.dataFinal && cursor <= hoje) {
+  while (cursor <= periodo.dataFinal && cursor <= limiteVenda) {
     const dow = dowFromYmdSp(cursor);
     const diasAteDomingo = dow === 0 ? 0 : 7 - dow;
     let fimCalendario = adicionarDias(cursor, diasAteDomingo);
     if (fimCalendario > periodo.dataFinal) {
       fimCalendario = periodo.dataFinal;
     }
-    const previa = hoje >= cursor && hoje <= fimCalendario;
+    const previa = mesCorrente && hoje >= cursor && hoje <= fimCalendario;
     const fim = previa ? hoje : fimCalendario;
     const fimRejeitado = previa ? periodo.dataFinal : fimCalendario;
     const rotulo = rotuloIntervalo(cursor, fim);
@@ -173,4 +178,34 @@ export function semanasMesCorrente(hoje: string): SemanaAnalise[] {
     cursor = next;
   }
   return semanas;
+}
+
+/** Atalho: semanas do mês de `hoje` (compat / home). */
+export function semanasMesCorrente(hoje: string): SemanaAnalise[] {
+  const key = `${hoje.slice(0, 4)}-${hoje.slice(5, 7)}`;
+  return semanasDaCompetencia(key, hoje);
+}
+
+/**
+ * Semanas candidatas do widget da home: mês corrente + mês anterior
+ * (para cair na última semana com movimento quando a prévia está zerada).
+ */
+export function semanasCandidatasHome(hoje: string): SemanaAnalise[] {
+  const ano = Number(hoje.slice(0, 4));
+  const mes = Number(hoje.slice(5, 7));
+  if (!Number.isInteger(ano) || mes < 1 || mes > 12) {
+    return [];
+  }
+  let anoAnt = ano;
+  let mesAnt = mes - 1;
+  if (mesAnt < 1) {
+    mesAnt = 12;
+    anoAnt -= 1;
+  }
+  const anteriores =
+    anoAnt >= COMERCIAL_ANALISE_ANO_MIN
+      ? semanasDaCompetencia(chaveCompetencia(anoAnt, mesAnt), hoje)
+      : [];
+  const atuais = semanasMesCorrente(hoje);
+  return [...anteriores, ...atuais];
 }

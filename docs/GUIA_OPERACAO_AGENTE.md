@@ -7,6 +7,7 @@
 - Liste 2-4 criterios de aceite verificaveis.
 - Informe validacao esperada (lint/build/teste manual).
 - Para UI: exigir tema claro/escuro e estados (hover/focus/disabled).
+- Card, indicador ou modal: colar o checklist "card ou modal".
 - Para negocio: citar RN-* do `docs/regras-negocio.md`.
 - Para API/DB: indicar contrato esperado e se precisa migration.
 - Se for tarefa grande, pedir plano curto antes de implementar.
@@ -70,7 +71,8 @@ Escopo permitido:
 Regras obrigatorias:
 - manter compatibilidade com tema claro e escuro;
 - evitar cor hardcoded (usar tokens/variaveis);
-- preservar padrao visual existente.
+- preservar padrao visual existente;
+- se a tarefa cria card, indicador ou modal, incluir o checklist "card ou modal".
 
 Criterios de aceite:
 1) componente funcional em tema claro e escuro;
@@ -162,6 +164,16 @@ Checklist obrigatorio no prompt:
 
 ---
 
+## Checklist — card ou modal
+
+Colar em qualquer pedido de card, indicador ou modal:
+
+1) O numero ja existe em outra tela? Reusar o mesmo servico/endpoint e o mesmo contrato. Proibido recalcular no componente, copiar formula no template ou query parecida so para esta superficie. Ver `docs/GUIA_DESENVOLVIMENTO.md`.
+2) Erro, aviso, sucesso e confirmacao usam `ErrorModalService` ou o modal da tela. Proibido toast, snackbar, `alert()`, `confirm()` e mensagem que some sozinha.
+3) Overlay com classe `nao-clicavel`. Nao fecha no clique fora. Fecha no X, em botao explicito ou, como excecao, ao terminar um processamento ou atualizacao. O conteudo nao propaga o clique.
+
+---
+
 ## Segredos e variaveis de ambiente
 
 - **Nao** pedir ao agente para ler `backend/.env`, `frontend/.env` ou `agent/.env`.
@@ -182,6 +194,7 @@ Checklist obrigatorio no prompt:
 - Existe regra RN-* que deve ser citada?
 - Tarefa envolve credenciais? Usar `.env.example` + confirmacao, sem colar secrets.
 - **Novo menu ou tela** que deve aparecer nos **atalhos da home**? Ver secao abaixo.
+- Card, indicador ou modal? Colar o checklist "card ou modal".
 
 ---
 
@@ -222,7 +235,7 @@ Validacao: lint e teste manual do fluxo.
 
 | Documento | Uso |
 |-----------|-----|
-| `docs/GUIA_DESENVOLVIMENTO.md` | Padrao de rotas, `permissionGuard`, anti-cache de versao e checklist de nova tela |
+| `docs/GUIA_DESENVOLVIMENTO.md` | Rotas, `permissionGuard`, anti-cache, mesma fonte de indicador, feedback em modal e checklist de nova tela |
 | `docs/regras-negocio.md` | RN-* oficiais |
 | `docs/ENCODING_SISTEMAS_LEGADOS.md` | Encoding Firebird/agente/backend; checklist para novos campos de texto no agente |
 | `docs/WHATSAPP_RECIBO_FOLHA.md` | Envio de recibo de folha por WhatsApp (especificacao + checklist pre-dev) |

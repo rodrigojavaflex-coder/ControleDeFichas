@@ -718,6 +718,50 @@ export class ComercialAcompanhamentoService {
   }
 
   /**
+   * Competências `YYYY-MM` com algum movimento comercial nas unidades
+   * (itens pagos, rejeitados ou baixas de terceiro) — para a análise não listar meses vazios.
+   */
+  async listarAnoMesComMovimento(
+    unidades: Unidade[],
+    dataInicial: string,
+    dataFinal: string,
+  ): Promise<Set<string>> {
+    if (!unidades.length || dataInicial > dataFinal) {
+      return new Set();
+    }
+    const rows = (await this.dataSource.query(
+      `
+        SELECT DISTINCT to_char(i.data_operacao::date, 'YYYY-MM') AS ym
+        FROM caixa_itens_erp i
+        INNER JOIN caixa_pagamentos_erp p ON p.id = i.pagamento_id
+        WHERE i.unidade::text = ANY($1::text[])
+          AND i.data_operacao >= $2::date
+          AND i.data_operacao <= $3::date
+        UNION
+        SELECT DISTINCT to_char(o."dataOrcamento"::date, 'YYYY-MM') AS ym
+        FROM orcamentos o
+        WHERE o.unidade::text = ANY($1::text[])
+          AND o.status = 'REJEITADO'
+          AND o."dataOrcamento" >= $2::date
+          AND o."dataOrcamento" <= $3::date
+        UNION
+        SELECT DISTINCT to_char(b."dataBaixa"::date, 'YYYY-MM') AS ym
+        FROM baixas b
+        INNER JOIN vendas v ON v.id = b.idvenda
+        WHERE v.unidade::text = ANY($1::text[])
+          AND b."dataBaixa" >= $2::date
+          AND b."dataBaixa" <= $3::date
+      `,
+      [unidades, dataInicial, dataFinal],
+    )) as Array<{ ym: string | null }>;
+    return new Set(
+      rows
+        .map((r) => String(r.ym ?? '').trim())
+        .filter((ym) => /^\d{4}-(0[1-9]|1[0-2])$/.test(ym)),
+    );
+  }
+
+  /**
    * Cards de vendedor (codigoVendedorErp > 0) num intervalo, com o mesmo
    * cálculo de findAll (RN-COM-003). Sem meta, comissão, projeção nem TOTAL da loja.
    * Recebido respeita o teto de prévia (min(fim, hoje)). Rejeitados usam
@@ -729,44 +773,34 @@ export class ComercialAcompanhamentoService {
     dataFinalRecebido: string,
     dataFinalRejeitado: string,
   ): Promise<ComercialAcompanhamentoItemDto[]> {
+    const [itens] = await this.listarItensVendedoresEmRecortes(unidade, [
+      {
+        inicio: dataInicial,
+        fimRecebido: dataFinalRecebido,
+        fimRejeitado: dataFinalRejeitado,
+      },
+    ]);
+    return itens;
+  }
+
+  /**
+   * Vários intervalos da mesma unidade: cadastro/políticas 1×; movimentos por recorte.
+   * Usado pela análise (semanas/competências) para evitar N× a mesma base estática.
+   */
+  async listarItensVendedoresEmRecortes(
+    unidade: Unidade,
+    recortes: Array<{
+      inicio: string;
+      fimRecebido: string;
+      fimRejeitado: string;
+    }>,
+  ): Promise<ComercialAcompanhamentoItemDto[][]> {
+    if (!recortes.length) return [];
     const hoje = ymdHojeSp();
-    const teto = dataTetoPreviaAcompanhamento(
-      dataInicial,
-      dataFinalRecebido,
-      hoje,
-    );
-    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
-      where: { unidade },
-    });
-    const considerarTaxas = politicaUnidade?.considerarTaxas === true;
-    const considerarConvenios = politicaUnidade?.considerarConvenios === true;
     const mapaVazio = () => new Map() as MapaMovimento;
 
-    const [
-      reqMapBase,
-      mpMapBase,
-      rejMap,
-      vinculados,
-      revendaMap,
-      politicasVend,
-      terceirosPorCodigo,
-      convReqMap,
-      convProdMap,
-    ] = await Promise.all([
-      teto
-        ? this.buscarRecebidoRequisicao(
-            unidade,
-            dataInicial,
-            teto,
-            considerarTaxas,
-          )
-        : Promise.resolve(mapaVazio()),
-      teto
-        ? this.buscarRecebidoMarcaPropria(unidade, dataInicial, teto)
-        : Promise.resolve(mapaVazio()),
-      dataInicial <= dataFinalRejeitado
-        ? this.buscarRejeitado(unidade, dataInicial, dataFinalRejeitado)
-        : Promise.resolve(mapaVazio()),
+    const [politicaUnidade, vinculados, politicasVend] = await Promise.all([
+      this.politicaUnidadeRepo.findOne({ where: { unidade } }),
       this.funcionarioRepo
         .createQueryBuilder('f')
         .where('f.unidade = :unidade', { unidade })
@@ -774,9 +808,6 @@ export class ComercialAcompanhamentoService {
         .andWhere('f.codigoVendedorErp > 0')
         .orderBy('f.nome', 'ASC')
         .getMany(),
-      teto
-        ? this.buscarRecebidoRevendaManipulados(unidade, dataInicial, teto)
-        : Promise.resolve(mapaVazio()),
       this.politicaRepo
         .createQueryBuilder('p')
         .innerJoinAndSelect('p.funcionario', 'f')
@@ -788,21 +819,9 @@ export class ComercialAcompanhamentoService {
           ],
         })
         .getMany(),
-      teto
-        ? this.buscarRecebidoTerceirosPorVendedor(unidade, dataInicial, teto)
-        : Promise.resolve(
-            new Map() as Map<number, { valor: number; qtd: number }>,
-          ),
-      teto && considerarConvenios
-        ? this.buscarRecebidoConvenioRequisicao(unidade, dataInicial, teto)
-        : Promise.resolve(mapaVazio()),
-      teto && considerarConvenios
-        ? this.buscarRecebidoConvenioProdutos(unidade, dataInicial, teto)
-        : Promise.resolve(mapaVazio()),
     ]);
-
-    const reqMap = this.mesclarMapaMovimento(reqMapBase, convReqMap);
-    const mpMap = this.mesclarMapaMovimento(mpMapBase, convProdMap);
+    const considerarTaxas = politicaUnidade?.considerarTaxas === true;
+    const considerarConvenios = politicaUnidade?.considerarConvenios === true;
     const setoresRevendaPorCodigo = new Map<number, number[]>();
     const setoresMpPorCodigo = new Map<number, number[]>();
     for (const p of politicasVend) {
@@ -821,19 +840,93 @@ export class ComercialAcompanhamentoService {
       }
     }
 
-    return vinculados.map((f) =>
-      this.montarItem(
-        f.id,
-        f.nome,
-        f.codigoVendedorErp!,
-        reqMap,
-        mpMap,
-        rejMap,
-        revendaMap,
-        setoresRevendaPorCodigo.get(f.codigoVendedorErp!) ?? [],
-        setoresMpPorCodigo.get(f.codigoVendedorErp!) ?? [],
-        terceirosPorCodigo,
-      ),
+    return Promise.all(
+      recortes.map(async (recorte) => {
+        const teto = dataTetoPreviaAcompanhamento(
+          recorte.inicio,
+          recorte.fimRecebido,
+          hoje,
+        );
+        const [
+          reqMapBase,
+          mpMapBase,
+          rejMap,
+          revendaMap,
+          terceirosPorCodigo,
+          convReqMap,
+          convProdMap,
+        ] = await Promise.all([
+          teto
+            ? this.buscarRecebidoRequisicao(
+                unidade,
+                recorte.inicio,
+                teto,
+                considerarTaxas,
+              )
+            : Promise.resolve(mapaVazio()),
+          teto
+            ? this.buscarRecebidoMarcaPropria(
+                unidade,
+                recorte.inicio,
+                teto,
+              )
+            : Promise.resolve(mapaVazio()),
+          recorte.inicio <= recorte.fimRejeitado
+            ? this.buscarRejeitado(
+                unidade,
+                recorte.inicio,
+                recorte.fimRejeitado,
+              )
+            : Promise.resolve(mapaVazio()),
+          teto
+            ? this.buscarRecebidoRevendaManipulados(
+                unidade,
+                recorte.inicio,
+                teto,
+              )
+            : Promise.resolve(mapaVazio()),
+          teto
+            ? this.buscarRecebidoTerceirosPorVendedor(
+                unidade,
+                recorte.inicio,
+                teto,
+              )
+            : Promise.resolve(
+                new Map() as Map<number, { valor: number; qtd: number }>,
+              ),
+          teto && considerarConvenios
+            ? this.buscarRecebidoConvenioRequisicao(
+                unidade,
+                recorte.inicio,
+                teto,
+              )
+            : Promise.resolve(mapaVazio()),
+          teto && considerarConvenios
+            ? this.buscarRecebidoConvenioProdutos(
+                unidade,
+                recorte.inicio,
+                teto,
+              )
+            : Promise.resolve(mapaVazio()),
+        ]);
+
+        const reqMap = this.mesclarMapaMovimento(reqMapBase, convReqMap);
+        const mpMap = this.mesclarMapaMovimento(mpMapBase, convProdMap);
+        return vinculados.map((f) =>
+          this.montarItem(
+            f.id,
+            f.nome,
+            f.codigoVendedorErp!,
+            reqMap,
+            mpMap,
+            rejMap,
+            revendaMap,
+            setoresRevendaPorCodigo.get(f.codigoVendedorErp!) ?? [],
+            setoresMpPorCodigo.get(f.codigoVendedorErp!) ?? [],
+            terceirosPorCodigo,
+          ),
+        );
+      }),
     );
   }
 
@@ -847,115 +940,210 @@ export class ComercialAcompanhamentoService {
     dataFinalRecebido: string,
     dataFinalRejeitado: string,
   ): Promise<ComercialAcompanhamentoItemDto> {
+    const [item] = await this.obterItensTotalLojaEmRecortes(unidade, [
+      {
+        inicio: dataInicial,
+        fimRecebido: dataFinalRecebido,
+        fimRejeitado: dataFinalRejeitado,
+      },
+    ]);
+    return item;
+  }
+
+  /**
+   * Vários intervalos da mesma unidade: política + códigos vinculados 1×;
+   * movimentos em paralelo por recorte (análise por semanas/competências).
+   */
+  async obterItensTotalLojaEmRecortes(
+    unidade: Unidade,
+    recortes: Array<{
+      inicio: string;
+      fimRecebido: string;
+      fimRejeitado: string;
+    }>,
+  ): Promise<ComercialAcompanhamentoItemDto[]> {
+    if (!recortes.length) return [];
     const hoje = ymdHojeSp();
-    const teto = dataTetoPreviaAcompanhamento(
-      dataInicial,
-      dataFinalRecebido,
-      hoje,
-    );
-    const politicaUnidade = await this.politicaUnidadeRepo.findOne({
-      where: { unidade },
-    });
+    const mapaVazio = () => new Map() as MapaMovimento;
+
+    const [politicaUnidade, codigosVinculados] = await Promise.all([
+      this.politicaUnidadeRepo.findOne({ where: { unidade } }),
+      this.listarCodigosVendedorVinculados(unidade),
+    ]);
     const setoresUnidade = this.normalizarCodigosSetor(
       politicaUnidade?.codigosSetor,
     );
     const setoresUnidadeRevenda = this.normalizarCodigosSetor(
       politicaUnidade?.codigosSetorRevendaManipulados,
     );
+    const considerarTaxas = politicaUnidade?.considerarTaxas === true;
     const considerarConvenios = politicaUnidade?.considerarConvenios === true;
-    const mapaVazio = () => new Map() as MapaMovimento;
 
-    const [itens, volumeLoja, terceirosLoja, rejMap, convProdMap] =
-      await Promise.all([
-        this.listarItensVendedoresNoIntervalo(
-          unidade,
-          dataInicial,
-          dataFinalRecebido,
-          dataFinalRejeitado,
-        ),
-        teto
-          ? this.buscarVolumeLoja(
-              unidade,
-              dataInicial,
-              teto,
-              setoresUnidade,
-              setoresUnidadeRevenda,
-            )
-          : Promise.resolve({
-              marcaPropria: {
-                valor: 0,
-                qtd: 0,
-                valorSetores: 0,
-                qtdSetores: 0,
-              },
-              revendaManipulados: { valor: 0, qtd: 0 },
-            }),
-        teto
-          ? this.buscarRecebidoTerceiros(unidade, dataInicial, teto)
-          : Promise.resolve({ valor: 0, qtd: 0 }),
-        dataInicial <= dataFinalRejeitado
-          ? this.buscarRejeitado(unidade, dataInicial, dataFinalRejeitado)
-          : Promise.resolve(mapaVazio()),
-        teto && considerarConvenios
-          ? this.buscarRecebidoConvenioProdutos(unidade, dataInicial, teto)
-          : Promise.resolve(mapaVazio()),
-      ]);
+    return Promise.all(
+      recortes.map(async (recorte) => {
+        const teto = dataTetoPreviaAcompanhamento(
+          recorte.inicio,
+          recorte.fimRecebido,
+          hoje,
+        );
+        const [
+          reqMapBase,
+          convReqMap,
+          volumeLoja,
+          terceirosLoja,
+          rejMap,
+          convProdMap,
+        ] = await Promise.all([
+          teto
+            ? this.buscarRecebidoRequisicao(
+                unidade,
+                recorte.inicio,
+                teto,
+                considerarTaxas,
+              )
+            : Promise.resolve(mapaVazio()),
+          teto && considerarConvenios
+            ? this.buscarRecebidoConvenioRequisicao(
+                unidade,
+                recorte.inicio,
+                teto,
+              )
+            : Promise.resolve(mapaVazio()),
+          teto
+            ? this.buscarVolumeLoja(
+                unidade,
+                recorte.inicio,
+                teto,
+                setoresUnidade,
+                setoresUnidadeRevenda,
+              )
+            : Promise.resolve({
+                marcaPropria: {
+                  valor: 0,
+                  qtd: 0,
+                  valorSetores: 0,
+                  qtdSetores: 0,
+                },
+                revendaManipulados: { valor: 0, qtd: 0 },
+              }),
+          teto
+            ? this.buscarRecebidoTerceiros(unidade, recorte.inicio, teto)
+            : Promise.resolve({ valor: 0, qtd: 0 }),
+          recorte.inicio <= recorte.fimRejeitado
+            ? this.buscarRejeitado(
+                unidade,
+                recorte.inicio,
+                recorte.fimRejeitado,
+              )
+            : Promise.resolve(mapaVazio()),
+          teto && considerarConvenios
+            ? this.buscarRecebidoConvenioProdutos(
+                unidade,
+                recorte.inicio,
+                teto,
+              )
+            : Promise.resolve(mapaVazio()),
+        ]);
 
-    const totais = this.somarTotais(itens);
-    const convMpLoja = considerarConvenios
-      ? this.somarMapa(convProdMap)
-      : { valor: 0, qtd: 0, qtdFormulas: 0 };
-    const lojaRecebidoMp = {
-      valor: this.round2(volumeLoja.marcaPropria.valor + convMpLoja.valor),
-      qtd: volumeLoja.marcaPropria.qtd + convMpLoja.qtd,
-      valorSetores: volumeLoja.marcaPropria.valorSetores,
-      qtdSetores: volumeLoja.marcaPropria.qtdSetores,
-    };
-    const lojaRejeitado = this.somarMapa(rejMap);
-    const lojaMpTotal = this.round2(lojaRecebidoMp.valor);
-    const lojaMpQtdTotal = lojaRecebidoMp.qtd;
-    const lojaMpSetores = this.round2(
-      setoresUnidade.length > 0 ? lojaRecebidoMp.valorSetores : 0,
+        const reqMap = this.mesclarMapaMovimento(reqMapBase, convReqMap);
+        const reqVinculados = this.somarMovimentoDosCodigos(
+          reqMap,
+          codigosVinculados,
+        );
+        const convMpLoja = considerarConvenios
+          ? this.somarMapa(convProdMap)
+          : { valor: 0, qtd: 0, qtdFormulas: 0 };
+        const lojaRecebidoMp = {
+          valor: this.round2(
+            volumeLoja.marcaPropria.valor + convMpLoja.valor,
+          ),
+          qtd: volumeLoja.marcaPropria.qtd + convMpLoja.qtd,
+          valorSetores: volumeLoja.marcaPropria.valorSetores,
+          qtdSetores: volumeLoja.marcaPropria.qtdSetores,
+        };
+        const lojaRejeitado = this.somarMapa(rejMap);
+        const lojaMpTotal = this.round2(lojaRecebidoMp.valor);
+        const lojaMpQtdTotal = lojaRecebidoMp.qtd;
+        const lojaMpSetores = this.round2(
+          setoresUnidade.length > 0 ? lojaRecebidoMp.valorSetores : 0,
+        );
+        const lojaMpQtdSetores =
+          setoresUnidade.length > 0 ? lojaRecebidoMp.qtdSetores : 0;
+        const lojaMpOutros = this.round2(lojaMpTotal - lojaMpSetores);
+        const lojaMpQtdOutros = Math.max(0, lojaMpQtdTotal - lojaMpQtdSetores);
+        const lojaComissaoMp =
+          setoresUnidade.length > 0 ? lojaMpSetores : lojaMpTotal;
+        const puraLoja = this.round2(reqVinculados.valor);
+        const extraLoja = volumeLoja.revendaManipulados;
+        const terceirosValor = this.round2(terceirosLoja.valor);
+        const lojaComissaoReq = this.round2(puraLoja + extraLoja.valor);
+        const valorRecebidoRequisicao = this.round2(
+          lojaComissaoReq + terceirosValor,
+        );
+
+        return {
+          funcionarioId: null,
+          nomeVendedor: `TOTAL ${unidade}`,
+          codigoVendedorErp: null,
+          valorRequisicaoPura: puraLoja,
+          valorRevendaManipulados: extraLoja.valor,
+          quantidadeRevendaManipulados: extraLoja.qtd,
+          codigosSetorRevendaManipulados: setoresUnidadeRevenda,
+          valorTerceirosManipulados: terceirosValor,
+          quantidadeTerceirosManipulados: terceirosLoja.qtd,
+          valorComissaoBaseRequisicao: lojaComissaoReq,
+          valorRecebidoRequisicao,
+          quantidadeRecebidoRequisicao: reqVinculados.qtd,
+          quantidadeFormulasRequisicao: reqVinculados.qtdFormulas,
+          valorRecebidoMarcaPropria: lojaMpTotal,
+          quantidadeRecebidoMarcaPropria: lojaMpQtdTotal,
+          valorRecebidoMarcaPropriaSetores: lojaMpSetores,
+          quantidadeRecebidoMarcaPropriaSetores: lojaMpQtdSetores,
+          valorRecebidoMarcaPropriaOutros: lojaMpOutros,
+          quantidadeRecebidoMarcaPropriaOutros: lojaMpQtdOutros,
+          valorComissaoBaseMarcaPropria: lojaComissaoMp,
+          codigosSetorMarcaPropria: setoresUnidade,
+          valorRejeitado: lojaRejeitado.valor,
+          quantidadeRejeitado: lojaRejeitado.qtd,
+        };
+      }),
     );
-    const lojaMpQtdSetores =
-      setoresUnidade.length > 0 ? lojaRecebidoMp.qtdSetores : 0;
-    const lojaMpOutros = this.round2(lojaMpTotal - lojaMpSetores);
-    const lojaMpQtdOutros = Math.max(0, lojaMpQtdTotal - lojaMpQtdSetores);
-    const lojaComissaoMp =
-      setoresUnidade.length > 0 ? lojaMpSetores : lojaMpTotal;
-    const puraLoja = this.round2(totais.valorRequisicaoPura);
-    const extraLoja = volumeLoja.revendaManipulados;
-    const terceirosValor = this.round2(terceirosLoja.valor);
-    const lojaComissaoReq = this.round2(puraLoja + extraLoja.valor);
-    const valorRecebidoRequisicao = this.round2(
-      lojaComissaoReq + terceirosValor,
-    );
+  }
 
-    return {
-      funcionarioId: null,
-      nomeVendedor: `TOTAL ${unidade}`,
-      codigoVendedorErp: null,
-      valorRequisicaoPura: puraLoja,
-      valorRevendaManipulados: extraLoja.valor,
-      quantidadeRevendaManipulados: extraLoja.qtd,
-      codigosSetorRevendaManipulados: setoresUnidadeRevenda,
-      valorTerceirosManipulados: terceirosValor,
-      quantidadeTerceirosManipulados: terceirosLoja.qtd,
-      valorComissaoBaseRequisicao: lojaComissaoReq,
-      valorRecebidoRequisicao,
-      quantidadeRecebidoRequisicao: totais.quantidadeRecebidoRequisicao,
-      quantidadeFormulasRequisicao: totais.quantidadeFormulasRequisicao,
-      valorRecebidoMarcaPropria: lojaMpTotal,
-      quantidadeRecebidoMarcaPropria: lojaMpQtdTotal,
-      valorRecebidoMarcaPropriaSetores: lojaMpSetores,
-      quantidadeRecebidoMarcaPropriaSetores: lojaMpQtdSetores,
-      valorRecebidoMarcaPropriaOutros: lojaMpOutros,
-      quantidadeRecebidoMarcaPropriaOutros: lojaMpQtdOutros,
-      valorComissaoBaseMarcaPropria: lojaComissaoMp,
-      codigosSetorMarcaPropria: setoresUnidade,
-      valorRejeitado: lojaRejeitado.valor,
-      quantidadeRejeitado: lojaRejeitado.qtd,
-    };
+  /** Códigos ERP dos vendedores da unidade (mesmo universo dos cards). */
+  private async listarCodigosVendedorVinculados(
+    unidade: Unidade,
+  ): Promise<Set<number>> {
+    const rows = await this.funcionarioRepo
+      .createQueryBuilder('f')
+      .select('f.codigoVendedorErp', 'codigo')
+      .where('f.unidade = :unidade', { unidade })
+      .andWhere('f.codigoVendedorErp IS NOT NULL')
+      .andWhere('f.codigoVendedorErp > 0')
+      .getRawMany<{ codigo: string | number }>();
+    return new Set(
+      rows
+        .map((r) => Number(r.codigo))
+        .filter((c) => Number.isFinite(c) && c > 0),
+    );
+  }
+
+  /** Soma valor/qtd/fórmulas só dos códigos vinculados (TOTAL = cards). */
+  private somarMovimentoDosCodigos(
+    map: MapaMovimento,
+    codigos: Set<number>,
+  ): { valor: number; qtd: number; qtdFormulas: number } {
+    let valor = 0;
+    let qtd = 0;
+    let qtdFormulas = 0;
+    for (const codigo of codigos) {
+      const item = map.get(codigo);
+      if (!item) continue;
+      valor += item.valor;
+      qtd += item.qtd;
+      qtdFormulas += item.qtdFormulas ?? 0;
+    }
+    return { valor, qtd, qtdFormulas };
   }
 
   async findAll(

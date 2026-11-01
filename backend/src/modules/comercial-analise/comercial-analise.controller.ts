@@ -19,6 +19,7 @@ import {
   ComercialAnaliseOpcoesResponseDto,
   ComercialAnaliseResponseDto,
 } from './dto/comercial-analise-response.dto';
+import { ComercialAnaliseHomeResponseDto } from './dto/comercial-analise-home.dto';
 
 @ApiTags('Comercial — Análise')
 @Controller('comercial/analise')
@@ -31,14 +32,31 @@ export class ComercialAnaliseController {
   @Permissions(Permission.COMERCIAL_ANALISE_READ)
   @ApiOperation({
     summary:
-      'Anos, competências até o mês corrente, semanas do mês e vendedores',
+      'Competências com movimento, semanas da competência (padrão = última com valor) e vendedores',
   })
   @ApiResponse({ status: 200, type: ComercialAnaliseOpcoesResponseDto })
   opcoes(
     @Req() req: { user: Usuario },
     @Query() query: FindComercialAnaliseOpcoesDto,
   ): Promise<ComercialAnaliseOpcoesResponseDto> {
-    return this.service.opcoes(req.user, query.unidade);
+    return this.service.opcoes(
+      req.user,
+      query.unidade,
+      query.competenciaSemanas,
+    );
+  }
+
+  @Get('home')
+  @Permissions(Permission.COMERCIAL_ANALISE_HOME)
+  @ApiOperation({
+    summary:
+      'Resumo da home: semana atual × anterior (Total vendido / valor / vendedor)',
+  })
+  @ApiResponse({ status: 200, type: ComercialAnaliseHomeResponseDto })
+  home(
+    @Req() req: { user: Usuario },
+  ): Promise<ComercialAnaliseHomeResponseDto> {
+    return this.service.resumoHome(req.user);
   }
 
   @Get()

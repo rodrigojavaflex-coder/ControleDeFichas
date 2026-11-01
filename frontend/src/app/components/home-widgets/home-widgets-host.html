@@ -11,6 +11,11 @@
           (carregandoChange)="onCarregandoChange('comercial-unidade', $event)"
         />
       }
+      @if (mostrar('comercial-analise')) {
+        <app-home-widget-comercial-analise
+          (carregandoChange)="onCarregandoChange('comercial-analise', $event)"
+        />
+      }
     </div>
   </section>
 }

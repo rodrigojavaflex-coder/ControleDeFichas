@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
+  ComercialAnaliseHomeResponse,
   ComercialAnaliseOpcoes,
   ComercialAnaliseResponse,
   FindComercialAnaliseDto,
@@ -14,12 +15,20 @@ export class ComercialAnaliseService {
   private http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/comercial/analise`;
 
+  /** Resumo da semana atual × anterior para o widget da home. */
+  resumoHome(): Observable<ComercialAnaliseHomeResponse> {
+    return this.http.get<ComercialAnaliseHomeResponse>(`${this.apiUrl}/home`);
+  }
+
   opcoes(
     filters: FindComercialAnaliseOpcoesDto,
   ): Observable<ComercialAnaliseOpcoes> {
     let params = new HttpParams();
     if (filters.unidade) {
       params = params.set('unidade', filters.unidade);
+    }
+    if (filters.competenciaSemanas) {
+      params = params.set('competenciaSemanas', filters.competenciaSemanas);
     }
     return this.http.get<ComercialAnaliseOpcoes>(`${this.apiUrl}/opcoes`, {
       params,
@@ -47,6 +56,9 @@ export class ComercialAnaliseService {
     } else if (modo === 'semanas') {
       const leitura = filters.leitura ?? 'comparar';
       params = params.set('leitura', leitura);
+      if (filters.competencia) {
+        params = params.set('competencia', filters.competencia);
+      }
       if (leitura === 'comparar') {
         if (filters.s1) params = params.set('s1', filters.s1);
         if (filters.s2) params = params.set('s2', filters.s2);

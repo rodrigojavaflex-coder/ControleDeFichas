@@ -171,8 +171,51 @@
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="'Card completo ' + modalCard.unidade">
-      <div class="modal-cabecalho">
-        <h3 class="modal-titulo">{{ modalCard.unidade }}</h3>
+      <div class="modal-cabecalho home-unidade-modal-cabecalho">
+        <div class="home-unidade-modal-titulo-bloco">
+          <div class="home-unidade-modal-titulo-start">
+            <h3 class="modal-titulo">
+              TOTAL {{ modalCard.unidade }}
+              <i class="fas fa-building" aria-hidden="true" title="Unidade"></i>
+            </h3>
+            <div
+              class="home-unidade-modal-caixa"
+              title="Último caixa CONFIRMADO da unidade"
+              aria-label="Último caixa fechado da unidade">
+              <span class="home-unidade-modal-caixa-label">
+                <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                Último caixa fechado
+              </span>
+              <strong>{{ formatarData(modalCard.item.dataUltimoCaixaFechado) }}</strong>
+            </div>
+          </div>
+          <div class="home-unidade-modal-titulo-end">
+            <div class="home-unidade-modal-total">
+              <span class="label">Total vendido</span>
+              <strong>{{ formatarMoeda(valorTotalRecebido(modalCard.item)) }}</strong>
+            </div>
+            <div class="home-unidade-modal-acoes">
+              <button
+                type="button"
+                class="btn btn-sm btn-imprimir"
+                (click)="abrirDetalhesModal()"
+                [attr.aria-label]="'Abrir detalhes de ' + modalCard.unidade"
+                title="Abrir detalhes">
+                <i class="fas fa-list-ul" aria-hidden="true"></i>
+                Detalhes
+              </button>
+              @if (podeAbrirAcompanhamento) {
+                <a
+                  class="btn btn-sm btn-secondary"
+                  routerLink="/comercial/acompanhamento"
+                  title="Abrir acompanhamento">
+                  <i class="fas fa-chart-line" aria-hidden="true"></i>
+                  Acompanhar
+                </a>
+              }
+            </div>
+          </div>
+        </div>
         <button
           type="button"
           class="modal-fechar"
@@ -183,12 +226,14 @@
       </div>
       <div class="modal-corpo home-unidade-modal-corpo">
         <app-comercial-vendedor-card
+          #cardModal
           [item]="modalCard.item"
           [isTotal]="true"
           [modoDetalhe]="'unidade'"
           [podeVerComissao]="false"
-          [mostrarAcompanhamento]="podeAbrirAcompanhamento"
-          [mostrarUltimoCaixa]="true"
+          [mostrarAcompanhamento]="false"
+          [mostrarUltimoCaixa]="false"
+          [ocultarCabecalho]="true"
           [competencia]="competencia"
           [anoMes]="anoMes"
           [unidade]="modalCard.unidade"

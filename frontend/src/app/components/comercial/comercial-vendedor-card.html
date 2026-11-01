@@ -1,4 +1,7 @@
-<article class="comercial-acomp-card comercial-vendedor-card-home">
+<article
+  class="comercial-acomp-card comercial-vendedor-card-home"
+  [class.sem-cabecalho]="ocultarCabecalho">
+  @if (!ocultarCabecalho) {
   <header class="comercial-acomp-card-head">
     <div class="comercial-acomp-card-head-start">
       <h3>
@@ -81,6 +84,7 @@
       </div>
     </div>
   </header>
+  }
 
   <div
     class="comercial-acomp-bloco comercial-acomp-bloco-resultados"
