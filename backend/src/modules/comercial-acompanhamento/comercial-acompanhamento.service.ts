@@ -1550,7 +1550,7 @@ export class ComercialAcompanhamentoService {
           FROM (
             SELECT
               MIN(i.data_operacao) AS data,
-              i.numero_cupom,
+              MIN(i.numero_cupom) AS numero_cupom,
               i.numero_requisicao,
               GREATEST(
                 0,
@@ -1580,16 +1580,16 @@ export class ComercialAcompanhamentoService {
               AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND c.codigo_vendedor = $4
               AND ${this.sqlExcluiReqNoLoteConvenio('i')}
-            GROUP BY i.numero_cupom, i.numero_requisicao
+            GROUP BY i.numero_requisicao
             UNION ALL
             SELECT
-              c.data_pagamento AS data,
-              c.numero_cupom,
+              MIN(c.data_pagamento) AS data,
+              MIN(c.numero_cupom) AS numero_cupom,
               c.numero_requisicao,
               GREATEST(
                 0,
-                COALESCE(c.valor_pago_requisicao, 0)
-                  - CASE WHEN $5::boolean THEN 0 ELSE COALESCE(c.valor_taxa, 0) END
+                COALESCE(MAX(c.valor_pago_requisicao), 0)
+                  - CASE WHEN $5::boolean THEN 0 ELSE COALESCE(MAX(c.valor_taxa), 0) END
               ) AS valor
             FROM caixa_requisicoes_pagas c
             WHERE c.unidade = $1
@@ -1599,6 +1599,7 @@ export class ComercialAcompanhamentoService {
               AND c.codigo_vendedor = $4
               AND ${this.sqlPagaSemItemComPagamento('c')}
               AND ${this.sqlExcluiReqNoLoteConvenio('c')}
+            GROUP BY c.numero_requisicao
           ) t
           ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
         `,
@@ -1867,7 +1868,7 @@ export class ComercialAcompanhamentoService {
           FROM (
             SELECT
               MIN(i.data_operacao) AS data,
-              i.numero_cupom,
+              MIN(i.numero_cupom) AS numero_cupom,
               i.numero_requisicao,
               GREATEST(
                 0,
@@ -1897,16 +1898,16 @@ export class ComercialAcompanhamentoService {
               AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND ${vinculoSql}
               AND ${this.sqlExcluiReqNoLoteConvenio('i')}
-            GROUP BY i.numero_cupom, i.numero_requisicao
+            GROUP BY c.codigo_vendedor, i.numero_requisicao
             UNION ALL
             SELECT
-              c.data_pagamento AS data,
-              c.numero_cupom,
+              MIN(c.data_pagamento) AS data,
+              MIN(c.numero_cupom) AS numero_cupom,
               c.numero_requisicao,
               GREATEST(
                 0,
-                COALESCE(c.valor_pago_requisicao, 0)
-                  - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(c.valor_taxa, 0) END
+                COALESCE(MAX(c.valor_pago_requisicao), 0)
+                  - CASE WHEN $4::boolean THEN 0 ELSE COALESCE(MAX(c.valor_taxa), 0) END
               ) AS valor
             FROM caixa_requisicoes_pagas c
             WHERE c.unidade = $1
@@ -1916,6 +1917,7 @@ export class ComercialAcompanhamentoService {
               AND ${vinculoSql}
               AND ${this.sqlPagaSemItemComPagamento('c')}
               AND ${this.sqlExcluiReqNoLoteConvenio('c')}
+            GROUP BY c.codigo_vendedor, c.numero_requisicao
           ) t
           ORDER BY t.data ASC, t.numero_cupom ASC, t.numero_requisicao ASC
         `,
@@ -2251,9 +2253,9 @@ export class ComercialAcompanhamentoService {
   /**
    * Manipulados do vendedor (RN-COM-003): Terminal de Caixa —
    * data_operacao + item com pagamento; Taxa=Não →
-   * LEAST(SUM(item−taxa), paga−taxa) por cupom+req.
-   * União: paga sem item no terminal (data_pagamento, pago−taxa).
-   * qtd = cupom+req; qtd_formulas = linhas de item / quantidade_formulas.
+   * LEAST(SUM(item−taxa), paga−taxa) **por requisição** (todos os cupons).
+   * União: paga sem item **com** pagamento_id (data_pagamento, pago−taxa).
+   * qtd = reqs distintas; qtd_formulas = linhas de item / quantidade_formulas.
    */
   private async buscarRecebidoRequisicao(
     unidade: Unidade,
@@ -2267,7 +2269,6 @@ export class ComercialAcompanhamentoService {
         SELECT
           c.codigo_vendedor,
           MAX(c.nome_vendedor) AS nome_vendedor,
-          i.numero_cupom,
           i.numero_requisicao,
           GREATEST(
             0,
@@ -2302,12 +2303,11 @@ export class ComercialAcompanhamentoService {
           AND c.codigo_vendedor IS NOT NULL
           AND c.codigo_vendedor > 0
           AND ${this.sqlExcluiReqNoLoteConvenio('i')}
-        GROUP BY c.codigo_vendedor, i.numero_cupom, i.numero_requisicao
+        GROUP BY c.codigo_vendedor, i.numero_requisicao
         UNION ALL
         SELECT
           c.codigo_vendedor,
           MAX(c.nome_vendedor) AS nome_vendedor,
-          c.numero_cupom,
           c.numero_requisicao,
           GREATEST(
             0,
@@ -2324,7 +2324,7 @@ export class ComercialAcompanhamentoService {
           AND c.codigo_vendedor > 0
           AND ${this.sqlPagaSemItemComPagamento('c')}
           AND ${this.sqlExcluiReqNoLoteConvenio('c')}
-        GROUP BY c.codigo_vendedor, c.numero_cupom, c.numero_requisicao
+        GROUP BY c.codigo_vendedor, c.numero_requisicao
       )
       SELECT codigo_vendedor,
              MAX(nome_vendedor) AS nome_vendedor,
@@ -3681,10 +3681,11 @@ export class ComercialAcompanhamentoService {
   }
 
   /**
-   * Paga sem item no terminal (ex. req 99774): o ERP credita o vendedor
-   * pela FC17000 mesmo sem FC31200. Se já existe item REQUISICAO (mesmo sem
-   * pagamento_id, ex. 100054), não entra por aqui — o card só conta item com
-   * pagamento, como o relatório de comissão.
+   * Paga sem item **com** pagamento no cupom (RN-COM-003):
+   * - sem nenhum item REQUISICAO (ex. 99774 / só FC17000);
+   * - ou só item sem `pagamento_id` (ex. depósito TPPAG=4 / Uberaba).
+   * Se já existe item com `pagamento_id`, a req entra pelo universo principal
+   * e não duplica por aqui.
    */
   private sqlPagaSemItemComPagamento(alias: string): string {
     return `
@@ -3694,6 +3695,7 @@ export class ComercialAcompanhamentoService {
               WHERE i_ex.unidade = ${alias}.unidade
                 AND i_ex.tipo_item = 'REQUISICAO'
                 AND i_ex.numero_requisicao = ${alias}.numero_requisicao
+                AND i_ex.pagamento_id IS NOT NULL
             )`;
   }
 
