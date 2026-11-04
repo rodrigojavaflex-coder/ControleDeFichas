@@ -31,20 +31,38 @@ export class ComercialAcompanhamentoService {
     return this.http.get<ComercialAcompanhamentoListResponse>(base, { params });
   }
 
-  meuCard(): Observable<ComercialAcompanhamentoMeuCard> {
-    return this.http.get<ComercialAcompanhamentoMeuCard>(`${base}/meu`);
+  meuCard(competencia?: {
+    ano?: number;
+    mes?: number;
+  }): Observable<ComercialAcompanhamentoMeuCard> {
+    let params = new HttpParams();
+    if (competencia?.ano != null && competencia?.mes != null) {
+      params = params
+        .set('ano', String(competencia.ano))
+        .set('mes', String(competencia.mes));
+    }
+    return this.http.get<ComercialAcompanhamentoMeuCard>(`${base}/meu`, {
+      params,
+    });
   }
 
-  meuDetalhe(filtroDia?: {
+  meuDetalhe(filtro?: {
+    ano?: number;
+    mes?: number;
     dataInicial?: string;
     dataFinal?: string;
   }): Observable<ComercialAcompanhamentoDetalhe> {
     let params = new HttpParams();
-    if (filtroDia?.dataInicial) {
-      params = params.set('dataInicial', filtroDia.dataInicial);
+    if (filtro?.ano != null && filtro?.mes != null) {
+      params = params
+        .set('ano', String(filtro.ano))
+        .set('mes', String(filtro.mes));
     }
-    if (filtroDia?.dataFinal) {
-      params = params.set('dataFinal', filtroDia.dataFinal);
+    if (filtro?.dataInicial) {
+      params = params.set('dataInicial', filtro.dataInicial);
+    }
+    if (filtro?.dataFinal) {
+      params = params.set('dataFinal', filtro.dataFinal);
     }
     return this.http.get<ComercialAcompanhamentoDetalhe>(`${base}/meu/detalhe`, {
       params,

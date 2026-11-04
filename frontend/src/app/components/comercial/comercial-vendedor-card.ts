@@ -539,10 +539,11 @@ export class ComercialVendedorCardComponent {
       dataInicial: this.detalheDataInicial || undefined,
       dataFinal: this.detalheDataFinal || undefined,
     };
+    const competencia = this.resolverAnoMesCompetencia();
     const req$ =
       this.modoDetalhe === 'unidade' && this.unidade
         ? this.service.unidadeDetalhe(this.unidade as Unidade, filtroDia)
-        : this.service.meuDetalhe(filtroDia);
+        : this.service.meuDetalhe({ ...filtroDia, ...competencia });
     req$
       .pipe(takeUntil(this.detalheReq$), takeUntilDestroyed(this.destroyRef))
       .subscribe({

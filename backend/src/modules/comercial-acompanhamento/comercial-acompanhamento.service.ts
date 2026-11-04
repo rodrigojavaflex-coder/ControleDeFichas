@@ -103,9 +103,12 @@ export class ComercialAcompanhamentoService {
     private readonly caixaFechamentoRepo: Repository<CaixaFechamento>,
   ) {}
 
-  async findMeuCard(usuario: Usuario): Promise<ComercialAcompanhamentoMeuCardDto> {
+  async findMeuCard(
+    usuario: Usuario,
+    competencia?: { ano?: number; mes?: number },
+  ): Promise<ComercialAcompanhamentoMeuCardDto> {
     const { usuarioCompleto, funcionario, ano, mes } =
-      await this.resolverMeuFuncionario(usuario);
+      await this.resolverMeuFuncionario(usuario, competencia);
     const lista = await this.findAll(usuarioCompleto, {
       unidade: funcionario.unidade,
       ano,
@@ -115,7 +118,7 @@ export class ComercialAcompanhamentoService {
     const item = lista.itens.find((i) => i.funcionarioId === funcionario.id);
     if (!item) {
       throw new NotFoundException(
-        'Card do vendedor não encontrado na competência atual.',
+        'Card do vendedor não encontrado na competência informada.',
       );
     }
     return {
@@ -129,17 +132,25 @@ export class ComercialAcompanhamentoService {
 
   async findMeuDetalhe(
     usuario: Usuario,
-    filtroDia?: { dataInicial?: string; dataFinal?: string },
+    filtro?: {
+      ano?: number;
+      mes?: number;
+      dataInicial?: string;
+      dataFinal?: string;
+    },
   ): Promise<ComercialAcompanhamentoDetalheDto> {
     const { usuarioCompleto, funcionario, ano, mes } =
-      await this.resolverMeuFuncionario(usuario);
+      await this.resolverMeuFuncionario(usuario, {
+        ano: filtro?.ano,
+        mes: filtro?.mes,
+      });
     return this.detalhe(usuarioCompleto, {
       unidade: funcionario.unidade,
       ano,
       mes,
       funcionarioId: funcionario.id,
-      dataInicial: filtroDia?.dataInicial,
-      dataFinal: filtroDia?.dataFinal,
+      dataInicial: filtro?.dataInicial,
+      dataFinal: filtro?.dataFinal,
     });
   }
 
@@ -660,7 +671,10 @@ export class ComercialAcompanhamentoService {
     };
   }
 
-  private async resolverMeuFuncionario(usuario: Usuario): Promise<{
+  private async resolverMeuFuncionario(
+    usuario: Usuario,
+    competencia?: { ano?: number; mes?: number },
+  ): Promise<{
     usuarioCompleto: Usuario;
     funcionario: Funcionario;
     ano: number;
@@ -688,14 +702,53 @@ export class ComercialAcompanhamentoService {
         'Funcionário comercial não gera card de acompanhamento.',
       );
     }
-    const hoje = ymdHojeSp();
-    const [anoStr, mesStr] = hoje.split('-');
+    const { ano, mes } = this.resolverCompetenciaMeuHome(
+      competencia?.ano,
+      competencia?.mes,
+    );
     return {
       usuarioCompleto: usuarioCompleto ?? usuario,
       funcionario,
-      ano: Number(anoStr),
-      mes: Number(mesStr),
+      ano,
+      mes,
     };
+  }
+
+  /**
+   * Competência do widget Meu desempenho: omitido = mês corrente SP;
+   * faixa 2026–2033, sem mês futuro (RN-COM-004).
+   */
+  private resolverCompetenciaMeuHome(
+    ano?: number,
+    mes?: number,
+  ): { ano: number; mes: number } {
+    const hoje = ymdHojeSp();
+    const anoHoje = Number(hoje.slice(0, 4));
+    const mesHoje = Number(hoje.slice(5, 7));
+    if (ano == null && mes == null) {
+      return { ano: anoHoje, mes: mesHoje };
+    }
+    if (ano == null || mes == null) {
+      throw new BadRequestException(
+        'Informe ano e mês da competência juntos.',
+      );
+    }
+    if (
+      !Number.isInteger(ano) ||
+      !Number.isInteger(mes) ||
+      ano < 2026 ||
+      ano > 2033 ||
+      mes < 1 ||
+      mes > 12
+    ) {
+      throw new BadRequestException('Competência inválida.');
+    }
+    if (ano > anoHoje || (ano === anoHoje && mes > mesHoje)) {
+      throw new BadRequestException(
+        'Competência futura não está disponível no Meu desempenho.',
+      );
+    }
+    return { ano, mes };
   }
 
   async listarVendedoresOpcoes(

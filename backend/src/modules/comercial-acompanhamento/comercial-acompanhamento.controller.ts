@@ -15,7 +15,7 @@ import {
   ComercialAcompanhamentoVendedorOpcaoDto,
   FindComercialAcompanhamentoDetalheDto,
   FindComercialAcompanhamentoDto,
-  FindComercialAcompanhamentoFiltroDiaDto,
+  FindComercialAcompanhamentoMeuDto,
   FindComercialAcompanhamentoUnidadeDetalheDto,
 } from './dto/comercial-acompanhamento.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -53,27 +53,34 @@ export class ComercialAcompanhamentoController {
   @Get('meu')
   @Permissions(Permission.COMERCIAL_ACOMPANHAMENTO_HOME)
   @ApiOperation({
-    summary: 'Card comercial do vendedor logado na competência atual',
+    summary:
+      'Card comercial do vendedor logado (competência corrente ou ano/mês)',
   })
   @ApiResponse({ status: 200, type: ComercialAcompanhamentoMeuCardDto })
   findMeu(
     @Req() req: { user: Usuario },
+    @Query() query: FindComercialAcompanhamentoMeuDto,
   ): Promise<ComercialAcompanhamentoMeuCardDto> {
-    return this.service.findMeuCard(req.user);
+    return this.service.findMeuCard(req.user, {
+      ano: query.ano,
+      mes: query.mes,
+    });
   }
 
   @Get('meu/detalhe')
   @Permissions(Permission.COMERCIAL_ACOMPANHAMENTO_HOME)
   @ApiOperation({
     summary:
-      'Movimentos do vendedor logado na competência atual (card da tela inicial)',
+      'Movimentos do vendedor logado (card da home; competência corrente ou ano/mês)',
   })
   @ApiResponse({ status: 200, type: ComercialAcompanhamentoDetalheDto })
   findMeuDetalhe(
     @Req() req: { user: Usuario },
-    @Query() query: FindComercialAcompanhamentoFiltroDiaDto,
+    @Query() query: FindComercialAcompanhamentoMeuDto,
   ): Promise<ComercialAcompanhamentoDetalheDto> {
     return this.service.findMeuDetalhe(req.user, {
+      ano: query.ano,
+      mes: query.mes,
       dataInicial: query.dataInicial,
       dataFinal: query.dataFinal,
     });

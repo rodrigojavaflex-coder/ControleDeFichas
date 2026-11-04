@@ -1,7 +1,9 @@
 import { periodoCompetencia } from '../visitacao-acompanhamento/utils/visitacao-dias-uteis.util';
 import {
   listarCompetenciasAnalise,
-  semanasCandidatasHome,
+  parSemanasComparacaoHome,
+  parSemanasFechadasHome,
+  rotuloIntervaloHome,
   semanasDaCompetencia,
   semanasMesCorrente,
 } from './comercial-analise-periodo.util';
@@ -94,11 +96,39 @@ describe('comercial-analise-periodo', () => {
     ).toBe(true);
   });
 
-  it('candidatas da home incluem mês anterior + prévia do corrente', () => {
-    const hoje = '2026-11-01';
-    const semanas = semanasCandidatasHome(hoje);
-    expect(semanas[0].inicio).toBe('2026-10-01');
-    expect(semanas[semanas.length - 1].label).toBe('1 a 1 de Nov (prévia)');
-    expect(semanas.some((s) => s.fim === '2026-10-31')).toBe(true);
+  it('rótulo home padroniza dias com zero e mês após o intervalo', () => {
+    expect(rotuloIntervaloHome('2026-10-26', '2026-10-31')).toBe('26 a 31 Out');
+    expect(rotuloIntervaloHome('2026-10-26', '2026-11-01')).toBe(
+      '26 Out a 01 Nov',
+    );
+    expect(rotuloIntervaloHome('2026-11-02', '2026-11-08')).toBe('02 a 08 Nov');
+  });
+
+  it('par da home usa semanas seg–dom sem cortar no mês', () => {
+    // terça 03/11/2026 → semana atual seg 02–dom 08 (prévia até 03);
+    // anterior seg 26/10–dom 01/11.
+    const par = parSemanasComparacaoHome('2026-11-03');
+    expect(par).not.toBeNull();
+    expect(par!.atual.inicio).toBe('2026-11-02');
+    expect(par!.atual.fim).toBe('2026-11-03');
+    expect(par!.atual.previa).toBe(true);
+    expect(par!.atual.labelCurto).toBe('02 a 08 Nov');
+    expect(par!.anterior?.inicio).toBe('2026-10-26');
+    expect(par!.anterior?.fim).toBe('2026-11-01');
+    expect(par!.anterior?.labelCurto).toBe('26 Out a 01 Nov');
+  });
+
+  it('par de semanas fechadas ignora a prévia corrente', () => {
+    // terça 03/11/2026 → fechada atual 26/10–01/11; anterior 19/10–25/10.
+    const par = parSemanasFechadasHome('2026-11-03');
+    expect(par).not.toBeNull();
+    expect(par!.atual.inicio).toBe('2026-10-26');
+    expect(par!.atual.fim).toBe('2026-11-01');
+    expect(par!.atual.previa).toBe(false);
+    expect(par!.atual.labelCurto).toBe('26 Out a 01 Nov');
+    expect(par!.anterior?.inicio).toBe('2026-10-19');
+    expect(par!.anterior?.fim).toBe('2026-10-25');
+    expect(par!.anterior?.previa).toBe(false);
+    expect(par!.anterior?.labelCurto).toBe('19 a 25 Out');
   });
 });

@@ -66,68 +66,26 @@ export class HomeWidgetComercialAnaliseComponent implements OnInit, OnDestroy {
     return this.resumo?.itens ?? [];
   }
 
-  get intervaloSemana(): string {
-    const s = this.resumo?.semanaAtual;
-    if (!s) return '';
-    return s.previa
-      ? String(s.label).replace(/\s*\(prévia\)\s*$/i, '').trim()
-      : s.labelCurto || s.label;
-  }
-
-  get seloPrevia(): boolean {
-    return this.resumo?.semanaAtual?.previa === true;
-  }
-
   get temComparacao(): boolean {
     return this.resumo?.temComparacao === true;
   }
 
-  /** Ex.: "Comparativo Semanal: 19 a 25 vs. 26 a 31 de Out". */
+  /** Ex.: "Semanas fechadas: 19 a 25 Out vs 26 Out a 01 Nov". */
   get tituloComparativo(): string {
-    if (!this.resumo) return 'Comparativo Semanal';
+    if (!this.resumo) return 'Semanas fechadas';
     if (!this.temComparacao || !this.resumo.semanaAnterior) {
-      return 'Comparativo Semanal: sem semana anterior';
+      return 'Semanas fechadas: sem semana anterior';
     }
-    const ant = this.resumo.semanaAnterior;
-    const atu = this.resumo.semanaAtual;
-    const diasAnt = this.rotuloDias(ant.inicio, ant.fim);
-    const diasAtu = this.rotuloDias(atu.inicio, atu.fim);
-    const mesAnt = this.mesCurto(ant.fim);
-    const mesAtu = this.mesCurto(atu.fim);
-    if (mesAnt === mesAtu) {
-      return `Comparativo Semanal: ${diasAnt} vs. ${diasAtu} de ${mesAtu}`;
-    }
-    return `Comparativo Semanal: ${diasAnt} de ${mesAnt} vs. ${diasAtu} de ${mesAtu}`;
+    const ant =
+      this.resumo.semanaAnterior.labelCurto ||
+      this.resumo.semanaAnterior.label;
+    const atu =
+      this.resumo.semanaAtual.labelCurto || this.resumo.semanaAtual.label;
+    return `Semanas fechadas: ${ant} vs ${atu}`;
   }
 
   atualizar(): void {
     this.carregar();
-  }
-
-  private rotuloDias(inicio: string, fim: string): string {
-    const diaIni = Number(inicio?.slice(8, 10));
-    const diaFim = Number(fim?.slice(8, 10));
-    if (!Number.isFinite(diaIni) || !Number.isFinite(diaFim)) return '—';
-    return `${diaIni} a ${diaFim}`;
-  }
-
-  private mesCurto(ymd: string): string {
-    const meses = [
-      'Jan',
-      'Fev',
-      'Mar',
-      'Abr',
-      'Mai',
-      'Jun',
-      'Jul',
-      'Ago',
-      'Set',
-      'Out',
-      'Nov',
-      'Dez',
-    ];
-    const mes = Number(ymd?.slice(5, 7));
-    return meses[mes - 1] ?? String(mes);
   }
 
   /**

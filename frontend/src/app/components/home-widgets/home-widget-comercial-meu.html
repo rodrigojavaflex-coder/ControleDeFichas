@@ -2,9 +2,32 @@
   <div class="home-widget-head">
     <div class="home-widget-head-title">
       <h2 class="home-section-title">Meu desempenho</h2>
-      @if (cardCompetencia) {
-        <p class="home-dashboard-competencia">{{ cardCompetencia }}</p>
-      }
+      <div
+        class="home-competencia-nav"
+        role="group"
+        aria-label="Navegar competência">
+        <button
+          type="button"
+          class="btn btn-sm btn-primary home-competencia-nav-btn"
+          title="Mês anterior"
+          aria-label="Mês anterior"
+          [disabled]="cardCarregando || !podeMesAnterior"
+          (click)="navegarMesAnterior()">
+          <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        </button>
+        <p class="home-dashboard-competencia">
+          {{ cardCompetencia || '—' }}
+        </p>
+        <button
+          type="button"
+          class="btn btn-sm btn-primary home-competencia-nav-btn"
+          title="Próximo mês"
+          aria-label="Próximo mês"
+          [disabled]="cardCarregando || !podeMesProximo"
+          (click)="navegarMesProximo()">
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </button>
+      </div>
       <button
         type="button"
         class="btn btn-sm home-widget-btn-atualizar"

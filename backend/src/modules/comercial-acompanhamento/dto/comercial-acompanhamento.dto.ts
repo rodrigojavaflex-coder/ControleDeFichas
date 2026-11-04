@@ -650,6 +650,34 @@ export class FindComercialAcompanhamentoFiltroDiaDto {
   dataFinal?: string;
 }
 
+/**
+ * Query do card / detalhe "Meu desempenho" na home.
+ * Sem `ano`/`mes` → competência corrente (America/Sao_Paulo).
+ */
+export class FindComercialAcompanhamentoMeuDto extends FindComercialAcompanhamentoFiltroDiaDto {
+  @ApiPropertyOptional({
+    example: 2026,
+    description: 'Ano da competência (omitido = mês corrente).',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2026)
+  @Max(2033)
+  ano?: number;
+
+  @ApiPropertyOptional({
+    example: 11,
+    description: 'Mês da competência 1–12 (omitido = mês corrente).',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  mes?: number;
+}
+
 export class FindComercialAcompanhamentoUnidadeDetalheDto extends FindComercialAcompanhamentoFiltroDiaDto {
   @ApiProperty({ enum: Unidade })
   @IsEnum(Unidade)

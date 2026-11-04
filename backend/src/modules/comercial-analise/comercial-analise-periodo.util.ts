@@ -1,4 +1,7 @@
-import { proximoDiaIso } from '../../common/utils/data-date.util';
+import {
+  proximoDiaIso,
+  subtrairDiasIso,
+} from '../../common/utils/data-date.util';
 import {
   dowFromYmdSp,
   periodoCompetencia,
@@ -187,8 +190,121 @@ export function semanasMesCorrente(hoje: string): SemanaAnalise[] {
 }
 
 /**
- * Semanas candidatas do widget da home: mês corrente + mês anterior
- * (para cair na última semana com movimento quando a prévia está zerada).
+ * Rótulo padronizado da home: `25 a 31 Out` ou `26 Out a 01 Nov`.
+ * Dias com zero à esquerda; mês abreviado após o intervalo (ou em cada ponta se cruzar mês).
+ */
+export function rotuloIntervaloHome(inicio: string, fim: string): string {
+  const diaIni = Number(inicio.slice(8, 10));
+  const diaFim = Number(fim.slice(8, 10));
+  const mesIni = Number(inicio.slice(5, 7));
+  const mesFim = Number(fim.slice(5, 7));
+  if (
+    !Number.isFinite(diaIni) ||
+    !Number.isFinite(diaFim) ||
+    mesIni < 1 ||
+    mesIni > 12 ||
+    mesFim < 1 ||
+    mesFim > 12
+  ) {
+    return '';
+  }
+  const d1 = String(diaIni).padStart(2, '0');
+  const d2 = String(diaFim).padStart(2, '0');
+  const m1 = MESES_CURTO[mesIni - 1];
+  const m2 = MESES_CURTO[mesFim - 1];
+  if (inicio.slice(0, 7) === fim.slice(0, 7)) {
+    return `${d1} a ${d2} ${m2}`;
+  }
+  return `${d1} ${m1} a ${d2} ${m2}`;
+}
+
+function segundaDaSemana(hoje: string): string | null {
+  const dow = dowFromYmdSp(hoje); // 0=dom … 6=sáb
+  const diasDesdeSegunda = dow === 0 ? 6 : dow - 1;
+  return subtrairDiasIso(hoje, diasDesdeSegunda);
+}
+
+function montarSemanaHome(
+  segunda: string,
+  hoje: string,
+): SemanaAnalise | null {
+  const domingo = adicionarDias(segunda, 6);
+  if (!domingo || domingo < segunda) return null;
+  const previa = hoje >= segunda && hoje <= domingo;
+  const fim = previa ? hoje : domingo;
+  // Prévia: rejeitados seguem o fim do mês civil da data de hoje (igual ao modo semanas).
+  let fimRejeitado = domingo;
+  if (previa) {
+    const ano = Number(hoje.slice(0, 4));
+    const mes = Number(hoje.slice(5, 7));
+    fimRejeitado = periodoCompetencia(ano, mes).dataFinal;
+  }
+  const rotulo = rotuloIntervaloHome(segunda, domingo);
+  return {
+    key: `${segunda}_${fim}`,
+    inicio: segunda,
+    fim,
+    fimRejeitado,
+    label: previa ? `${rotulo} (prévia)` : rotulo,
+    labelCurto: rotulo,
+    previa,
+  };
+}
+
+/**
+ * Par de semanas do widget da home: semana calendário atual (seg–dom, sem
+ * cortar no mês; prévia até hoje) × semana calendário imediatamente anterior.
+ * Evita pedaços tipo "1 a 1" gerados por `semanasDaCompetencia`.
+ */
+export function parSemanasComparacaoHome(hoje: string): {
+  atual: SemanaAnalise;
+  anterior: SemanaAnalise | null;
+} | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hoje)) return null;
+  const segundaAtual = segundaDaSemana(hoje);
+  if (!segundaAtual) return null;
+  const atual = montarSemanaHome(segundaAtual, hoje);
+  if (!atual) return null;
+
+  const segundaAnterior = subtrairDiasIso(segundaAtual, 7);
+  const anterior = segundaAnterior
+    ? montarSemanaHome(segundaAnterior, hoje)
+    : null;
+
+  return { atual, anterior };
+}
+
+/**
+ * Duas últimas semanas **fechadas** (seg–dom completos) para o Δ estável
+ * do widget da home. A semana corrente (ainda em andamento) não entra.
+ * Ex.: terça 03/11 → atual 26/10–01/11 × anterior 19/10–25/10.
+ */
+export function parSemanasFechadasHome(hoje: string): {
+  atual: SemanaAnalise;
+  anterior: SemanaAnalise | null;
+} | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hoje)) return null;
+  const segundaCorrente = segundaDaSemana(hoje);
+  if (!segundaCorrente) return null;
+  const segundaFechada = subtrairDiasIso(segundaCorrente, 7);
+  if (!segundaFechada) return null;
+  const atual = montarSemanaHome(segundaFechada, hoje);
+  if (!atual || atual.previa) return null;
+
+  const segundaAnterior = subtrairDiasIso(segundaFechada, 7);
+  const anterior = segundaAnterior
+    ? montarSemanaHome(segundaAnterior, hoje)
+    : null;
+  if (anterior?.previa) {
+    return { atual, anterior: null };
+  }
+
+  return { atual, anterior };
+}
+
+/**
+ * @deprecated Preferir `parSemanasComparacaoHome` no widget.
+ * Mantido para testes/legado: mês corrente + mês anterior (cortados no mês).
  */
 export function semanasCandidatasHome(hoje: string): SemanaAnalise[] {
   const ano = Number(hoje.slice(0, 4));

@@ -27,6 +27,37 @@
 
 .home-widget-head .home-dashboard-competencia {
   margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  white-space: nowrap;
+}
+
+.home-competencia-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+/* Mesmo padrão visual do "Ver mais" (btn-primary + altura compacta). */
+.home-competencia-nav-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.85rem;
+  min-width: 1.85rem;
+  min-height: 1.85rem;
+  padding: 0 !important;
+  white-space: nowrap;
+  font-size: 0.78rem !important;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.home-competencia-nav-btn i {
+  font-size: 0.75rem;
 }
 
 .home-widget-btn-atualizar {

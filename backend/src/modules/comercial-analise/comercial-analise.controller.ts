@@ -50,7 +50,7 @@ export class ComercialAnaliseController {
   @Permissions(Permission.COMERCIAL_ANALISE_HOME)
   @ApiOperation({
     summary:
-      'Resumo da home: semana atual × anterior (Total vendido / valor / vendedor)',
+      'Resumo da home: Δ das 2 últimas semanas fechadas (RN-COM-009)',
   })
   @ApiResponse({ status: 200, type: ComercialAnaliseHomeResponseDto })
   home(

@@ -14,7 +14,7 @@ import {
   COMERCIAL_ANALISE_ANO_MIN,
   listarCompetenciasAnalise,
   parseCompetenciaKey,
-  semanasCandidatasHome,
+  parSemanasFechadasHome,
   semanasDaCompetencia,
   semanasMesCorrente,
 } from './comercial-analise-periodo.util';
@@ -102,9 +102,9 @@ export class ComercialAnaliseService {
   }
 
   /**
-   * Resumo da home: última semana **com movimento** × a anterior
-   * (Total vendido / valor / vendedor). Escopo fixo → 1 card; sem unidade →
-   * um card por loja. Reusa `carregar` + `linhaComparar` — sem fórmula paralela.
+   * Resumo da home (RN-COM-009): Δ das 2 últimas semanas fechadas
+   * (seg–dom; prévia corrente fora). Escopo fixo → 1 card; sem unidade →
+   * um card por loja.
    */
   async resumoHome(usuario: Usuario): Promise<ComercialAnaliseHomeResponseDto> {
     const unidades = this.unidadesDoEscopo(usuario);
@@ -118,15 +118,13 @@ export class ComercialAnaliseService {
     }
 
     const hoje = ymdHojeSp();
-    const semanas = semanasCandidatasHome(hoje);
-    if (!semanas.length) {
+    const par = parSemanasFechadasHome(hoje);
+    if (!par) {
       throw new BadRequestException(
-        'Não há semanas no período para analisar.',
+        'Não há semanas fechadas no período para analisar.',
       );
     }
-
-    const { semanaAtual, semanaAnterior } =
-      await this.resolverSemanasHomeComMovimento(unidades, semanas);
+    const { atual: semanaAtual, anterior: semanaAnterior } = par;
 
     const itens = await Promise.all(
       unidades.map((unidade) =>
@@ -144,54 +142,6 @@ export class ComercialAnaliseService {
       temComparacao: !!semanaAnterior,
       itens,
     };
-  }
-
-  /**
-   * Percorre as semanas do fim para o início e escolhe a última com
-   * Total vendido ou rejeitado > 0 em qualquer unidade do escopo.
-   */
-  private async resolverSemanasHomeComMovimento(
-    unidades: Unidade[],
-    semanas: SemanaAnalise[],
-  ): Promise<{
-    semanaAtual: SemanaAnalise;
-    semanaAnterior: SemanaAnalise | null;
-  }> {
-    const dimensao: ComercialAnaliseDimensao = 'vendedor';
-    for (let i = semanas.length - 1; i >= 0; i -= 1) {
-      const candidata = semanas[i];
-      const mapas = await Promise.all(
-        unidades.map(async (unidade) => {
-          const [mapa] = await this.carregarVarios(
-            [unidade],
-            [this.recorteSemana(candidata)],
-            dimensao,
-          );
-          return mapa;
-        }),
-      );
-      if (mapas.some((m) => this.mapaTemMovimentoHome(m))) {
-        return {
-          semanaAtual: candidata,
-          semanaAnterior: i > 0 ? semanas[i - 1] : null,
-        };
-      }
-    }
-    // Nenhuma semana com movimento: mantém a mais recente (comportamento anterior).
-    const ultimo = semanas.length - 1;
-    return {
-      semanaAtual: semanas[ultimo],
-      semanaAnterior: ultimo > 0 ? semanas[ultimo - 1] : null,
-    };
-  }
-
-  private mapaTemMovimentoHome(mapa: MapaItens): boolean {
-    for (const item of mapa.values()) {
-      const vendido = this.par(item, 'totalVendido').valor;
-      const rejeitado = this.par(item, 'rejeitado').valor;
-      if (vendido > 0 || rejeitado > 0) return true;
-    }
-    return false;
   }
 
   private async montarCardHomeUnidade(
@@ -227,13 +177,13 @@ export class ComercialAnaliseService {
     const vendas = ids.map((id) =>
       this.linhaComparar(id, mapa1, mapa2, base, metrica),
     );
-    const crescimento = this.ordenarCrescimento(vendas);
-    const queda = this.ordenarQueda(vendas);
 
     return {
       unidade,
-      maiorCrescimento: this.destaqueDeLinha(crescimento[0] ?? null),
-      maiorQueda: this.destaqueDeLinha(queda[0] ?? null),
+      maiorCrescimento: this.destaqueDeLinha(
+        this.ordenarCrescimento(vendas)[0] ?? null,
+      ),
+      maiorQueda: this.destaqueDeLinha(this.ordenarQueda(vendas)[0] ?? null),
       maiorRejeitado: this.destaqueRejeitadoSemana(mapa2),
     };
   }

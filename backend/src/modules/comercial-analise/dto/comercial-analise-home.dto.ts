@@ -10,7 +10,7 @@ export class ComercialAnaliseHomeDestaqueDto {
   @ApiProperty()
   nomeVendedor: string;
 
-  @ApiProperty({ description: 'Δ em R$ (semana atual − anterior).' })
+  @ApiProperty({ description: 'Δ em R$ (semana foco − anterior).' })
   delta: number;
 
   @ApiPropertyOptional({
@@ -19,11 +19,11 @@ export class ComercialAnaliseHomeDestaqueDto {
   })
   percentual: number | null;
 
-  @ApiProperty({ description: 'Valor (Total vendido) na semana atual.' })
+  @ApiProperty({ description: 'Valor (Total vendido) na semana foco.' })
   valorSemanaAtual: number;
 }
 
-/** Vendedor com maior rejeitado na semana atual (valor, não Δ). */
+/** Vendedor com maior rejeitado na semana foco (valor, não Δ). */
 export class ComercialAnaliseHomeRejeitadoDto {
   @ApiProperty()
   funcionarioId: string;
@@ -31,7 +31,7 @@ export class ComercialAnaliseHomeRejeitadoDto {
   @ApiProperty()
   nomeVendedor: string;
 
-  @ApiProperty({ description: 'Valor rejeitado na semana atual.' })
+  @ApiProperty({ description: 'Valor rejeitado na semana foco.' })
   valor: number;
 }
 
@@ -61,8 +61,8 @@ export class ComercialAnaliseHomeUnidadeCardDto {
 
 /**
  * Resumo enxuto para o widget da home (RN-COM-009).
- * Sempre: modo semanas, base Total vendido, métrica valor, dimensão vendedor.
- * Escopo fixo → 1 card; sem unidade → um card por loja do enum.
+ * Sempre: base Total vendido, métrica valor, dimensão vendedor.
+ * Compara as **duas últimas semanas fechadas** (seg–dom).
  */
 export class ComercialAnaliseHomeResponseDto {
   @ApiProperty({ type: ComercialAnalisePeriodoDto })
@@ -71,7 +71,7 @@ export class ComercialAnaliseHomeResponseDto {
   @ApiPropertyOptional({
     type: ComercialAnalisePeriodoDto,
     nullable: true,
-    description: 'Null se o mês ainda não tem semana anterior para comparar.',
+    description: 'Null se ainda não houver semana anterior fechada.',
   })
   semanaAnterior: ComercialAnalisePeriodoDto | null;
 
