@@ -22,6 +22,7 @@ import {
   isCodEtapaGestao,
 } from '../../common/constants/producao-gestao.constants';
 import { ProducaoCertificadosService } from '../producao-certificados/producao-certificados.service';
+import { repararDescricaoEtapaExibicao } from '../../common/utils/encoding-legado.util';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import { Permission } from '../../common/enums/permission.enum';
 import {
@@ -221,7 +222,7 @@ export class ProducaoProdutividadeService {
     for (const item of remuneradas) {
       remuneracaoPorUnidadeEtapa.set(`${item.unidade}:${item.codEtapa}`, {
         valor: Number(item.valor) || 0,
-        etapa: item.etapa,
+        etapa: repararDescricaoEtapaExibicao(item.etapa),
       });
     }
 
@@ -301,7 +302,7 @@ export class ProducaoProdutividadeService {
           if (!nomeEtapaPorCodEtapa.has(row.codEtapa)) {
             nomeEtapaPorCodEtapa.set(
               row.codEtapa,
-              remBase.etapa || row.etapa,
+              repararDescricaoEtapaExibicao(remBase.etapa || row.etapa),
             );
           }
         }
@@ -339,7 +340,7 @@ export class ProducaoProdutividadeService {
           semEtapaVinculadaPorFuncionario,
           funcionario,
           row,
-          rem.etapa || row.etapa,
+          repararDescricaoEtapaExibicao(rem.etapa || row.etapa),
         );
         continue;
       }
@@ -381,7 +382,7 @@ export class ProducaoProdutividadeService {
       } else {
         acc.etapas.set(row.codEtapa, {
           codEtapa: row.codEtapa,
-          etapa: rem.etapa || row.etapa,
+          etapa: repararDescricaoEtapaExibicao(rem.etapa || row.etapa),
           quantidade: 1,
           valorTotal: rem.valor,
         });
@@ -617,7 +618,7 @@ export class ProducaoProdutividadeService {
     for (const item of remuneradas) {
       remuneracaoPorUnidadeEtapa.set(`${item.unidade}:${item.codEtapa}`, {
         valor: Number(item.valor) || 0,
-        etapa: item.etapa,
+        etapa: repararDescricaoEtapaExibicao(item.etapa),
       });
     }
 
@@ -697,7 +698,7 @@ export class ProducaoProdutividadeService {
         funcionario: funcionario.nome?.trim() || 'Nome não informado',
         unidade: row.unidade,
         codEtapa: row.codEtapa,
-        etapa: rem.etapa || row.etapa,
+        etapa: repararDescricaoEtapaExibicao(rem.etapa || row.etapa),
         requisicao: row.requisicao,
         formula: row.formula,
         data: row.dataSaida ?? '',
@@ -775,7 +776,7 @@ export class ProducaoProdutividadeService {
       etapaAcc.linhas += 1;
     } else {
       acc.etapas.set(row.codEtapa, {
-        etapa: nomeEtapa?.trim() || row.codEtapa,
+        etapa: repararDescricaoEtapaExibicao(nomeEtapa) || row.codEtapa,
         linhas: 1,
       });
     }
@@ -1104,7 +1105,9 @@ export class ProducaoProdutividadeService {
   private formatarAmostraRequisicao(row: ProducaoEtapaResumo): string {
     const formula = row.formula?.trim() || '0';
     const etapa =
-      row.etapa?.trim() || row.codEtapa?.trim() || 'Etapa não informada';
+      repararDescricaoEtapaExibicao(row.etapa) ||
+      row.codEtapa?.trim() ||
+      'Etapa não informada';
     return `${row.requisicao}-${formula} ${etapa}`;
   }
 
@@ -1121,7 +1124,7 @@ export class ProducaoProdutividadeService {
       etapas: [...acc.etapas.entries()]
         .map(([codEtapa, item]) => ({
           codEtapa,
-          etapa: item.etapa,
+          etapa: repararDescricaoEtapaExibicao(item.etapa),
           linhas: item.linhas,
         }))
         .sort((a, b) => {

@@ -315,6 +315,30 @@ export function padronizarDescricaoLegado(
   }
 }
 
+/**
+ * Nomes de etapa já gravados com U+FFFD (node-firebird trocou o byte WIN1252).
+ * ÇÃO vira dois FFFD antes do O; É/Ê isolados viram um FFFD.
+ * Não reinterpreta texto válido (Ç/Ã já corretos).
+ */
+export function repararDescricaoEtapaExibicao(
+  str: string | null | undefined,
+): string {
+  if (!str?.trim()) return '';
+
+  const texto = str
+    .trim()
+    .replace(/\uFFFD\uFFFDO(?=\s|$)/g, 'ÇÃO')
+    .replace(/FARMAC\uFFFD(?=U)/gi, 'FARMACÉ')
+    .replace(/SACH\uFFFD(?=\s|$)/gi, 'SACHÊ')
+    .replace(/\s+/g, ' ');
+
+  try {
+    return texto.toLocaleUpperCase('pt-BR');
+  } catch {
+    return texto.toUpperCase();
+  }
+}
+
 export function normalizarTextoLegado(
   str: string | null | undefined,
   sourceCharset: string = 'NONE',
