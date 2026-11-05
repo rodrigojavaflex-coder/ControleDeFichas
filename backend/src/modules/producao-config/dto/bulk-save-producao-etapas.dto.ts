@@ -24,8 +24,7 @@ export class ProducaoEtapaRemuneracaoItemDto {
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
-  @Length(1, 200)
+  @Length(0, 200)
   etapa: string;
 
   @ApiProperty()

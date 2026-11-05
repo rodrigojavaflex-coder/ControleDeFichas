@@ -117,13 +117,20 @@ export class ProducaoConfigService {
     const rows: ProducaoEtapaRemuneracaoRow[] = [];
 
     for (const raw of distinctRaw) {
+      if (!raw.codEtapa?.trim() || !String(raw.etapa ?? '').trim()) {
+        continue;
+      }
       codigosVistos.add(raw.codEtapa);
       const cfg = configMap.get(raw.codEtapa);
       rows.push(this.mergeEtapaRow(raw, cfg));
     }
 
     for (const cfg of configs) {
-      if (!codigosVistos.has(cfg.codEtapa) && !isCodEtapaGestao(cfg.codEtapa)) {
+      if (
+        !codigosVistos.has(cfg.codEtapa) &&
+        !isCodEtapaGestao(cfg.codEtapa) &&
+        (isCodEtapaCertificados(cfg.codEtapa) || Boolean(cfg.etapa?.trim()))
+      ) {
         rows.push({
           codEtapa: cfg.codEtapa,
           etapa: cfg.etapa,
@@ -156,14 +163,22 @@ export class ProducaoConfigService {
   ): Promise<ProducaoEtapaRemuneracaoRow[]> {
     assertUnidadeFolha(usuario, dto.unidade);
 
-    const codigos = dto.itens.map((i) => i.codEtapa);
+    const itens = dto.itens.filter((item) => {
+      const manual =
+        isCodEtapaGestao(item.codEtapa) ||
+        item.tipoCalculo === ProducaoEtapaTipoCalculo.GESTAO ||
+        isCodEtapaCertificados(item.codEtapa) ||
+        item.tipoCalculo === ProducaoEtapaTipoCalculo.CERTIFICADO;
+      return manual || Boolean(item.etapa?.trim());
+    });
+    const codigos = itens.map((i) => i.codEtapa);
     if (codigos.length !== new Set(codigos).size) {
       throw new BadRequestException('Etapa duplicada na lista enviada.');
     }
 
     await this.dataSource.transaction(async (manager) => {
       const repo = manager.getRepository(ProducaoEtapaRemuneracao);
-      for (const item of dto.itens) {
+      for (const item of itens) {
         const recebe = item.recebe === true;
         const valor = recebe ? Math.max(0, Number(item.valor) || 0) : 0;
         const isGestao =

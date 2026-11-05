@@ -696,7 +696,7 @@
 
 ### RN-PCP-002 — Remuneração por etapa (config permanente)
 
-- Tela **`/producao/config`**: lista etapas distintas do histórico (`producao_etapas_resumo`) por unidade, ordenadas por `posicaoEtapa`.
+- Tela **`/producao/config`**: lista etapas distintas do histórico (`producao_etapas_resumo`) por unidade, ordenadas por `posicaoEtapa`. Linha do histórico **sem nome** não entra na lista e é ignorada no salvamento em lote.
 - Persistência: `producao_etapa_remuneracao`; chave `unidade + cod_etapa`.
 - Campos: `recebe` (boolean) e `valor` (unitário por etapa concluída). Se `recebe = false`, valor deve ser zero. Se `recebe = true`, **valor obrigatório e maior que zero**.
 - Filtro na UI: exibir **Todas**, **Recebe** ou **Não recebe**.

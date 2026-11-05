@@ -854,12 +854,21 @@ export class ProducaoConfigPage implements OnInit {
       tipoCalculo?: ProducaoEtapaTipoCalculo;
     }[],
   ): ProducaoEtapaEditRow[] {
-    return lista.map((e) => ({
-      ...e,
-      valor: Number(e.valor) || 0,
-      valorDisplay: this.formatarMoeda(Number(e.valor) || 0),
-      dirty: false,
-    }));
+    return lista
+      .filter(
+        (e) =>
+          Boolean(e.etapa?.trim()) ||
+          e.codEtapa === PRODUCAO_COD_ETAPA_GESTAO ||
+          e.codEtapa === PRODUCAO_COD_ETAPA_CERTIFICADOS ||
+          e.tipoCalculo === 'gestao' ||
+          e.tipoCalculo === 'certificado',
+      )
+      .map((e) => ({
+        ...e,
+        valor: Number(e.valor) || 0,
+        valorDisplay: this.formatarMoeda(Number(e.valor) || 0),
+        dirty: false,
+      }));
   }
 
   private parseMoeda(texto: string): number {
