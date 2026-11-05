@@ -23,6 +23,7 @@ import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.servic
 import { ProducaoEtapasLimpezaService } from './producao-etapas-limpeza.service';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { FechamentoCaixaModule } from '../fechamento-caixa/fechamento-caixa.module';
+import { ProducaoCertificadosModule } from '../producao-certificados/producao-certificados.module';
 import { RepararNomesMedicosService } from './reparar-nomes-medicos.service';
 import { ImportarProfissaoPrescritoresService } from './importar-profissao-prescritores.service';
 import { BackfillPfcrmRetratosService } from './backfill-pfcrm-retratos.service';
@@ -48,6 +49,7 @@ import { VisitacaoFechamentoCarteira } from '../visitacao-acompanhamento/entitie
     ConfigModule,
     ScheduleModule.forRoot(),
     FechamentoCaixaModule,
+    ProducaoCertificadosModule,
   ],
   controllers: [SincronizacaoConfigController, SincronizacaoController],
   providers: [

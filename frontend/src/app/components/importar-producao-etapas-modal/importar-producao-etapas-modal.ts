@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Output, inject, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { Unidade } from '../../models/usuario.model';
@@ -53,6 +53,13 @@ export class ImportarProducaoEtapasModalComponent implements OnDestroy {
   importacaoProgress: ImportacaoManualProgress | null = null;
 
   @Output() importacaoConcluida = new EventEmitter<void>();
+  @Input() destino: 'etapas' | 'certificados' = 'etapas';
+
+  get titulo(): string {
+    return this.destino === 'certificados'
+      ? 'Buscar certificados por período'
+      : 'Buscar etapas por período';
+  }
 
   ngOnDestroy(): void {
     this.pararPollingProgresso();
@@ -125,13 +132,20 @@ export class ImportarProducaoEtapasModalComponent implements OnDestroy {
     this.importacaoProgress = null;
     this.iniciarPollingProgresso();
 
-    this.sincronizacaoService
-      .importarProducaoEtapas({
-        unidade: this.unidade,
-        dataInicio: this.dataInicio,
-        dataFim: this.dataFim,
-      })
-      .subscribe({
+    const req =
+      this.destino === 'certificados'
+        ? this.sincronizacaoService.importarProducaoCertificados({
+            unidade: this.unidade,
+            dataInicio: this.dataInicio,
+            dataFim: this.dataFim,
+          })
+        : this.sincronizacaoService.importarProducaoEtapas({
+            unidade: this.unidade,
+            dataInicio: this.dataInicio,
+            dataFim: this.dataFim,
+          });
+
+    req.subscribe({
         next: (importResult) => {
           this.result = importResult;
           this.loading = false;
@@ -146,9 +160,14 @@ export class ImportarProducaoEtapasModalComponent implements OnDestroy {
             (Array.isArray(err?.error?.message)
               ? err.error.message.join(', ')
               : null) ||
-            'Não foi possível importar as etapas de produção. Verifique o agente e tente novamente.';
+            'Não foi possível importar. Verifique o agente e tente novamente.';
           this.error = msg;
-          this.errorModalService.show(msg, 'Importar etapas de produção');
+          this.errorModalService.show(
+            msg,
+            this.destino === 'certificados'
+              ? 'Importar certificados de análise'
+              : 'Importar etapas de produção',
+          );
         },
       });
   }

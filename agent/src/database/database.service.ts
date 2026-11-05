@@ -3074,6 +3074,113 @@ export class DatabaseService {
     });
   }
 
+  /**
+   * RN-PCP-013: certificados de análise (FC21000) por filial e data do certificado.
+   * Um registro por NRCER. Sem filtro de tipo. DTCER é DATE (BETWEEN inclusivo).
+   */
+  async buscarCertificadosAnalise(
+    unit: number,
+    start: string,
+    end: string,
+  ): Promise<
+    {
+      numero: number;
+      filial: number;
+      codigoProduto: number | null;
+      tipo: string | null;
+      dataCertificado: string | null;
+      dataFabricacao: string | null;
+      dataValidade: string | null;
+      funcionarioCodigo: number | null;
+      produtoNome: string | null;
+    }[]
+  > {
+    const sql = `
+      SELECT
+        c.nrcer AS numero,
+        c.cdfil AS filial,
+        c.cdpro AS codigo_produto,
+        TRIM(c.tpcer) AS tipo,
+        c.dtcer AS data_certificado,
+        c.dtfab AS data_fabricacao,
+        c.dtval AS data_validade,
+        c.cdfun AS funcionario_codigo,
+        ${this.sqlTextoOctets('p.descrprd', 'produto_nome', 120)}
+      FROM fc21000 c
+      LEFT JOIN fc03000 p ON p.cdpro = c.cdpro
+      WHERE c.cdfil = ?
+        AND c.dtcer BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
+      ORDER BY c.dtcer, c.nrcer
+    `;
+    const connectOptions = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    return new Promise((resolve, reject) => {
+      Firebird.attach(connectOptions, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+        const t0 = Date.now();
+        db.query(sql, [unit, start, end], (queryErr: Error, result: any[]) => {
+          db.detach();
+          if (queryErr) {
+            return reject(
+              new InternalServerErrorException(
+                `Erro ao consultar certificados de análise: ${queryErr.message}`,
+              ),
+            );
+          }
+          const linhas = (result ?? []).map((row) => {
+            const converted = converterObjetoFirebird(
+              row,
+              charset,
+            ) as Record<string, unknown>;
+            const get = (key: string) =>
+              converted[key] ??
+              converted[key.toLowerCase()] ??
+              converted[key.toUpperCase()];
+            const inteiro = (value: unknown): number | null => {
+              const n = Number(value);
+              if (!Number.isFinite(n) || n <= 0) return null;
+              return Math.trunc(n);
+            };
+            const data = (value: unknown): string | null => {
+              if (value instanceof Date && !isNaN(value.getTime())) {
+                const pad = (n: number) => String(n).padStart(2, '0');
+                return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+              }
+              const texto = value == null ? '' : String(value).trim();
+              const match = texto.match(/^(\d{4}-\d{2}-\d{2})/);
+              return match ? match[1] : null;
+            };
+            const tipoBruto = get('tipo');
+            const tipo =
+              tipoBruto == null || String(tipoBruto).trim() === ''
+                ? null
+                : String(tipoBruto).trim();
+            return {
+              numero: inteiro(get('numero')) ?? 0,
+              filial: inteiro(get('filial')) ?? unit,
+              codigoProduto: inteiro(get('codigo_produto')),
+              tipo,
+              dataCertificado: data(get('data_certificado')),
+              dataFabricacao: data(get('data_fabricacao')),
+              dataValidade: data(get('data_validade')),
+              funcionarioCodigo: inteiro(get('funcionario_codigo')),
+              produtoNome: this.textoCampoFirebird(get('produto_nome')) || null,
+            };
+          });
+          this.logger.log(
+            `Certificados FC21000: ${linhas.length} registro(s) (cdfil=${unit}, ${start}..${end}, ${Date.now() - t0}ms)`,
+          );
+          resolve(linhas);
+        });
+      });
+    });
+  }
+
   /** RN-PCP-008: exclusões de fórmula (módulo RECEITAS) na janela de datas. */
   async buscarExclusoesReceitas(
     unit: number,

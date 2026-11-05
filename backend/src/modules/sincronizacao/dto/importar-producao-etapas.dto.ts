@@ -32,3 +32,11 @@ export class ImportarProducaoEtapasResponseDto {
   @ApiProperty({ type: [String] })
   erros: string[];
 }
+
+export class ImportarProducaoCertificadosResponseDto extends ImportarProducaoEtapasResponseDto {
+  @ApiProperty()
+  removidos: number;
+
+  @ApiProperty()
+  ignorados: number;
+}

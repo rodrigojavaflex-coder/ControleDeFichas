@@ -69,6 +69,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
 
   @ViewChild('caixaErpModal') caixaErpModal?: ImportarCaixaErpModalComponent;
   @ViewChild('etapasModal') etapasModal?: ImportarProducaoEtapasModalComponent;
+  @ViewChild('certificadosModal') certificadosModal?: ImportarProducaoEtapasModalComponent;
   @ViewChild('limparEtapasModal') limparEtapasModal?: LimparProducaoEtapasModalComponent;
   @ViewChild('orcamentosModal') orcamentosModal?: ImportarOrcamentosModalComponent;
   @ViewChild('repararNomesMedicosModal')
@@ -141,6 +142,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     painelContrato: string | number;
     painelRepresentantes: string;
     ultimaModificacaoProducaoEtapas: string;
+    ultimaModificacaoProducaoCertificados: string;
     intervaloMinutos: number;
     overlapDiasProducaoEtapas: number;
     nivelLogSync: SincronizacaoNivelLog;
@@ -302,6 +304,15 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
     this.etapasModal?.abrir();
   }
 
+  abrirModalImportarCertificados(): void {
+    this.certificadosModal?.abrir();
+  }
+
+  onImportacaoCertificadosConcluida(): void {
+    this.success = 'Importação de certificados de análise concluída.';
+    this.error = null;
+  }
+
   onImportacaoEtapasConcluida(): void {
     this.success = 'Importação de etapas de produção concluída.';
     this.error = null;
@@ -370,6 +381,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
             : undefined,
           ultimaModificacaoProducaoEtapas: config.ultimaModificacaoProducaoEtapas
             ? this.normalizarDateTime(config.ultimaModificacaoProducaoEtapas)
+            : undefined,
+          ultimaModificacaoProducaoCertificados: config.ultimaModificacaoProducaoCertificados
+            ? this.normalizarDateTime(config.ultimaModificacaoProducaoCertificados)
             : undefined,
         }));
         this.sincronizacaoLoading = false;
@@ -711,6 +725,7 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       painelContrato: painel.contrato,
       painelRepresentantes: painel.representantes,
       ultimaModificacaoProducaoEtapas: this.normalizarDateTime(config?.ultimaModificacaoProducaoEtapas) || '',
+      ultimaModificacaoProducaoCertificados: this.normalizarDateTime(config?.ultimaModificacaoProducaoCertificados) || '',
       intervaloMinutos: config?.intervaloMinutos || 60,
       overlapDiasProducaoEtapas: config?.overlapDiasProducaoEtapas ?? 5,
       nivelLogSync: config?.nivelLogSync ?? 'todos',
@@ -754,6 +769,9 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
       painelContratoRepresentantes,
       ultimaModificacaoProducaoEtapas: formData.ultimaModificacaoProducaoEtapas
         ? this.dateTimeParaBackend(formData.ultimaModificacaoProducaoEtapas)
+        : null,
+      ultimaModificacaoProducaoCertificados: formData.ultimaModificacaoProducaoCertificados
+        ? this.dateTimeParaBackend(formData.ultimaModificacaoProducaoCertificados)
         : null,
       intervaloMinutos: formData.intervaloMinutos,
       overlapDiasProducaoEtapas: formData.overlapDiasProducaoEtapas ?? 5,

@@ -28,6 +28,17 @@ export class ProducaoFuncionarioGestaoConfigDto {
   opcoesBase: ProducaoFuncionarioGestaoBaseOpcaoDto[];
 }
 
+export class ProducaoFuncionarioCertificadosConfigDto {
+  @ApiProperty()
+  disponivel: boolean;
+
+  @ApiProperty()
+  recebe: boolean;
+
+  @ApiProperty()
+  valor: number;
+}
+
 export class ProducaoFuncionarioEtapasResponseDto {
   @ApiProperty({ type: [Object] })
   etapas: {
@@ -41,4 +52,10 @@ export class ProducaoFuncionarioEtapasResponseDto {
 
   @ApiProperty({ type: ProducaoFuncionarioGestaoConfigDto, nullable: true })
   gestao: ProducaoFuncionarioGestaoConfigDto | null;
+
+  @ApiProperty({
+    type: ProducaoFuncionarioCertificadosConfigDto,
+    nullable: true,
+  })
+  certificados: ProducaoFuncionarioCertificadosConfigDto | null;
 }

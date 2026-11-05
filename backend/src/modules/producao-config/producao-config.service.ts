@@ -27,12 +27,16 @@ import {
 import {
   PRODUCAO_COD_ETAPA_GESTAO,
   PRODUCAO_NOME_ETAPA_GESTAO,
+  PRODUCAO_COD_ETAPA_CERTIFICADOS,
+  PRODUCAO_NOME_ETAPA_CERTIFICADOS,
   ProducaoEtapaTipoCalculo,
   isCodEtapaGestao,
+  isCodEtapaCertificados,
 } from '../../common/constants/producao-gestao.constants';
 import {
   ProducaoFuncionarioEtapasResponseDto,
   ProducaoFuncionarioGestaoConfigDto,
+  ProducaoFuncionarioCertificadosConfigDto,
 } from './dto/producao-funcionario-etapas-response.dto';
 import {
   AtualizarCodigoUsuarioErpProducaoDto,
@@ -131,6 +135,10 @@ export class ProducaoConfigService {
       }
     }
 
+    this.ensureCertificadosRow(
+      rows,
+      configMap.get(PRODUCAO_COD_ETAPA_CERTIFICADOS),
+    );
     this.ensureGestaoRow(rows, configMap.get(PRODUCAO_COD_ETAPA_GESTAO));
 
     rows.sort(
@@ -161,6 +169,9 @@ export class ProducaoConfigService {
         const isGestao =
           isCodEtapaGestao(item.codEtapa) ||
           item.tipoCalculo === ProducaoEtapaTipoCalculo.GESTAO;
+        const isCertificado =
+          isCodEtapaCertificados(item.codEtapa) ||
+          item.tipoCalculo === ProducaoEtapaTipoCalculo.CERTIFICADO;
         if (recebe && valor <= 0) {
           throw new BadRequestException(
             `Informe valor maior que zero para a etapa «${item.etapa.trim()}» marcada como Recebe.`,
@@ -172,18 +183,30 @@ export class ProducaoConfigService {
         if (!entity) {
           entity = repo.create({
             unidade: dto.unidade,
-            codEtapa: isGestao ? PRODUCAO_COD_ETAPA_GESTAO : item.codEtapa,
+            codEtapa: isGestao
+              ? PRODUCAO_COD_ETAPA_GESTAO
+              : isCertificado
+                ? PRODUCAO_COD_ETAPA_CERTIFICADOS
+                : item.codEtapa,
           });
         }
         entity.etapa = isGestao
           ? PRODUCAO_NOME_ETAPA_GESTAO
-          : item.etapa.trim();
-        entity.posicaoEtapa = isGestao ? 99999 : Number(item.posicaoEtapa) || 0;
+          : isCertificado
+            ? PRODUCAO_NOME_ETAPA_CERTIFICADOS
+            : item.etapa.trim();
+        entity.posicaoEtapa = isGestao
+          ? 99999
+          : isCertificado
+            ? 99998
+            : Number(item.posicaoEtapa) || 0;
         entity.recebe = recebe;
         entity.valor = String(valor);
         entity.tipoCalculo = isGestao
           ? ProducaoEtapaTipoCalculo.GESTAO
-          : ProducaoEtapaTipoCalculo.ERP;
+          : isCertificado
+            ? ProducaoEtapaTipoCalculo.CERTIFICADO
+            : ProducaoEtapaTipoCalculo.ERP;
         await repo.save(entity);
       }
     });
@@ -260,7 +283,12 @@ export class ProducaoConfigService {
     const funcMap = new Map(configsFunc.map((c) => [c.codEtapa, c]));
 
     const etapasErp = etapas
-      .filter((e) => e.recebe && !isCodEtapaGestao(e.codEtapa))
+      .filter(
+        (e) =>
+          e.recebe &&
+          !isCodEtapaGestao(e.codEtapa) &&
+          !isCodEtapaCertificados(e.codEtapa),
+      )
       .map((e) => ({
         codEtapa: e.codEtapa,
         etapa: e.etapa,
@@ -271,8 +299,12 @@ export class ProducaoConfigService {
       }));
 
     const gestao = this.montarGestaoConfigFuncionario(etapas, funcMap);
+    const certificados = this.montarCertificadosConfigFuncionario(
+      etapas,
+      funcMap,
+    );
 
-    return { etapas: etapasErp, gestao };
+    return { etapas: etapasErp, gestao, certificados };
   }
 
   async atualizarCodigoUsuarioErp(
@@ -337,11 +369,17 @@ export class ProducaoConfigService {
 
     const etapasRemuneradas = await this.listarEtapas(usuario, dto.unidade);
     const remuneradasErp = etapasRemuneradas.filter(
-      (e) => e.recebe && !isCodEtapaGestao(e.codEtapa),
+      (e) =>
+        e.recebe &&
+        !isCodEtapaGestao(e.codEtapa) &&
+        !isCodEtapaCertificados(e.codEtapa),
     );
     const remuneradasSet = new Set(remuneradasErp.map((e) => e.codEtapa));
     const gestaoRemunerada = etapasRemuneradas.find(
       (e) => isCodEtapaGestao(e.codEtapa) && e.recebe,
+    );
+    const certificadosRemunerada = etapasRemuneradas.find(
+      (e) => isCodEtapaCertificados(e.codEtapa) && e.recebe,
     );
 
     const codigos = dto.itens.map((i) => i.codEtapa);
@@ -353,6 +391,11 @@ export class ProducaoConfigService {
       if (isCodEtapaGestao(item.codEtapa)) {
         throw new BadRequestException(
           'Use o bloco Gestão para configurar a etapa GESTÃO.',
+        );
+      }
+      if (isCodEtapaCertificados(item.codEtapa)) {
+        throw new BadRequestException(
+          'Use o bloco Certificados para configurar essa etapa.',
         );
       }
       if (item.recebe && !remuneradasSet.has(item.codEtapa)) {
@@ -381,6 +424,12 @@ export class ProducaoConfigService {
       }
     }
 
+    if (dto.certificados?.recebe && !certificadosRemunerada) {
+      throw new BadRequestException(
+        'A etapa Certificados não está remunerada na unidade.',
+      );
+    }
+
     await this.dataSource.transaction(async (manager) => {
       const repo = manager.getRepository(ProducaoFuncionarioEtapa);
       await repo.delete({ funcionario: { id: funcionarioId } });
@@ -405,6 +454,18 @@ export class ProducaoConfigService {
             codEtapa: PRODUCAO_COD_ETAPA_GESTAO,
             recebe: true,
             codEtapaReferencia: dto.gestao.codEtapaReferencia!.trim(),
+          }),
+        );
+      }
+
+      if (dto.certificados?.recebe && certificadosRemunerada) {
+        toSave.push(
+          repo.create({
+            unidade: dto.unidade,
+            funcionario: { id: funcionarioId } as Funcionario,
+            codEtapa: PRODUCAO_COD_ETAPA_CERTIFICADOS,
+            recebe: true,
+            codEtapaReferencia: null,
           }),
         );
       }
@@ -499,7 +560,12 @@ export class ProducaoConfigService {
 
     const etapasRemuneradas = (
       await this.listarEtapas(usuario, dto.unidade)
-    ).filter((e) => e.recebe && !isCodEtapaGestao(e.codEtapa));
+    ).filter(
+      (e) =>
+        e.recebe &&
+        !isCodEtapaGestao(e.codEtapa) &&
+        !isCodEtapaCertificados(e.codEtapa),
+    );
     if (etapasRemuneradas.length === 0) {
       throw new BadRequestException(
         'Nenhuma etapa remunerada configurada na unidade.',
@@ -515,6 +581,14 @@ export class ProducaoConfigService {
       const repo = manager.getRepository(ProducaoFuncionarioEtapa);
 
       for (const funcionario of alvo) {
+        const vinculoCertificados = await repo.findOne({
+          where: {
+            unidade: dto.unidade,
+            funcionario: { id: funcionario.id },
+            codEtapa: PRODUCAO_COD_ETAPA_CERTIFICADOS,
+            recebe: true,
+          },
+        });
         await repo.delete({ funcionario: { id: funcionario.id } });
 
         const toSave = etapasRemuneradas.map((e) =>
@@ -526,6 +600,18 @@ export class ProducaoConfigService {
             codEtapaReferencia: null,
           }),
         );
+
+        if (vinculoCertificados) {
+          toSave.push(
+            repo.create({
+              unidade: dto.unidade,
+              funcionario: { id: funcionario.id } as Funcionario,
+              codEtapa: PRODUCAO_COD_ETAPA_CERTIFICADOS,
+              recebe: true,
+              codEtapaReferencia: null,
+            }),
+          );
+        }
 
         if (toSave.length > 0) {
           await repo.save(toSave);
@@ -646,6 +732,23 @@ export class ProducaoConfigService {
     };
   }
 
+  private ensureCertificadosRow(
+    rows: ProducaoEtapaRemuneracaoRow[],
+    cfg?: ProducaoEtapaRemuneracao,
+  ): void {
+    if (rows.some((r) => isCodEtapaCertificados(r.codEtapa))) {
+      return;
+    }
+    rows.push({
+      codEtapa: PRODUCAO_COD_ETAPA_CERTIFICADOS,
+      etapa: PRODUCAO_NOME_ETAPA_CERTIFICADOS,
+      posicaoEtapa: 99998,
+      recebe: cfg?.recebe ?? false,
+      valor: cfg ? Number(cfg.valor) : 0,
+      tipoCalculo: ProducaoEtapaTipoCalculo.CERTIFICADO,
+    });
+  }
+
   private ensureGestaoRow(
     rows: ProducaoEtapaRemuneracaoRow[],
     cfg?: ProducaoEtapaRemuneracao,
@@ -673,7 +776,12 @@ export class ProducaoConfigService {
     }
 
     const opcoesBase = etapas
-      .filter((e) => e.recebe && !isCodEtapaGestao(e.codEtapa))
+      .filter(
+        (e) =>
+          e.recebe &&
+          !isCodEtapaGestao(e.codEtapa) &&
+          !isCodEtapaCertificados(e.codEtapa),
+      )
       .map((e) => ({ codEtapa: e.codEtapa, etapa: e.etapa }));
 
     const cfgGestao = funcMap.get(PRODUCAO_COD_ETAPA_GESTAO);
@@ -689,6 +797,20 @@ export class ProducaoConfigService {
       etapaReferencia,
       valor: gestaoEtapa.valor,
       opcoesBase,
+    };
+  }
+
+  private montarCertificadosConfigFuncionario(
+    etapas: ProducaoEtapaRemuneracaoRow[],
+    funcMap: Map<string, ProducaoFuncionarioEtapa>,
+  ): ProducaoFuncionarioCertificadosConfigDto | null {
+    const etapa = etapas.find((e) => isCodEtapaCertificados(e.codEtapa));
+    if (!etapa) return null;
+    const cfg = funcMap.get(PRODUCAO_COD_ETAPA_CERTIFICADOS);
+    return {
+      disponivel: etapa.recebe,
+      recebe: cfg?.recebe ?? false,
+      valor: etapa.valor,
     };
   }
 }

@@ -69,6 +69,14 @@ export interface ProdutividadeAvisos {
   totalLinhasSemEtapaVinculada: number;
   funcionariosSemEtapaVinculada: ProdutividadeFuncionarioSemEtapaVinculada[];
   funcionariosSemEtapaVinculadaOcultos: number;
+  totalCertificadosSemFuncionario: number;
+  certificadosSemFuncionario: {
+    numeroCertificado: number;
+    filial: number;
+    unidade: Unidade;
+    dataCertificado: string;
+  }[];
+  certificadosSemFuncionarioOcultos: number;
 }
 
 export interface ProdutividadeTotalColunaEtapa {

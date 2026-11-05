@@ -32,6 +32,7 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import {
   ImportarProducaoEtapasDto,
   ImportarProducaoEtapasResponseDto,
+  ImportarProducaoCertificadosResponseDto,
 } from './dto/importar-producao-etapas.dto';
 import {
   ImportarOrcamentosDto,
@@ -141,6 +142,21 @@ export class SincronizacaoController {
     @Body() dto: ImportarProducaoEtapasDto,
   ): Promise<ImportarProducaoEtapasResponseDto> {
     return this.sincronizacaoService.importarProducaoEtapasManual(dto);
+  }
+
+  @Post('producao-certificados/importar')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Importar certificados de análise por período (não altera watermark automático)',
+  })
+  @ApiResponse({ status: 200, description: 'Importação manual executada' })
+  async importarProducaoCertificados(
+    @Body() dto: ImportarProducaoEtapasDto,
+  ): Promise<ImportarProducaoCertificadosResponseDto> {
+    return this.sincronizacaoService.importarProducaoCertificadosManual(dto);
   }
 
   @Get('producao-etapas/etapas-disponiveis')

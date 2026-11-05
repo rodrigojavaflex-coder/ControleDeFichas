@@ -78,6 +78,19 @@ export class CreateSincronizacaoConfigDto {
   ultimaModificacaoProducaoEtapas?: string;
 
   @ApiProperty({
+    description:
+      'Watermark dos certificados de análise (YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss)',
+    example: '2026-10-01T00:00:00',
+    required: false,
+  })
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/, {
+    message:
+      'ultimaModificacaoProducaoCertificados deve estar no formato YYYY-MM-DD ou YYYY-MM-DDTHH:mm:ss',
+  })
+  ultimaModificacaoProducaoCertificados?: string;
+
+  @ApiProperty({
     description: 'Intervalo em minutos entre sincronizações',
     example: 60,
     default: 60,

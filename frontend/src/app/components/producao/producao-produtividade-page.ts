@@ -17,7 +17,7 @@ import {
   ProdutividadeTipoRelatorio,
   PRODUTIVIDADE_TIPOS_RELATORIO,
 } from '../../models/producao-produtividade.model';
-import { PRODUCAO_COD_ETAPA_GESTAO } from '../../models/producao-config.model';
+import { PRODUCAO_COD_ETAPA_GESTAO, PRODUCAO_COD_ETAPA_CERTIFICADOS } from '../../models/producao-config.model';
 import { MESES_PT, nomeMesPt } from '../folha/folha-meses';
 import { environment } from '../../../environments/environment';
 
@@ -391,14 +391,19 @@ export class ProducaoProdutividadePage implements OnInit {
 
   temAvisos(): boolean {
     if (!this.podeVerAlertas()) return false;
-    return this.temAvisosSemCadastro() || this.temAvisosSemEtapaVinculada();
+    return (
+      this.temAvisosSemCadastro() ||
+      this.temAvisosSemEtapaVinculada() ||
+      (this.resultado?.avisos?.certificadosSemFuncionario?.length ?? 0) > 0
+    );
   }
 
   totalLinhasAvisos(): number {
     if (!this.podeVerAlertas() || !this.resultado?.avisos) return 0;
     return (
       (this.resultado.avisos.totalLinhasSemCadastro ?? 0) +
-      (this.resultado.avisos.totalLinhasSemEtapaVinculada ?? 0)
+      (this.resultado.avisos.totalLinhasSemEtapaVinculada ?? 0) +
+      (this.resultado.avisos.totalCertificadosSemFuncionario ?? 0)
     );
   }
 
@@ -553,6 +558,13 @@ export class ProducaoProdutividadePage implements OnInit {
     if (idxGestao >= 0) {
       const [gestao] = colunas.splice(idxGestao, 1);
       colunas.push(gestao);
+    }
+    const idxCertificados = colunas.findIndex(
+      (c) => c.codEtapa === PRODUCAO_COD_ETAPA_CERTIFICADOS,
+    );
+    if (idxCertificados >= 0) {
+      const [certificados] = colunas.splice(idxCertificados, 1);
+      colunas.push(certificados);
     }
 
     return colunas;

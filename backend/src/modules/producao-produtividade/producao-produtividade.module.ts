@@ -10,6 +10,7 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { ProducaoProdutividadeService } from './producao-produtividade.service';
 import { ProducaoProdutividadeController } from './producao-produtividade.controller';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { ProducaoCertificadosModule } from '../producao-certificados/producao-certificados.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
     ]),
     JwtModule,
     ConfigModule,
+    ProducaoCertificadosModule,
   ],
   controllers: [ProducaoProdutividadeController],
   providers: [ProducaoProdutividadeService, PermissionsGuard],

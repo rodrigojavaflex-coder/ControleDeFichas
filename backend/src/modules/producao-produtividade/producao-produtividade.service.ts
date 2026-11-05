@@ -17,8 +17,11 @@ import {
 import { funcionarioElegivelProdutividadeNoPeriodo } from '../folha/utils/folha-competencia.util';
 import {
   PRODUCAO_COD_ETAPA_GESTAO,
+  PRODUCAO_COD_ETAPA_CERTIFICADOS,
+  PRODUCAO_NOME_ETAPA_CERTIFICADOS,
   isCodEtapaGestao,
 } from '../../common/constants/producao-gestao.constants';
+import { ProducaoCertificadosService } from '../producao-certificados/producao-certificados.service';
 import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 import { Permission } from '../../common/enums/permission.enum';
 import {
@@ -96,6 +99,7 @@ export class ProducaoProdutividadeService {
     private readonly funcionarioEtapaRepo: Repository<ProducaoFuncionarioEtapa>,
     @InjectRepository(Funcionario)
     private readonly funcionarioRepo: Repository<Funcionario>,
+    private readonly certificadosService: ProducaoCertificadosService,
   ) {}
 
   async consultar(
@@ -393,6 +397,28 @@ export class ProducaoProdutividadeService {
       totalBaseGestaoPorCodEtapa,
     );
 
+    const certificadosSemFuncionario: {
+      numeroCertificado: number;
+      filial: number;
+      unidade: Unidade;
+      dataCertificado: string;
+    }[] = [];
+    const totalCertificadosDistintos = await this.aplicarCertificados(
+      unidadesResumo,
+      unidadesFuncionarios,
+      dataInicio,
+      dataFim,
+      aggPorFuncionario,
+      remuneracaoPorUnidadeEtapa,
+      funcEtapaSet,
+      mapasFuncionarios,
+      creditarResumoOutrasUnidades,
+      consultaMultiplasUnidadesResumo,
+      semCadastroPorChave,
+      semEtapaVinculadaPorFuncionario,
+      certificadosSemFuncionario,
+    );
+
     const funcionariosRows: ProdutividadeFuncionarioRowDto[] = [];
 
     for (const acc of aggPorFuncionario.values()) {
@@ -450,6 +476,7 @@ export class ProducaoProdutividadeService {
       nomeEtapaPorCodEtapa,
       aggPorFuncionario,
       remuneracaoPorUnidadeEtapa,
+      totalCertificadosDistintos,
     );
 
     const podeVerAlertas = this.usuarioPodeVerAlertas(usuario);
@@ -460,6 +487,16 @@ export class ProducaoProdutividadeService {
           linhasSemFuncionario,
         )
       : this.avisosVazios();
+    const exibidosSemFuncionario = certificadosSemFuncionario.slice(0, 50);
+    avisos.totalCertificadosSemFuncionario = podeVerAlertas
+      ? certificadosSemFuncionario.length
+      : 0;
+    avisos.certificadosSemFuncionario = podeVerAlertas
+      ? exibidosSemFuncionario
+      : [];
+    avisos.certificadosSemFuncionarioOcultos = podeVerAlertas
+      ? Math.max(0, certificadosSemFuncionario.length - exibidosSemFuncionario.length)
+      : 0;
 
     return {
       unidades: unidadesResumo,
@@ -487,11 +524,18 @@ export class ProducaoProdutividadeService {
     nomeEtapaPorCodEtapa: Map<string, string>,
     aggPorFuncionario: Map<string, AccFuncionarioConsolidado>,
     remuneracaoPorUnidadeEtapa: Map<string, { valor: number; etapa: string }>,
+    totalCertificadosDistintos: number,
   ): ProdutividadeTotalColunaEtapaDto[] {
     const itens: ProdutividadeTotalColunaEtapaDto[] = [];
 
     for (const [codEtapa, quantidade] of totalRemuneradoResumoPorCodEtapa) {
-      if (quantidade <= 0 || isCodEtapaGestao(codEtapa)) continue;
+      if (
+        quantidade <= 0 ||
+        isCodEtapaGestao(codEtapa) ||
+        codEtapa === PRODUCAO_COD_ETAPA_CERTIFICADOS
+      ) {
+        continue;
+      }
       itens.push({
         codEtapa,
         etapa: nomeEtapaPorCodEtapa.get(codEtapa) ?? codEtapa,
@@ -522,9 +566,29 @@ export class ProducaoProdutividadeService {
       });
     }
 
+    if (totalCertificadosDistintos > 0) {
+      let nomeCertificados = PRODUCAO_NOME_ETAPA_CERTIFICADOS;
+      for (const [key, rem] of remuneracaoPorUnidadeEtapa) {
+        if (key.endsWith(`:${PRODUCAO_COD_ETAPA_CERTIFICADOS}`)) {
+          if (rem.etapa?.trim()) nomeCertificados = rem.etapa.trim();
+          break;
+        }
+      }
+      itens.push({
+        codEtapa: PRODUCAO_COD_ETAPA_CERTIFICADOS,
+        etapa: nomeCertificados,
+        quantidade: totalCertificadosDistintos,
+      });
+    }
+
     itens.sort((a, b) => {
-      if (a.codEtapa === PRODUCAO_COD_ETAPA_GESTAO) return 1;
-      if (b.codEtapa === PRODUCAO_COD_ETAPA_GESTAO) return -1;
+      const ordem = (cod: string) => {
+        if (cod === PRODUCAO_COD_ETAPA_GESTAO) return 1;
+        if (cod === PRODUCAO_COD_ETAPA_CERTIFICADOS) return 2;
+        return 0;
+      };
+      const diff = ordem(a.codEtapa) - ordem(b.codEtapa);
+      if (diff !== 0) return diff;
       return a.etapa.localeCompare(b.etapa, 'pt-BR');
     });
 
@@ -790,6 +854,134 @@ export class ProducaoProdutividadeService {
     }
   }
 
+  /**
+   * RN-PCP-013: crédito pelo CDFUN do FC21000. A tabela não tem CDUSU.
+   * Sem funcionário: só alerta. Rodapé = quantidade distinta da unidade.
+   */
+  private async aplicarCertificados(
+    unidadesResumo: Unidade[],
+    unidadesFuncionarios: Unidade[],
+    dataInicio: string,
+    dataFim: string,
+    aggPorFuncionario: Map<string, AccFuncionarioConsolidado>,
+    remuneracaoPorUnidadeEtapa: Map<string, { valor: number; etapa: string }>,
+    funcEtapaSet: Set<string>,
+    mapasFuncionarios: ReturnType<typeof construirMapasFuncionarios>,
+    creditarResumoOutrasUnidades: boolean,
+    consultaMultiplasUnidadesResumo: boolean,
+    semCadastro: Map<string, AccSemCadastro>,
+    semEtapaVinculada: Map<string, AccSemEtapaVinculada>,
+    semFuncionario: {
+      numeroCertificado: number;
+      filial: number;
+      unidade: Unidade;
+      dataCertificado: string;
+    }[],
+  ): Promise<number> {
+    const certificados = await this.certificadosService.listarNoPeriodo(
+      unidadesResumo,
+      dataInicio,
+      dataFim,
+    );
+    const distintos = new Set<string>();
+
+    for (const cert of certificados) {
+      const rem = remuneracaoPorUnidadeEtapa.get(
+        `${cert.unidade}:${PRODUCAO_COD_ETAPA_CERTIFICADOS}`,
+      );
+      if (!rem) continue;
+      distintos.add(
+        `${cert.unidade}:${cert.filial}:${cert.numeroCertificado}`,
+      );
+
+      const codigo = cert.funcionarioCodigo;
+      if (codigo == null || codigo <= 0) {
+        semFuncionario.push({
+          numeroCertificado: cert.numeroCertificado,
+          filial: cert.filial,
+          unidade: cert.unidade,
+          dataCertificado: String(cert.dataCertificado).slice(0, 10),
+        });
+        continue;
+      }
+
+      const credito: ProducaoCodigoCredito = {
+        tipo: 'FUNCIONARIO',
+        codigo,
+      };
+      const funcionario = resolverFuncionarioProducao(
+        credito,
+        cert.unidade,
+        mapasFuncionarios,
+        creditarResumoOutrasUnidades,
+        consultaMultiplasUnidadesResumo,
+      );
+      const amostra = {
+        unidade: cert.unidade,
+        requisicao: cert.numeroCertificado,
+        formula: '',
+        etapa: rem.etapa || PRODUCAO_NOME_ETAPA_CERTIFICADOS,
+        codEtapa: PRODUCAO_COD_ETAPA_CERTIFICADOS,
+      } as ProducaoEtapaResumo;
+
+      if (
+        !funcionario ||
+        !unidadesFuncionarios.includes(funcionario.unidade) ||
+        !funcionarioElegivelProdutividadeNoPeriodo(funcionario, dataInicio)
+      ) {
+        if (!funcionario) {
+          this.registrarSemCadastro(semCadastro, credito, amostra);
+        }
+        continue;
+      }
+
+      if (
+        !funcEtapaSet.has(
+          `${funcionario.id}:${PRODUCAO_COD_ETAPA_CERTIFICADOS}`,
+        )
+      ) {
+        this.registrarSemEtapaVinculada(
+          semEtapaVinculada,
+          funcionario,
+          amostra,
+          rem.etapa || PRODUCAO_NOME_ETAPA_CERTIFICADOS,
+        );
+        continue;
+      }
+
+      let acc = aggPorFuncionario.get(funcionario.id);
+      if (!acc) {
+        const codExibicao = codigoExibicaoFuncionario(funcionario);
+        acc = {
+          funcionario,
+          codigosErp: new Set<number>(
+            codExibicao != null ? [codExibicao] : [],
+          ),
+          unidadesCadastro: new Set<Unidade>([funcionario.unidade]),
+          unidadesResumo: new Set<Unidade>(),
+          etapas: new Map<string, AggEtapaConsolidada>(),
+        };
+        aggPorFuncionario.set(funcionario.id, acc);
+      }
+      acc.unidadesResumo.add(cert.unidade);
+      acc.unidadesCadastro.add(funcionario.unidade);
+      const existente = acc.etapas.get(PRODUCAO_COD_ETAPA_CERTIFICADOS);
+      if (existente) {
+        existente.quantidade += 1;
+        existente.valorTotal += rem.valor;
+      } else {
+        acc.etapas.set(PRODUCAO_COD_ETAPA_CERTIFICADOS, {
+          codEtapa: PRODUCAO_COD_ETAPA_CERTIFICADOS,
+          etapa: rem.etapa || PRODUCAO_NOME_ETAPA_CERTIFICADOS,
+          quantidade: 1,
+          valorTotal: rem.valor,
+        });
+      }
+    }
+
+    return distintos.size;
+  }
+
   private usuarioPodeVerAlertas(usuario: Usuario): boolean {
     return getUsuarioPermissoes(usuario).includes(
       Permission.PRODUCAO_PRODUTIVIDADE_READ_ALERTAS,
@@ -803,6 +995,14 @@ export class ProducaoProdutividadeService {
     totalLinhasSemEtapaVinculada: number;
     funcionariosSemEtapaVinculada: ProdutividadeFuncionarioSemEtapaVinculadaDto[];
     funcionariosSemEtapaVinculadaOcultos: number;
+    totalCertificadosSemFuncionario: number;
+    certificadosSemFuncionario: {
+      numeroCertificado: number;
+      filial: number;
+      unidade: Unidade;
+      dataCertificado: string;
+    }[];
+    certificadosSemFuncionarioOcultos: number;
   } {
     return {
       totalLinhasSemCadastro: 0,
@@ -811,6 +1011,9 @@ export class ProducaoProdutividadeService {
       totalLinhasSemEtapaVinculada: 0,
       funcionariosSemEtapaVinculada: [],
       funcionariosSemEtapaVinculadaOcultos: 0,
+      totalCertificadosSemFuncionario: 0,
+      certificadosSemFuncionario: [],
+      certificadosSemFuncionarioOcultos: 0,
     };
   }
 
@@ -825,6 +1028,14 @@ export class ProducaoProdutividadeService {
     totalLinhasSemEtapaVinculada: number;
     funcionariosSemEtapaVinculada: ProdutividadeFuncionarioSemEtapaVinculadaDto[];
     funcionariosSemEtapaVinculadaOcultos: number;
+    totalCertificadosSemFuncionario: number;
+    certificadosSemFuncionario: {
+      numeroCertificado: number;
+      filial: number;
+      unidade: Unidade;
+      dataCertificado: string;
+    }[];
+    certificadosSemFuncionarioOcultos: number;
   } {
     const listaSemCadastro = [...semCadastro.values()]
       .map((acc) => this.mapSemCadastro(acc))
@@ -866,6 +1077,9 @@ export class ProducaoProdutividadeService {
         0,
         listaSemEtapa.length - exibidosSemEtapa.length,
       ),
+      totalCertificadosSemFuncionario: 0,
+      certificadosSemFuncionario: [],
+      certificadosSemFuncionarioOcultos: 0,
     };
   }
 

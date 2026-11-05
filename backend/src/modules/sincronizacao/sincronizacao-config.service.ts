@@ -41,6 +41,8 @@ export class SincronizacaoConfigService {
         dto.painelContratoRepresentantes || undefined,
       ultimaModificacaoProducaoEtapas:
         dto.ultimaModificacaoProducaoEtapas || undefined,
+      ultimaModificacaoProducaoCertificados:
+        dto.ultimaModificacaoProducaoCertificados || undefined,
     });
 
     return this.configRepository.save(config);
@@ -118,6 +120,10 @@ export class SincronizacaoConfigService {
         dto.ultimaModificacaoProducaoEtapas !== undefined
           ? dto.ultimaModificacaoProducaoEtapas || null
           : config.ultimaModificacaoProducaoEtapas,
+      ultimaModificacaoProducaoCertificados:
+        dto.ultimaModificacaoProducaoCertificados !== undefined
+          ? dto.ultimaModificacaoProducaoCertificados || null
+          : config.ultimaModificacaoProducaoCertificados,
     });
 
     return this.configRepository.save(config);

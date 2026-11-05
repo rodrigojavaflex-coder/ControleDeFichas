@@ -185,6 +185,20 @@ export class ProdutividadeAvisosDto {
       'Quantidade de funcionários com cadastro omitidos da lista por limite de exibição',
   })
   funcionariosSemEtapaVinculadaOcultos: number;
+
+  @ApiProperty()
+  totalCertificadosSemFuncionario: number;
+
+  @ApiProperty({ type: [Object] })
+  certificadosSemFuncionario: {
+    numeroCertificado: number;
+    filial: number;
+    unidade: Unidade;
+    dataCertificado: string;
+  }[];
+
+  @ApiProperty()
+  certificadosSemFuncionarioOcultos: number;
 }
 
 export class ProdutividadeConsultaResponseDto {

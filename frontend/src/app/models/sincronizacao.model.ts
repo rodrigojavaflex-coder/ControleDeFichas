@@ -13,6 +13,7 @@ export interface SincronizacaoConfig {
   ultimaModificacaoOrcamento?: string;
   painelContratoRepresentantes?: string;
   ultimaModificacaoProducaoEtapas?: string;
+  ultimaModificacaoProducaoCertificados?: string;
   intervaloMinutos: number;
   /** Lookback/overlap dias (PCP + exclusões + agendamento). Padrão 5. */
   overlapDiasProducaoEtapas?: number;
@@ -30,6 +31,7 @@ export interface CreateSincronizacaoConfigDto {
   ultimaModificacaoOrcamento?: string;
   painelContratoRepresentantes?: string;
   ultimaModificacaoProducaoEtapas?: string;
+  ultimaModificacaoProducaoCertificados?: string;
   intervaloMinutos?: number;
   overlapDiasProducaoEtapas?: number;
   nivelLogSync?: SincronizacaoNivelLog;
@@ -75,6 +77,7 @@ export type SincronizacaoProgressEtapa =
   | 'orcamentos'
   | 'painel'
   | 'producao_etapas'
+  | 'producao_certificados'
   | 'caixa_erp'
   | 'finalizando'
   | 'concluido';
@@ -126,6 +129,8 @@ export interface ImportarProducaoEtapasResponse {
   processados: number;
   criados: number;
   atualizados: number;
+  removidos?: number;
+  ignorados?: number;
   erros: string[];
 }
 

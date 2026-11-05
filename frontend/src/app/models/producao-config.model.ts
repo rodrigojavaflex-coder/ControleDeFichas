@@ -1,8 +1,9 @@
 import { Unidade } from './usuario.model';
 
 export const PRODUCAO_COD_ETAPA_GESTAO = 'GESTAO';
+export const PRODUCAO_COD_ETAPA_CERTIFICADOS = 'CERTIFICADOS';
 
-export type ProducaoEtapaTipoCalculo = 'erp' | 'gestao';
+export type ProducaoEtapaTipoCalculo = 'erp' | 'gestao' | 'certificado';
 
 export interface ProducaoEtapaRemuneracaoRow {
   codEtapa: string;
@@ -42,6 +43,13 @@ export interface ProducaoFuncionarioGestaoConfig {
 export interface ProducaoFuncionarioEtapasResponse {
   etapas: ProducaoFuncionarioEtapaModalRow[];
   gestao: ProducaoFuncionarioGestaoConfig | null;
+  certificados: ProducaoFuncionarioCertificadosConfig | null;
+}
+
+export interface ProducaoFuncionarioCertificadosConfig {
+  disponivel: boolean;
+  recebe: boolean;
+  valor: number;
 }
 
 export interface ProducaoFuncionarioEtapaModalRow {
@@ -67,6 +75,7 @@ export interface BulkSaveProducaoFuncionarioEtapasDto {
   unidade: Unidade;
   itens: { codEtapa: string; recebe: boolean }[];
   gestao?: ProducaoFuncionarioGestaoSaveDto;
+  certificados?: { recebe: boolean };
 }
 
 export type FiltroEtapasRecebe = 'todas' | 'recebe' | 'nao_recebe';

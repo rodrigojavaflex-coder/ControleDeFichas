@@ -478,6 +478,32 @@
             }
           </section>
         }
+
+        @if (resultado.avisos.certificadosSemFuncionario.length > 0) {
+          <section class="producao-prod-avisos producao-prod-avisos-etapa producao-prod-avisos-modal">
+            <p class="producao-prod-avisos-titulo">
+              <i class="fas fa-file-alt" aria-hidden="true"></i>
+              {{ resultado.avisos.totalCertificadosSemFuncionario }} certificado(s) sem funcionário no ERP.
+            </p>
+            <p class="producao-prod-avisos-dica">
+              O FC21000 não trouxe CDFUN. Essas linhas não entram na remuneração.
+            </p>
+            <ul class="producao-prod-avisos-lista">
+              @for (item of resultado.avisos.certificadosSemFuncionario; track item.numeroCertificado) {
+                <li>
+                  <strong>Nº {{ item.numeroCertificado }}</strong>
+                  · filial {{ item.filial }}
+                  · {{ item.dataCertificado }}
+                </li>
+              }
+            </ul>
+            @if (resultado.avisos.certificadosSemFuncionarioOcultos > 0) {
+              <p class="producao-prod-avisos-mais">
+                … e mais {{ resultado.avisos.certificadosSemFuncionarioOcultos }} certificado(s) não listado(s).
+              </p>
+            }
+          </section>
+        }
       </div>
 
       <footer class="producao-prod-modal-footer">

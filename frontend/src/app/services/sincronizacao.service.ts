@@ -89,6 +89,15 @@ export class SincronizacaoService {
     );
   }
 
+  importarProducaoCertificados(
+    data: ImportarProducaoEtapasDto,
+  ): Observable<ImportarProducaoEtapasResponse> {
+    return this.http.post<ImportarProducaoEtapasResponse>(
+      `${this.syncApiUrl}/producao-certificados/importar`,
+      data,
+    );
+  }
+
   listarEtapasDisponiveisLimpeza(
     unidade: string,
   ): Observable<ProducaoEtapaDisponivelLimpeza[]> {

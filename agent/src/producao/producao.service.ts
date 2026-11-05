@@ -6,6 +6,7 @@ import { DatabaseService } from '../database/database.service';
 import { ProducaoEtapaResumoRow } from '../database/database.types';
 import { ProducaoEtapasResumoDto } from './dto/producao-etapas-resumo.dto';
 import { ProducaoExclusoesReceitasDto } from './dto/producao-exclusoes-receitas.dto';
+import { ProducaoCertificadosAnaliseDto } from './dto/producao-certificados-analise.dto';
 import { ProducaoAlteracoesAgendamentoReceitasDto } from './dto/producao-alteracoes-agendamento-receitas.dto';
 import { ProducaoExclusaoReceitaRow } from '../database/database.types';
 import { ProducaoAlteracaoAgendamentoRow } from '../database/database.types';
@@ -40,6 +41,30 @@ export class ProducaoService {
     );
 
     return { etapas: rows };
+  }
+
+  async buscarCertificadosAnalise(dto: ProducaoCertificadosAnaliseDto) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}/.test(dto.start) ||
+      !/^\d{4}-\d{2}-\d{2}/.test(dto.end)
+    ) {
+      throw new BadRequestException(
+        'start e end devem estar no formato YYYY-MM-DD',
+      );
+    }
+    const start = dto.start.slice(0, 10);
+    const end = dto.end.slice(0, 10);
+    if (start > end) {
+      throw new BadRequestException(
+        'start não pode ser posterior a end',
+      );
+    }
+    const certificados = await this.databaseService.buscarCertificadosAnalise(
+      dto.unit,
+      start,
+      end,
+    );
+    return { certificados };
   }
 
   async buscarExclusoesReceitas(

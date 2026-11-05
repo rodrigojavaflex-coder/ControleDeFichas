@@ -1,7 +1,7 @@
-<div class="modal-overlay" *ngIf="visible">
+<div class="modal-overlay nao-clicavel" *ngIf="visible">
   <div class="modal-conteudo modal-importacao-periodo">
     <div class="modal-cabecalho">
-      <h3 class="modal-titulo">Buscar etapas por período</h3>
+      <h3 class="modal-titulo">{{ titulo }}</h3>
       <button
         type="button"
         class="modal-fechar"
@@ -71,6 +71,12 @@
             <li>Processados: {{ result.processados }}</li>
             <li>Criados: {{ result.criados }}</li>
             <li>Atualizados: {{ result.atualizados }}</li>
+            @if (result.removidos != null) {
+              <li>Removidos: {{ result.removidos }}</li>
+            }
+            @if (result.ignorados != null) {
+              <li>Ignorados: {{ result.ignorados }}</li>
+            }
           </ul>
           @if (result.erros.length) {
             <div class="importacao-periodo-erros-lista">

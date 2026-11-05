@@ -22,6 +22,7 @@ import { garantirPrescritorPorCrmUf } from '../../common/utils/prescritor-crm.ut
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { PainelMedicosService } from '../painel-medicos/painel-medicos.service';
 import { ProducaoEtapasService } from '../producao-etapas/producao-etapas.service';
+import { ProducaoCertificadosService } from '../producao-certificados/producao-certificados.service';
 import { parsePainelContratoRepresentantes } from '../../common/utils/painel-config.util';
 import {
   dividirPeriodoEmSegmentosPorDias,
@@ -36,6 +37,7 @@ import { fetchAgenteComRetry } from '../../common/utils/fetch-agente-com-retry.u
 import {
   ImportarProducaoEtapasDto,
   ImportarProducaoEtapasResponseDto,
+  ImportarProducaoCertificadosResponseDto,
 } from './dto/importar-producao-etapas.dto';
 import {
   ImportarOrcamentosDto,
@@ -130,6 +132,12 @@ export interface SincronizacaoResult {
   /** RN-PCP-012: remarcação de retirada via auditoria AGENDAMENTO. */
   producaoEtapasRetiradaAgendamentoFormulas: number;
   producaoEtapasRetiradaAgendamentoLinhas: number;
+  /** RN-PCP-013: certificados de análise (FC21000). */
+  producaoCertificadosLidos: number;
+  producaoCertificadosCriados: number;
+  producaoCertificadosAtualizados: number;
+  producaoCertificadosRemovidos: number;
+  producaoCertificadosIgnorados: number;
   /** RN-CXA-010: sync caixa ERP (baixas + detalhes). */
   caixaErpDiasProcessados: number;
   caixaErpDiasDetalhes: number;
@@ -148,6 +156,7 @@ export type SincronizacaoProgressEtapa =
   | 'orcamentos'
   | 'painel'
   | 'producao_etapas'
+  | 'producao_certificados'
   | 'caixa_erp'
   | 'finalizando'
   | 'concluido';
@@ -233,6 +242,7 @@ export class SincronizacaoService {
     private readonly configService: ConfigService,
     private readonly painelMedicosService: PainelMedicosService,
     private readonly producaoEtapasService: ProducaoEtapasService,
+    private readonly producaoCertificadosService: ProducaoCertificadosService,
     private readonly importacaoProgressService: ImportacaoManualProgressService,
     private readonly fechamentoCaixaService: FechamentoCaixaService,
     private readonly sincronizacaoLogService: SincronizacaoLogService,
@@ -360,6 +370,11 @@ export class SincronizacaoService {
       producaoEtapasRemovidas: 0,
       producaoEtapasRetiradaAgendamentoFormulas: 0,
       producaoEtapasRetiradaAgendamentoLinhas: 0,
+      producaoCertificadosLidos: 0,
+      producaoCertificadosCriados: 0,
+      producaoCertificadosAtualizados: 0,
+      producaoCertificadosRemovidos: 0,
+      producaoCertificadosIgnorados: 0,
       caixaErpDiasProcessados: 0,
       caixaErpDiasDetalhes: 0,
       caixaErpDiasUpsert: 0,
@@ -1216,6 +1231,31 @@ export class SincronizacaoService {
       );
     }
 
+    if (config.ultimaModificacaoProducaoCertificados) {
+      try {
+        await this.sincronizarProducaoCertificados(
+          config,
+          agenteConfig.url,
+          agenteConfig.token,
+          resultado,
+        );
+      } catch (error: unknown) {
+        this.logger.error(
+          `Erro ao sincronizar certificados de análise do agente ${config.agente}:`,
+          error,
+        );
+        this.registrarErroSincronizacaoAgente(
+          resultado,
+          'Certificados de análise',
+          error,
+        );
+      }
+    } else {
+      this.logger.log(
+        `[${config.agente}] Sincronização de certificados ignorada: ultimaModificacaoProducaoCertificados não configurada`,
+      );
+    }
+
     try {
       await this.sincronizarCaixaErp(config, resultado);
     } catch (error: unknown) {
@@ -1281,6 +1321,14 @@ export class SincronizacaoService {
         .slice(0, 19);
     }
 
+    if (config.ultimaModificacaoProducaoCertificados) {
+      updateData.ultimaModificacaoProducaoCertificados = String(
+        config.ultimaModificacaoProducaoCertificados,
+      )
+        .replace('T', ' ')
+        .slice(0, 19);
+    }
+
     await this.configRepository.update(config.id, updateData);
 
     const resumoSucesso =
@@ -1296,6 +1344,7 @@ export class SincronizacaoService {
       (resultado.producaoEtapasRemovidas
         ? ` / ${resultado.producaoEtapasRemovidas} removidas (exclusão ERP)`
         : '') +
+      `; certificados ${resultado.producaoCertificadosLidos} lidos / ${resultado.producaoCertificadosCriados} criados / ${resultado.producaoCertificadosAtualizados} atualizados / ${resultado.producaoCertificadosRemovidos} removidos` +
       `; caixa ERP ${resultado.caixaErpDiasUpsert ?? 0} aberto(s)` +
       (resultado.erros.length > 0
         ? ` — com ${resultado.erros.length} erro(s) no ciclo`
@@ -2100,6 +2149,152 @@ export class SincronizacaoService {
       return;
     }
     this.atualizarWatermarkProducaoEtapas(config);
+  }
+
+  private atualizarWatermarkProducaoCertificados(
+    config: SincronizacaoConfig,
+  ): void {
+    const watermark = this.formatarDataHoraBrasilia();
+    config.ultimaModificacaoProducaoCertificados = watermark;
+    this.logger.log(
+      `[${config.agente}] Watermark de certificados de análise atualizado para hora do processamento (Brasília): ${watermark}`,
+    );
+  }
+
+  /**
+   * RN-PCP-013: mesmo ciclo da sync de produção, watermark próprio.
+   * Busca vazia com sucesso avança. Erro não avança e não mexe no watermark das etapas.
+   */
+  private async sincronizarProducaoCertificados(
+    config: SincronizacaoConfig,
+    url: string,
+    token: string,
+    resultado: SincronizacaoResult,
+  ): Promise<void> {
+    const unit = this.agenteCdfilMap[config.agente];
+    if (!unit) {
+      throw new Error(`Unidade não mapeada para o agente: ${config.agente}`);
+    }
+    const unidade = this.producaoEtapasService.getUnidadePorAgente(
+      config.agente,
+    );
+    const inicio = normalizarDataIso(
+      config.ultimaModificacaoProducaoCertificados,
+    );
+    const fim = this.dataIsoHojeBrasilia();
+    if (!inicio || inicio > fim) {
+      this.logger.warn(
+        `[${config.agente}] Janela de certificados ignorada (início=${inicio ?? 'null'}, fim=${fim})`,
+      );
+      return;
+    }
+
+    this.atualizarProgresso({
+      etapa: 'producao_certificados',
+      message: `Buscando certificados de análise (${config.agente}, ${inicio}..${fim})...`,
+      fase: 0.9,
+    });
+
+    const linhas = await this.producaoCertificadosService.buscarDoAgente(
+      url,
+      token,
+      unit,
+      inicio,
+      fim,
+      config.agente,
+    );
+    const stats = await this.producaoCertificadosService.reconciliarPeriodo(
+      unidade,
+      unit,
+      inicio,
+      fim,
+      linhas,
+    );
+    resultado.producaoCertificadosLidos = stats.lidos;
+    resultado.producaoCertificadosCriados = stats.criados;
+    resultado.producaoCertificadosAtualizados = stats.atualizados;
+    resultado.producaoCertificadosRemovidos = stats.removidos;
+    resultado.producaoCertificadosIgnorados = stats.ignorados;
+    this.atualizarWatermarkProducaoCertificados(config);
+    this.logger.log(
+      `[${config.agente}] Certificados: lidos=${stats.lidos} criados=${stats.criados} atualizados=${stats.atualizados} removidos=${stats.removidos} ignorados=${stats.ignorados}`,
+    );
+  }
+
+  async importarProducaoCertificadosManual(
+    dto: ImportarProducaoEtapasDto,
+  ): Promise<ImportarProducaoCertificadosResponseDto> {
+    const agente = this.unidadeAgenteMap[dto.unidade];
+    if (!agente) {
+      throw new BadRequestException(
+        `Unidade ${dto.unidade} não possui agente de sincronização mapeado`,
+      );
+    }
+    const agentesConfig = this.configService.get('agentes');
+    const agenteConfig = agentesConfig[agente];
+    if (!agenteConfig?.url || !agenteConfig?.token) {
+      throw new BadRequestException(
+        `Configuração do agente ${agente} não encontrada ou incompleta`,
+      );
+    }
+    const dataInicio = normalizarDataIso(dto.dataInicio);
+    const dataFim = normalizarDataIso(dto.dataFim);
+    if (!dataInicio || !dataFim || dataInicio > dataFim) {
+      throw new BadRequestException(
+        'Período inválido. Informe dataInicio e dataFim no formato YYYY-MM-DD.',
+      );
+    }
+    const unit = this.agenteCdfilMap[agente];
+    this.importacaoProgressService.iniciar({
+      tipo: 'producao_certificados',
+      unidade: dto.unidade,
+      agente,
+      message: `Preparando certificados de análise (${dataInicio} a ${dataFim})...`,
+    });
+    try {
+      this.importacaoProgressService.atualizar({
+        fase: 'consultando_agente',
+        message: `Consultando certificados ${dataInicio}..${dataFim} — agente ${agente}...`,
+        percentual: 20,
+      });
+      const linhas = await this.producaoCertificadosService.buscarDoAgente(
+        agenteConfig.url,
+        agenteConfig.token,
+        unit,
+        dataInicio,
+        dataFim,
+        agente,
+      );
+      this.importacaoProgressService.atualizar({
+        fase: 'gravando_postgres',
+        message: `Gravando ${linhas.length} certificado(s)...`,
+        total: linhas.length,
+        percentual: 60,
+      });
+      const stats = await this.producaoCertificadosService.reconciliarPeriodo(
+        dto.unidade,
+        unit,
+        dataInicio,
+        dataFim,
+        linhas,
+      );
+      const mensagem = `Importação concluída: ${stats.lidos} lidos (${stats.criados} criados, ${stats.atualizados} atualizados, ${stats.removidos} removidos, ${stats.ignorados} ignorados).`;
+      this.importacaoProgressService.finalizar('completed', mensagem);
+      return {
+        unidade: dto.unidade,
+        processados: stats.lidos,
+        criados: stats.criados,
+        atualizados: stats.atualizados,
+        removidos: stats.removidos,
+        ignorados: stats.ignorados,
+        erros: [],
+      };
+    } catch (error: unknown) {
+      const msg =
+        error instanceof Error ? error.message : 'Erro desconhecido';
+      this.importacaoProgressService.finalizar('error', msg);
+      throw new BadRequestException(msg);
+    }
   }
 
   /**

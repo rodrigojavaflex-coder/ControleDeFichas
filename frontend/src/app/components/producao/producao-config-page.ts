@@ -21,6 +21,7 @@ import {
   AplicarEtapasRemuneradasDto,
   RemoverEtapasFuncionariosDto,
   PRODUCAO_COD_ETAPA_GESTAO,
+  PRODUCAO_COD_ETAPA_CERTIFICADOS,
   ProducaoEtapaTipoCalculo,
 } from '../../models/producao-config.model';
 import { ProducaoJornadaPanel } from './producao-jornada-panel/producao-jornada-panel';
@@ -71,6 +72,7 @@ export class ProducaoConfigPage implements OnInit {
   modalFuncionario: ProducaoFuncionarioConfigRow | null = null;
   modalEtapas: ProducaoFuncionarioEtapaModalRow[] = [];
   modalGestao: ProducaoFuncionarioGestaoConfig | null = null;
+  modalCertificados: ProducaoFuncionarioEtapasResponse['certificados'] = null;
   modalCarregando = false;
   modalSalvando = false;
   modalCodigoUsuarioErpInput = '';
@@ -230,7 +232,9 @@ export class ProducaoConfigPage implements OnInit {
   }
 
   etapasRemuneradasSalvas(): ProducaoEtapaEditRow[] {
-    return this.etapas.filter((e) => e.recebe && !this.isEtapaGestao(e));
+    return this.etapas.filter(
+      (e) => e.recebe && !this.isEtapaGestao(e) && !this.isEtapaCertificados(e),
+    );
   }
 
   isEtapaGestao(row: { codEtapa: string; tipoCalculo?: string }): boolean {
@@ -238,6 +242,26 @@ export class ProducaoConfigPage implements OnInit {
       row.codEtapa === PRODUCAO_COD_ETAPA_GESTAO ||
       row.tipoCalculo === 'gestao'
     );
+  }
+
+  isEtapaCertificados(row: { codEtapa: string; tipoCalculo?: string }): boolean {
+    return (
+      row.codEtapa === PRODUCAO_COD_ETAPA_CERTIFICADOS ||
+      row.tipoCalculo === 'certificado'
+    );
+  }
+
+  isEtapaManual(row: { codEtapa: string; tipoCalculo?: string }): boolean {
+    return this.isEtapaGestao(row) || this.isEtapaCertificados(row);
+  }
+
+  private tipoCalculoEtapa(row: {
+    codEtapa: string;
+    tipoCalculo?: ProducaoEtapaTipoCalculo;
+  }): ProducaoEtapaTipoCalculo {
+    if (this.isEtapaGestao(row)) return 'gestao';
+    if (this.isEtapaCertificados(row)) return 'certificado';
+    return 'erp';
   }
 
   podeImprimirRelatorio(): boolean {
@@ -502,7 +526,7 @@ export class ProducaoConfigPage implements OnInit {
           posicaoEtapa: e.posicaoEtapa,
           recebe: e.recebe,
           valor: e.recebe ? Math.max(0, this.valorEtapaObrigatorio(e)) : 0,
-          tipoCalculo: this.isEtapaGestao(e) ? 'gestao' : 'erp',
+          tipoCalculo: this.tipoCalculoEtapa(e),
         })),
       })
       .subscribe({
@@ -528,6 +552,7 @@ export class ProducaoConfigPage implements OnInit {
     this.modalCarregando = true;
     this.modalEtapas = [];
     this.modalGestao = null;
+    this.modalCertificados = null;
     this.modalCodigoUsuarioErpOriginal = f.codigoUsuarioErp ?? null;
     this.modalCodigoUsuarioErpInput =
       f.codigoUsuarioErp != null ? String(f.codigoUsuarioErp) : '';
@@ -540,6 +565,7 @@ export class ProducaoConfigPage implements OnInit {
         next: (res) => {
           this.modalEtapas = res.etapas;
           this.modalGestao = res.gestao;
+          this.modalCertificados = res.certificados;
           this.modalCarregando = false;
         },
         error: (e) => {
@@ -558,6 +584,7 @@ export class ProducaoConfigPage implements OnInit {
     this.modalFuncionario = null;
     this.modalEtapas = [];
     this.modalGestao = null;
+    this.modalCertificados = null;
     this.modalCodigoUsuarioErpInput = '';
     this.modalCodigoUsuarioErpOriginal = null;
     this.modalCodigoFuncionarioErpInput = '';
@@ -603,6 +630,14 @@ export class ProducaoConfigPage implements OnInit {
       codEtapaReferencia: checked
         ? this.modalGestao.codEtapaReferencia
         : null,
+    };
+  }
+
+  alternarCertificadosModal(checked: boolean): void {
+    if (!this.modalCertificados) return;
+    this.modalCertificados = {
+      ...this.modalCertificados,
+      recebe: checked,
     };
   }
 
@@ -724,6 +759,9 @@ export class ProducaoConfigPage implements OnInit {
                 recebe: this.modalGestao.recebe,
                 codEtapaReferencia: this.modalGestao.codEtapaReferencia,
               }
+            : undefined,
+          certificados: this.modalCertificados
+            ? { recebe: this.modalCertificados.recebe }
             : undefined,
         }),
       );

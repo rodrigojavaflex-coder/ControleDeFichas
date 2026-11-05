@@ -751,6 +751,22 @@
 - **Contagem** `qtdEtapasConfiguradas`: inclui GESTÃO somente quando `cod_etapa_referencia` estiver preenchido.
 - **Demanda futura:** relatório de detalhamento por etapa/funcionário e bloco de **etapas órfãs** na Gestão (conferência entre total da coluna base, total GESTÃO e linhas não contabilizadas) — ver `docs/anotacoes.md` (Pendente).
 
+### RN-PCP-013 — Remuneração por certificado de análise
+
+- **Fonte:** Firebird `FC21000` (tela FórmulaCerta — Certificado de Análise). Não usa a tabela PostgreSQL `certificados` nem o módulo de laudo de fornecedor. `NRLAUDO` não entra na chave nem na quantidade.
+- **Grão:** 1 linha por certificado (`NRCER`). Outubro/2026 em `bancofc.ib`: **120** registros (`cdfil` 2 = 119, `cdfil` 4 = 1). `NRCER` é único na base. Tipos (`TPCER` nulo, `1` e `2`) entram todos. `INDRESULT` não filtra (na amostra, todos `0`).
+- **Campos:** número `NRCER`, data do filtro e da produtividade `DTCER` (DATE, dia inclusivo), filial `CDFIL`, tipo `TPCER`, produto `CDPRO` (+ nome em `FC03000.DESCRPRD`), fabricação `DTFAB`, validade `DTVAL`. Pessoa: só `CDFUN`. Não há `CDUSU`. `CDCON` não credita.
+- **Configuração** (`/producao/config`, `producao-config:read` / `update`): linha fixa **Certificados** (`codEtapa = CERTIFICADOS`, `tipo_calculo = certificado`), fora do `FC12500`. `recebe = false` zera o valor; `recebe = true` exige valor > 0. No funcionário, checkbox sem etapa base; só marca se a unidade estiver com `recebe = true`. Conta em `qtdEtapasConfiguradas` quando o vínculo existe. **Aplicar etapas** não cria e não apaga esse vínculo. **Remover etapas** apaga. Relatório: nome + valor na unidade e, no funcionário, o rótulo Certificados.
+- **Sync:** mesmo ciclo da produção, fluxo separado do `FC12500`. Watermark próprio `ultimaModificacaoProducaoCertificados` (dia do corte até hoje, America/Sao_Paulo; o dia do corte é reprocessado). Busca vazia com sucesso avança. Erro de consulta ou gravação não avança e não altera o watermark das etapas. Por filial do agente (`cdfil`). Texto do produto: `CAST … CHARACTER SET OCTETS` + WIN1252 no agente; no backend, `padronizarNomeDeSistemaLegado()`.
+- **Chave:** `unidade + filial + numero_certificado`. Upsert idempotente.
+- **Exclusão:** `FC01M20` do módulo `CERTIFICADOS` só tem `ALTERACAO` e o texto não traz `NRCER` (não há `EXCLUSAO` para reconciliar como a RN-PCP-008). A exclusão local é a substituição do conjunto na janela de `DTCER`: o que a consulta não devolve é apagado (`DELETE` físico) e o retorno é gravado. Falha da consulta não apaga. Certificado cuja data saiu da janela só sai na reimportação do período antigo.
+- **Importação manual:** `POST /sincronizacao/producao-certificados/importar` (`configuracao:access`). Não move o watermark. Reimportar o período deixa o conjunto local igual ao retorno.
+- **Log:** lidos, criados, atualizados, removidos e ignorados.
+- **Produtividade** (`GET /producao/produtividade`, escopo da RN-PCP-005): coluna **Certificados** depois de GESTÃO. Eixo = `dataCertificado`. Quantidade do funcionário = certificados do período cujo `CDFUN` bate com `codigoFuncionarioErp` (não há `CDUSU` para tentar antes) e o vínculo Certificados está marcado. Valor = quantidade × valor unitário da **unidade da linha**. Vários certificados do mesmo funcionário somam. Demissão segue a RN-PCP-005.
+- **Sem CDFUN:** não remunera; entra no alerta da consulta (até 50), só com `producao-produtividade:read-alertas`. `CDFUN` preenchido sem cadastro ou sem vínculo usa os alertas já existentes (sem cadastro / sem etapa).
+- **Rodapé:** quantidade distinta de certificados remunerados da unidade no período, sem somar as células.
+- **Fora:** cálculo das etapas PCP e da GESTÃO; permissão nova; overlap de vários dias das etapas.
+
 ### RN-PCP-007 — Acompanhamento da fila de produção (operacional)
 
 - Tela **`/producao/acompanhamento`** (título **Acompanhamento Produção**), menu **Produção → Acompanhamento**; permissão **`producao-acompanhamento:read`** (independente de produtividade e config).

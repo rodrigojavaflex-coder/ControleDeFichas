@@ -3,6 +3,7 @@ import { ProducaoService } from './producao.service';
 import { ProducaoEtapasResumoDto } from './dto/producao-etapas-resumo.dto';
 
 import { ProducaoExclusoesReceitasDto } from './dto/producao-exclusoes-receitas.dto';
+import { ProducaoCertificadosAnaliseDto } from './dto/producao-certificados-analise.dto';
 import { ProducaoAlteracoesAgendamentoReceitasDto } from './dto/producao-alteracoes-agendamento-receitas.dto';
 
 @Controller('v1/producao')
@@ -12,6 +13,11 @@ export class ProducaoController {
   @Post('etapas-resumo')
   async etapasResumo(@Body() body: ProducaoEtapasResumoDto) {
     return this.producaoService.buscarEtapasResumo(body);
+  }
+
+  @Post('certificados-analise')
+  async certificadosAnalise(@Body() body: ProducaoCertificadosAnaliseDto) {
+    return this.producaoService.buscarCertificadosAnalise(body);
   }
 
   @Post('exclusoes-receitas')

@@ -1,5 +1,6 @@
 export type ImportacaoManualTipo =
   | 'producao_etapas'
+  | 'producao_certificados'
   | 'orcamentos'
   | 'caixa_erp';
 

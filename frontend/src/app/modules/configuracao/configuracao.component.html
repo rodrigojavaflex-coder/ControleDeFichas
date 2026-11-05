@@ -503,6 +503,7 @@
                 <th>Filial do Painel</th>
                 <th>Representantes do Painel (ex 1,2)</th>
                 <th>Última Mod. Etapas</th>
+                <th>Última Mod. Certificados</th>
                 <th>Overlap etapas (dias)</th>
                 <th>Intervalo (min)</th>
                 <th>Log</th>
@@ -593,6 +594,16 @@
                         class="form-input-inline" />
                     } @else {
                       {{ formatarDateTime(config?.ultimaModificacaoProducaoEtapas) }}
+                    }
+                  </td>
+                  <td>
+                    @if (editando) {
+                      <input
+                        type="datetime-local"
+                        [(ngModel)]="formSincronizacao[agente.value].ultimaModificacaoProducaoCertificados"
+                        class="form-input-inline" />
+                    } @else {
+                      {{ formatarDateTime(config?.ultimaModificacaoProducaoCertificados) }}
                     }
                   </td>
                   <td>
@@ -755,6 +766,25 @@
       <div class="importacao-card">
         <div class="importacao-header">
           <div>
+            <h3 class="section-title">Certificados de análise</h3>
+            <p class="section-description">
+              Importe certificados do FórmulaCerta (FC21000) por unidade e data do certificado.
+              A reimportação do período substitui o conjunto local e não altera o watermark da sincronização automática.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-migracao btn-importacao-etapas"
+            (click)="abrirModalImportarCertificados()">
+            <i class="fas fa-file-alt"></i>
+            Buscar certificados por período
+          </button>
+        </div>
+      </div>
+
+      <div class="importacao-card">
+        <div class="importacao-header">
+          <div>
             <h3 class="section-title">Nomes de médicos (encoding)</h3>
             <p class="section-description">
               Corrige <strong>prescritores.nome</strong> (fonte canônica) cruzando
@@ -887,6 +917,12 @@
 <app-importar-producao-etapas-modal
   #etapasModal
   (importacaoConcluida)="onImportacaoEtapasConcluida()">
+</app-importar-producao-etapas-modal>
+
+<app-importar-producao-etapas-modal
+  #certificadosModal
+  destino="certificados"
+  (importacaoConcluida)="onImportacaoCertificadosConcluida()">
 </app-importar-producao-etapas-modal>
 
 <app-limpar-producao-etapas-modal

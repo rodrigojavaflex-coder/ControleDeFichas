@@ -141,7 +141,7 @@
                     role="listitem"
                     [class.row-dirty]="row.dirty"
                     [class.row-valor-invalid]="etapaValorInvalido(row)"
-                    [class.is-gestao]="isEtapaGestao(row)">
+                    [class.is-gestao]="isEtapaManual(row)">
                     <label class="col-recebe producao-etapas-check">
                       <input
                         type="checkbox"
@@ -152,7 +152,7 @@
                     </label>
                     <span class="col-etapa" [title]="row.etapa">
                       {{ row.etapa }}
-                      @if (isEtapaGestao(row)) {
+                      @if (isEtapaManual(row)) {
                         <span class="producao-gestao-badge">Manual</span>
                       }
                     </span>
@@ -439,7 +439,7 @@
               }
             </section>
 
-            @if (modalEtapas.length === 0 && !modalGestao?.disponivel) {
+            @if (modalEtapas.length === 0 && !modalGestao?.disponivel && !modalCertificados?.disponivel) {
               <div class="no-data-inline">
                 Nenhuma etapa remunerada configurada na unidade. Configure em «Etapas remuneradas».
               </div>
@@ -517,6 +517,31 @@
                       Selecione a etapa base quando «Recebe gestão» estiver marcado.
                     </p>
                   }
+                </section>
+              }
+
+              @if (modalCertificados?.disponivel) {
+                <section class="producao-modal-gestao" aria-labelledby="producao-modal-certificados-titulo">
+                  <h4 id="producao-modal-certificados-titulo" class="producao-modal-gestao-titulo">
+                    Certificados
+                    <span class="producao-gestao-badge">Manual</span>
+                  </h4>
+                  <p class="producao-modal-gestao-help">
+                    Quantidade de certificados de análise da unidade no período, creditada pelo funcionário do ERP (CDFUN).
+                  </p>
+                  <div class="producao-modal-gestao-row">
+                    <label class="producao-modal-gestao-check">
+                      <input
+                        type="checkbox"
+                        [checked]="modalCertificados!.recebe"
+                        [disabled]="!podeEditar()"
+                        (change)="alternarCertificadosModal($any($event.target).checked)" />
+                      Recebe certificados
+                    </label>
+                    <span class="producao-modal-gestao-valor">
+                      Valor unitário: {{ formatarMoeda(modalCertificados!.valor) }}
+                    </span>
+                  </div>
                 </section>
               }
             }

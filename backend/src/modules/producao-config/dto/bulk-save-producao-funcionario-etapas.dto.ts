@@ -36,6 +36,12 @@ export class ProducaoFuncionarioGestaoSaveDto {
   codEtapaReferencia?: string | null;
 }
 
+export class ProducaoFuncionarioCertificadosSaveDto {
+  @ApiProperty()
+  @IsBoolean()
+  recebe: boolean;
+}
+
 export class BulkSaveProducaoFuncionarioEtapasDto {
   @ApiProperty({ enum: Unidade })
   @IsEnum(Unidade)
@@ -52,4 +58,10 @@ export class BulkSaveProducaoFuncionarioEtapasDto {
   @ValidateNested()
   @Type(() => ProducaoFuncionarioGestaoSaveDto)
   gestao?: ProducaoFuncionarioGestaoSaveDto;
+
+  @ApiPropertyOptional({ type: ProducaoFuncionarioCertificadosSaveDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProducaoFuncionarioCertificadosSaveDto)
+  certificados?: ProducaoFuncionarioCertificadosSaveDto;
 }
