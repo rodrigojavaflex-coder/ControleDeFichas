@@ -4,7 +4,7 @@ import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } 
 import { Router, ActivatedRoute } from '@angular/router';
 import { PrescritoresService } from '../../services/prescritores.service';
 import { CreatePrescritorDto, UpdatePrescritorDto, Prescritor } from '../../models/prescritor.model';
-import { Permission } from '../../models/usuario.model';
+import { Permission, Unidade } from '../../models/usuario.model';
 import { ErrorModalService } from '../../services/error-modal.service';
 import { PageContextService } from '../../services/page-context.service';
 import { AuthService } from '../../services/auth.service';
@@ -27,6 +27,7 @@ export class PrescritorFormComponent implements OnInit {
   private authService = inject(AuthService);
 
   readonly pfCrmOpcoes = PF_CRM_OPCOES;
+  readonly unidades = Object.values(Unidade);
 
   prescritorForm: FormGroup;
   isEditMode = false;
@@ -69,6 +70,7 @@ export class PrescritorFormComponent implements OnInit {
       numeroCRM: [''],
       UFCRM: ['', [Validators.maxLength(2)]],
       pfcrm: [PF_CRM_PADRAO, [Validators.required, Validators.maxLength(3)]],
+      unidade: [''],
     });
   }
 
@@ -81,6 +83,17 @@ export class PrescritorFormComponent implements OnInit {
       this.loadPrescritor(id);
     } else {
       this.isEditMode = false;
+      this.prescritorForm.get('numeroCRM')?.setValidators([Validators.required, Validators.min(1)]);
+      this.prescritorForm.get('UFCRM')?.setValidators([
+        Validators.required,
+        Validators.minLength(2),
+        Validators.maxLength(2),
+      ]);
+      this.prescritorForm.get('unidade')?.setValidators([Validators.required]);
+      this.prescritorForm.patchValue({ unidade: this.unidadeDoUsuario() });
+      this.prescritorForm.get('numeroCRM')?.updateValueAndValidity();
+      this.prescritorForm.get('UFCRM')?.updateValueAndValidity();
+      this.prescritorForm.get('unidade')?.updateValueAndValidity();
     }
   }
 
@@ -95,6 +108,7 @@ export class PrescritorFormComponent implements OnInit {
           numeroCRM: prescritor.numeroCRM || '',
           UFCRM: prescritor.UFCRM || '',
           pfcrm: prescritor.pfcrm || PF_CRM_PADRAO,
+          unidade: prescritor.unidade || '',
         });
         this.loading = false;
       },
@@ -128,9 +142,10 @@ export class PrescritorFormComponent implements OnInit {
   private createPrescritor(formValue: any): void {
     const createPrescritorDto: CreatePrescritorDto = {
       nome: formValue.nome,
-      numeroCRM: formValue.numeroCRM ? parseInt(formValue.numeroCRM) : undefined,
-      UFCRM: formValue.UFCRM || undefined,
+      numeroCRM: parseInt(formValue.numeroCRM, 10),
+      UFCRM: String(formValue.UFCRM).trim().toUpperCase(),
       pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
+      unidade: formValue.unidade,
     };
 
     this.prescritoresService.create(createPrescritorDto).subscribe({
@@ -150,6 +165,7 @@ export class PrescritorFormComponent implements OnInit {
       numeroCRM: formValue.numeroCRM ? parseInt(formValue.numeroCRM) : undefined,
       UFCRM: formValue.UFCRM || undefined,
       pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
+      unidade: formValue.unidade || null,
     };
 
     this.prescritoresService.update(this.prescritorId!, updatePrescritorDto).subscribe({
@@ -177,6 +193,11 @@ export class PrescritorFormComponent implements OnInit {
     });
   }
 
+  private unidadeDoUsuario(): string {
+    const u = this.authService.getCurrentUser()?.unidade?.trim() ?? '';
+    return Object.values(Unidade).includes(u as Unidade) ? u : '';
+  }
+
   onCancel(): void {
     this.router.navigate(['/prescritores']);
   }
@@ -189,10 +210,28 @@ export class PrescritorFormComponent implements OnInit {
     return this.prescritorForm.get('pfcrm');
   }
 
+  get numeroCRM() {
+    return this.prescritorForm.get('numeroCRM');
+  }
+
+  get ufCrm() {
+    return this.prescritorForm.get('UFCRM');
+  }
+
+  get unidade() {
+    return this.prescritorForm.get('unidade');
+  }
+
   getErrorMessage(fieldName: string): string {
     const control = this.prescritorForm.get(fieldName);
     if (control?.hasError('required')) {
+      if (fieldName === 'numeroCRM') return 'Número do CRM é obrigatório';
+      if (fieldName === 'UFCRM') return 'UF do CRM é obrigatória';
+      if (fieldName === 'unidade') return 'Unidade é obrigatória';
       return 'Nome é obrigatório';
+    }
+    if (control?.hasError('min')) {
+      return 'Número do CRM deve ser maior que zero';
     }
     if (control?.hasError('maxlength')) {
       return `Campo excede o tamanho máximo permitido`;

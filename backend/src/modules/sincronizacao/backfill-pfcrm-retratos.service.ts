@@ -19,8 +19,10 @@ type RowPend = {
   crmMedico: string;
   ufCrmMedico: string;
   nomeMedico: string;
-  /** Unidade do fechamento (escopo do filtro), não a unidade de movimento. */
+  /** Unidade do fechamento (escopo do filtro e do resumo). */
   unidade: Unidade;
+  /** Unidade usada no match do cadastro: movimento na grade, fechamento na carteira. */
+  matchUnidade: Unidade;
 };
 
 type ResolveOk = { pfcrm: string; via: 'unico' | 'nome' | 'padrao' };
@@ -56,7 +58,7 @@ export class BackfillPfcrmRetratosService {
     const padrao = PF_CRM_PADRAO_VISITACAO;
 
     const prescritores = await this.prescritorRepository.find({
-      select: ['id', 'nome', 'numeroCRM', 'UFCRM', 'pfcrm'],
+      select: ['id', 'nome', 'numeroCRM', 'UFCRM', 'pfcrm', 'unidade'],
     });
     const porCrmUf = new Map<string, Prescritor[]>();
     for (const p of prescritores) {
@@ -85,6 +87,7 @@ export class BackfillPfcrmRetratosService {
         ufCrmMedico: m.ufCrmMedico,
         nomeMedico: m.nomeMedico,
         unidade: m.fechamento.unidade,
+        matchUnidade: (m.unidade as Unidade) || m.fechamento.unidade,
       }));
 
     const carteiraQb = this.carteiraRepository
@@ -103,6 +106,7 @@ export class BackfillPfcrmRetratosService {
         ufCrmMedico: c.ufCrmMedico,
         nomeMedico: c.nomeMedico,
         unidade: c.fechamento.unidade,
+        matchUnidade: c.fechamento.unidade,
       }));
 
     const resumoMap = new Map<Unidade, BackfillPfcrmUnidadeResumoDto>();
@@ -162,10 +166,15 @@ export class BackfillPfcrmRetratosService {
       crm: string,
       uf: string,
       nome: string,
+      matchUnidade: Unidade,
     ): ResolveResult => {
       const crmN = parseCrmNumero(crm);
       if (crmN == null || !uf?.trim()) return null;
-      const list = porCrmUf.get(`${crmN}|${uf.trim().toUpperCase()}`) ?? [];
+      const todos = porCrmUf.get(`${crmN}|${uf.trim().toUpperCase()}`) ?? [];
+      const daUnidade = todos.filter((p) => p.unidade === matchUnidade);
+      const list = daUnidade.length
+        ? daUnidade
+        : todos.filter((p) => !p.unidade);
       if (!list.length) return null;
 
       const nomePad =
@@ -214,7 +223,12 @@ export class BackfillPfcrmRetratosService {
         via: ResolveOk['via'];
       }> = [];
       for (const row of rows) {
-        const r = resolver(row.crmMedico, row.ufCrmMedico, row.nomeMedico);
+        const r = resolver(
+          row.crmMedico,
+          row.ufCrmMedico,
+          row.nomeMedico,
+          row.matchUnidade,
+        );
         const resumo = ensure(row.unidade);
         if (!r) {
           semMatch++;

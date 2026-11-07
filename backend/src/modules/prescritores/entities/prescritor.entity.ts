@@ -2,11 +2,20 @@ import { Entity, Column, Index } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { PfCrm } from '../../../common/enums/pf-crm.enum';
+import { Unidade } from '../../../common/enums/unidade.enum';
 
 @Entity('prescritores')
-@Index('uq_prescritores_crm_uf_pfcrm', ['numeroCRM', 'UFCRM', 'pfcrm'], {
+@Index(
+  'uq_prescritores_unidade_crm_uf_pfcrm',
+  ['unidade', 'numeroCRM', 'UFCRM', 'pfcrm'],
+  {
+    unique: true,
+    where: `unidade IS NOT NULL AND "numeroCRM" IS NOT NULL AND "UFCRM" IS NOT NULL`,
+  },
+)
+@Index('uq_prescritores_crm_uf_pfcrm_sem_unidade', ['numeroCRM', 'UFCRM', 'pfcrm'], {
   unique: true,
-  where: `"numeroCRM" IS NOT NULL AND "UFCRM" IS NOT NULL`,
+  where: `unidade IS NULL AND "numeroCRM" IS NOT NULL AND "UFCRM" IS NOT NULL`,
 })
 export class Prescritor extends BaseEntity {
   /**
@@ -48,4 +57,14 @@ export class Prescritor extends BaseEntity {
   })
   @Column({ type: 'varchar', length: 3, default: PfCrm.MEDICO })
   pfcrm: string;
+
+  @ApiProperty({
+    enum: Unidade,
+    required: false,
+    nullable: true,
+    description:
+      'Unidade dona do cadastro (cópia do ERP da loja). Nulo = ainda não usado em movimento.',
+  })
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  unidade?: Unidade | null;
 }

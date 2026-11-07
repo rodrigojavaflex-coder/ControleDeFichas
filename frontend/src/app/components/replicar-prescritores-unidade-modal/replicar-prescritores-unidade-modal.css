@@ -1,0 +1,109 @@
+.modal-replicar-prescritor {
+  width: min(920px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-replicar-prescritor .modal-corpo {
+  overflow: auto;
+}
+
+.replicar-hint,
+.replicar-status,
+.replicar-resumo p {
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.replicar-erro {
+  color: var(--cor-perigo, #b42318);
+  margin: 0 0 12px;
+}
+
+.replicar-andamento {
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-superficie-hover);
+  color: var(--cor-texto-primario);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 0 0 12px;
+}
+
+.replicar-andamento-ok {
+  border-color: var(--cor-sucesso);
+  background: var(--cor-sucesso-clara);
+  color: var(--cor-sucesso-texto);
+}
+
+.replicar-andamento-erro {
+  border-color: var(--cor-perigo);
+  background: var(--cor-perigo-clara);
+  color: var(--cor-perigo-texto);
+}
+
+.replicar-andamento .replicar-status {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.replicar-etapas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+}
+
+.replicar-etapas li {
+  color: var(--cor-texto-secundario);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.replicar-etapas li.atual {
+  color: var(--cor-texto-primario);
+  font-weight: 600;
+}
+
+.replicar-etapas li.feita {
+  color: var(--cor-sucesso-texto);
+}
+
+.replicar-andamento-ok .replicar-etapas li,
+.replicar-andamento-erro .replicar-etapas li {
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .replicar-etapas {
+    grid-template-columns: 1fr;
+  }
+}
+
+.replicar-amostra {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.replicar-amostra th,
+.replicar-amostra td {
+  border-bottom: 1px solid var(--cor-borda, #ddd);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.replicar-amostra td span {
+  display: block;
+}
+
+.modal-replicar-prescritor .modal-rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px 16px;
+}

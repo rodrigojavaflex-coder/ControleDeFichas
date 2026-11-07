@@ -88,6 +88,7 @@ export class OrcamentosService {
           'o."ufcrmMedico"',
           'pr_nome',
           'o.pfcrm',
+          'o.unidade',
         ),
       )
       .addSelect('pr_nome.nome', 'joined_nome_medico')
@@ -211,6 +212,7 @@ export class OrcamentosService {
           'o."ufcrmMedico"',
           'pr_nome',
           'o.pfcrm',
+          'o.unidade',
         ),
       )
       .select(LABEL_MEDICO, 'nome')

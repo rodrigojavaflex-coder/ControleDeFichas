@@ -1,0 +1,131 @@
+<div class="modal-overlay nao-clicavel" *ngIf="visible">
+  <div class="modal-conteudo modal-replicar-prescritor" (click)="$event.stopPropagation()">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Prescritor por unidade</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="loading"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <p class="replicar-hint">
+        Cria uma cópia do prescritor em cada unidade em que ele já aparece
+        (orçamento, caixa, produção, painel, retrato e venda de terceiro).
+        O nome vem do <strong>FC04000 daquela unidade</strong>.
+        O movimento cruzado usa o nome da loja onde a venda aconteceu.
+        Não exclui cadastro. Pare a sincronização antes de aplicar.
+      </p>
+
+      <p class="replicar-status" *ngIf="statusMsg && fase === 'preview'">
+        <i class="fas fa-spinner fa-spin"></i> {{ statusMsg }}
+      </p>
+
+      <div
+        class="replicar-andamento"
+        *ngIf="mostrarAndamento"
+        [class.replicar-andamento-ok]="statusEtapa === 'concluido'"
+        [class.replicar-andamento-erro]="statusEtapa === 'erro'">
+        <p class="replicar-status">
+          <i
+            class="fas"
+            [class.fa-spinner]="fase === 'aplicando'"
+            [class.fa-spin]="fase === 'aplicando'"
+            [class.fa-check]="statusEtapa === 'concluido'"
+            [class.fa-exclamation-circle]="statusEtapa === 'erro'"></i>
+          {{ statusMsg }}
+          <span *ngIf="fase === 'aplicando'"> · {{ decorrido }}</span>
+        </p>
+        <ol class="replicar-etapas">
+          <li
+            *ngFor="let etapa of etapas"
+            [class.feita]="etapaFeita(etapa.id)"
+            [class.atual]="etapaAtual(etapa.id)">
+            <i
+              class="fas"
+              [class.fa-check]="etapaFeita(etapa.id)"
+              [class.fa-spinner]="etapaAtual(etapa.id)"
+              [class.fa-spin]="etapaAtual(etapa.id)"
+              [class.fa-circle]="!etapaFeita(etapa.id) && !etapaAtual(etapa.id)"></i>
+            {{ etapa.label }}
+          </li>
+        </ol>
+      </div>
+
+      <p class="replicar-erro" *ngIf="error">{{ error }}</p>
+
+      <div class="replicar-resumo" *ngIf="painel as r">
+        <p>
+          {{ r.aplicar ? 'Aplicado' : 'Prévia' }} —
+          {{ r.triadesComUso }} CRM+UF+profissão com uso,
+          {{ r.copiasCriadas }} cópias,
+          {{ r.atribuicoes }} linhas atuais ganham unidade,
+          {{ r.nomesCadastroAtualizados }} nomes de cadastro,
+          {{ r.semCadastroErp }} sem nome no ERP da unidade,
+          {{ r.prescritoresSemUnidade }} continuam sem unidade.
+          Profissão vazia: {{ r.profissoesHerdadas }} herdaram a única do FC04000,
+          {{ r.profissoesAmbiguas }} com mais de uma profissão ficaram sem escolha,
+          {{ r.semNomeIgnorados }} sem nome no ERP e no NEST não foram criados.
+        </p>
+        <p>
+          Vendas repontadas: {{ r.vendasRepontadas }}.
+          Vendas sem unidade (não mudam): {{ r.vendasSemUnidade }}.
+          Sem CRM ou UF: {{ r.prescritoresVendaTerceiro }} recebem a unidade da venda de terceiro,
+          {{ r.copiasVendaTerceiro }} cópias.
+          Nomes: retrato médico {{ r.retratoMedico }},
+          carteira {{ r.retratoCarteira }},
+          histórico do painel {{ r.historicoPainel }},
+          produção {{ r.producao }}.
+        </p>
+        <p *ngIf="r.agentesConsultados.length">
+          Agentes: {{ r.agentesConsultados.join(', ') }}
+        </p>
+        <table class="replicar-amostra" *ngIf="r.amostra.length">
+          <caption>Mesmo CRM com nomes diferentes entre unidades</caption>
+          <thead>
+            <tr>
+              <th>CRM</th>
+              <th>UF</th>
+              <th>PF</th>
+              <th>Por unidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of r.amostra">
+              <td>{{ item.crm }}</td>
+              <td>{{ item.uf }}</td>
+              <td>{{ item.pfcrm }}</td>
+              <td>
+                <span *ngFor="let u of item.porUnidade">
+                  {{ u.unidade }}: {{ u.nome }} ({{ u.origem }})
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal-rodape">
+      <button type="button" class="botao botao-fantasma" (click)="fechar()" [disabled]="loading">
+        Fechar
+      </button>
+      <button type="button" class="botao botao-secundario" (click)="executarPrevia()" [disabled]="loading">
+        <i class="fas fa-search" [class.fa-spin]="fase === 'preview'"></i>
+        Prévia
+      </button>
+      <button
+        type="button"
+        class="botao botao-primario"
+        (click)="executarAplicar()"
+        [disabled]="loading || !preview || !preview.agentesConsultados.length">
+        <i class="fas fa-clone" [class.fa-spin]="fase === 'aplicando'"></i>
+        {{ fase === 'aplicando' ? 'Aplicando…' : 'Aplicar' }}
+      </button>
+    </div>
+  </div>
+</div>

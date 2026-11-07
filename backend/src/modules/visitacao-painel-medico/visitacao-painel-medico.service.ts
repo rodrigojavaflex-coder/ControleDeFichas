@@ -63,6 +63,7 @@ export class VisitacaoPainelMedicoService {
           'p."ufCrmMedico"',
           'pr_nome',
           'p.pfcrm',
+          'p.unidade',
         ),
       )
       .addSelect('pr_nome.nome', 'pr_nome_nome')

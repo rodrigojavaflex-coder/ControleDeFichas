@@ -34,28 +34,36 @@
 
     <!-- Número CRM -->
     <div class="form-group">
-      <label for="numeroCRM" class="form-label">Número do CRM</label>
+      <label for="numeroCRM" class="form-label">Número do CRM{{ isEditMode ? '' : ' *' }}</label>
       <input
         id="numeroCRM"
         type="number"
         formControlName="numeroCRM"
         class="form-control"
+        [class.error]="numeroCRM?.invalid && numeroCRM?.touched"
         placeholder="Número do CRM"
       >
+      <div *ngIf="numeroCRM?.invalid && numeroCRM?.touched" class="error-message">
+        {{ getErrorMessage('numeroCRM') }}
+      </div>
     </div>
 
     <!-- UF CRM -->
     <div class="form-group">
-      <label for="UFCRM" class="form-label">UF do CRM</label>
+      <label for="UFCRM" class="form-label">UF do CRM{{ isEditMode ? '' : ' *' }}</label>
       <input
         id="UFCRM"
         type="text"
         formControlName="UFCRM"
         class="form-control"
+        [class.error]="ufCrm?.invalid && ufCrm?.touched"
         placeholder="GO"
         maxlength="2"
         style="text-transform: uppercase;"
       >
+      <div *ngIf="ufCrm?.invalid && ufCrm?.touched" class="error-message">
+        {{ getErrorMessage('UFCRM') }}
+      </div>
       <div class="form-help">
         Exemplo: GO, SP, MG
       </div>
@@ -74,7 +82,27 @@
         }
       </select>
       <div class="form-help">
-        Identidade canônica: CRM + UF + profissão (mesmo CRM pode ter mais de uma)
+        Identidade: unidade + CRM + UF + profissão
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="unidade" class="form-label">Unidade{{ isEditMode ? '' : ' *' }}</label>
+      <select
+        id="unidade"
+        formControlName="unidade"
+        class="form-control"
+        [class.error]="unidade?.invalid && unidade?.touched">
+        <option value="">{{ isEditMode ? 'Sem unidade' : 'Selecione a unidade' }}</option>
+        @for (u of unidades; track u) {
+          <option [value]="u">{{ u }}</option>
+        }
+      </select>
+      <div *ngIf="unidade?.invalid && unidade?.touched" class="error-message">
+        {{ getErrorMessage('unidade') }}
+      </div>
+      <div class="form-help" *ngIf="isEditMode">
+        Loja dona deste cadastro. Vazio só para prescritor que ainda não entrou em movimento.
       </div>
     </div>
 

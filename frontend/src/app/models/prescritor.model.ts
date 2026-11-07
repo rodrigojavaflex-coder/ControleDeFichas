@@ -7,15 +7,17 @@ export interface Prescritor {
   UFCRM?: string;
   /** Profissão (PFCRM do ERP): 1=MEDICO, 6=NUTRICIONISTA, … */
   pfcrm?: string;
+  unidade?: string | null;
   criadoEm: Date;
   atualizadoEm: Date;
 }
 
 export interface CreatePrescritorDto {
   nome: string;
-  numeroCRM?: number;
-  UFCRM?: string;
+  numeroCRM: number;
+  UFCRM: string;
   pfcrm?: string;
+  unidade: string;
 }
 
 export interface UpdatePrescritorDto {
@@ -23,6 +25,7 @@ export interface UpdatePrescritorDto {
   numeroCRM?: number;
   UFCRM?: string;
   pfcrm?: string;
+  unidade?: string | null;
 }
 
 export interface FindPrescritoresDto {
@@ -31,6 +34,7 @@ export interface FindPrescritoresDto {
   nome?: string;
   numeroCRM?: number;
   pfcrm?: string;
+  unidade?: string;
 }
 
 export interface PrescritorPaginatedResponse extends PaginatedResponse<Prescritor> {}

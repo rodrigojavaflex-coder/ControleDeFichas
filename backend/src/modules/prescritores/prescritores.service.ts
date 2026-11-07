@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Prescritor } from './entities/prescritor.entity';
 import { CreatePrescritorDto } from './dto/create-prescritor.dto';
 import { UpdatePrescritorDto } from './dto/update-prescritor.dto';
@@ -28,6 +28,7 @@ export class PrescritoresService {
     try {
       const pfcrm =
         createPrescritorDto.pfcrm?.trim()?.toUpperCase() || '1';
+      const unidade = createPrescritorDto.unidade ?? null;
 
       if (
         createPrescritorDto.numeroCRM != null &&
@@ -38,11 +39,12 @@ export class PrescritoresService {
             numeroCRM: createPrescritorDto.numeroCRM,
             UFCRM: createPrescritorDto.UFCRM,
             pfcrm,
+            unidade: unidade ?? IsNull(),
           },
         });
         if (mesmaTriade) {
           throw new ConflictException(
-            `Já existe prescritor com CRM ${createPrescritorDto.numeroCRM}/${createPrescritorDto.UFCRM} e profissão ${pfcrm}`,
+            `Já existe prescritor com CRM ${createPrescritorDto.numeroCRM}/${createPrescritorDto.UFCRM}, profissão ${pfcrm} e unidade ${unidade ?? 'sem unidade'}`,
           );
         }
       }
@@ -50,6 +52,7 @@ export class PrescritoresService {
       const prescritor = this.prescritorRepository.create({
         ...createPrescritorDto,
         pfcrm,
+        unidade,
       });
       return await this.prescritorRepository.save(prescritor);
     } catch (error) {
@@ -64,7 +67,8 @@ export class PrescritoresService {
   async findAll(
     findPrescritoresDto: FindPrescritoresDto,
   ): Promise<PaginatedResponseDto<Prescritor>> {
-    const { page = 1, limit = 10, nome, numeroCRM, pfcrm } = findPrescritoresDto;
+    const { page = 1, limit = 10, nome, numeroCRM, pfcrm, unidade } =
+      findPrescritoresDto;
 
     const queryBuilder =
       this.prescritorRepository.createQueryBuilder('prescritor');
@@ -83,6 +87,12 @@ export class PrescritoresService {
       queryBuilder.andWhere('UPPER(BTRIM(prescritor.pfcrm)) = :pfcrm', {
         pfcrm: pfcrm.trim().toUpperCase(),
       });
+    }
+
+    if (unidade === 'SEM') {
+      queryBuilder.andWhere('prescritor.unidade IS NULL');
+    } else if (unidade) {
+      queryBuilder.andWhere('prescritor.unidade = :unidade', { unidade });
     }
 
     const [prescritores, total] = await queryBuilder
@@ -146,14 +156,23 @@ export class PrescritoresService {
       )
         ?.trim()
         ?.toUpperCase() || '1';
+    const nextUnidade =
+      updatePrescritorDto.unidade !== undefined
+        ? updatePrescritorDto.unidade
+        : prescritor.unidade ?? null;
 
     if (nextCrm != null && nextUf) {
       const conflito = await this.prescritorRepository.findOne({
-        where: { numeroCRM: nextCrm, UFCRM: nextUf, pfcrm: nextPf },
+        where: {
+          numeroCRM: nextCrm,
+          UFCRM: nextUf,
+          pfcrm: nextPf,
+          unidade: nextUnidade ?? IsNull(),
+        },
       });
       if (conflito && conflito.id !== id) {
         throw new ConflictException(
-          `Já existe prescritor com CRM ${nextCrm}/${nextUf} e profissão ${nextPf}`,
+          `Já existe prescritor com CRM ${nextCrm}/${nextUf}, profissão ${nextPf} e unidade ${nextUnidade ?? 'sem unidade'}`,
         );
       }
     }

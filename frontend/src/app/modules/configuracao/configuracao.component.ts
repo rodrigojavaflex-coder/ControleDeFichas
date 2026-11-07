@@ -25,6 +25,7 @@ import { ImportarOrcamentosModalComponent } from '../../components/importar-orca
 import { RepararNomesMedicosModalComponent } from '../../components/reparar-nomes-medicos-modal/reparar-nomes-medicos-modal';
 import { ImportarProfissaoPrescritoresModalComponent } from '../../components/importar-profissao-prescritores-modal/importar-profissao-prescritores-modal';
 import { BackfillPfcrmRetratosModalComponent } from '../../components/backfill-pfcrm-retratos-modal/backfill-pfcrm-retratos-modal';
+import { ReplicarPrescritoresUnidadeModalComponent } from '../../components/replicar-prescritores-unidade-modal/replicar-prescritores-unidade-modal';
 import { SincronizacaoLogsModalComponent } from '../../components/sincronizacao-logs-modal/sincronizacao-logs-modal';
 import { BackfillPfcrmRetratosResponse } from '../../models/sincronizacao.model';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
@@ -53,6 +54,7 @@ type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
     RepararNomesMedicosModalComponent,
     ImportarProfissaoPrescritoresModalComponent,
     BackfillPfcrmRetratosModalComponent,
+    ReplicarPrescritoresUnidadeModalComponent,
     SincronizacaoLogsModalComponent,
   ],
   templateUrl: './configuracao.component.html',
@@ -78,6 +80,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   importarProfissaoPrescritoresModal?: ImportarProfissaoPrescritoresModalComponent;
   @ViewChild('backfillPfcrmRetratosModal')
   backfillPfcrmRetratosModal?: BackfillPfcrmRetratosModalComponent;
+  @ViewChild('replicarPrescritoresUnidadeModal')
+  replicarPrescritoresUnidadeModal?: ReplicarPrescritoresUnidadeModalComponent;
   @ViewChild('sincronizacaoLogsModal')
   sincronizacaoLogsModal?: SincronizacaoLogsModalComponent;
   private progressSubscription?: Subscription;
@@ -360,6 +364,10 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
 
   abrirModalBackfillPfcrmRetratos(): void {
     this.backfillPfcrmRetratosModal?.abrir();
+  }
+
+  abrirModalReplicarPrescritoresUnidade(): void {
+    this.replicarPrescritoresUnidadeModal?.abrir();
   }
 
   onBackfillPfcrmRetratosConcluido(res: BackfillPfcrmRetratosResponse): void {

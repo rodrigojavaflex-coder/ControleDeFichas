@@ -61,6 +61,11 @@ export class ImportProfissaoItemDto {
   @ApiPropertyOptional({ nullable: true })
   id!: string | null;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  unidade?: string;
+
   @ApiProperty()
   crm!: string;
 

@@ -31,6 +31,19 @@
         }
       </select>
     </div>
+    <div class="filter-group">
+      <select
+        class="form-control"
+        [(ngModel)]="unidadeFilter"
+        (ngModelChange)="onFilterChange()"
+        aria-label="Filtrar por unidade">
+        <option value="">Todas as unidades</option>
+        <option value="SEM">Sem unidade</option>
+        @for (u of unidades; track u) {
+          <option [value]="u">{{ u }}</option>
+        }
+      </select>
+    </div>
     <button class="btn btn-limpar" (click)="clearFilters()">
       Limpar Filtros
     </button>
@@ -64,6 +77,7 @@
             <th>Nome</th>
             <th>CRM</th>
             <th>Profissão</th>
+            <th>Unidade</th>
             <th>Criado em</th>
             <th>Ações</th>
           </tr>
@@ -73,6 +87,7 @@
             <td>{{ prescritor.nome }}</td>
             <td>{{ getCRMFormat(prescritor) }}</td>
             <td>{{ formatProfissao(prescritor) }}</td>
+            <td>{{ prescritor.unidade || '—' }}</td>
             <td>{{ formatDate(prescritor.criadoEm) }}</td>
             <td class="action-buttons">
               @if (canEditPrescritor()) {

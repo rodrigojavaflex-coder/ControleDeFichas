@@ -29,6 +29,7 @@ const UNIDADE_AGENTE: Record<Unidade, string> = {
 };
 
 interface ErpRow {
+  unidade: Unidade;
   pfcrm: string;
   crm: string;
   uf: string;
@@ -62,13 +63,13 @@ export class ImportarProfissaoPrescritoresService {
       unidadeFiltro,
     );
     const nestRows = await this.prescritorRepository.find({
-      select: ['id', 'nome', 'numeroCRM', 'UFCRM', 'pfcrm'],
+      select: ['id', 'nome', 'numeroCRM', 'UFCRM', 'pfcrm', 'unidade'],
     });
 
     const porCrmUf = new Map<string, Prescritor[]>();
     for (const p of nestRows) {
-      if (p.numeroCRM == null || !p.UFCRM) continue;
-      const k = `${p.numeroCRM}|${p.UFCRM.toUpperCase()}`;
+      if (p.numeroCRM == null || !p.UFCRM || !p.unidade) continue;
+      const k = `${p.unidade}|${p.numeroCRM}|${p.UFCRM.toUpperCase()}`;
       const list = porCrmUf.get(k) ?? [];
       list.push(p);
       porCrmUf.set(k, list);
@@ -89,7 +90,7 @@ export class ImportarProfissaoPrescritoresService {
     const padrao = PF_CRM_PADRAO_VISITACAO; // '1'
 
     for (const erp of erpRows) {
-      const k = `${erp.crm}|${erp.uf}`;
+      const k = `${erp.unidade}|${erp.crm}|${erp.uf}`;
       const candidatos = porCrmUf.get(k) ?? [];
       const jaComPf = candidatos.find(
         (c) => (c.pfcrm || '').toUpperCase() === erp.pfcrm,
@@ -115,6 +116,7 @@ export class ImportarProfissaoPrescritoresService {
             .map((p) => `${p.nome} [${p.pfcrm}]`)
             .join(' | '),
           nomeErp: erp.nome,
+          unidade: erp.unidade,
           origemErp: erp.origem,
           motivo:
             '5) Pendente — vários NEST com mesmo CRM+UF e nome compatível',
@@ -137,7 +139,8 @@ export class ImportarProfissaoPrescritoresService {
             nomeNest: alvo.nome,
             nomeErp: erp.nome,
             pfcrmAtual: alvo.pfcrm,
-            origemErp: erp.origem,
+            unidade: erp.unidade,
+          origemErp: erp.origem,
             motivo:
               '1) Match CRM+UF+nome — atualizar PFCRM (corrigir default 1)',
             acao: 'atualizar',
@@ -152,7 +155,8 @@ export class ImportarProfissaoPrescritoresService {
             nomeNest: `${alvo.nome} [${alvo.pfcrm}]`,
             nomeErp: erp.nome,
             pfcrmAtual: alvo.pfcrm,
-            origemErp: erp.origem,
+            unidade: erp.unidade,
+          origemErp: erp.origem,
             motivo:
               '2) Match CRM+UF+nome — criar outra profissão (NEST já tem PFCRM ≠ 1)',
             acao: 'criar',
@@ -170,6 +174,7 @@ export class ImportarProfissaoPrescritoresService {
           profissao: rotuloPfCrm(erp.pfcrm),
           nomeNest: null,
           nomeErp: erp.nome,
+          unidade: erp.unidade,
           origemErp: erp.origem,
           motivo: '3) Sem prescritor NEST — criar com PFCRM',
           acao: 'criar',
@@ -242,7 +247,12 @@ export class ImportarProfissaoPrescritoresService {
         continue;
       }
       const exists = await this.prescritorRepository.findOne({
-        where: { numeroCRM: crm, UFCRM: uf, pfcrm },
+        where: {
+          numeroCRM: crm,
+          UFCRM: uf,
+          pfcrm,
+          ...(item.unidade ? { unidade: item.unidade as Unidade } : {}),
+        },
         select: ['id'],
       });
       if (!exists) faltam++;
@@ -301,7 +311,12 @@ export class ImportarProfissaoPrescritoresService {
 
         if (item.acao === 'atualizar' && item.id) {
           const conflito = await this.prescritorRepository.findOne({
-            where: { numeroCRM: crm, UFCRM: uf, pfcrm },
+            where: {
+              numeroCRM: crm,
+              UFCRM: uf,
+              pfcrm,
+              ...(item.unidade ? { unidade: item.unidade as Unidade } : {}),
+            },
           });
           if (conflito && conflito.id !== item.id) {
             erros.push(
@@ -321,7 +336,12 @@ export class ImportarProfissaoPrescritoresService {
         }
 
         const exists = await this.prescritorRepository.findOne({
-          where: { numeroCRM: crm, UFCRM: uf, pfcrm },
+          where: {
+            numeroCRM: crm,
+            UFCRM: uf,
+            pfcrm,
+            ...(item.unidade ? { unidade: item.unidade as Unidade } : {}),
+          },
         });
         if (exists) {
           n++;
@@ -333,6 +353,7 @@ export class ImportarProfissaoPrescritoresService {
             UFCRM: uf,
             pfcrm,
             nome: item.nomeErp,
+            unidade: (item.unidade as Unidade) || null,
           }),
         );
         n++;
@@ -447,11 +468,19 @@ export class ImportarProfissaoPrescritoresService {
             ignorados++;
             continue;
           }
-          const chave = `${crmNum}|${uf}|${pfcrm}`;
+          const unidadeErp = (Object.keys(UNIDADE_AGENTE) as Unidade[]).find(
+            (u) => UNIDADE_AGENTE[u] === config.agente,
+          );
+          if (!unidadeErp) {
+            ignorados++;
+            continue;
+          }
+          const chave = `${unidadeErp}|${crmNum}|${uf}|${pfcrm}`;
           if (visto.has(chave)) continue;
           visto.add(chave);
           aceitos++;
           out.push({
+            unidade: unidadeErp,
             pfcrm,
             crm: String(crmNum),
             uf,

@@ -311,6 +311,50 @@ export interface BackfillPfcrmRetratosResponse {
   amostraFalhas: string[];
 }
 
+export interface ReplicarPrescritoresUnidadeDto {
+  aplicar: boolean;
+}
+
+export interface ReplicarPrescritoresUnidadeStatus {
+  emAndamento: boolean;
+  etapa: string;
+  mensagem: string;
+  iniciadoEm: string | null;
+  atualizadoEm: string | null;
+  erro: string | null;
+}
+
+export interface ReplicarPrescritorAmostra {
+  crm: string;
+  uf: string;
+  pfcrm: string;
+  porUnidade: Array<{ unidade: string; nome: string; origem: 'erp' | 'nest' }>;
+}
+
+export interface ReplicarPrescritoresUnidadeResponse {
+  aplicar: boolean;
+  triadesComUso: number;
+  copiasCriadas: number;
+  atribuicoes: number;
+  nomesCadastroAtualizados: number;
+  semCadastroErp: number;
+  profissoesHerdadas: number;
+  profissoesAmbiguas: number;
+  semNomeIgnorados: number;
+  prescritoresVendaTerceiro: number;
+  copiasVendaTerceiro: number;
+  prescritoresSemUnidade: number;
+  vendasRepontadas: number;
+  vendasSemUnidade: number;
+  retratoMedico: number;
+  retratoCarteira: number;
+  historicoPainel: number;
+  producao: number;
+  agentesConsultados: string[];
+  erros: string[];
+  amostra: ReplicarPrescritorAmostra[];
+}
+
 export interface SincronizacaoLogErro {
   id: string;
   agente: string;

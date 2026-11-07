@@ -807,6 +807,26 @@
       <div class="importacao-card">
         <div class="importacao-header">
           <div>
+            <h3 class="section-title">Prescritor por unidade</h3>
+            <p class="section-description">
+              Replica o cadastro em cada loja onde o médico já foi usado e regrava
+              venda de terceiro, retrato, histórico do painel e produção.
+              O nome é o do ERP da unidade do movimento. Não exclui. Pare a sincronização e rode a prévia antes de aplicar.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-migracao"
+            (click)="abrirModalReplicarPrescritoresUnidade()">
+            <i class="fas fa-clone"></i>
+            Replicar por unidade
+          </button>
+        </div>
+      </div>
+
+      <div class="importacao-card">
+        <div class="importacao-header">
+          <div>
             <h3 class="section-title">Profissão do prescritor (PFCRM)</h3>
             <p class="section-description">
               Identidade canônica: <strong>CRM + UF + PFCRM</strong> (profissão do ERP).
@@ -949,3 +969,7 @@
   #backfillPfcrmRetratosModal
   (concluido)="onBackfillPfcrmRetratosConcluido($event)">
 </app-backfill-pfcrm-retratos-modal>
+
+<app-replicar-prescritores-unidade-modal
+  #replicarPrescritoresUnidadeModal>
+</app-replicar-prescritores-unidade-modal>

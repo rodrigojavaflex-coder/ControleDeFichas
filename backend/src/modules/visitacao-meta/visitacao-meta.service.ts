@@ -571,7 +571,7 @@ export class VisitacaoMetaService {
         p.unidade,
         MAX(p."nomeRepresentante") AS representante
       FROM painel_medicos_representantes p
-      ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel', 'p.pfcrm')}
+      ${sqlLeftJoinPrescritores('p."crmMedico"', 'p."ufCrmMedico"', 'pr_painel', 'p.pfcrm', 'p.unidade')}
       WHERE p.unidade = ANY($1)
         AND NULLIF(BTRIM(p."crmMedico"), '') IS NOT NULL
         AND NULLIF(BTRIM(p."ufCrmMedico"), '') IS NOT NULL

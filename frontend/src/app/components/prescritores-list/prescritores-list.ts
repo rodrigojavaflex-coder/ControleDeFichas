@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PrescritoresService } from '../../services/prescritores.service';
 import { Prescritor, FindPrescritoresDto, PrescritorPaginatedResponse } from '../../models/prescritor.model';
-import { Permission } from '../../models/usuario.model';
+import { Permission, Unidade } from '../../models/usuario.model';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
 import { BaseListComponent } from '../base-list.component';
 import { PageContextService } from '../../services/page-context.service';
@@ -27,6 +27,7 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
 
   Permission = Permission;
   readonly pfCrmOpcoes = PF_CRM_OPCOES;
+  readonly unidades = Object.values(Unidade);
 
   // Paginação
   currentPage = 1;
@@ -38,6 +39,7 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
   nomeFilter = '';
   numeroCRMFilter = '';
   pfcrmFilter = '';
+  unidadeFilter = '';
 
   deleteModalTitle = 'Confirmação de Exclusão';
 
@@ -80,6 +82,10 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
       filters.pfcrm = this.pfcrmFilter.trim();
     }
 
+    if (this.unidadeFilter.trim()) {
+      filters.unidade = this.unidadeFilter.trim();
+    }
+
     this.prescritoresService.findAll(filters).subscribe({
       next: (response: PrescritorPaginatedResponse) => {
         this.items = response.data;
@@ -108,6 +114,7 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
     this.nomeFilter = '';
     this.numeroCRMFilter = '';
     this.pfcrmFilter = '';
+    this.unidadeFilter = '';
     this.currentPage = 1;
     this.loadItems();
   }

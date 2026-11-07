@@ -61,6 +61,12 @@ import {
   BackfillPfcrmRetratosDto,
   BackfillPfcrmRetratosResponseDto,
 } from './dto/backfill-pfcrm-retratos.dto';
+import { ReplicarPrescritoresUnidadeService } from './replicar-prescritores-unidade.service';
+import {
+  ReplicarPrescritoresUnidadeDto,
+  ReplicarPrescritoresUnidadeResponseDto,
+  ReplicarPrescritoresUnidadeStatusDto,
+} from './dto/replicar-prescritores-unidade.dto';
 
 @ApiTags('sincronizacao')
 @Controller('sincronizacao')
@@ -72,6 +78,7 @@ export class SincronizacaoController {
     private readonly repararNomesMedicosService: RepararNomesMedicosService,
     private readonly importarProfissaoPrescritoresService: ImportarProfissaoPrescritoresService,
     private readonly backfillPfcrmRetratosService: BackfillPfcrmRetratosService,
+    private readonly replicarPrescritoresUnidadeService: ReplicarPrescritoresUnidadeService,
   ) {}
 
   @Post('executar')
@@ -279,6 +286,33 @@ export class SincronizacaoController {
     @Body() dto: BackfillPfcrmRetratosDto,
   ): Promise<BackfillPfcrmRetratosResponseDto> {
     return this.backfillPfcrmRetratosService.executar(dto);
+  }
+
+  @Get('replicar-prescritores-unidade/status')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary: 'Status da réplica de prescritores por unidade em andamento',
+  })
+  @ApiResponse({ status: 200, type: ReplicarPrescritoresUnidadeStatusDto })
+  statusReplicarPrescritoresUnidade(): ReplicarPrescritoresUnidadeStatusDto {
+    return this.replicarPrescritoresUnidadeService.lerStatus();
+  }
+
+  @Post('replicar-prescritores-unidade')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Replica prescritores por unidade onde já foram usados e regrava referências (dry-run ou apply). Não exclui.',
+  })
+  @ApiResponse({ status: 200, type: ReplicarPrescritoresUnidadeResponseDto })
+  replicarPrescritoresUnidade(
+    @Body() dto: ReplicarPrescritoresUnidadeDto,
+  ): Promise<ReplicarPrescritoresUnidadeResponseDto> {
+    return this.replicarPrescritoresUnidadeService.executar(dto);
   }
 
   @Get('logs')

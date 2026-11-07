@@ -7,6 +7,7 @@ import { Prescritor } from '../prescritores/entities/prescritor.entity';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { padronizarNomeDeSistemaLegado } from '../../common/utils/encoding-legado.util';
 import { parseCrmNumero } from '../../common/utils/prescritor-crm.util';
+import { normalizarPfCrm, PF_CRM_PADRAO_VISITACAO } from '../../common/enums/pf-crm.enum';
 import { fetchAgenteComRetry } from '../../common/utils/fetch-agente-com-retry.util';
 import {
   RepararNomesMedicosDto,
@@ -34,6 +35,7 @@ interface NestNomeRow {
   unidade: string | null;
   crm: string;
   uf: string;
+  pfcrm: string;
   nome: string;
 }
 
@@ -79,7 +81,9 @@ export class RepararNomesMedicosService {
       erros,
       unidadeFiltro,
     );
-    const nestRows = await this.carregarNomesNest();
+    const nestRows = (await this.carregarNomesNest()).filter(
+      (row) => !unidadeFiltro || row.unidade === unidadeFiltro,
+    );
 
     const paraCorrigir: ReparoNomeMedicoItemDto[] = [];
     const pendentesRelatorio: ReparoNomeMedicoItemDto[] = [];
@@ -118,7 +122,8 @@ export class RepararNomesMedicosService {
         continue;
       }
 
-      const chave = this.chave(crm, uf);
+      const pfcrm = (row.pfcrm || PF_CRM_PADRAO_VISITACAO).trim().toUpperCase();
+      const chave = this.chave(crm, uf, pfcrm, row.unidade || '');
       const erp = erpMap.get(chave);
 
       if (!erp) {
@@ -339,6 +344,7 @@ export class RepararNomesMedicosService {
           },
         );
         const data = (await response.json()) as Array<{
+          pfcrm?: string;
           nrcrm?: number | string;
           ufcrm?: string;
           nomemed?: string;
@@ -353,10 +359,16 @@ export class RepararNomesMedicosService {
           const nomeBruto = String(row.nomemed ?? '').trim();
           if (crmNum == null || !uf || !nomeBruto) continue;
 
+          const unidadeErp = (Object.keys(UNIDADE_AGENTE) as Unidade[]).find(
+            (u) => UNIDADE_AGENTE[u] === config.agente,
+          );
+          if (!unidadeErp) continue;
+          const pfcrm =
+            normalizarPfCrm(row.pfcrm) ?? PF_CRM_PADRAO_VISITACAO;
           const crm = String(crmNum);
           const nomePad =
             padronizarNomeDeSistemaLegado(nomeBruto) || nomeBruto;
-          const chave = this.chave(crm, uf);
+          const chave = this.chave(crm, uf, pfcrm, unidadeErp);
           this.registrarNomeErp(
             mapa,
             chave,
@@ -435,15 +447,16 @@ export class RepararNomesMedicosService {
   private async carregarNomesNest(): Promise<NestNomeRow[]> {
     const prescritores = await this.prescritorRepository
       .createQueryBuilder('p')
-      .select(['p.id', 'p.nome', 'p.numeroCRM', 'p.UFCRM'])
+      .select(['p.id', 'p.nome', 'p.numeroCRM', 'p.UFCRM', 'p.pfcrm', 'p.unidade'])
       .getMany();
 
     return prescritores.map((p) => ({
       tabela: 'prescritores',
       id: p.id,
-      unidade: null,
+      unidade: p.unidade ?? null,
       crm: p.numeroCRM != null ? String(p.numeroCRM) : '',
       uf: p.UFCRM || '',
+      pfcrm: p.pfcrm || PF_CRM_PADRAO_VISITACAO,
       nome: p.nome || '',
     }));
   }
@@ -481,8 +494,8 @@ export class RepararNomesMedicosService {
     return total;
   }
 
-  private chave(crm: string, uf: string): string {
-    return `${crm}|${uf.toUpperCase()}`;
+  private chave(crm: string, uf: string, pfcrm: string, unidade: string): string {
+    return `${crm}|${uf.toUpperCase()}|${pfcrm}|${unidade}`;
   }
 
   private nomeSuspeito(nome: string): boolean {

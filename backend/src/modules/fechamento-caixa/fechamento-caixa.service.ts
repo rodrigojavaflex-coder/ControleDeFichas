@@ -1361,6 +1361,8 @@ export class FechamentoCaixaService {
         uf,
         row.nome_medico,
         pfcrm,
+        unidade,
+        false,
       );
     }
 
@@ -1503,6 +1505,8 @@ export class FechamentoCaixaService {
           ufCrmMedico,
           f.nome_medico,
           pfcrm,
+          unidade,
+          false,
         );
         entities.push(
           this.formulaRepo.create({
@@ -1604,7 +1608,7 @@ export class FechamentoCaixaService {
         c.crm_medico AS "crmMedico",
         ${sqlNomePrescritorJoin('pr_nome', 'NULL')} AS "nomeMedico"
       FROM caixa_requisicoes_pagas c
-      ${sqlLeftJoinPrescritores('c.crm_medico', 'c.uf_crm_medico', 'pr_nome', 'c.pfcrm')}
+      ${sqlLeftJoinPrescritores('c.crm_medico', 'c.uf_crm_medico', 'pr_nome', 'c.pfcrm', 'c.unidade')}
       WHERE c.unidade = $1
         AND c.data_pagamento = $2
         AND c.tipo_requisicao = 'C'

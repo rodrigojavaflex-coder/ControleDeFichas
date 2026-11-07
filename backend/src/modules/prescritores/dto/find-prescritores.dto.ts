@@ -63,4 +63,12 @@ export class FindPrescritoresDto {
   @IsOptional()
   @IsString()
   pfcrm?: string;
+
+  @ApiProperty({
+    description: 'Filtrar por unidade. SEM = cadastro ainda sem unidade.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  unidade?: string;
 }

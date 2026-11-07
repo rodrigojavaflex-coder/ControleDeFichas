@@ -1,5 +1,5 @@
 <!-- Modal de Criação Rápida de Prescritor -->
-<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+<div class="modal-overlay nao-clicavel" *ngIf="showModal">
   <div class="modal-conteudo modal-pequeno" (click)="$event.stopPropagation()">
     <!-- Header -->
     <div class="modal-cabecalho">
@@ -36,29 +36,37 @@
 
         <!-- Número CRM -->
         <div class="grupo-campo">
-          <label for="numeroCRM" class="label-campo">Número CRM</label>
+          <label for="numeroCRM" class="label-campo obrigatorio">Número CRM</label>
           <input
             id="numeroCRM"
             type="number"
             formControlName="numeroCRM"
             class="campo"
             autocomplete="off"
+            [ngClass]="{'invalido': hasFieldError('numeroCRM')}"
             placeholder="Número do CRM">
+          <div class="mensagem-invalida" *ngIf="hasFieldError('numeroCRM')">
+            {{ getFieldError('numeroCRM') }}
+          </div>
         </div>
 
         <!-- UF CRM -->
         <div class="grupo-campo">
-          <label for="UFCRM" class="label-campo">UF CRM</label>
+          <label for="UFCRM" class="label-campo obrigatorio">UF CRM</label>
           <select
             id="UFCRM"
             formControlName="UFCRM"
             class="campo"
-            autocomplete="off">
+            autocomplete="off"
+            [ngClass]="{'invalido': hasFieldError('UFCRM')}">
             <option value="">Selecione a UF</option>
             <option *ngFor="let uf of ufs" [value]="uf">
               {{ uf }}
             </option>
           </select>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('UFCRM')">
+            {{ getFieldError('UFCRM') }}
+          </div>
         </div>
 
         <!-- Profissão -->
@@ -73,6 +81,21 @@
               {{ op.codigo }} — {{ op.label }}
             </option>
           </select>
+        </div>
+
+        <div class="grupo-campo">
+          <label for="unidadeQuick" class="label-campo obrigatorio">Unidade</label>
+          <select
+            id="unidadeQuick"
+            formControlName="unidade"
+            class="campo"
+            [ngClass]="{'invalido': hasFieldError('unidade')}">
+            <option value="">Selecione a unidade</option>
+            <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
+          </select>
+          <div class="mensagem-invalida" *ngIf="hasFieldError('unidade')">
+            {{ getFieldError('unidade') }}
+          </div>
         </div>
       </div>
     </form>

@@ -149,6 +149,7 @@ export class OrcamentosDashboardService {
           'o."ufcrmMedico"',
           'pr_nome',
           'o.pfcrm',
+          'o.unidade',
         ),
       )
       .select(LABEL_MEDICO, 'nome')
@@ -782,6 +783,7 @@ export class OrcamentosDashboardService {
         `${alias}."ufcrmMedico"`,
         'pr_nome',
         `${alias}.pfcrm`,
+        `${alias}.unidade`,
       ),
     );
   }

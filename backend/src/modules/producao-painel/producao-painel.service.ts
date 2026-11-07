@@ -443,7 +443,8 @@ export class ProducaoPainelService {
     if (!Number.isFinite(numero) || numero <= 0) {
       return null;
     }
-    return mapaCrm.get(`${uf}:${numero}`) ?? null;
+    const unidade = grupo.map((r) => r.unidade).find(Boolean);
+    return mapaCrm.get(`${unidade ?? ''}:${uf}:${numero}`) ?? null;
   }
 
   private async mapaNomesPrescritorPorCrm(
@@ -470,19 +471,19 @@ export class ProducaoPainelService {
     }
     const prescritores = await this.prescritorRepo.find({
       where: { numeroCRM: In([...numeros]) },
-      select: { nome: true, numeroCRM: true, UFCRM: true, pfcrm: true },
+      select: { nome: true, numeroCRM: true, UFCRM: true, pfcrm: true, unidade: true },
     });
     for (const p of prescritores) {
-      if (p.numeroCRM == null || !p.UFCRM?.trim()) {
+      if (p.numeroCRM == null || !p.UFCRM?.trim() || !p.unidade) {
         continue;
       }
       const nome = p.nome?.trim();
       if (!nome) {
         continue;
       }
-      const key = `${p.UFCRM.trim().toUpperCase()}:${p.numeroCRM}`;
+      const key = `${p.unidade}:${p.UFCRM.trim().toUpperCase()}:${p.numeroCRM}`;
       const pf = (p.pfcrm || '1').trim().toUpperCase() || '1';
-      // Sem PFCRM no movimento de produção: preferir MEDICO (1); não sobrescrever com outra profissão.
+      // Sem PFCRM no movimento de produção: preferir MEDICO (1) da mesma unidade.
       if (!map.has(key) || pf === '1') {
         map.set(key, nome);
       }

@@ -18,6 +18,9 @@ import {
   ImportarProfissaoPrescritoresResponse,
   BackfillPfcrmRetratosDto,
   BackfillPfcrmRetratosResponse,
+  ReplicarPrescritoresUnidadeDto,
+  ReplicarPrescritoresUnidadeResponse,
+  ReplicarPrescritoresUnidadeStatus,
   ProducaoEtapaDisponivelLimpeza,
   LimparProducaoEtapasAntigasDto,
   LimparProducaoEtapasAntigasResponse,
@@ -159,6 +162,21 @@ export class SincronizacaoService {
     return this.http.post<ImportarProfissaoPrescritoresResponse>(
       `${this.syncApiUrl}/importar-profissao-prescritores`,
       data,
+    );
+  }
+
+  replicarPrescritoresUnidade(
+    data: ReplicarPrescritoresUnidadeDto,
+  ): Observable<ReplicarPrescritoresUnidadeResponse> {
+    return this.http.post<ReplicarPrescritoresUnidadeResponse>(
+      `${this.syncApiUrl}/replicar-prescritores-unidade`,
+      data,
+    );
+  }
+
+  statusReplicarPrescritoresUnidade(): Observable<ReplicarPrescritoresUnidadeStatus> {
+    return this.http.get<ReplicarPrescritoresUnidadeStatus>(
+      `${this.syncApiUrl}/replicar-prescritores-unidade/status`,
     );
   }
 

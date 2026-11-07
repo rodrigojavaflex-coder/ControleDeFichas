@@ -5,7 +5,7 @@ import { PrescritoresService } from '../../services/prescritores.service';
 import { AuthService } from '../../services/auth.service';
 import { ErrorModalService } from '../../services/error-modal.service';
 import { Prescritor, CreatePrescritorDto } from '../../models/prescritor.model';
-import { Permission } from '../../models/usuario.model';
+import { Permission, Unidade } from '../../models/usuario.model';
 import { PF_CRM_OPCOES, PF_CRM_PADRAO } from '../../utils/pf-crm.util';
 
 @Component({
@@ -29,6 +29,7 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
   quickForm!: FormGroup;
   isLoading = false;
   readonly pfCrmOpcoes = PF_CRM_OPCOES;
+  readonly unidades = Object.values(Unidade);
 
   ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
@@ -36,9 +37,10 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
     // Criar form com todos os campos
     this.quickForm = this.fb.group({
       nome: [this.initialNome?.toUpperCase() || '', [Validators.required, Validators.maxLength(500)]],
-      numeroCRM: [''],
-      UFCRM: [''],
+      numeroCRM: ['', [Validators.required, Validators.min(1)]],
+      UFCRM: ['', [Validators.required]],
       pfcrm: [PF_CRM_PADRAO, [Validators.required]],
+      unidade: [this.unidadeDoUsuario(), [Validators.required]],
     });
   }
 
@@ -63,9 +65,10 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
 
       const createDto: CreatePrescritorDto = {
         nome: formValue.nome.trim().toUpperCase(),
-        numeroCRM: formValue.numeroCRM ? Number(formValue.numeroCRM) : undefined,
-        UFCRM: formValue.UFCRM?.trim().toUpperCase() || undefined,
+        numeroCRM: Number(formValue.numeroCRM),
+        UFCRM: String(formValue.UFCRM).trim().toUpperCase(),
         pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
+        unidade: formValue.unidade,
       };
 
       this.prescritoresService.create(createDto).subscribe({
@@ -86,6 +89,11 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
     }
   }
 
+  private unidadeDoUsuario(): string {
+    const u = this.authService.getCurrentUser()?.unidade?.trim() ?? '';
+    return Object.values(Unidade).includes(u as Unidade) ? u : '';
+  }
+
   closeModal(): void {
     if (!this.isLoading) {
       this.cancelled.emit();
@@ -104,10 +112,16 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
     }
 
     if (field.errors['required']) {
+      if (fieldName === 'numeroCRM') return 'Número do CRM é obrigatório';
+      if (fieldName === 'UFCRM') return 'UF do CRM é obrigatória';
+      if (fieldName === 'unidade') return 'Unidade é obrigatória';
       return 'Nome é obrigatório';
     }
+    if (field.errors['min']) {
+      return 'Número do CRM deve ser maior que zero';
+    }
     if (field.errors['maxlength']) {
-      return `Nome não pode ter mais que 500 caracteres`;
+      return 'Nome não pode ter mais que 500 caracteres';
     }
 
     return 'Campo inválido';

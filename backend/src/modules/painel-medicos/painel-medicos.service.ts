@@ -152,6 +152,8 @@ export class PainelMedicosService {
         ufCrmMedico,
         registro.nome_medico,
         pfcrm,
+        unidade,
+        false,
       );
 
       const payload: Partial<PainelMedicoRepresentante> = {
@@ -272,6 +274,8 @@ export class PainelMedicosService {
         registro.ufCrmMedico,
         undefined,
         registro.pfcrm,
+        registro.unidade,
+        false,
       );
       const nomeMedico =
         prescritor?.nome?.trim() ||

@@ -3,10 +3,14 @@ import {
   IsNotEmpty,
   IsString,
   MaxLength,
+  MinLength,
   IsOptional,
   IsInt,
+  IsEnum,
+  Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { Unidade } from '../../../common/enums/unidade.enum';
 
 export class CreatePrescritorDto {
   @ApiProperty({
@@ -22,23 +26,25 @@ export class CreatePrescritorDto {
   @ApiProperty({
     description: 'Número do CRM do prescritor',
     example: 12345,
-    required: false,
   })
-  @IsOptional()
+  @IsNotEmpty({ message: 'Número do CRM é obrigatório' })
   @IsInt({ message: 'numeroCRM deve ser um número inteiro' })
-  numeroCRM?: number;
+  @Min(1, { message: 'Número do CRM deve ser maior que zero' })
+  numeroCRM: number;
 
   @ApiProperty({
     description: 'UF do CRM do prescritor',
     example: 'GO',
     maxLength: 2,
-    required: false,
   })
-  @IsOptional()
+  @IsNotEmpty({ message: 'UF do CRM é obrigatória' })
   @IsString({ message: 'UFCRM deve ser uma string' })
+  @MinLength(2, { message: 'UF do CRM deve ter 2 caracteres' })
   @MaxLength(2, { message: 'UFCRM não pode ter mais que 2 caracteres' })
-  @Transform(({ value }) => (value === '' ? null : value))
-  UFCRM?: string;
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  UFCRM: string;
 
   @ApiProperty({
     description: 'Profissão / PFCRM do ERP (1=MEDICO, 6=NUTRICIONISTA, …)',
@@ -55,4 +61,12 @@ export class CreatePrescritorDto {
     return String(value).trim().toUpperCase();
   })
   pfcrm?: string;
+
+  @ApiProperty({
+    enum: Unidade,
+    description: 'Unidade dona do cadastro',
+  })
+  @IsNotEmpty({ message: 'Unidade é obrigatória' })
+  @IsEnum(Unidade, { message: 'Unidade inválida' })
+  unidade: Unidade;
 }

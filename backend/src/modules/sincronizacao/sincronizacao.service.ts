@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { SincronizacaoConfig } from './entities/sincronizacao-config.entity';
 import { Cliente } from '../clientes/entities/cliente.entity';
@@ -1076,7 +1076,10 @@ export class SincronizacaoService {
           const prescritorAgente = prescritores[pi];
           try {
             resultado.prescritoresProcessados++;
-            const foiCriado = await this.processarPrescritor(prescritorAgente);
+            const foiCriado = await this.processarPrescritor(
+              prescritorAgente,
+              this.unidadeDoAgente(config.agente),
+            );
             if (foiCriado) {
               resultado.prescritoresCriados++;
             } else {
@@ -2535,6 +2538,8 @@ export class SincronizacaoService {
       ufcrmMedico,
       orcamentoAgente.nome_medico,
       pfcrm,
+      unidade,
+      false,
     );
 
     const payload: Partial<Orcamento> = {
@@ -2781,8 +2786,16 @@ export class SincronizacaoService {
    * Processa e salva/atualiza um prescritor
    * Retorna true se foi criado, false se foi atualizado
    */
+  private unidadeDoAgente(agente: string): Unidade | null {
+    if (agente === 'inhumas') return Unidade.INHUMAS;
+    if (agente === 'uberaba') return Unidade.UBERABA;
+    if (agente === 'neropolis') return Unidade.NERÓPOLIS;
+    return null;
+  }
+
   private async processarPrescritor(
     prescritorAgente: AgentePrescritor,
+    unidade: Unidade | null,
   ): Promise<boolean> {
     const nomePadronizado = padronizarNomeDeSistemaLegado(
       prescritorAgente.nomemed,
@@ -2809,6 +2822,7 @@ export class SincronizacaoService {
           numeroCRM,
           UFCRM: ufcrmValido,
           pfcrm,
+          unidade: unidade ?? IsNull(),
         },
       });
     }
@@ -2821,11 +2835,10 @@ export class SincronizacaoService {
         numeroCRM,
         UFCRM: ufcrmValido,
         pfcrm,
+        unidade,
       });
-    } else {
-      if (nomePadronizado && prescritor.nome !== nomePadronizado) {
-        prescritor.nome = nomePadronizado;
-      }
+    } else if (nomePadronizado && prescritor.nome !== nomePadronizado) {
+      prescritor.nome = nomePadronizado;
     }
 
     await this.prescritorRepository.save(prescritor);
