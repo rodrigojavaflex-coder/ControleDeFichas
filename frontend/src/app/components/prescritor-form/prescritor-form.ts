@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -27,7 +27,18 @@ export class PrescritorFormComponent implements OnInit {
   private authService = inject(AuthService);
 
   readonly pfCrmOpcoes = PF_CRM_OPCOES;
+  readonly ufs = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
+    'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
+    'SP', 'SE', 'TO',
+  ];
   readonly unidades = Object.values(Unidade);
+
+  get unidadesVisiveis(): Unidade[] {
+    const vinculo = this.unidadeDoUsuario();
+    if (!vinculo) return this.unidades;
+    return this.unidades.filter((u) => u === vinculo);
+  }
 
   prescritorForm: FormGroup;
   isEditMode = false;
@@ -35,6 +46,8 @@ export class PrescritorFormComponent implements OnInit {
   loading = false;
   error: string | null = null;
   isSubmitting = false;
+  unidadeTravada = false;
+  comboAberto: 'uf' | 'profissao' | null = null;
 
   constructor() {
     this.prescritorForm = this.createForm();
@@ -71,6 +84,7 @@ export class PrescritorFormComponent implements OnInit {
       UFCRM: ['', [Validators.maxLength(2)]],
       pfcrm: [PF_CRM_PADRAO, [Validators.required, Validators.maxLength(3)]],
       unidade: [''],
+      dataNascimento: ['', [Validators.pattern(/^\d{4}-\d{2}-\d{2}$/)]],
     });
   }
 
@@ -91,6 +105,7 @@ export class PrescritorFormComponent implements OnInit {
       ]);
       this.prescritorForm.get('unidade')?.setValidators([Validators.required]);
       this.prescritorForm.patchValue({ unidade: this.unidadeDoUsuario() });
+      this.travarUnidadeSeVinculado();
       this.prescritorForm.get('numeroCRM')?.updateValueAndValidity();
       this.prescritorForm.get('UFCRM')?.updateValueAndValidity();
       this.prescritorForm.get('unidade')?.updateValueAndValidity();
@@ -103,13 +118,25 @@ export class PrescritorFormComponent implements OnInit {
 
     this.prescritoresService.findOne(id).subscribe({
       next: (prescritor) => {
+        const vinculo = this.unidadeDoUsuario();
+        if (vinculo && prescritor.unidade !== vinculo) {
+          this.loading = false;
+          this.errorModalService.show(
+            'Você só pode consultar e alterar prescritores da sua unidade.',
+            'Acesso Negado',
+          );
+          this.router.navigate(['/prescritores']);
+          return;
+        }
         this.prescritorForm.patchValue({
           nome: prescritor.nome,
           numeroCRM: prescritor.numeroCRM || '',
           UFCRM: prescritor.UFCRM || '',
           pfcrm: prescritor.pfcrm || PF_CRM_PADRAO,
           unidade: prescritor.unidade || '',
+          dataNascimento: this.dataParaInput(prescritor.dataNascimento),
         });
+        this.travarUnidadeSeVinculado();
         this.loading = false;
       },
       error: (error) => {
@@ -130,7 +157,7 @@ export class PrescritorFormComponent implements OnInit {
     this.isSubmitting = true;
     this.error = null;
 
-    const formValue = { ...this.prescritorForm.value };
+    const formValue = { ...this.prescritorForm.getRawValue() };
 
     if (this.isEditMode && this.prescritorId) {
       this.updatePrescritor(formValue);
@@ -145,7 +172,8 @@ export class PrescritorFormComponent implements OnInit {
       numeroCRM: parseInt(formValue.numeroCRM, 10),
       UFCRM: String(formValue.UFCRM).trim().toUpperCase(),
       pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
-      unidade: formValue.unidade,
+      unidade: this.unidadeDoUsuario() || formValue.unidade,
+      dataNascimento: formValue.dataNascimento || null,
     };
 
     this.prescritoresService.create(createPrescritorDto).subscribe({
@@ -165,7 +193,8 @@ export class PrescritorFormComponent implements OnInit {
       numeroCRM: formValue.numeroCRM ? parseInt(formValue.numeroCRM) : undefined,
       UFCRM: formValue.UFCRM || undefined,
       pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
-      unidade: formValue.unidade || null,
+      unidade: this.unidadeDoUsuario() || formValue.unidade || null,
+      dataNascimento: formValue.dataNascimento || null,
     };
 
     this.prescritoresService.update(this.prescritorId!, updatePrescritorDto).subscribe({
@@ -193,9 +222,23 @@ export class PrescritorFormComponent implements OnInit {
     });
   }
 
+  private travarUnidadeSeVinculado(): void {
+    const vinculo = this.unidadeDoUsuario();
+    this.unidadeTravada = !!vinculo;
+    if (!vinculo) return;
+    this.prescritorForm.patchValue({ unidade: vinculo });
+    this.prescritorForm.get('unidade')?.disable({ emitEvent: false });
+  }
+
   private unidadeDoUsuario(): string {
     const u = this.authService.getCurrentUser()?.unidade?.trim() ?? '';
     return Object.values(Unidade).includes(u as Unidade) ? u : '';
+  }
+
+  private dataParaInput(valor: string | null | undefined): string {
+    if (!valor) return '';
+    const match = String(valor).match(/^(\d{4}-\d{2}-\d{2})/);
+    return match ? match[1] : '';
   }
 
   onCancel(): void {
@@ -204,6 +247,10 @@ export class PrescritorFormComponent implements OnInit {
 
   get nome() {
     return this.prescritorForm.get('nome');
+  }
+
+  get dataNascimento() {
+    return this.prescritorForm.get('dataNascimento');
   }
 
   get pfcrm() {
@@ -222,6 +269,62 @@ export class PrescritorFormComponent implements OnInit {
     return this.prescritorForm.get('unidade');
   }
 
+  @HostListener('document:click')
+  fecharCombo(): void {
+    this.comboAberto = null;
+  }
+
+  @HostListener('document:keydown.escape')
+  fecharComboPorTecla(): void {
+    this.comboAberto = null;
+  }
+
+  alternarCombo(qual: 'uf' | 'profissao', event: Event): void {
+    event.stopPropagation();
+    const controle = qual === 'uf' ? this.ufCrm : this.pfcrm;
+    if (controle?.disabled) return;
+    this.comboAberto = this.comboAberto === qual ? null : qual;
+    if (!this.comboAberto) return;
+    setTimeout(() => this.posicionarOpcaoAtiva());
+  }
+
+  escolherUf(uf: string, event: Event): void {
+    event.stopPropagation();
+    this.ufCrm?.setValue(uf);
+    this.ufCrm?.markAsTouched();
+    this.comboAberto = null;
+  }
+
+  escolherProfissao(codigo: string, event: Event): void {
+    event.stopPropagation();
+    this.pfcrm?.setValue(codigo);
+    this.pfcrm?.markAsTouched();
+    this.comboAberto = null;
+  }
+
+  rotuloUf(): string {
+    return String(this.ufCrm?.value ?? '').trim();
+  }
+
+  rotuloProfissao(): string {
+    const codigo = String(this.pfcrm?.value ?? '');
+    const opcao = this.pfCrmOpcoes.find((op) => op.codigo === codigo);
+    return opcao ? `${opcao.codigo} — ${opcao.label}` : codigo;
+  }
+
+  ufsDoCombo(): string[] {
+    const atual = this.rotuloUf();
+    if (atual && !this.ufs.includes(atual)) return [atual, ...this.ufs];
+    return [...this.ufs];
+  }
+
+  private posicionarOpcaoAtiva(): void {
+    const lista = document.querySelector('.combo.aberto .combo-lista');
+    const ativa = lista?.querySelector('.ativo');
+    if (!(lista instanceof HTMLElement) || !(ativa instanceof HTMLElement)) return;
+    lista.scrollTop = Math.max(0, ativa.offsetTop - lista.clientHeight / 2);
+  }
+
   getErrorMessage(fieldName: string): string {
     const control = this.prescritorForm.get(fieldName);
     if (control?.hasError('required')) {
@@ -232,6 +335,9 @@ export class PrescritorFormComponent implements OnInit {
     }
     if (control?.hasError('min')) {
       return 'Número do CRM deve ser maior que zero';
+    }
+    if (control?.hasError('pattern') && fieldName === 'dataNascimento') {
+      return 'Use uma data válida';
     }
     if (control?.hasError('maxlength')) {
       return `Campo excede o tamanho máximo permitido`;

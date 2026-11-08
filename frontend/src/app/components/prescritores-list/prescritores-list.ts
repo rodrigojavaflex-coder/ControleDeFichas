@@ -40,6 +40,7 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
   numeroCRMFilter = '';
   pfcrmFilter = '';
   unidadeFilter = '';
+  unidadeTravada = false;
 
   deleteModalTitle = 'Confirmação de Exclusão';
 
@@ -47,7 +48,13 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
   showAuditModal = false;
   selectedPrescritorForAudit: Prescritor | null = null;
 
+  get unidadesVisiveis(): Unidade[] {
+    if (!this.unidadeTravada) return this.unidades;
+    return this.unidades.filter((u) => u === this.unidadeFilter);
+  }
+
   override ngOnInit(): void {
+    this.aplicarEscopoUnidade();
     if (!this.canReadPrescritor()) {
       this.error = 'Você não possui permissão para visualizar prescritores.';
       this.errorModalService.show('Você não possui permissão para visualizar prescritores', 'Acesso Negado');
@@ -114,9 +121,19 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
     this.nomeFilter = '';
     this.numeroCRMFilter = '';
     this.pfcrmFilter = '';
-    this.unidadeFilter = '';
+    if (!this.unidadeTravada) {
+      this.unidadeFilter = '';
+    }
     this.currentPage = 1;
     this.loadItems();
+  }
+
+  private aplicarEscopoUnidade(): void {
+    const u = this.authService.getCurrentUser()?.unidade?.trim() ?? '';
+    if (Object.values(Unidade).includes(u as Unidade)) {
+      this.unidadeFilter = u;
+      this.unidadeTravada = true;
+    }
   }
 
   createPrescritor(): void {
@@ -137,6 +154,13 @@ export class PrescritoresListComponent extends BaseListComponent<Prescritor> imp
 
   protected override getId(item: Prescritor): string {
     return item.id;
+  }
+
+  formatarNascimento(valor: string | null | undefined): string {
+    if (!valor) return '—';
+    const match = String(valor).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return '—';
+    return `${match[3]}/${match[2]}/${match[1]}`;
   }
 
   formatDate(date: Date | string): string {

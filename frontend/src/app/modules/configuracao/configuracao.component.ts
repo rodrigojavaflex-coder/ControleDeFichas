@@ -26,6 +26,7 @@ import { RepararNomesMedicosModalComponent } from '../../components/reparar-nome
 import { ImportarProfissaoPrescritoresModalComponent } from '../../components/importar-profissao-prescritores-modal/importar-profissao-prescritores-modal';
 import { BackfillPfcrmRetratosModalComponent } from '../../components/backfill-pfcrm-retratos-modal/backfill-pfcrm-retratos-modal';
 import { ReplicarPrescritoresUnidadeModalComponent } from '../../components/replicar-prescritores-unidade-modal/replicar-prescritores-unidade-modal';
+import { AtualizarDataNascimentoPrescritoresModalComponent } from '../../components/atualizar-data-nascimento-prescritores-modal/atualizar-data-nascimento-prescritores-modal';
 import { SincronizacaoLogsModalComponent } from '../../components/sincronizacao-logs-modal/sincronizacao-logs-modal';
 import { BackfillPfcrmRetratosResponse } from '../../models/sincronizacao.model';
 import { ProducaoEtapasRefreshService } from '../../services/producao-etapas-refresh.service';
@@ -55,6 +56,7 @@ type SaldoCaixaFormItem = CaixaSaldoInicialUnidade & {
     ImportarProfissaoPrescritoresModalComponent,
     BackfillPfcrmRetratosModalComponent,
     ReplicarPrescritoresUnidadeModalComponent,
+    AtualizarDataNascimentoPrescritoresModalComponent,
     SincronizacaoLogsModalComponent,
   ],
   templateUrl: './configuracao.component.html',
@@ -82,6 +84,8 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
   backfillPfcrmRetratosModal?: BackfillPfcrmRetratosModalComponent;
   @ViewChild('replicarPrescritoresUnidadeModal')
   replicarPrescritoresUnidadeModal?: ReplicarPrescritoresUnidadeModalComponent;
+  @ViewChild('atualizarDataNascimentoModal')
+  atualizarDataNascimentoModal?: AtualizarDataNascimentoPrescritoresModalComponent;
   @ViewChild('sincronizacaoLogsModal')
   sincronizacaoLogsModal?: SincronizacaoLogsModalComponent;
   private progressSubscription?: Subscription;
@@ -364,6 +368,16 @@ export class ConfiguracaoComponent implements OnInit, OnDestroy {
 
   abrirModalBackfillPfcrmRetratos(): void {
     this.backfillPfcrmRetratosModal?.abrir();
+  }
+
+  abrirModalAtualizarDataNascimento(): void {
+    this.atualizarDataNascimentoModal?.abrir();
+  }
+
+  onDataNascimentoPrescritoresConcluida(): void {
+    this.success =
+      'Data de nascimento aplicada nos prescritores. A sync diária passa a atualizar a data dos cadastros novos.';
+    this.error = null;
   }
 
   abrirModalReplicarPrescritoresUnidade(): void {

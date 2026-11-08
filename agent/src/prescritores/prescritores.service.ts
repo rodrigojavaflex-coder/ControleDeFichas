@@ -7,6 +7,7 @@ export interface PrescritorRow {
   ufcrm?: string;
   nomemed: string;
   dtcad: string;
+  dtnas?: string;
 }
 
 @Injectable()

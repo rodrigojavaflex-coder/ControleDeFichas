@@ -90,8 +90,8 @@
             formControlName="unidade"
             class="campo"
             [ngClass]="{'invalido': hasFieldError('unidade')}">
-            <option value="">Selecione a unidade</option>
-            <option *ngFor="let u of unidades" [value]="u">{{ u }}</option>
+            <option *ngIf="!unidadeTravada" value="">Selecione a unidade</option>
+            <option *ngFor="let u of unidadesVisiveis" [value]="u">{{ u }}</option>
           </select>
           <div class="mensagem-invalida" *ngIf="hasFieldError('unidade')">
             {{ getFieldError('unidade') }}

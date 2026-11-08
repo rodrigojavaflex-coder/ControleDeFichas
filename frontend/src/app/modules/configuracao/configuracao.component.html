@@ -827,6 +827,25 @@
       <div class="importacao-card">
         <div class="importacao-header">
           <div>
+            <h3 class="section-title">Data de nascimento do prescritor</h3>
+            <p class="section-description">
+              Lê DTNAS do cadastro FC04000 e grava em quem já existe no NEST.
+              Data vazia no ERP não apaga. A sincronização diária atualiza só cadastros a partir da última data.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-migracao"
+            (click)="abrirModalAtualizarDataNascimento()">
+            <i class="fas fa-calendar"></i>
+            Atualizar datas de nascimento
+          </button>
+        </div>
+      </div>
+
+      <div class="importacao-card">
+        <div class="importacao-header">
+          <div>
             <h3 class="section-title">Profissão do prescritor (PFCRM)</h3>
             <p class="section-description">
               Identidade canônica: <strong>CRM + UF + PFCRM</strong> (profissão do ERP).
@@ -973,3 +992,8 @@
 <app-replicar-prescritores-unidade-modal
   #replicarPrescritoresUnidadeModal>
 </app-replicar-prescritores-unidade-modal>
+
+<app-atualizar-data-nascimento-prescritores-modal
+  #atualizarDataNascimentoModal
+  (atualizacaoConcluida)="onDataNascimentoPrescritoresConcluida()">
+</app-atualizar-data-nascimento-prescritores-modal>

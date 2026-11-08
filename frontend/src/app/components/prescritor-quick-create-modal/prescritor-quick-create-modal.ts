@@ -31,6 +31,16 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
   readonly pfCrmOpcoes = PF_CRM_OPCOES;
   readonly unidades = Object.values(Unidade);
 
+  get unidadeTravada(): boolean {
+    return !!this.unidadeDoUsuario();
+  }
+
+  get unidadesVisiveis(): Unidade[] {
+    const vinculo = this.unidadeDoUsuario();
+    if (!vinculo) return this.unidades;
+    return this.unidades.filter((u) => u === vinculo);
+  }
+
   ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
   ngOnInit(): void {
@@ -42,6 +52,9 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
       pfcrm: [PF_CRM_PADRAO, [Validators.required]],
       unidade: [this.unidadeDoUsuario(), [Validators.required]],
     });
+    if (this.unidadeTravada) {
+      this.quickForm.get('unidade')?.disable({ emitEvent: false });
+    }
   }
 
   onNomeInput(event: any): void {
@@ -68,24 +81,31 @@ export class PrescritorQuickCreateModalComponent implements OnInit {
         numeroCRM: Number(formValue.numeroCRM),
         UFCRM: String(formValue.UFCRM).trim().toUpperCase(),
         pfcrm: formValue.pfcrm || PF_CRM_PADRAO,
-        unidade: formValue.unidade,
+        unidade: this.unidadeDoUsuario() || formValue.unidade,
       };
 
       this.prescritoresService.create(createDto).subscribe({
         next: (prescritor) => {
           this.isLoading = false;
-          this.quickForm.enable();
+          this.reabilitarFormulario();
           this.created.emit(prescritor);
         },
         error: (error) => {
           this.isLoading = false;
-          this.quickForm.enable();
+          this.reabilitarFormulario();
           const message = error.error?.message || 'Erro ao criar prescritor';
           this.errorModalService.show(message, 'Erro');
         }
       });
     } else {
       this.markFormGroupTouched();
+    }
+  }
+
+  private reabilitarFormulario(): void {
+    this.quickForm.enable({ emitEvent: false });
+    if (this.unidadeTravada) {
+      this.quickForm.get('unidade')?.disable({ emitEvent: false });
     }
   }
 

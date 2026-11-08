@@ -7,6 +7,8 @@ export interface Prescritor {
   UFCRM?: string;
   /** Profissão (PFCRM do ERP): 1=MEDICO, 6=NUTRICIONISTA, … */
   pfcrm?: string;
+  /** YYYY-MM-DD */
+  dataNascimento?: string | null;
   unidade?: string | null;
   criadoEm: Date;
   atualizadoEm: Date;
@@ -18,6 +20,7 @@ export interface CreatePrescritorDto {
   UFCRM: string;
   pfcrm?: string;
   unidade: string;
+  dataNascimento?: string | null;
 }
 
 export interface UpdatePrescritorDto {
@@ -26,6 +29,7 @@ export interface UpdatePrescritorDto {
   UFCRM?: string;
   pfcrm?: string;
   unidade?: string | null;
+  dataNascimento?: string | null;
 }
 
 export interface FindPrescritoresDto {

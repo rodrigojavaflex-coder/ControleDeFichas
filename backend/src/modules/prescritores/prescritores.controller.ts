@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   HttpStatus,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,6 +28,7 @@ import { Prescritor } from './entities/prescritor.entity';
 import { Permission } from '../../common/enums/permission.enum';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Usuario } from '../usuarios/entities/usuario.entity';
 
 @ApiTags('Prescritores')
 @Controller('prescritores')
@@ -55,8 +57,11 @@ export class PrescritoresController {
     status: HttpStatus.FORBIDDEN,
     description: 'Permissão insuficiente',
   })
-  create(@Body() createPrescritorDto: CreatePrescritorDto) {
-    return this.prescritoresService.create(createPrescritorDto);
+  create(
+    @Req() req: { user: Usuario },
+    @Body() createPrescritorDto: CreatePrescritorDto,
+  ) {
+    return this.prescritoresService.create(createPrescritorDto, req.user);
   }
 
   @Get('search')
@@ -77,8 +82,16 @@ export class PrescritoresController {
     required: false,
     description: 'Limite de resultados (padrão: 20)',
   })
-  async search(@Query('nome') nome: string, @Query('limit') limit?: number) {
-    return this.prescritoresService.search(nome, limit ? Number(limit) : 20);
+  async search(
+    @Req() req: { user: Usuario },
+    @Query('nome') nome: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.prescritoresService.search(
+      nome,
+      limit ? Number(limit) : 20,
+      req.user,
+    );
   }
 
   @Get()
@@ -96,8 +109,11 @@ export class PrescritoresController {
     required: false,
     description: 'Filtrar por número do CRM',
   })
-  findAll(@Query() findPrescritoresDto: FindPrescritoresDto) {
-    return this.prescritoresService.findAll(findPrescritoresDto);
+  findAll(
+    @Req() req: { user: Usuario },
+    @Query() findPrescritoresDto: FindPrescritoresDto,
+  ) {
+    return this.prescritoresService.findAll(findPrescritoresDto, req.user);
   }
 
   @Get(':id')
@@ -112,8 +128,11 @@ export class PrescritoresController {
     status: HttpStatus.NOT_FOUND,
     description: 'Prescritor não encontrado',
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.prescritoresService.findOne(id);
+  findOne(
+    @Req() req: { user: Usuario },
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.prescritoresService.findOne(id, req.user);
   }
 
   @Patch(':id')
@@ -137,10 +156,11 @@ export class PrescritoresController {
     description: 'Permissão insuficiente',
   })
   update(
+    @Req() req: { user: Usuario },
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePrescritorDto: UpdatePrescritorDto,
   ) {
-    return this.prescritoresService.update(id, updatePrescritorDto);
+    return this.prescritoresService.update(id, updatePrescritorDto, req.user);
   }
 
   @Delete(':id')
@@ -158,7 +178,10 @@ export class PrescritoresController {
     status: HttpStatus.FORBIDDEN,
     description: 'Permissão insuficiente',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.prescritoresService.remove(id);
+  remove(
+    @Req() req: { user: Usuario },
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.prescritoresService.remove(id, req.user);
   }
 }

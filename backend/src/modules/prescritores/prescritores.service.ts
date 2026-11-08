@@ -1,6 +1,7 @@
 import {
   Injectable,
   ConflictException,
+  ForbiddenException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +15,8 @@ import {
   PaginatedResponseDto,
   PaginationMetaDto,
 } from '../../common/dto/paginated-response.dto';
+import { Unidade } from '../../common/enums/unidade.enum';
+import { Usuario } from '../usuarios/entities/usuario.entity';
 
 @Injectable()
 export class PrescritoresService {
@@ -24,11 +27,17 @@ export class PrescritoresService {
     private readonly prescritorRepository: Repository<Prescritor>,
   ) {}
 
-  async create(createPrescritorDto: CreatePrescritorDto): Promise<Prescritor> {
+  async create(
+    createPrescritorDto: CreatePrescritorDto,
+    usuario?: Usuario,
+  ): Promise<Prescritor> {
     try {
       const pfcrm =
         createPrescritorDto.pfcrm?.trim()?.toUpperCase() || '1';
-      const unidade = createPrescritorDto.unidade ?? null;
+      const unidade = this.unidadeParaGravar(
+        usuario,
+        createPrescritorDto.unidade ?? null,
+      );
 
       if (
         createPrescritorDto.numeroCRM != null &&
@@ -44,7 +53,13 @@ export class PrescritoresService {
         });
         if (mesmaTriade) {
           throw new ConflictException(
-            `Já existe prescritor com CRM ${createPrescritorDto.numeroCRM}/${createPrescritorDto.UFCRM}, profissão ${pfcrm} e unidade ${unidade ?? 'sem unidade'}`,
+            this.mensagemCrmDuplicado(
+              mesmaTriade,
+              createPrescritorDto.numeroCRM,
+              createPrescritorDto.UFCRM,
+              pfcrm,
+              unidade,
+            ),
           );
         }
       }
@@ -66,9 +81,11 @@ export class PrescritoresService {
 
   async findAll(
     findPrescritoresDto: FindPrescritoresDto,
+    usuario?: Usuario,
   ): Promise<PaginatedResponseDto<Prescritor>> {
-    const { page = 1, limit = 10, nome, numeroCRM, pfcrm, unidade } =
+    const { page = 1, limit = 10, nome, numeroCRM, pfcrm } =
       findPrescritoresDto;
+    const unidade = this.unidadeDaConsulta(usuario, findPrescritoresDto.unidade);
 
     const queryBuilder =
       this.prescritorRepository.createQueryBuilder('prescritor');
@@ -105,7 +122,7 @@ export class PrescritoresService {
     return new PaginatedResponseDto(prescritores, meta);
   }
 
-  async findOne(id: string): Promise<Prescritor> {
+  async findOne(id: string, usuario?: Usuario): Promise<Prescritor> {
     const prescritor = await this.prescritorRepository.findOne({
       where: { id },
     });
@@ -114,14 +131,16 @@ export class PrescritoresService {
       throw new NotFoundException(`Prescritor com ID ${id} não encontrado`);
     }
 
+    this.exigirMesmaUnidade(usuario, prescritor.unidade ?? null);
     return prescritor;
   }
 
   async update(
     id: string,
     updatePrescritorDto: UpdatePrescritorDto,
+    usuario?: Usuario,
   ): Promise<Prescritor> {
-    const prescritor = await this.findOne(id);
+    const prescritor = await this.findOne(id, usuario);
 
     // Verificar nome duplicado (se estiver alterando)
     if (
@@ -156,10 +175,12 @@ export class PrescritoresService {
       )
         ?.trim()
         ?.toUpperCase() || '1';
-    const nextUnidade =
+    const nextUnidade = this.unidadeParaGravar(
+      usuario,
       updatePrescritorDto.unidade !== undefined
         ? updatePrescritorDto.unidade
-        : prescritor.unidade ?? null;
+        : prescritor.unidade ?? null,
+    );
 
     if (nextCrm != null && nextUf) {
       const conflito = await this.prescritorRepository.findOne({
@@ -172,13 +193,20 @@ export class PrescritoresService {
       });
       if (conflito && conflito.id !== id) {
         throw new ConflictException(
-          `Já existe prescritor com CRM ${nextCrm}/${nextUf}, profissão ${nextPf} e unidade ${nextUnidade ?? 'sem unidade'}`,
+          this.mensagemCrmDuplicado(
+            conflito,
+            nextCrm,
+            nextUf,
+            nextPf,
+            nextUnidade,
+          ),
         );
       }
     }
 
     Object.assign(prescritor, {
       ...updatePrescritorDto,
+      unidade: nextUnidade,
       ...(updatePrescritorDto.pfcrm !== undefined
         ? { pfcrm: nextPf }
         : {}),
@@ -192,12 +220,16 @@ export class PrescritoresService {
     }
   }
 
-  async remove(id: string): Promise<void> {
-    const prescritor = await this.findOne(id);
+  async remove(id: string, usuario?: Usuario): Promise<void> {
+    const prescritor = await this.findOne(id, usuario);
     await this.prescritorRepository.remove(prescritor);
   }
 
-  async search(nome: string, limit: number = 20): Promise<Prescritor[]> {
+  async search(
+    nome: string,
+    limit: number = 20,
+    usuario?: Usuario,
+  ): Promise<Prescritor[]> {
     const queryBuilder =
       this.prescritorRepository.createQueryBuilder('prescritor');
 
@@ -207,9 +239,65 @@ export class PrescritoresService {
       });
     }
 
+    const vinculo = this.unidadeVinculada(usuario);
+    if (vinculo) {
+      queryBuilder.andWhere('prescritor.unidade = :unidadeEscopo', {
+        unidadeEscopo: vinculo,
+      });
+    }
+
     return await queryBuilder
       .orderBy('prescritor.nome', 'ASC')
       .take(limit)
       .getMany();
+  }
+
+  private unidadeVinculada(usuario?: Usuario): Unidade | null {
+    const valor = usuario?.unidade?.trim() ?? '';
+    if (!valor) return null;
+    return (Object.values(Unidade) as string[]).includes(valor)
+      ? (valor as Unidade)
+      : null;
+  }
+
+  private unidadeDaConsulta(
+    usuario: Usuario | undefined,
+    unidadeFiltro?: string,
+  ): string | undefined {
+    return this.unidadeVinculada(usuario) ?? unidadeFiltro;
+  }
+
+  private unidadeParaGravar(
+    usuario: Usuario | undefined,
+    unidadeInformada: Unidade | null,
+  ): Unidade | null {
+    return this.unidadeVinculada(usuario) ?? unidadeInformada;
+  }
+
+  private mensagemCrmDuplicado(
+    existente: Prescritor,
+    crm: number,
+    uf: string,
+    pfcrm: string,
+    unidade: Unidade | null,
+  ): string {
+    const nome = existente.nome?.trim() || 'sem nome';
+    const loja = unidade
+      ? `na unidade ${unidade}`
+      : 'sem unidade';
+    return `O prescritor ${nome} já possui o CRM ${crm}/${uf} e a profissão ${pfcrm}, ${loja}.`;
+  }
+
+  private exigirMesmaUnidade(
+    usuario: Usuario | undefined,
+    unidadePrescritor: Unidade | null,
+  ): void {
+    const vinculo = this.unidadeVinculada(usuario);
+    if (!vinculo) return;
+    if (unidadePrescritor !== vinculo) {
+      throw new ForbiddenException(
+        'Você só pode consultar e alterar prescritores da sua unidade.',
+      );
+    }
   }
 }

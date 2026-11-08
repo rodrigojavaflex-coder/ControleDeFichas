@@ -355,6 +355,40 @@ export interface ReplicarPrescritoresUnidadeResponse {
   amostra: ReplicarPrescritorAmostra[];
 }
 
+export interface AtualizarDataNascimentoPrescritoresDto {
+  aplicar: boolean;
+  unidade?: string;
+}
+
+export interface AtualizarDataNascimentoItem {
+  id: string;
+  unidade: string;
+  crm: string;
+  uf: string;
+  pfcrm: string;
+  nome: string;
+  dataAtual: string | null;
+  dataErp: string;
+}
+
+export interface AtualizarDataNascimentoPrescritoresResponse {
+  aplicar: boolean;
+  unidadeFiltro: string | null;
+  totalNest: number;
+  paraAtualizar: number;
+  atualizados: number;
+  iguais: number;
+  semDataErp: number;
+  semCrm: number;
+  semUnidade: number;
+  semCadastroErp: number;
+  ambiguos: number;
+  agentesConsultados: string[];
+  erros: string[];
+  itens: AtualizarDataNascimentoItem[];
+  ambiguosDescricao: string[];
+}
+
 export interface SincronizacaoLogErro {
   id: string;
   agente: string;

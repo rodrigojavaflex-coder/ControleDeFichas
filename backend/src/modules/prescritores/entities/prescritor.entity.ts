@@ -59,6 +59,33 @@ export class Prescritor extends BaseEntity {
   pfcrm: string;
 
   @ApiProperty({
+    description: 'Data de nascimento (FC04000.DTNAS)',
+    example: '1980-05-15',
+    required: false,
+    nullable: true,
+  })
+  @Column({
+    type: 'date',
+    nullable: true,
+    transformer: {
+      from: (value: string | null) => value,
+      to: (value: string | Date | null | undefined) => {
+        if (value == null || value === '') return null;
+        if (typeof value === 'string') {
+          const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+          return match ? match[1] : null;
+        }
+        if (value instanceof Date && !isNaN(value.getTime())) {
+          const pad = (n: number) => String(n).padStart(2, '0');
+          return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+        }
+        return null;
+      },
+    },
+  })
+  dataNascimento?: string | null;
+
+  @ApiProperty({
     enum: Unidade,
     required: false,
     nullable: true,

@@ -16,6 +16,8 @@ import {
   RepararNomesMedicosResponse,
   ImportarProfissaoPrescritoresDto,
   ImportarProfissaoPrescritoresResponse,
+  AtualizarDataNascimentoPrescritoresDto,
+  AtualizarDataNascimentoPrescritoresResponse,
   BackfillPfcrmRetratosDto,
   BackfillPfcrmRetratosResponse,
   ReplicarPrescritoresUnidadeDto,
@@ -152,6 +154,15 @@ export class SincronizacaoService {
   ): Observable<RepararNomesMedicosResponse> {
     return this.http.post<RepararNomesMedicosResponse>(
       `${this.syncApiUrl}/reparar-nomes-medicos`,
+      data,
+    );
+  }
+
+  atualizarDataNascimentoPrescritores(
+    data: AtualizarDataNascimentoPrescritoresDto,
+  ): Observable<AtualizarDataNascimentoPrescritoresResponse> {
+    return this.http.post<AtualizarDataNascimentoPrescritoresResponse>(
+      `${this.syncApiUrl}/atualizar-data-nascimento-prescritores`,
       data,
     );
   }

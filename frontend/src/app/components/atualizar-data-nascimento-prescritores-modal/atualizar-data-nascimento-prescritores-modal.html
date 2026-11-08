@@ -1,0 +1,118 @@
+<div class="modal-overlay nao-clicavel" *ngIf="visible">
+  <div class="modal-conteudo modal-data-nascimento" (click)="$event.stopPropagation()">
+    <div class="modal-cabecalho">
+      <h3 class="modal-titulo">Data de nascimento dos prescritores</h3>
+      <button
+        type="button"
+        class="modal-fechar"
+        (click)="fechar()"
+        [disabled]="loading"
+        aria-label="Fechar">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="modal-corpo">
+      <p class="dn-hint">
+        Lê <strong>FC04000.DTNAS</strong> do cadastro completo de cada agente.
+        Atualiza só quem já existe no NEST, pela unidade e por CRM + UF + profissão.
+        Data vazia no ERP não apaga a data já gravada. Não altera nome, CRM nem profissão.
+      </p>
+
+      <div class="dn-filtros">
+        <div class="filter-group">
+          <label for="dnUnidade" class="label-campo">Unidade</label>
+          @if (unidadeBloqueada) {
+            <input
+              id="dnUnidade"
+              type="text"
+              class="campo"
+              [value]="unidade"
+              disabled
+              readonly />
+          } @else {
+            <select
+              id="dnUnidade"
+              class="campo"
+              [(ngModel)]="unidade"
+              (ngModelChange)="result = null"
+              [disabled]="loading">
+              <option value="">Todas</option>
+              <option *ngFor="let u of unidades" [ngValue]="u">{{ u }}</option>
+            </select>
+          }
+        </div>
+        <div class="dn-acoes">
+          <button
+            type="button"
+            class="btn btn-editar"
+            (click)="prever()"
+            [disabled]="loading">
+            Prévia
+          </button>
+          <button
+            type="button"
+            class="btn btn-salvar"
+            (click)="aplicar()"
+            [disabled]="loading || !result || result.paraAtualizar === 0 || result.aplicar">
+            Aplicar todos
+          </button>
+        </div>
+      </div>
+
+      <p class="dn-status" *ngIf="loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        Consultando o cadastro dos agentes...
+      </p>
+      <p class="dn-erro" *ngIf="error">{{ error }}</p>
+
+      <div class="dn-resumo" *ngIf="result as r">
+        <p>
+          {{ r.aplicar ? 'Aplicado' : 'Prévia' }} —
+          {{ r.totalNest }} prescritores no recorte,
+          {{ r.paraAtualizar }} para atualizar,
+          {{ r.atualizados }} gravados,
+          {{ r.iguais }} já iguais,
+          {{ r.semDataErp }} sem data no ERP,
+          {{ r.semCadastroErp }} sem cadastro no ERP da unidade,
+          {{ r.semCrm }} sem CRM ou UF,
+          {{ r.semUnidade }} sem unidade,
+          {{ r.ambiguos }} com datas conflitantes.
+        </p>
+        <p *ngIf="r.agentesConsultados.length">
+          Agentes: {{ r.agentesConsultados.join(', ') }}
+        </p>
+        <ul *ngIf="r.ambiguosDescricao.length">
+          <li *ngFor="let item of r.ambiguosDescricao">{{ item }}</li>
+        </ul>
+      </div>
+
+      <div class="dn-tabela-wrap" *ngIf="result?.itens?.length">
+        <p class="dn-hint" *ngIf="result!.itens.length > limiteLista">
+          Mostrando {{ limiteLista }} de {{ result!.itens.length }}.
+          Aplicar grava a lista inteira.
+        </p>
+        <table class="dn-tabela">
+          <thead>
+            <tr>
+              <th>Unidade</th>
+              <th>Prescritor</th>
+              <th>CRM</th>
+              <th>No NEST</th>
+              <th>No ERP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of result!.itens.slice(0, limiteLista)">
+              <td>{{ item.unidade }}</td>
+              <td>{{ item.nome }}</td>
+              <td>{{ item.crm }}/{{ item.uf }} · {{ item.pfcrm }}</td>
+              <td>{{ formatarData(item.dataAtual) }}</td>
+              <td>{{ formatarData(item.dataErp) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

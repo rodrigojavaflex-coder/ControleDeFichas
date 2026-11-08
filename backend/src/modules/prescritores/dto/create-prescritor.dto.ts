@@ -8,6 +8,8 @@ import {
   IsInt,
   IsEnum,
   Min,
+  Matches,
+  ValidateIf,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { Unidade } from '../../../common/enums/unidade.enum';
@@ -69,4 +71,22 @@ export class CreatePrescritorDto {
   @IsNotEmpty({ message: 'Unidade é obrigatória' })
   @IsEnum(Unidade, { message: 'Unidade inválida' })
   unidade: Unidade;
+
+  @ApiProperty({
+    description: 'Data de nascimento (YYYY-MM-DD). Vazio remove a data.',
+    example: '1980-05-15',
+    required: false,
+    nullable: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === null || value === '') return null;
+    return typeof value === 'string' ? value.trim() : value;
+  })
+  @ValidateIf((_, value) => value != null)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'Data de nascimento deve estar no formato YYYY-MM-DD',
+  })
+  dataNascimento?: string | null;
 }

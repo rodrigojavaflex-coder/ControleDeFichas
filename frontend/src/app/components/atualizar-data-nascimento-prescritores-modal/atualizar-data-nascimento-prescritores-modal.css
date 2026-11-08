@@ -1,0 +1,72 @@
+.modal-data-nascimento {
+  width: min(960px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-data-nascimento .modal-corpo {
+  overflow: auto;
+}
+
+.dn-hint,
+.dn-status,
+.dn-resumo p {
+  margin: 0 0 12px;
+  line-height: 1.45;
+  color: var(--cor-texto-primario);
+}
+
+.dn-erro {
+  color: var(--cor-perigo, #b42318);
+  margin: 0 0 12px;
+}
+
+.dn-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.dn-acoes {
+  display: flex;
+  gap: 8px;
+}
+
+.dn-resumo {
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-superficie-hover);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.dn-resumo ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.dn-tabela-wrap {
+  overflow: auto;
+}
+
+.dn-tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dn-tabela th,
+.dn-tabela td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--cor-borda);
+  color: var(--cor-texto-primario);
+}
+
+.dn-tabela th {
+  position: sticky;
+  top: 0;
+  background: var(--cor-superficie);
+}

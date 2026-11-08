@@ -64,6 +64,7 @@ interface AgentePrescritor {
   ufcrm?: string;
   nomemed: string;
   dtcad: string;
+  dtnas?: string;
 }
 
 interface AgenteOrcamento {
@@ -2841,8 +2842,64 @@ export class SincronizacaoService {
       prescritor.nome = nomePadronizado;
     }
 
+    this.aplicarDataNascimento(
+      prescritor,
+      prescritorAgente.dtnas,
+      numeroCRM,
+      ufcrmValido,
+    );
+
     await this.prescritorRepository.save(prescritor);
     return foiCriado;
+  }
+
+  /**
+   * Grava DTNAS quando vem válida e diferente. Vazio no ERP não apaga.
+   * Formato inválido fica de fora e gera aviso.
+   */
+  private aplicarDataNascimento(
+    prescritor: Prescritor,
+    bruto: unknown,
+    numeroCRM?: number,
+    ufcrm?: string,
+  ): void {
+    if (
+      bruto == null ||
+      (!(bruto instanceof Date) && this.textoData(bruto) === '')
+    ) {
+      return;
+    }
+    const iso = this.dataIsoCalendario(bruto);
+    if (!iso) {
+      this.logger.warn(
+        `Data de nascimento inválida para CRM ${numeroCRM ?? '-'}/${ufcrm ?? '-'}: "${this.textoData(bruto) || 'valor inválido'}"`,
+      );
+      return;
+    }
+    const atual = this.dataIsoCalendario(prescritor.dataNascimento);
+    if (atual !== iso) {
+      prescritor.dataNascimento = iso;
+    }
+  }
+
+  private dataIsoCalendario(value: unknown): string | undefined {
+    if (value == null || value === '') return undefined;
+    if (value instanceof Date) {
+      if (isNaN(value.getTime())) return undefined;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+    }
+    const texto = this.textoData(value);
+    const iso = texto.match(/^(\d{4}-\d{2}-\d{2})/);
+    return iso ? iso[1] : undefined;
+  }
+
+  private textoData(value: unknown): string {
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).trim();
+    }
+    return '';
   }
 
   /**

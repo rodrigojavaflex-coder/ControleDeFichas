@@ -338,7 +338,8 @@ export class DatabaseService {
         prescritor.nrcrm AS nrcrm,
         prescritor.ufcrm AS ufcrm,
         ${this.sqlTextoOctets('prescritor.nomemed', 'nomemed', 120)},
-        prescritor.dtcad AS dtcad
+        prescritor.dtcad AS dtcad,
+        prescritor.dtnas AS dtnas
       FROM fc04000 prescritor
       ${filtroData}
       ORDER BY prescritor.dtcad
@@ -506,7 +507,24 @@ export class DatabaseService {
       ufcrm: get('ufcrm') ? String(get('ufcrm')).trim() : undefined,
       nomemed: this.textoCampoFirebird(get('nomemed')),
       dtcad: dtcad,
+      dtnas: this.dataIsoCalendario(get('dtnas')),
     };
+  }
+
+  /**
+   * Data de calendário YYYY-MM-DD. Usa os componentes locais do Date
+   * (node-firebird cria DATE em meia-noite local). Não usa toISOString().
+   */
+  private dataIsoCalendario(value: unknown): string | undefined {
+    if (value == null || value === '') return undefined;
+    if (value instanceof Date) {
+      if (isNaN(value.getTime())) return undefined;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+    }
+    const texto = String(value).trim();
+    const iso = texto.match(/^(\d{4}-\d{2}-\d{2})/);
+    return iso ? iso[1] : undefined;
   }
 
   private formatDate(date: Date): string {

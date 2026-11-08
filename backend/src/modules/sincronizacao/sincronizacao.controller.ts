@@ -62,6 +62,11 @@ import {
   BackfillPfcrmRetratosResponseDto,
 } from './dto/backfill-pfcrm-retratos.dto';
 import { ReplicarPrescritoresUnidadeService } from './replicar-prescritores-unidade.service';
+import { AtualizarDataNascimentoPrescritoresService } from './atualizar-data-nascimento-prescritores.service';
+import {
+  AtualizarDataNascimentoPrescritoresDto,
+  AtualizarDataNascimentoPrescritoresResponseDto,
+} from './dto/atualizar-data-nascimento-prescritores.dto';
 import {
   ReplicarPrescritoresUnidadeDto,
   ReplicarPrescritoresUnidadeResponseDto,
@@ -79,6 +84,7 @@ export class SincronizacaoController {
     private readonly importarProfissaoPrescritoresService: ImportarProfissaoPrescritoresService,
     private readonly backfillPfcrmRetratosService: BackfillPfcrmRetratosService,
     private readonly replicarPrescritoresUnidadeService: ReplicarPrescritoresUnidadeService,
+    private readonly atualizarDataNascimentoPrescritoresService: AtualizarDataNascimentoPrescritoresService,
   ) {}
 
   @Post('executar')
@@ -271,6 +277,24 @@ export class SincronizacaoController {
     @Body() dto: ImportarProfissaoPrescritoresDto,
   ): Promise<ImportarProfissaoPrescritoresResponseDto> {
     return this.importarProfissaoPrescritoresService.executar(dto);
+  }
+
+  @Post('atualizar-data-nascimento-prescritores')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Permissions(Permission.CONFIGURACAO_ACCESS)
+  @ApiOperation({
+    summary:
+      'Atualiza data de nascimento dos prescritores a partir de FC04000.DTNAS (prévia ou aplicar em todos)',
+  })
+  @ApiResponse({
+    status: 200,
+    type: AtualizarDataNascimentoPrescritoresResponseDto,
+  })
+  atualizarDataNascimentoPrescritores(
+    @Body() dto: AtualizarDataNascimentoPrescritoresDto,
+  ): Promise<AtualizarDataNascimentoPrescritoresResponseDto> {
+    return this.atualizarDataNascimentoPrescritoresService.executar(dto);
   }
 
   @Post('backfill-pfcrm-retratos')

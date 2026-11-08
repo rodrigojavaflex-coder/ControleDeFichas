@@ -40,6 +40,9 @@ export class PrescritoresService {
       if (findPrescritoresDto.pfcrm) {
         params = params.set('pfcrm', findPrescritoresDto.pfcrm);
       }
+      if (findPrescritoresDto.unidade) {
+        params = params.set('unidade', findPrescritoresDto.unidade);
+      }
     }
 
     return this.http.get<PrescritorPaginatedResponse>(this.apiUrl, { params });

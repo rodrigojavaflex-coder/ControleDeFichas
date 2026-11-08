@@ -28,6 +28,7 @@ import { RepararNomesMedicosService } from './reparar-nomes-medicos.service';
 import { ImportarProfissaoPrescritoresService } from './importar-profissao-prescritores.service';
 import { BackfillPfcrmRetratosService } from './backfill-pfcrm-retratos.service';
 import { ReplicarPrescritoresUnidadeService } from './replicar-prescritores-unidade.service';
+import { AtualizarDataNascimentoPrescritoresService } from './atualizar-data-nascimento-prescritores.service';
 import { VisitacaoFechamentoMedico } from '../visitacao-acompanhamento/entities/visitacao-fechamento-medico.entity';
 import { VisitacaoFechamentoCarteira } from '../visitacao-acompanhamento/entities/visitacao-fechamento-carteira.entity';
 
@@ -65,6 +66,7 @@ import { VisitacaoFechamentoCarteira } from '../visitacao-acompanhamento/entitie
     ImportarProfissaoPrescritoresService,
     BackfillPfcrmRetratosService,
     ReplicarPrescritoresUnidadeService,
+    AtualizarDataNascimentoPrescritoresService,
     PermissionsGuard,
   ],
   exports: [SincronizacaoConfigService, SincronizacaoService],

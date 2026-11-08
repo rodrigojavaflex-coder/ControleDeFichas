@@ -51,38 +51,87 @@
     <!-- UF CRM -->
     <div class="form-group">
       <label for="UFCRM" class="form-label">UF do CRM{{ isEditMode ? '' : ' *' }}</label>
-      <input
-        id="UFCRM"
-        type="text"
-        formControlName="UFCRM"
-        class="form-control"
-        [class.error]="ufCrm?.invalid && ufCrm?.touched"
-        placeholder="GO"
-        maxlength="2"
-        style="text-transform: uppercase;"
-      >
+      <div class="combo" [class.aberto]="comboAberto === 'uf'" (click)="$event.stopPropagation()">
+        <button
+          id="UFCRM"
+          type="button"
+          class="form-control combo-botao"
+          [class.vazio]="!rotuloUf()"
+          [class.error]="ufCrm?.invalid && ufCrm?.touched"
+          [disabled]="!!ufCrm?.disabled"
+          [attr.aria-expanded]="comboAberto === 'uf'"
+          aria-haspopup="listbox"
+          (click)="alternarCombo('uf', $event)">
+          {{ rotuloUf() || 'Selecione a UF' }}
+        </button>
+        <ul class="combo-lista" role="listbox" *ngIf="comboAberto === 'uf'">
+          <li>
+            <button type="button" class="combo-opcao" [class.ativo]="!rotuloUf()" (click)="escolherUf('', $event)">
+              Selecione a UF
+            </button>
+          </li>
+          <li *ngFor="let uf of ufsDoCombo()">
+            <button
+              type="button"
+              class="combo-opcao"
+              role="option"
+              [class.ativo]="rotuloUf() === uf"
+              [attr.aria-selected]="rotuloUf() === uf"
+              (click)="escolherUf(uf, $event)">
+              {{ uf }}
+            </button>
+          </li>
+        </ul>
+      </div>
       <div *ngIf="ufCrm?.invalid && ufCrm?.touched" class="error-message">
         {{ getErrorMessage('UFCRM') }}
-      </div>
-      <div class="form-help">
-        Exemplo: GO, SP, MG
       </div>
     </div>
 
     <!-- Profissão (PFCRM) -->
     <div class="form-group">
       <label for="pfcrm" class="form-label">Profissão (PFCRM) *</label>
-      <select
-        id="pfcrm"
-        formControlName="pfcrm"
-        class="form-control"
-        [class.error]="pfcrm?.invalid && pfcrm?.touched">
-        @for (op of pfCrmOpcoes; track op.codigo) {
-          <option [value]="op.codigo">{{ op.codigo }} — {{ op.label }}</option>
-        }
-      </select>
+      <div class="combo" [class.aberto]="comboAberto === 'profissao'" (click)="$event.stopPropagation()">
+        <button
+          id="pfcrm"
+          type="button"
+          class="form-control combo-botao"
+          [class.error]="pfcrm?.invalid && pfcrm?.touched"
+          [disabled]="!!pfcrm?.disabled"
+          [attr.aria-expanded]="comboAberto === 'profissao'"
+          aria-haspopup="listbox"
+          (click)="alternarCombo('profissao', $event)">
+          {{ rotuloProfissao() }}
+        </button>
+        <ul class="combo-lista" role="listbox" *ngIf="comboAberto === 'profissao'">
+          <li *ngFor="let op of pfCrmOpcoes">
+            <button
+              type="button"
+              class="combo-opcao"
+              role="option"
+              [class.ativo]="pfcrm?.value === op.codigo"
+              [attr.aria-selected]="pfcrm?.value === op.codigo"
+              (click)="escolherProfissao(op.codigo, $event)">
+              {{ op.codigo }} — {{ op.label }}
+            </button>
+          </li>
+        </ul>
+      </div>
       <div class="form-help">
         Identidade: unidade + CRM + UF + profissão
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="dataNascimento" class="form-label">Data de nascimento</label>
+      <input
+        id="dataNascimento"
+        type="date"
+        formControlName="dataNascimento"
+        class="form-control"
+        [class.error]="dataNascimento?.invalid && dataNascimento?.touched">
+      <div *ngIf="dataNascimento?.invalid && dataNascimento?.touched" class="error-message">
+        {{ getErrorMessage('dataNascimento') }}
       </div>
     </div>
 
@@ -93,15 +142,17 @@
         formControlName="unidade"
         class="form-control"
         [class.error]="unidade?.invalid && unidade?.touched">
-        <option value="">{{ isEditMode ? 'Sem unidade' : 'Selecione a unidade' }}</option>
-        @for (u of unidades; track u) {
+        @if (!unidadeTravada) {
+          <option value="">{{ isEditMode ? 'Sem unidade' : 'Selecione a unidade' }}</option>
+        }
+        @for (u of unidadesVisiveis; track u) {
           <option [value]="u">{{ u }}</option>
         }
       </select>
       <div *ngIf="unidade?.invalid && unidade?.touched" class="error-message">
         {{ getErrorMessage('unidade') }}
       </div>
-      <div class="form-help" *ngIf="isEditMode">
+      <div class="form-help" *ngIf="isEditMode && !unidadeTravada">
         Loja dona deste cadastro. Vazio só para prescritor que ainda não entrou em movimento.
       </div>
     </div>
