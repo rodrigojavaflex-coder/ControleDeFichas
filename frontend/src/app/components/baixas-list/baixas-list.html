@@ -214,6 +214,19 @@
           </div>
 
           <div class="filter-group">
+            <label for="tipoDaBaixaFilterModal" class="label-campo">Tipo da baixa</label>
+            <select
+              id="tipoDaBaixaFilterModal"
+              class="campo form-control"
+              [(ngModel)]="tipoDaBaixaFilter">
+              <option [ngValue]="''">Todos</option>
+              <option *ngFor="let tipo of tiposDaBaixa" [ngValue]="tipo">
+                {{ getTipoBaixaLabel(tipo) }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group">
             <label for="clienteFilterModal" class="label-campo">Cliente</label>
             <input
               id="clienteFilterModal"

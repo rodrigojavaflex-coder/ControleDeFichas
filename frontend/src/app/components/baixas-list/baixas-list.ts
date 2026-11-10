@@ -29,6 +29,7 @@ interface BaixasFilterSnapshot {
   protocolo: string;
   cliente: string;
   vendedor: string;
+  tipoDaBaixa: TipoDaBaixa | '';
   dataInicial: string;
   dataFinal: string;
   unidade: string | Unidade | Unidade[];
@@ -79,6 +80,9 @@ export class BaixasListComponent implements OnInit, OnDestroy {
   protocoloFilter = '';
   clienteFilter = '';
   vendedorFilter = '';
+  /** '' = todos os tipos */
+  tipoDaBaixaFilter: TipoDaBaixa | '' = '';
+  tiposDaBaixa = Object.values(TipoDaBaixa);
   valorMinFilter = '';
   valorMaxFilter = '';
   origemFilter: VendaOrigem[] = [];
@@ -177,6 +181,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       protocolo: this.protocoloFilter || '',
       cliente: this.clienteFilter || '',
       vendedor: this.vendedorFilter || '',
+      tipoDaBaixa: this.tipoDaBaixaFilter || '',
       dataInicial: this.dataInicialFilter || '',
       dataFinal: this.dataFinalFilter || '',
       unidade: this.unidadeFilter.length > 0 ? (this.unidadeFilter.length === 1 ? this.unidadeFilter[0] : this.unidadeFilter) : ('' as any),
@@ -217,6 +222,9 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
     if (this.vendedorFilter.trim()) {
       filters.vendedor = this.vendedorFilter.trim();
+    }
+    if (this.tipoDaBaixaFilter) {
+      filters.tipoDaBaixa = this.tipoDaBaixaFilter;
     }
     this.baixasService.getBaixas(filters).subscribe({
       next: (response: BaixaPaginatedResponse) => {
@@ -280,6 +288,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     this.protocoloFilter = '';
     this.clienteFilter = '';
     this.vendedorFilter = '';
+    this.tipoDaBaixaFilter = '';
     this.origemFilter = [];
     this.valorMinFilter = '';
     this.valorMaxFilter = '';
@@ -347,6 +356,13 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     if (snapshot.vendedor.trim()) {
       filters.push({ key: 'vendedor', label: 'Vendedor', value: snapshot.vendedor.trim() });
     }
+    if (snapshot.tipoDaBaixa) {
+      filters.push({
+        key: 'tipoDaBaixa',
+        label: 'Tipo da baixa',
+        value: this.getTipoBaixaLabel(snapshot.tipoDaBaixa),
+      });
+    }
     if (snapshot.dataInicial || snapshot.dataFinal) {
       const inicio = this.formatDateDisplay(snapshot.dataInicial);
       const fim = this.formatDateDisplay(snapshot.dataFinal);
@@ -386,6 +402,9 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       case 'vendedor':
         this.vendedorFilter = '';
         break;
+      case 'tipoDaBaixa':
+        this.tipoDaBaixaFilter = '';
+        break;
       case 'periodo':
         this.dataInicialFilter = '';
         this.dataFinalFilter = '';
@@ -418,12 +437,22 @@ export class BaixasListComponent implements OnInit, OnDestroy {
       protocolo: 'fa-hashtag',
       cliente: 'fa-user',
       vendedor: 'fa-user-tie',
+      tipoDaBaixa: 'fa-money-bill-wave',
       periodo: 'fa-calendar-alt',
       unidade: 'fa-building',
       origem: 'fa-map-marker-alt',
       valor: 'fa-dollar-sign'
     };
     return icons[key] || 'fa-filter';
+  }
+
+  getTipoBaixaLabel(tipo: TipoDaBaixa): string {
+    const labels: Record<TipoDaBaixa, string> = {
+      [TipoDaBaixa.DINHEIRO]: 'Dinheiro',
+      [TipoDaBaixa.CARTAO_PIX]: 'Cartão/PIX',
+      [TipoDaBaixa.DEPOSITO]: 'Depósito',
+    };
+    return labels[tipo] || tipo;
   }
   
   formatFilterValue(filter: AppliedFilter): string {
@@ -555,7 +584,7 @@ export class BaixasListComponent implements OnInit, OnDestroy {
 
   /**
    * Busca todas as páginas de `GET /baixas` com os filtros de API
-   * (data/vendedor) e aplica os filtros locais (unidade, origem, etc.).
+   * (data/vendedor/tipo) e aplica os filtros locais (unidade, origem, etc.).
    * O relatório de fechamento não fica restrito à página da grade.
    */
   private async carregarBaixasFiltradasParaRelatorio(): Promise<Baixa[]> {
@@ -589,6 +618,9 @@ export class BaixasListComponent implements OnInit, OnDestroy {
     }
     if (this.vendedorFilter.trim()) {
       filters.vendedor = this.vendedorFilter.trim();
+    }
+    if (this.tipoDaBaixaFilter) {
+      filters.tipoDaBaixa = this.tipoDaBaixaFilter;
     }
     return filters;
   }
