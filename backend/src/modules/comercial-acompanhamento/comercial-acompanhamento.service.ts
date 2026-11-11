@@ -1651,6 +1651,7 @@ export class ComercialAcompanhamentoService {
               AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND c.codigo_vendedor = $4
               AND ${this.sqlPagaSemItemComPagamento('c')}
+              AND ${this.sqlExcluiPagaCupomZerado('c')}
               AND ${this.sqlExcluiReqNoLoteConvenio('c')}
             GROUP BY c.numero_requisicao
           ) t
@@ -1969,6 +1970,7 @@ export class ComercialAcompanhamentoService {
               AND COALESCE(c.tipo_requisicao, '') <> 'C'
               AND ${vinculoSql}
               AND ${this.sqlPagaSemItemComPagamento('c')}
+              AND ${this.sqlExcluiPagaCupomZerado('c')}
               AND ${this.sqlExcluiReqNoLoteConvenio('c')}
             GROUP BY c.codigo_vendedor, c.numero_requisicao
           ) t
@@ -2307,7 +2309,8 @@ export class ComercialAcompanhamentoService {
    * Manipulados do vendedor (RN-COM-003): Terminal de Caixa —
    * data_operacao + item com pagamento; Taxa=Não →
    * LEAST(SUM(item−taxa), paga−taxa) **por requisição** (todos os cupons).
-   * União: paga sem item **com** pagamento_id (data_pagamento, pago−taxa).
+   * União: paga sem item **com** pagamento_id (data_pagamento, pago−taxa),
+   * excluindo cupom zerado (convênio — só lote) e req já no lote.
    * qtd = reqs distintas; qtd_formulas = linhas de item / quantidade_formulas.
    */
   private async buscarRecebidoRequisicao(
@@ -2376,6 +2379,7 @@ export class ComercialAcompanhamentoService {
           AND c.codigo_vendedor IS NOT NULL
           AND c.codigo_vendedor > 0
           AND ${this.sqlPagaSemItemComPagamento('c')}
+          AND ${this.sqlExcluiPagaCupomZerado('c')}
           AND ${this.sqlExcluiReqNoLoteConvenio('c')}
         GROUP BY c.codigo_vendedor, c.numero_requisicao
       )
@@ -3749,6 +3753,37 @@ export class ComercialAcompanhamentoService {
                 AND i_ex.tipo_item = 'REQUISICAO'
                 AND i_ex.numero_requisicao = ${alias}.numero_requisicao
                 AND i_ex.pagamento_id IS NOT NULL
+            )`;
+  }
+
+  /**
+   * Convênio de funcionário (cupom zerado): há item REQUISICAO da req e
+   * SUM(valor_liquido_linha)=0 (a linha do cupom; valor_liquido_item pode
+   * trazer o bruto). Não credita pela paga na data da venda; só entra pelo
+   * lote CONVENIO-DINHEIRO (`data_recebimento`) quando `considerarConvenios`
+   * estiver ligado (RN-COM-003).
+   * Mantém: paga sem item (só FC17000) e item sem pagamento com linha > 0.
+   */
+  private sqlExcluiPagaCupomZerado(alias: string): string {
+    return `
+            NOT (
+              EXISTS (
+                SELECT 1
+                FROM caixa_itens_erp i_z
+                WHERE i_z.unidade = ${alias}.unidade
+                  AND i_z.tipo_item = 'REQUISICAO'
+                  AND i_z.numero_requisicao = ${alias}.numero_requisicao
+              )
+              AND COALESCE(
+                (
+                  SELECT SUM(COALESCE(i_s.valor_liquido_linha, 0))
+                  FROM caixa_itens_erp i_s
+                  WHERE i_s.unidade = ${alias}.unidade
+                    AND i_s.tipo_item = 'REQUISICAO'
+                    AND i_s.numero_requisicao = ${alias}.numero_requisicao
+                ),
+                0
+              ) = 0
             )`;
   }
 
