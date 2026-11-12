@@ -60,6 +60,7 @@ type ReportColuna =
   | 'cliente'
   | 'vendedor'
   | 'medico'
+  | 'principiosAtivos'
   | 'tipo'
   | 'precoCobrado'
   | 'motivo'
@@ -1118,8 +1119,25 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     return status === OrcamentoStatus.APROVADO ? 'Aprovado' : 'Rejeitado';
   }
 
+  formatarPrincipiosAtivos(item: Orcamento): string {
+    const texto = item.principiosAtivos?.trim();
+    return texto || '—';
+  }
+
+  tituloPrincipiosAtivos(item: Orcamento): string | null {
+    const texto = item.principiosAtivos?.trim();
+    return texto || null;
+  }
+
+  classePrincipiosAtivos(item: Orcamento): string {
+    const len = item.principiosAtivos?.trim().length ?? 0;
+    if (len > 80) return 'principios-texto-longo';
+    if (len > 35) return 'principios-texto-medio';
+    return '';
+  }
+
   getTableColspan(): number {
-    let cols = 6;
+    let cols = 7;
     if (this.exibirCheckboxSelecao()) cols += 1;
     if (this.exibirColunaTipo()) cols += 1;
     if (this.canViewValores()) cols += 1;
@@ -1662,6 +1680,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     if (opcoes.agrupamentoSecundario !== 'medico') {
       colunas.push('medico');
     }
+    colunas.push('principiosAtivos');
     if (
       this.incluirColunaTipoNoRelatorio(opcoes, itens)
     ) {
@@ -1752,6 +1771,8 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
         return this.escapeHtml(item.nomeVendedor || '—');
       case 'medico':
         return this.escapeHtml(this.formatarMedico(item));
+      case 'principiosAtivos':
+        return this.escapeHtml(this.formatarPrincipiosAtivos(item));
       case 'tipo':
         return this.escapeHtml(this.formatarStatus(item.status));
       case 'precoCobrado':
@@ -1771,6 +1792,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
       cliente: 'Cliente',
       vendedor: 'Vendedor',
       medico: 'Médico',
+      principiosAtivos: 'Princípio ativo',
       tipo: 'Tipo',
       precoCobrado: 'Valor',
       motivo: 'Motivo',

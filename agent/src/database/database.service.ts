@@ -665,7 +665,8 @@ export class DatabaseService {
         CAST(o.NRCRM AS VARCHAR(20)) AS crm_medico,
         TRIM(o.UFCRM) AS ufcrm_medico,
         TRIM(o.pfcrm) AS pfcrm,
-        ${this.sqlTextoOctets('med.NOMEMED', 'nome_medico', 120)}
+        ${this.sqlTextoOctets('med.NOMEMED', 'nome_medico', 120)},
+        ${this.sqlPrincipiosAtivosOrcamento()}
       FROM fc15100 o
       JOIN fc15000 cap
         ON cap.cdfil = o.cdfil
@@ -723,7 +724,8 @@ export class DatabaseService {
         CAST(o.NRCRM AS VARCHAR(20)) AS crm_medico,
         TRIM(o.UFCRM) AS ufcrm_medico,
         TRIM(o.pfcrm) AS pfcrm,
-        ${this.sqlTextoOctets('med.NOMEMED', 'nome_medico', 120)}
+        ${this.sqlTextoOctets('med.NOMEMED', 'nome_medico', 120)},
+        ${this.sqlPrincipiosAtivosOrcamento()}
       FROM fc15100 o
       JOIN fc15000 cap
         ON cap.cdfil = o.cdfil
@@ -813,7 +815,50 @@ export class DatabaseService {
         const nome = this.textoCampoFirebird(nomeMedico);
         return nome || null;
       })(),
+      principios_ativos: (() => {
+        const texto = this.textoCampoFirebird(get('principios_ativos'));
+        return texto || null;
+      })(),
     };
+  }
+
+  /**
+   * Princípios ativos da fórmula (FC15110, TPCMP = 'C'), um texto por linha de FC15100.
+   * Subquery escalar no SELECT: não altera FROM, JOIN nem WHERE e não multiplica orçamento.
+   * Série por TRIM textual (há SERIEO letra A/B/...; CAST INTEGER quebra a query).
+   * Nome preferencial: FC15110.DESCR (preenchido); fallback FC03000.
+   */
+  private sqlPrincipiosAtivosOrcamento(): string {
+    return `
+      CAST(
+        SUBSTRING(
+          (
+            SELECT LIST(
+              DISTINCT TRIM(
+                COALESCE(
+                  NULLIF(TRIM(cmp.descr), ''),
+                  NULLIF(TRIM(prod.descr), ''),
+                  NULLIF(TRIM(prod.descrprd), '')
+                )
+              ),
+              ', '
+            )
+            FROM fc15110 cmp
+            LEFT JOIN fc03000 prod ON prod.cdpro = cmp.cdpro
+            WHERE cmp.cdfil = o.cdfil
+              AND cmp.nrorc = o.nrorc
+              AND TRIM(cmp.serieo) = TRIM(o.serieo)
+              AND UPPER(TRIM(cmp.tpcmp)) = 'C'
+              AND COALESCE(
+                NULLIF(TRIM(cmp.descr), ''),
+                NULLIF(TRIM(prod.descr), ''),
+                NULLIF(TRIM(prod.descrprd), '')
+              ) IS NOT NULL
+          )
+          FROM 1 FOR 4000
+        ) AS VARCHAR(4000) CHARACTER SET OCTETS
+      ) AS principios_ativos
+    `;
   }
 
   private formatDateField(value: unknown): string {

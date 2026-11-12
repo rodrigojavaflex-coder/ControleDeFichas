@@ -207,6 +207,8 @@ export interface OrcamentoRow {
   ufcrm_medico?: string | null;
   pfcrm?: string | null;
   nome_medico?: string | null;
+  /** Princípios ativos da fórmula (FC15110), separados por vírgula. */
+  principios_ativos?: string | null;
 }
 
 /** Orçamento excluído no ERP (FC01M20 ORCAMENTO) — RN-ORC-008 */

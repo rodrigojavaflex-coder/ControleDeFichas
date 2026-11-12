@@ -25,6 +25,8 @@ export interface Orcamento {
   precoVenda: number;
   precoCobrado: number;
   descontoFormula: number;
+  /** Princípios ativos da fórmula, separados por vírgula. */
+  principiosAtivos?: string | null;
   codigoCliente?: number | null;
   nomeCliente?: string | null;
   codigoVendedor?: number | null;

@@ -260,6 +260,37 @@ body.theme-dark .orcamentos-rejeitados-page .page-info {
   text-overflow: ellipsis;
 }
 
+.orcamentos-rejeitados-page .vendas-table th.col-medico,
+.orcamentos-rejeitados-page .vendas-table td.col-medico {
+  width: 16rem;
+  min-width: 14rem;
+  max-width: 18rem;
+}
+
+.orcamentos-rejeitados-page .vendas-table th.col-principios,
+.orcamentos-rejeitados-page .vendas-table td.col-principios {
+  width: 8rem;
+  min-width: 8rem;
+  max-width: 12rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+  line-height: 1.35;
+}
+
+.orcamentos-rejeitados-page .vendas-table td.col-principios.principios-texto-medio {
+  width: 12rem;
+  min-width: 12rem;
+  max-width: 18rem;
+}
+
+.orcamentos-rejeitados-page .vendas-table td.col-principios.principios-texto-longo {
+  width: auto;
+  min-width: 16rem;
+  max-width: 28rem;
+}
+
 .orcamento-motivo-modal {
   max-width: 480px;
   width: 100%;

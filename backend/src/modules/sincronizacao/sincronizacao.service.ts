@@ -15,6 +15,7 @@ import { Unidade } from '../../common/enums/unidade.enum';
 import { OrcamentoStatus } from '../../common/enums/orcamento-status.enum';
 import {
   normalizarTextoLegado,
+  padronizarDescricaoLegado,
   padronizarNomeDeSistemaLegado,
   padronizarNomeLegadoNullable,
 } from '../../common/utils/encoding-legado.util';
@@ -86,6 +87,7 @@ interface AgenteOrcamento {
   ufcrm_medico?: string | null;
   pfcrm?: string | null;
   nome_medico?: string | null;
+  principios_ativos?: string | null;
 }
 
 interface AgenteOrcamentoExclusao {
@@ -2564,6 +2566,12 @@ export class SincronizacaoService {
       ultimaModificacao: new Date(orcamentoAgente.ultima_modificacao),
     };
 
+    if ('principios_ativos' in orcamentoAgente) {
+      payload.principiosAtivos = this.principiosAtivosDoAgente(
+        orcamentoAgente.principios_ativos,
+      );
+    }
+
     if (!orcamento) {
       orcamento = this.orcamentoRepository.create(payload);
     } else {
@@ -2585,6 +2593,13 @@ export class SincronizacaoService {
 
     await this.orcamentoRepository.save(orcamento);
     return foiCriado;
+  }
+
+  private principiosAtivosDoAgente(
+    valor: string | null | undefined,
+  ): string | null {
+    const texto = padronizarDescricaoLegado(valor);
+    return texto || null;
   }
 
   private formatDateTimeForAgent(

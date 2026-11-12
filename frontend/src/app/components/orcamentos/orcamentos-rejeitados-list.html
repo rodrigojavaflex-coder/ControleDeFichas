@@ -166,9 +166,10 @@
             <th class="sortable" (click)="sortBy('nomeVendedor')">
               Vendedor <i class="fas" [ngClass]="getSortIcon('nomeVendedor')"></i>
             </th>
-            <th class="sortable" (click)="sortBy('nomeMedico')">
+            <th class="sortable col-medico" (click)="sortBy('nomeMedico')">
               Médico <i class="fas" [ngClass]="getSortIcon('nomeMedico')"></i>
             </th>
+            <th class="col-principios">Princípio ativo</th>
             <th class="sortable" *ngIf="exibirColunaTipo()" (click)="sortBy('status')">
               Tipo <i class="fas" [ngClass]="getSortIcon('status')"></i>
             </th>
@@ -198,7 +199,13 @@
             <td>{{ formatarData(item.dataOrcamento) }}</td>
             <td>{{ item.nomeCliente || '—' }}</td>
             <td>{{ item.nomeVendedor || '—' }}</td>
-            <td>{{ formatarMedico(item) }}</td>
+            <td class="col-medico">{{ formatarMedico(item) }}</td>
+            <td
+              class="col-principios"
+              [ngClass]="classePrincipiosAtivos(item)"
+              [attr.title]="tituloPrincipiosAtivos(item)">
+              {{ formatarPrincipiosAtivos(item) }}
+            </td>
             <td *ngIf="exibirColunaTipo()">{{ formatarStatus(item.status) }}</td>
             <td *ngIf="canViewValores()">{{ formatarMoeda(item.precoCobrado) }}</td>
             <td *ngIf="exibirColunasRejeitado()">{{ item.motivoRejeicao?.descricao || '—' }}</td>

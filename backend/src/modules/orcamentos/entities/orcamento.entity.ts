@@ -69,6 +69,14 @@ export class Orcamento extends BaseEntity {
   @Column({ type: 'numeric', precision: 15, scale: 2, default: 0 })
   descontoFormula: number;
 
+  @ApiProperty({
+    required: false,
+    description:
+      'Princípios ativos da fórmula (FC15110, TPCMP = C), separados por vírgula',
+  })
+  @Column({ type: 'text', nullable: true })
+  principiosAtivos?: string | null;
+
   @ApiProperty({ required: false })
   @Column({ type: 'integer', nullable: true })
   codigoCliente?: number | null;
