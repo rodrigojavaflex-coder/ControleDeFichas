@@ -759,8 +759,9 @@ export class ComercialAnaliseService {
   private ordenarCrescimento(
     linhas: ComercialAnaliseLinhaDto[],
   ): ComercialAnaliseLinhaDto[] {
+    // Só crescimento real (Δ > 0). Empate em 0 não é destaque de alta.
     return linhas
-      .filter((l) => l.delta >= 0)
+      .filter((l) => l.delta > 0)
       .sort((a, b) => b.delta - a.delta || this.porNome(a, b));
   }
 
