@@ -23,4 +23,10 @@ export default registerAs('database', () => ({
   connectTimeoutMS: 60000,
   acquireTimeoutMS: 60000,
   timeout: 60000,
+  // Pico de RAM no Postgres: no máximo 5 sessões e work_mem baixo em cada uma.
+  // extra é aplicado depois de poolSize no driver; não repetir `max` aqui.
+  poolSize: 5,
+  extra: {
+    options: '-c work_mem=4MB',
+  },
 }));

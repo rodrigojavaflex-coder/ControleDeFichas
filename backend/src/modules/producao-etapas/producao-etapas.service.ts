@@ -431,7 +431,7 @@ export class ProducaoEtapasService {
     );
     const codEtapa = String(registro.cod_etapa ?? '').trim();
 
-    let etapa = await this.etapaRepository.findOne({
+    const fechamento = await this.etapaRepository.findOne({
       where: {
         unidade,
         filial: Number(registro.filial ?? 0),
@@ -439,9 +439,20 @@ export class ProducaoEtapasService {
         formula,
         codEtapa,
       },
+      select: {
+        id: true,
+        usuarioEntrada: true,
+        usuarioSaida: true,
+        funcionarioEntrada: true,
+        funcionarioSaida: true,
+        dataEntrada: true,
+        horaEntrada: true,
+        dataSaida: true,
+        horaSaida: true,
+      },
     });
 
-    const foiCriado = !etapa;
+    const foiCriado = !fechamento;
     const payload: Partial<ProducaoEtapaResumo> = {
       unidade,
       filial: Number(registro.filial ?? 0),
@@ -486,14 +497,14 @@ export class ProducaoEtapasService {
       horaEntradaFila: registro.hora_entrada_fila || null,
     };
 
-    if (!etapa) {
-      etapa = this.etapaRepository.create(payload);
+    if (!fechamento) {
+      await this.etapaRepository.save(this.etapaRepository.create(payload));
     } else {
-      this.preservarFechamentoNoPayload(payload, etapa);
-      Object.assign(etapa, payload);
+      this.preservarFechamentoNoPayload(payload, fechamento);
+      await this.etapaRepository.save(
+        this.etapaRepository.create({ ...payload, id: fechamento.id }),
+      );
     }
-
-    await this.etapaRepository.save(etapa);
     return foiCriado;
   }
 

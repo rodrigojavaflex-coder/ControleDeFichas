@@ -176,9 +176,10 @@ export class ComercialAcompanhamentoService {
       ? [escopo]
       : (Object.values(Unidade) as Unidade[]);
 
-    const cards = await Promise.all(
-      unidades.map((unidade) => this.montarCardUnidade(user, unidade, ano, mes)),
-    );
+    const cards: ComercialAcompanhamentoUnidadeCardDto[] = [];
+    for (const unidade of unidades) {
+      cards.push(await this.montarCardUnidade(user, unidade, ano, mes));
+    }
 
     const primeiro = cards[0];
     return {
@@ -262,23 +263,24 @@ export class ComercialAcompanhamentoService {
     const considerarTaxas = politicaUnidade?.considerarTaxas === true;
     const considerarConvenios = politicaUnidade?.considerarConvenios === true;
 
-    const [
-      reqMapBase,
-      rejMap,
-      vinculados,
-      volumeLoja,
-      terceirosLoja,
-      convReqMap,
-      convProdMap,
-    ] = await Promise.all([
-      tetoLoja
-        ? this.buscarRecebidoRequisicao(
-            unidade,
-            periodo.dataInicial,
-            tetoLoja,
-            considerarTaxas,
-          )
-        : Promise.resolve(new Map() as MapaMovimento),
+    const volumeLojaVazio = {
+      marcaPropria: {
+        valor: 0,
+        qtd: 0,
+        valorSetores: 0,
+        qtdSetores: 0,
+      },
+      revendaManipulados: { valor: 0, qtd: 0 },
+    };
+    const reqMapBase = tetoLoja
+      ? await this.buscarRecebidoRequisicao(
+          unidade,
+          periodo.dataInicial,
+          tetoLoja,
+          considerarTaxas,
+        )
+      : (new Map() as MapaMovimento);
+    const [rejMap, vinculados] = await Promise.all([
       this.buscarRejeitado(unidade, periodo.dataInicial, periodo.dataFinal),
       this.funcionarioRepo
         .createQueryBuilder('f')
@@ -287,30 +289,24 @@ export class ComercialAcompanhamentoService {
         .andWhere('f.codigoVendedorErp IS NOT NULL')
         .andWhere('f.codigoVendedorErp > 0')
         .getMany(),
-      tetoLoja
-        ? this.buscarVolumeLoja(
-            unidade,
-            periodo.dataInicial,
-            tetoLoja,
-            setoresUnidade,
-            setoresUnidadeRevenda,
-          )
-        : Promise.resolve({
-            marcaPropria: {
-              valor: 0,
-              qtd: 0,
-              valorSetores: 0,
-              qtdSetores: 0,
-            },
-            revendaManipulados: { valor: 0, qtd: 0 },
-          }),
-      tetoLoja
-        ? this.buscarRecebidoTerceiros(
-            unidade,
-            periodo.dataInicial,
-            tetoLoja,
-          )
-        : Promise.resolve({ valor: 0, qtd: 0 }),
+    ]);
+    const volumeLoja = tetoLoja
+      ? await this.buscarVolumeLoja(
+          unidade,
+          periodo.dataInicial,
+          tetoLoja,
+          setoresUnidade,
+          setoresUnidadeRevenda,
+        )
+      : volumeLojaVazio;
+    const terceirosLoja = tetoLoja
+      ? await this.buscarRecebidoTerceiros(
+          unidade,
+          periodo.dataInicial,
+          tetoLoja,
+        )
+      : { valor: 0, qtd: 0 };
+    const [convReqMap, convProdMap] = await Promise.all([
       tetoLoja && considerarConvenios
         ? this.buscarRecebidoConvenioRequisicao(
             unidade,
@@ -400,22 +396,24 @@ export class ComercialAcompanhamentoService {
     // Mesmo recorte “hoje” do card total do acompanhamento (Vendido hoje / Falta hoje).
     const incluirHoje = tetoLoja != null && tetoLoja === hoje;
     if (incluirHoje) {
-      const [
-        reqHojeBase,
-        volumeLojaHoje,
-        tercLojaHoje,
-        convReqHoje,
-        convProdHoje,
-      ] = await Promise.all([
-        this.buscarRecebidoRequisicaoHoje(unidade, hoje, considerarTaxas),
-        this.buscarVolumeLoja(
-          unidade,
-          hoje,
-          hoje,
-          setoresUnidade,
-          setoresUnidadeRevenda,
-        ),
-        this.buscarRecebidoTerceiros(unidade, hoje, hoje),
+      const reqHojeBase = await this.buscarRecebidoRequisicaoHoje(
+        unidade,
+        hoje,
+        considerarTaxas,
+      );
+      const volumeLojaHoje = await this.buscarVolumeLoja(
+        unidade,
+        hoje,
+        hoje,
+        setoresUnidade,
+        setoresUnidadeRevenda,
+      );
+      const tercLojaHoje = await this.buscarRecebidoTerceiros(
+        unidade,
+        hoje,
+        hoje,
+      );
+      const [convReqHoje, convProdHoje] = await Promise.all([
         considerarConvenios
           ? this.buscarRecebidoConvenioRequisicao(unidade, hoje, hoje)
           : Promise.resolve(new Map() as MapaMovimento),
@@ -2591,10 +2589,17 @@ export class ComercialAcompanhamentoService {
     hoje: string,
     considerarTaxas = false,
   ): Promise<MapaMovimento> {
-    const [oficial, previa] = await Promise.all([
-      this.buscarRecebidoRequisicao(unidade, hoje, hoje, considerarTaxas),
-      this.buscarRecebidoRequisicaoPreviaCupom(unidade, hoje, hoje),
-    ]);
+    const oficial = await this.buscarRecebidoRequisicao(
+      unidade,
+      hoje,
+      hoje,
+      considerarTaxas,
+    );
+    const previa = await this.buscarRecebidoRequisicaoPreviaCupom(
+      unidade,
+      hoje,
+      hoje,
+    );
     return this.mesclarMapaMovimento(oficial, previa);
   }
 
@@ -2761,9 +2766,12 @@ export class ComercialAcompanhamentoService {
     const setoresMpEfetivos = setoresUnidade.filter(
       (s) => !setoresRevendaManipulados.includes(s),
     );
-    const [mpRows, mpSetoresRows, revendaRows] = await Promise.all([
-      this.dataSource.query(
-        `
+    type VolumeRow = {
+      valor: string | number | null;
+      qtd: string | number | null;
+    };
+    const mpRows = (await this.dataSource.query(
+      `
           SELECT
             COALESCE(
               SUM(
@@ -2783,12 +2791,11 @@ export class ComercialAcompanhamentoService {
             AND i.data_operacao <= $3
             ${excluirRevendaSql}
         `,
-        paramsMpTotal,
-      ) as Promise<
-        Array<{ valor: string | number | null; qtd: string | number | null }>
-      >,
+      paramsMpTotal,
+    )) as VolumeRow[];
+    const mpSetoresRows = (
       setoresMpEfetivos.length
-        ? (this.dataSource.query(
+        ? await this.dataSource.query(
             `
               SELECT
                 COALESCE(
@@ -2810,15 +2817,12 @@ export class ComercialAcompanhamentoService {
                 AND i.codigo_setor = ANY($4::int[])
             `,
             [...paramsPeriodo, setoresMpEfetivos],
-          ) as Promise<
-            Array<{
-              valor: string | number | null;
-              qtd: string | number | null;
-            }>
-          >)
-        : Promise.resolve([{ valor: 0, qtd: 0 }]),
+          )
+        : [{ valor: 0, qtd: 0 }]
+    ) as VolumeRow[];
+    const revendaRows = (
       setoresRevendaManipulados.length
-        ? (this.dataSource.query(
+        ? await this.dataSource.query(
             `
               SELECT
                 COALESCE(
@@ -2840,14 +2844,9 @@ export class ComercialAcompanhamentoService {
                 AND i.codigo_setor = ANY($4::int[])
             `,
             [...paramsPeriodo, setoresRevendaManipulados],
-          ) as Promise<
-            Array<{
-              valor: string | number | null;
-              qtd: string | number | null;
-            }>
-          >)
-        : Promise.resolve([{ valor: 0, qtd: 0 }]),
-    ]);
+          )
+        : [{ valor: 0, qtd: 0 }]
+    ) as VolumeRow[];
 
     return {
       marcaPropria: {
