@@ -103,9 +103,31 @@
   transform: translateY(-1px);
 }
 
+.orcamentos-rejeitados-page .header-actions .btn-exportar-orcamentos {
+  background-color: var(--cor-excel, #217346) !important;
+  border-color: var(--cor-excel, #217346) !important;
+  color: #fff !important;
+  min-height: 36px;
+  padding: 0.45rem 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--cor-excel, #217346) 28%, transparent);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+}
+
+.orcamentos-rejeitados-page .header-actions .btn-exportar-orcamentos:hover:not(:disabled),
+.orcamentos-rejeitados-page .header-actions .btn-exportar-orcamentos:focus-visible:not(:disabled) {
+  background-color: var(--cor-excel-hover, #1a5c38) !important;
+  border-color: var(--cor-excel-hover, #1a5c38) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--cor-excel, #217346) 40%, transparent);
+  transform: translateY(-1px);
+}
+
 .orcamentos-rejeitados-page .header-actions .btn-registrar-motivo:disabled,
 .orcamentos-rejeitados-page .header-actions .btn-atualizar-orcamentos:disabled,
-.orcamentos-rejeitados-page .header-actions .btn-imprimir-rejeitados:disabled {
+.orcamentos-rejeitados-page .header-actions .btn-imprimir-rejeitados:disabled,
+.orcamentos-rejeitados-page .header-actions .btn-exportar-orcamentos:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   box-shadow: none;
@@ -149,6 +171,21 @@ body.theme-dark .orcamentos-rejeitados-page .header-actions .btn-imprimir-rejeit
   border-color: var(--cor-info-hover, #5fd4db) !important;
   color: #fff !important;
   box-shadow: 0 4px 18px color-mix(in srgb, var(--cor-info, #3fc1c9) 65%, transparent);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .header-actions .btn-exportar-orcamentos {
+  background-color: var(--cor-excel, #2e8b57) !important;
+  border-color: var(--cor-excel, #2e8b57) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--cor-excel, #2e8b57) 40%, transparent);
+}
+
+body.theme-dark .orcamentos-rejeitados-page .header-actions .btn-exportar-orcamentos:hover:not(:disabled),
+body.theme-dark .orcamentos-rejeitados-page .header-actions .btn-exportar-orcamentos:focus-visible:not(:disabled) {
+  background-color: var(--cor-excel-hover, #3aa56a) !important;
+  border-color: var(--cor-excel-hover, #3aa56a) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--cor-excel, #2e8b57) 55%, transparent);
 }
 
 .orcamentos-rejeitados-page .orcamentos-legenda {

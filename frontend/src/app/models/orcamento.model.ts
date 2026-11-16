@@ -64,7 +64,10 @@ export interface FindOrcamentosDto {
   nomeVendedor?: string;
   nomesMedico?: string[];
   comMotivo?: boolean;
+  /** @deprecated Preferir motivoRejeicaoIds */
   motivoRejeicaoId?: string;
+  /** Filtrar por um ou mais motivos; combinar com comMotivo=false para incluir “Sem motivo”. */
+  motivoRejeicaoIds?: string[];
   dataInicial?: string;
   dataFinal?: string;
   /** precoVenda >= valor (exige orcamento:view-valores). */

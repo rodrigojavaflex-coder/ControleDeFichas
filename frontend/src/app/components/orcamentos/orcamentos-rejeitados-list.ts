@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval, forkJoin } from 'rxjs';
 import { switchMap, takeWhile } from 'rxjs/operators';
+import ExcelJS from 'exceljs';
 import { OrcamentosService } from '../../services/orcamentos.service';
 import { AuthService } from '../../services/auth.service';
 import { PageContextService } from '../../services/page-context.service';
@@ -30,7 +31,13 @@ import {
   DateRangeValue,
 } from '../date-range-filter/date-range-filter';
 import { OrcamentosRejeitadosMedicoFiltroComponent } from './orcamentos-rejeitados-medico-filtro';
+import {
+  MultiSelectDropdownComponent,
+  MultiSelectOption,
+} from '../multi-select-dropdown/multi-select-dropdown';
 import { environment } from '../../../environments/environment';
+
+const MOTIVO_FILTRO_SEM = 'sem';
 
 type SortDirection = 'asc' | 'desc';
 type SortableField =
@@ -81,6 +88,7 @@ interface OrcamentosRelatorioOpcoes {
     FormsModule,
     DateRangeFilterComponent,
     OrcamentosRejeitadosMedicoFiltroComponent,
+    MultiSelectDropdownComponent,
   ],
   templateUrl: './orcamentos-rejeitados-list.html',
   styleUrls: ['../vendas-list/vendas-list.css', './orcamentos-rejeitados-list.css'],
@@ -99,8 +107,12 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
 
   items: Orcamento[] = [];
   motivos: OrcamentoMotivoRejeicao[] = [];
+  motivoFilterOptions: MultiSelectOption[] = [
+    { value: MOTIVO_FILTRO_SEM, label: 'Sem motivo' },
+  ];
   loading = false;
   printLoading = false;
+  exportLoading = false;
   error = '';
 
   currentPage = 1;
@@ -112,8 +124,8 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
   nomeClienteFilter = '';
   nomeVendedorFilter = '';
   unidadeFilter: Unidade | '' = '';
-  /** '' = todos; 'sem' = sem motivo; UUID = motivo do cadastro */
-  motivoRejeicaoFilter = '';
+  /** Valores: `sem` e/ou UUIDs de motivos; vazio = todos */
+  selectedMotivoFilters: string[] = [];
   statusFilter: OrcamentoListaStatusFiltro = 'REJEITADO';
   dataInicialFilter = '';
   dataFinalFilter = '';
@@ -395,7 +407,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
 
   onStatusFilterChange(): void {
     if (this.statusFilter === 'APROVADO') {
-      this.motivoRejeicaoFilter = '';
+      this.selectedMotivoFilters = [];
       this.selectedIds.clear();
     }
     if (
@@ -407,6 +419,20 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     this.currentPage = 1;
     this.buildAppliedFilters();
     this.loadItems();
+  }
+
+  onMotivoFiltersChange(valores: string[]): void {
+    this.selectedMotivoFilters = Array.isArray(valores) ? [...valores] : [];
+  }
+
+  private atualizarMotivoFilterOptions(): void {
+    this.motivoFilterOptions = [
+      { value: MOTIVO_FILTRO_SEM, label: 'Sem motivo' },
+      ...this.motivos.map((motivo) => ({
+        value: motivo.id,
+        label: motivo.descricao,
+      })),
+    ];
   }
 
   getStatusFilterLabel(status: OrcamentoListaStatusFiltro): string {
@@ -532,7 +558,15 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     this.orcamentosService.listarMotivos(true).subscribe({
       next: (m) => {
         this.motivos = m;
-        if (this.motivoRejeicaoFilter && this.motivoRejeicaoFilter !== 'sem') {
+        this.atualizarMotivoFilterOptions();
+        const idsValidos = new Set(m.map((motivo) => motivo.id));
+        const filtrados = this.selectedMotivoFilters.filter(
+          (valor) => valor === MOTIVO_FILTRO_SEM || idsValidos.has(valor),
+        );
+        if (filtrados.length !== this.selectedMotivoFilters.length) {
+          this.selectedMotivoFilters = filtrados;
+        }
+        if (this.selectedMotivoFilters.length > 0) {
           this.buildAppliedFilters();
         }
       },
@@ -593,11 +627,16 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     if (this.selectedMedicos.size > 0) {
       filters.nomesMedico = Array.from(this.selectedMedicos);
     }
-    if (this.exibirColunasRejeitado()) {
-      if (this.motivoRejeicaoFilter === 'sem') {
+    if (this.exibirColunasRejeitado() && this.selectedMotivoFilters.length > 0) {
+      const incluirSem = this.selectedMotivoFilters.includes(MOTIVO_FILTRO_SEM);
+      const motivoIds = this.selectedMotivoFilters.filter(
+        (valor) => valor !== MOTIVO_FILTRO_SEM,
+      );
+      if (incluirSem) {
         filters.comMotivo = false;
-      } else if (this.motivoRejeicaoFilter) {
-        filters.motivoRejeicaoId = this.motivoRejeicaoFilter;
+      }
+      if (motivoIds.length > 0) {
+        filters.motivoRejeicaoIds = motivoIds;
       }
     }
     if (this.dataInicialFilter) filters.dataInicial = this.dataInicialFilter;
@@ -626,7 +665,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     this.nrOrcamentoFilter = '';
     this.nomeClienteFilter = '';
     this.nomeVendedorFilter = '';
-    this.motivoRejeicaoFilter = '';
+    this.selectedMotivoFilters = [];
     this.selectedMedicos.clear();
     this.dataInicialFilter = '';
     this.dataFinalFilter = '';
@@ -738,20 +777,17 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
         value: Array.from(this.selectedMedicos).join(', '),
       });
     }
-    if (this.exibirColunasRejeitado()) {
-      if (this.motivoRejeicaoFilter === 'sem') {
-        list.push({
-          key: 'motivoRejeicao',
-          label: 'Motivo registrado',
-          value: 'Sem motivo',
-        });
-      } else if (this.motivoRejeicaoFilter) {
-        list.push({
-          key: 'motivoRejeicao',
-          label: 'Motivo registrado',
-          value: this.getMotivoDescricao(this.motivoRejeicaoFilter),
-        });
-      }
+    if (this.exibirColunasRejeitado() && this.selectedMotivoFilters.length > 0) {
+      const labels = this.selectedMotivoFilters.map((valor) =>
+        valor === MOTIVO_FILTRO_SEM
+          ? 'Sem motivo'
+          : this.getMotivoDescricao(valor),
+      );
+      list.push({
+        key: 'motivoRejeicao',
+        label: 'Motivo registrado',
+        value: labels.join(', '),
+      });
     }
     if (this.dataInicialFilter || this.dataFinalFilter) {
       if (this.dataInicialFilter && !this.dataFinalFilter) {
@@ -849,7 +885,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
         break;
       case 'comMotivo':
       case 'motivoRejeicao':
-        this.motivoRejeicaoFilter = '';
+        this.selectedMotivoFilters = [];
         break;
       case 'dataOrcamento':
         this.dataInicialFilter = '';
@@ -1155,6 +1191,107 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     this.openPrintModal();
   }
 
+  exportarExcel(): void {
+    if (
+      !this.canPrint() ||
+      !this.canReadAny() ||
+      this.totalItems === 0 ||
+      this.exportLoading ||
+      this.printLoading
+    ) {
+      return;
+    }
+
+    this.exportLoading = true;
+    this.loadAllOrcamentosForReport(
+      async (registros) => {
+        try {
+          if (registros.length === 0) {
+            this.errorModalService.show(
+              'Nenhum orçamento encontrado com os filtros aplicados.',
+              'Aviso',
+            );
+            return;
+          }
+          await this.gerarExcelOrcamentos(registros);
+        } catch {
+          this.errorModalService.show(
+            'Erro ao exportar planilha. Tente novamente.',
+            'Erro',
+          );
+        } finally {
+          this.exportLoading = false;
+        }
+      },
+      () => {
+        this.exportLoading = false;
+        this.errorModalService.show(
+          'Erro ao carregar dados para exportação.',
+          'Erro',
+        );
+      },
+    );
+  }
+
+  private async gerarExcelOrcamentos(registros: Orcamento[]): Promise<void> {
+    const incluirMotivo = this.exibirColunasRejeitado();
+    const planilha = registros.map((item) => {
+      const linha: Record<string, string | number> = {
+        Unidade: item.unidade || '',
+        'Nº orçamento': item.nrOrcamento ?? '',
+        Data: this.formatarData(item.dataOrcamento),
+        Cliente: item.nomeCliente || '',
+        Vendedor: item.nomeVendedor || '',
+        Médico: this.formatarMedico(item),
+        'Princípio ativo': item.principiosAtivos?.trim() || '',
+        Tipo: this.formatarStatus(item.status),
+      };
+
+      if (this.canViewValores()) {
+        linha['Valor'] = Number(item.precoCobrado) || 0;
+      }
+
+      if (incluirMotivo) {
+        linha['Motivo'] = item.motivoRejeicao?.descricao || '';
+        linha['Observação'] = item.observacaoRejeicao || '';
+      }
+
+      return linha;
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Orçamentos');
+
+    if (planilha.length > 0) {
+      const headers = Object.keys(planilha[0]);
+      worksheet.columns = headers.map((header) => ({
+        header,
+        key: header,
+        width: Math.min(
+          48,
+          Math.max(
+            header.length + 2,
+            ...planilha.map((row) => String(row[header] ?? '').length + 2),
+          ),
+        ),
+      }));
+      planilha.forEach((row) => worksheet.addRow(row));
+      worksheet.getRow(1).font = { bold: true };
+    }
+
+    const nomeArquivo = `Orcamentos_${this.getReportTimestamp().replace(/[:\s]/g, '-')}.xlsx`;
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nomeArquivo;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  }
+
   openPrintModal(): void {
     if (!this.canPrint() || !this.canReadAny()) {
       return;
@@ -1294,16 +1431,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
     const logoUrl = `${environment.apiUrl}/configuracao/logo`;
     const logoHtml = `<img src="${logoUrl}" alt="Logo do sistema" onerror="this.style.display='none'" />`;
 
-    const filtrosHtml =
-      this.appliedFilters.length > 0
-        ? `<div class="subheader filtros"><strong>Filtros aplicados:</strong> ${this.appliedFilters
-            .map(
-              (filtro) =>
-                `${this.escapeHtml(filtro.label)}: ${this.escapeHtml(filtro.value)}`,
-            )
-            .join(' | ')}</div>`
-        : '';
-
+    const filtrosHtml = this.buildFiltrosRelatorioHtml();
     const parametrosHtml = this.formatOpcoesRelatorioHtml(opcoes);
     const contador = { n: 0 };
     const corpoRelatorio = this.buildReportSections(registros, opcoes, contador);
@@ -1326,26 +1454,74 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
             h3.subgroup-title { margin: 12px 0 6px; font-size: 12px; font-weight: 700; color: #334155; }
             .print-actions { text-align: right; margin-bottom: 12px; }
             .print-actions button { padding: 8px 16px; border: none; background: #2563eb; color: #fff; border-radius: 4px; cursor: pointer; font-size: 12px; }
-            .report-header { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
-            .logo-area { flex: 0 0 200px; display: flex; justify-content: flex-start; align-items: center; }
-            .logo-area img { max-height: 60px; width: auto; display: block; }
+            .report-header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+            .logo-area { flex: 0 0 180px; display: flex; justify-content: flex-start; align-items: center; }
+            .logo-area img { max-height: 56px; width: auto; display: block; }
             .title-area { flex: 1; text-align: center; }
             .subheader { color: #64748b; font-size: 12px; margin-top: 4px; }
-            .filtros, .parametros { margin-top: 8px; line-height: 1.4; }
-            .report-group { margin-top: 18px; page-break-inside: avoid; }
-            .report-subgroup { margin-top: 10px; margin-left: 12px; }
-            .table-wrapper { border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 8px; }
-            table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            th, td { border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; vertical-align: top; }
+            .parametros { margin-top: 6px; line-height: 1.4; text-align: left; }
+            .filtros { margin: 8px 0 12px; text-align: left; color: #334155; font-size: 11px; line-height: 1.35; }
+            .filtros-titulo { display: block; font-weight: 700; color: #0f172a; margin-bottom: 6px; font-size: 11px; }
+            .filtros-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+              gap: 4px 12px;
+              margin: 0;
+              padding: 0;
+              list-style: none;
+            }
+            .filtro-item { margin: 0; padding: 2px 0; }
+            .filtro-label { font-weight: 700; color: #0f172a; margin-right: 4px; }
+            .filtro-motivos { margin-top: 6px; }
+            .filtro-motivos-lista {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 2px 14px;
+              margin: 4px 0 0;
+              padding: 0 0 0 14px;
+            }
+            .filtro-motivos-lista li { overflow-wrap: anywhere; word-break: break-word; }
+            .report-group { margin-top: 18px; page-break-inside: auto; break-inside: auto; }
+            .report-subgroup { margin-top: 10px; margin-left: 12px; page-break-inside: auto; break-inside: auto; }
+            .table-wrapper { border: 1px solid #e2e8f0; border-radius: 4px; overflow: visible; margin-top: 8px; }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            tr { page-break-inside: auto; break-inside: auto; }
+            th, td {
+              border-bottom: 1px solid #e5e7eb;
+              padding: 4px 5px;
+              text-align: left;
+              vertical-align: top;
+              overflow-wrap: anywhere;
+              word-break: break-word;
+              white-space: normal;
+              line-height: 1.3;
+            }
             tr:last-child td { border-bottom: none; }
-            th { background-color: #f8fafc; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; color: #475569; }
+            th { background-color: #f8fafc; text-transform: uppercase; font-size: 8px; letter-spacing: 0.03em; color: #475569; }
+            th.col-indice, td.col-indice { width: 2.2%; padding-left: 3px; padding-right: 3px; }
+            th.col-nrOrcamento, td.col-nrOrcamento { width: 5.5%; }
+            th.col-data, td.col-data { width: 5.5%; }
+            th.col-precoCobrado, td.col-precoCobrado { width: 5.5%; white-space: nowrap; }
+            th.col-tipo, td.col-tipo { width: 5%; }
+            th.col-cliente, td.col-cliente,
+            th.col-vendedor, td.col-vendedor,
+            th.col-medico, td.col-medico { width: 9%; }
+            th.col-principiosAtivos, td.col-principiosAtivos,
+            th.col-motivo, td.col-motivo,
+            th.col-observacao, td.col-observacao { width: 16%; }
             tfoot td { background-color: #f8fafc; font-weight: 700; color: #0f172a; border-top: 2px solid #cbd5e1; }
             .group-summary { margin-top: 8px; text-align: right; font-weight: 600; color: #334155; font-size: 11px; }
             .group-summary.subtotal { color: #475569; }
             .group-summary.total-unidade { margin-top: 12px; font-size: 12px; color: #0f172a; }
             .sintetico-total-unidade { margin-top: 4px; font-size: 12px; font-weight: 700; color: #0f172a; }
             .summary { margin-top: 16px; text-align: right; font-weight: 700; color: #0f172a; }
-            @media print { .print-actions { display: none; } body { margin: 0 20px 80px; } }
+            @media print {
+              .print-actions { display: none; }
+              body { margin: 0 10px 16px; }
+              .report-header, .filtros, .parametros { page-break-after: avoid; break-after: avoid; }
+            }
           </style>
         </head>
         <body>
@@ -1357,10 +1533,10 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
             <div class="title-area">
               <h1>${reportTitle}</h1>
               <div class="subheader">${geradoEm}</div>
-              ${filtrosHtml}
-              ${parametrosHtml}
             </div>
           </div>
+          ${filtrosHtml}
+          ${parametrosHtml}
           ${corpoRelatorio}
           <div class="summary">
             Total no filtro: ${registros.length} registro(s)${this.canViewValores() ? ` | Soma valor: ${this.escapeHtml(this.formatarMoeda(totalPreco))}` : ''}
@@ -1369,6 +1545,53 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
       </html>
     `);
     popup.document.close();
+  }
+
+  private buildFiltrosRelatorioHtml(): string {
+    if (this.appliedFilters.length === 0) {
+      return '';
+    }
+
+    const filtrosSimples = this.appliedFilters.filter(
+      (filtro) => filtro.key !== 'motivoRejeicao',
+    );
+
+    const itensSimples = filtrosSimples
+      .map(
+        (filtro) => `
+          <li class="filtro-item">
+            <span class="filtro-label">${this.escapeHtml(filtro.label)}:</span>
+            ${this.escapeHtml(filtro.value)}
+          </li>`,
+      )
+      .join('');
+
+    let motivosHtml = '';
+    if (
+      this.exibirColunasRejeitado() &&
+      this.selectedMotivoFilters.length > 0
+    ) {
+      const motivos = this.selectedMotivoFilters.map((valor) =>
+        valor === MOTIVO_FILTRO_SEM
+          ? 'Sem motivo'
+          : this.getMotivoDescricao(valor),
+      );
+      const lista = motivos
+        .map((motivo) => `<li>${this.escapeHtml(motivo)}</li>`)
+        .join('');
+      motivosHtml = `
+        <div class="filtro-motivos">
+          <span class="filtro-label">Motivo registrado (${motivos.length}):</span>
+          <ul class="filtro-motivos-lista">${lista}</ul>
+        </div>`;
+    }
+
+    return `
+      <div class="filtros">
+        <span class="filtros-titulo">Filtros aplicados</span>
+        <ul class="filtros-grid">${itensSimples}</ul>
+        ${motivosHtml}
+      </div>`;
   }
 
   private formatOpcoesRelatorioHtml(opcoes: OrcamentosRelatorioOpcoes): string {
@@ -1681,9 +1904,7 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
       colunas.push('medico');
     }
     colunas.push('principiosAtivos');
-    if (
-      this.incluirColunaTipoNoRelatorio(opcoes, itens)
-    ) {
+    if (this.incluirColunaTipoNoRelatorio(opcoes, itens)) {
       colunas.push('tipo');
     }
 
@@ -1733,14 +1954,20 @@ export class OrcamentosRejeitadosListComponent implements OnInit, OnDestroy {
       .map((item) => {
         contador.n += 1;
         const celulas = colunas
-          .map((coluna) => `<td>${this.renderCelulaRelatorio(item, coluna, contador.n)}</td>`)
+          .map(
+            (coluna) =>
+              `<td class="col-${coluna}">${this.renderCelulaRelatorio(item, coluna, contador.n)}</td>`,
+          )
           .join('');
         return `<tr>${celulas}</tr>`;
       })
       .join('');
 
     const cabecalho = colunas
-      .map((coluna) => `<th>${this.getColunaLabel(coluna)}</th>`)
+      .map(
+        (coluna) =>
+          `<th class="col-${coluna}">${this.getColunaLabel(coluna)}</th>`,
+      )
       .join('');
 
     return `

@@ -82,6 +82,17 @@ export class FindOrcamentosRejeitadosDto extends PaginationDto {
   @IsUUID('4')
   motivoRejeicaoId?: string;
 
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Filtrar por um ou mais motivos de rejeição (UUIDs). Pode combinar com comMotivo=false para incluir “Sem motivo”.',
+    isArray: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => toStringArray(value))
+  @IsUUID('4', { each: true })
+  motivoRejeicaoIds?: string[];
+
   @ApiPropertyOptional({ example: '2026-01-01' })
   @IsOptional()
   @IsDateString(

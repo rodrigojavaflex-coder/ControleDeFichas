@@ -31,10 +31,20 @@
           type="button"
           class="btn btn-salvar btn-imprimir-rejeitados"
           (click)="imprimirFiltrados()"
-          [attr.disabled]="totalItems === 0 || loading || printLoading || syncOrcamentosExecutando ? 'disabled' : null"
+          [attr.disabled]="totalItems === 0 || loading || printLoading || exportLoading || syncOrcamentosExecutando ? 'disabled' : null"
           title="Imprimir todos os orçamentos do filtro atual">
           <i class="fas fa-print" [class.fa-spin]="printLoading"></i>
           Imprimir
+        </button>
+        <button
+          *ngIf="canPrint()"
+          type="button"
+          class="btn btn-exportar btn-exportar-orcamentos"
+          (click)="exportarExcel()"
+          [attr.disabled]="totalItems === 0 || loading || printLoading || exportLoading || syncOrcamentosExecutando ? 'disabled' : null"
+          title="Exportar todos os orçamentos do filtro atual para Excel">
+          <i class="fas fa-file-excel" [class.fa-spin]="exportLoading"></i>
+          Exportar
         </button>
       </div>
       <div class="orcamentos-legenda" *ngIf="exibirLegenda()" role="note" aria-label="Legenda de cores das linhas">
@@ -302,12 +312,16 @@
             </div>
 
             <div class="filter-group" *ngIf="exibirColunasRejeitado()">
-              <label for="motivoRejeicaoFilterModal" class="label-campo">Motivo registrado</label>
-              <select id="motivoRejeicaoFilterModal" class="campo" [(ngModel)]="motivoRejeicaoFilter">
-                <option value="">Todos</option>
-                <option value="sem">Sem motivo</option>
-                <option *ngFor="let m of motivos" [value]="m.id">{{ m.descricao }}</option>
-              </select>
+              <label class="label-campo" id="motivoRejeicaoFilterModalLabel">Motivo registrado</label>
+              <app-multi-select-dropdown
+                aria-labelledby="motivoRejeicaoFilterModalLabel"
+                [(ngModel)]="selectedMotivoFilters"
+                [options]="motivoFilterOptions"
+                placeholder="Todos os motivos..."
+                selectAllLabel="Marcar todos"
+                deselectAllLabel="Desmarcar todos"
+                (selectionChange)="onMotivoFiltersChange($event)">
+              </app-multi-select-dropdown>
             </div>
 
             <div class="filter-group">

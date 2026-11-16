@@ -123,13 +123,30 @@ export class OrcamentosService {
     }
 
     if (incluiRejeitados) {
-      if (dto.motivoRejeicaoId) {
-        qb.andWhere('o.motivoRejeicaoId = :motivoRejeicaoId', {
-          motivoRejeicaoId: dto.motivoRejeicaoId,
+      const motivoIds = [
+        ...new Set(
+          (dto.motivoRejeicaoIds?.length
+            ? dto.motivoRejeicaoIds
+            : dto.motivoRejeicaoId
+              ? [dto.motivoRejeicaoId]
+              : []
+          ).filter((id) => !!id),
+        ),
+      ];
+      const incluirSemMotivo = dto.comMotivo === false;
+
+      if (motivoIds.length > 0 && incluirSemMotivo) {
+        qb.andWhere(
+          '(o.motivoRejeicaoId IN (:...motivoRejeicaoIds) OR o.motivoRejeicaoId IS NULL)',
+          { motivoRejeicaoIds: motivoIds },
+        );
+      } else if (motivoIds.length > 0) {
+        qb.andWhere('o.motivoRejeicaoId IN (:...motivoRejeicaoIds)', {
+          motivoRejeicaoIds: motivoIds,
         });
       } else if (dto.comMotivo === true) {
         qb.andWhere('o.motivoRejeicaoId IS NOT NULL');
-      } else if (dto.comMotivo === false) {
+      } else if (incluirSemMotivo) {
         qb.andWhere('o.motivoRejeicaoId IS NULL');
       }
     }

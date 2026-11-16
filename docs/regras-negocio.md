@@ -189,7 +189,8 @@
 - Permissões de leitura: **`orcamento-rejeitado:read`** (rejeitados) e **`orcamento-aprovado:read`** (aprovados).
 - Coluna **Valor** e totais monetários na listagem/relatório exigem **`orcamento:view-valores`** — a API mascara `precoCobrado`, `precoVenda` e `descontoFormula` (zero) quando o usuário não possui a permissão.
 - **Filtro por valor** (opcional, independente): query params **`valorMaiorIgual`** (`precoVenda >=`) e **`valorMenorIgual`** (`precoVenda <=`); campos vazios = sem filtro; podem ser combinados em faixa. Valores devem ser **>= 0**; se ambos forem informados e `valorMaiorIgual > valorMenorIgual`, a API retorna erro de negócio. Exige **`orcamento:view-valores`** (UI não exibe os campos sem a permissão; API retorna **403** se os params forem enviados sem ela). Os mesmos filtros aplicam-se à impressão/exportação da listagem.
-- Impressão exige **`orcamento:print`** — requisições com query **`relatorio=true`** em **`GET /orcamentos`** retornam **403** sem essa permissão.
+- **Filtro de motivo registrado** (rejeitados): multi-seleção com checkboxes (**Sem motivo** + motivos ativos). Query: **`motivoRejeicaoIds`** (UUIDs) e, se “Sem motivo” estiver marcado, **`comMotivo=false`** (OR: id nos selecionados **ou** sem motivo). Vazio = todos.
+- Impressão e **exportação Excel** da listagem filtrada exigem **`orcamento:print`** — requisições com query **`relatorio=true`** em **`GET /orcamentos`** retornam **403** sem essa permissão.
 
 ### RN-ORC-002 — Registro de motivo em rejeitados
 
