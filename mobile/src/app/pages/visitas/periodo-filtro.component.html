@@ -1,0 +1,134 @@
+@if (!somenteDias) {
+<div class="periodo-filtro">
+  <div class="periodo-filtro__opcoes" role="group" aria-label="Filtro por período">
+    <button
+      type="button"
+      class="periodo-filtro__btn"
+      [class.periodo-filtro__btn--ativo]="modo === 'ano'"
+      [attr.aria-pressed]="modo === 'ano'"
+      (click)="escolher('ano')">
+      Ano
+    </button>
+    <button
+      type="button"
+      class="periodo-filtro__btn"
+      [class.periodo-filtro__btn--ativo]="modo === 'mes'"
+      [attr.aria-pressed]="modo === 'mes'"
+      (click)="escolher('mes')">
+      Mês
+    </button>
+    <button
+      type="button"
+      class="periodo-filtro__btn"
+      [class.periodo-filtro__btn--ativo]="modo === 'personalizado'"
+      [attr.aria-pressed]="modo === 'personalizado'"
+      (click)="escolher('personalizado')">
+      Personalizado
+    </button>
+    <button
+      type="button"
+      class="periodo-filtro__btn periodo-filtro__btn--limpar"
+      [disabled]="modo == null"
+      (click)="limpar()">
+      Limpar
+    </button>
+  </div>
+
+  @if (modo === 'ano') {
+    <label class="periodo-filtro__campo">
+      <span>Ano</span>
+      <select [(ngModel)]="ano" (ngModelChange)="aoMudarAnoMes()">
+        @for (opcao of anos; track opcao) {
+          <option [ngValue]="opcao">{{ opcao }}</option>
+        }
+      </select>
+    </label>
+  }
+
+  @if (modo === 'mes') {
+    <div class="periodo-filtro__linha">
+      <label class="periodo-filtro__campo">
+        <span>Mês</span>
+        <select [(ngModel)]="mes" (ngModelChange)="aoMudarAnoMes()">
+          @for (nome of meses; track nome; let i = $index) {
+            <option [ngValue]="i + 1">{{ nome }}</option>
+          }
+        </select>
+      </label>
+      <label class="periodo-filtro__campo">
+        <span>Ano</span>
+        <select [(ngModel)]="ano" (ngModelChange)="aoMudarAnoMes()">
+          @for (opcao of anos; track opcao) {
+            <option [ngValue]="opcao">{{ opcao }}</option>
+          }
+        </select>
+      </label>
+    </div>
+  }
+
+  @if (modo === 'personalizado') {
+    <div class="periodo-filtro__linha">
+      <label class="periodo-filtro__campo">
+        <span>De</span>
+        <input type="date" [(ngModel)]="dataInicio" (ngModelChange)="aoMudarDatas()" />
+      </label>
+      <label class="periodo-filtro__campo">
+        <span>Até</span>
+        <input type="date" [(ngModel)]="dataFim" (ngModelChange)="aoMudarDatas()" />
+      </label>
+    </div>
+    @if (aviso) {
+      <p class="periodo-filtro__aviso">{{ aviso }}</p>
+    } @else if (!dataInicio || !dataFim) {
+      <p class="periodo-filtro__aviso">Informe a data inicial e a data final.</p>
+    }
+  }
+</div>
+}
+
+@if (somenteDias || mostrarDias) {
+  <div class="periodo-filtro periodo-filtro--dias">
+    <div class="periodo-filtro__opcoes" role="group" aria-label="Filtro por dias da visita">
+      <button
+        type="button"
+        class="periodo-filtro__btn"
+        [class.periodo-filtro__btn--ativo]="modoDias === 'mais'"
+        [attr.aria-pressed]="modoDias === 'mais'"
+        (click)="escolherDias('mais')">
+        Mais de
+      </button>
+      <button
+        type="button"
+        class="periodo-filtro__btn"
+        [class.periodo-filtro__btn--ativo]="modoDias === 'menos'"
+        [attr.aria-pressed]="modoDias === 'menos'"
+        (click)="escolherDias('menos')">
+        Menos de
+      </button>
+      <button
+        type="button"
+        class="periodo-filtro__btn periodo-filtro__btn--limpar"
+        [disabled]="modoDias == null"
+        (click)="limparDias()">
+        Limpar
+      </button>
+    </div>
+    @if (modoDias) {
+      <label class="periodo-filtro__campo">
+        <span>Dias</span>
+        <input
+          type="number"
+          min="0"
+          max="3650"
+          step="1"
+          inputmode="numeric"
+          [(ngModel)]="diasTexto"
+          (ngModelChange)="aoMudarDias()"
+          placeholder="Ex.: 5" />
+      </label>
+      <p class="periodo-filtro__aviso">
+        {{ modoDias === 'mais' ? 'Visitas com mais dias que o número.' : 'Visitas com menos dias que o número.' }}
+      </p>
+    }
+  </div>
+}

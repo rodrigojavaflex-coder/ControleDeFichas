@@ -28,6 +28,11 @@ import {
 } from './dto/visitacao-acompanhamento-recebido-unidade.dto';
 import { VisitacaoPainelMedicoRepresentanteDto } from '../visitacao-painel-medico/dto/visitacao-painel-medico-representante.dto';
 import { VisitacaoAcompanhamentoOpcoesFiltroDto } from './dto/visitacao-acompanhamento-opcoes-filtro.dto';
+import {
+  FindVisitacaoAcompanhamentoMeuDto,
+  VisitacaoAcompanhamentoMeuCardDto,
+  VisitacaoAcompanhamentoMeuHomeDto,
+} from './dto/visitacao-acompanhamento-meu-home.dto';
 import { VisitacaoMetaRepresentante } from '../visitacao-meta/entities/visitacao-meta-representante.entity';
 import { VisitacaoComissaoFaixa } from '../visitacao-meta/entities/visitacao-comissao-faixa.entity';
 import { VisitacaoRepresentanteUnidadeComissao } from '../visitacao-meta/entities/visitacao-representante-unidade-comissao.entity';
@@ -180,6 +185,78 @@ export class VisitacaoAcompanhamentoService {
     @InjectRepository(PainelMedicoRepresentante)
     private readonly painelRepository: Repository<PainelMedicoRepresentante>,
   ) {}
+
+  /**
+   * Home do app: card do representante do funcionário vinculado ao usuário.
+   * Sem funcionário ou sem par painel (cdcon/cdfun) → disponivel=false (não carrega UI).
+   */
+  async findMeuHome(
+    usuario: Usuario,
+    query: FindVisitacaoAcompanhamentoMeuDto = {},
+  ): Promise<VisitacaoAcompanhamentoMeuHomeDto> {
+    const usuarioCompleto = await this.dataSource.getRepository(Usuario).findOne({
+      where: { id: usuario.id },
+      relations: ['funcionario'],
+    });
+    const funcionarioId = usuarioCompleto?.funcionario?.id;
+    if (!funcionarioId) {
+      return { disponivel: false, motivo: 'sem_funcionario' };
+    }
+
+    const funcionario = await this.funcionarioRepository.findOne({
+      where: { id: funcionarioId },
+    });
+    const contrato = funcionario?.painelContratoRepresentante ?? 0;
+    const codigo = funcionario?.painelCodigoRepresentante ?? 0;
+    if (!funcionario || contrato <= 0 || codigo <= 0) {
+      return { disponivel: false, motivo: 'sem_representante' };
+    }
+
+    const { ano, mes } = this.resolverCompetenciaMeuHome(query.ano, query.mes);
+    const lista = await this.findAll(usuarioCompleto ?? usuario, {
+      ano,
+      mes,
+      unidade: funcionario.unidade,
+      funcionarioId: funcionario.id,
+      todos: true,
+      page: 1,
+      limit: 50,
+    });
+
+    const cardOrigem =
+      lista.totaisPorRepresentante.find((r) => r.funcionarioId === funcionario.id) ??
+      lista.totaisPorRepresentante[0] ??
+      null;
+
+    const card = this.mapearCardMeuHome(
+      cardOrigem,
+      funcionario,
+      lista.totais.valorRecebidoCaixa ?? lista.totais.valorRecebido ?? 0,
+    );
+
+    const diasUteis = cardOrigem?.diasUteisMes ?? null;
+    const realizados =
+      cardOrigem?.diasRealizados ?? cardOrigem?.diasUteisDecorridos ?? null;
+    const faltam =
+      diasUteis != null && realizados != null
+        ? Math.max(0, Number((diasUteis - realizados).toFixed(2)))
+        : null;
+
+    return {
+      disponivel: true,
+      motivo: null,
+      unidade: funcionario.unidade,
+      ano,
+      mes,
+      competenciaRotulo: this.rotuloCompetencia(ano, mes),
+      competenciaStatus: lista.competenciaStatus,
+      dataUltimoCaixaFechado: cardOrigem?.dataUltimoCaixaFechado ?? null,
+      diasUteisMes: diasUteis,
+      diasRealizados: realizados,
+      diasFaltam: faltam,
+      card,
+    };
+  }
 
   async findAll(
     usuario: Usuario,
@@ -1880,6 +1957,88 @@ export class VisitacaoAcompanhamentoService {
     const coluna = colunas[dto.ordenarPor ?? 'valorRecebido'] ?? colunas.valorRecebido;
     const direcao = dto.ordem === 'asc' ? 'ASC' : 'DESC';
     return `ORDER BY ${coluna} ${direcao} NULLS LAST, f.nome_medico ASC, f.crm ASC, f.unidade ASC`;
+  }
+
+  private resolverCompetenciaMeuHome(
+    ano?: number,
+    mes?: number,
+  ): { ano: number; mes: number } {
+    const hoje = ymdHojeSp();
+    const anoHoje = Number(hoje.slice(0, 4));
+    const mesHoje = Number(hoje.slice(5, 7));
+    if (ano == null && mes == null) {
+      return { ano: anoHoje, mes: mesHoje };
+    }
+    if (ano == null || mes == null) {
+      throw new BadRequestException(
+        'Informe ano e mês da competência juntos.',
+      );
+    }
+    if (
+      !Number.isInteger(ano) ||
+      !Number.isInteger(mes) ||
+      ano < 2026 ||
+      ano > 2033 ||
+      mes < 1 ||
+      mes > 12
+    ) {
+      throw new BadRequestException('Competência inválida.');
+    }
+    if (ano > anoHoje || (ano === anoHoje && mes > mesHoje)) {
+      throw new BadRequestException(
+        'Competência futura não está disponível na home.',
+      );
+    }
+    return { ano, mes };
+  }
+
+  private rotuloCompetencia(ano: number, mes: number): string {
+    const nome = new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', {
+      month: 'long',
+    });
+    const nomeMes = nome.charAt(0).toUpperCase() + nome.slice(1);
+    return `${nomeMes} de ${ano}`;
+  }
+
+  private mapearCardMeuHome(
+    origem: VisitacaoAcompanhamentoTotaisRepresentanteDto | null,
+    funcionario: Funcionario,
+    valorRecebidoCaixaUnidade: number,
+  ): VisitacaoAcompanhamentoMeuCardDto {
+    const valorRecebido = Number(origem?.valorRecebido) || 0;
+    const valorMarcaPropria = Number(origem?.valorMarcaPropria) || 0;
+    const representatividade =
+      valorRecebidoCaixaUnidade > 0
+        ? Number(((valorRecebido / valorRecebidoCaixaUnidade) * 100).toFixed(1))
+        : null;
+
+    return {
+      nomeRepresentante: origem?.nomeRepresentante?.trim() || funcionario.nome,
+      funcionarioId: origem?.funcionarioId ?? funcionario.id,
+      valorRecebido,
+      quantidadeRecebido: Number(origem?.quantidadeRecebido) || 0,
+      valorRejeitado: Number(origem?.valorRejeitado) || 0,
+      quantidadeRejeitado: Number(origem?.quantidadeRejeitado) || 0,
+      quantidadeMedicos: Number(origem?.quantidadeMedicos) || 0,
+      quantidadeMedicosPainel: Number(origem?.quantidadeMedicosPainel) || 0,
+      quantidadeMedicosForaAtendimento:
+        Number(origem?.quantidadeMedicosForaAtendimento) || 0,
+      valorMarcaPropria,
+      quantidadeMarcaPropria: Number(origem?.quantidadeMarcaPropria) || 0,
+      representatividadePercentual: representatividade,
+      recebidoPorUnidade: origem?.recebidoPorUnidade ?? [],
+      valorMeta: origem?.valorMeta ?? null,
+      percentualMeta: origem?.percentualMeta ?? null,
+      valorProjetado: origem?.valorProjetado ?? null,
+      percentualProjecao: origem?.percentualProjecao ?? null,
+      percentualComissaoFaixa: origem?.percentualComissaoFaixa ?? null,
+      valorComissao: origem?.valorComissao ?? null,
+      percentualComissaoFaixaProjetada:
+        origem?.percentualComissaoFaixaProjetada ?? null,
+      valorComissaoProjetado: origem?.valorComissaoProjetado ?? null,
+      mesAberto: origem?.mesAberto ?? true,
+      valorBaseOficial: valorRecebido + valorMarcaPropria,
+    };
   }
 
   private async resolverFiltroRepresentante(

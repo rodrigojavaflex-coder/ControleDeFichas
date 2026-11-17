@@ -17,6 +17,19 @@ buildscript {
 
 apply from: "variables.gradle"
 
+// Gradle 10: plugins Capacitor leem ext do root via lookup implícito (deprecado).
+// Copia as props para cada subprojeto antes da avaliação dos build.gradle.
+gradle.beforeProject { project ->
+    if (project == rootProject) {
+        return
+    }
+    rootProject.ext.properties.each { key, value ->
+        if (!project.ext.has(key)) {
+            project.ext.set(key, value)
+        }
+    }
+}
+
 allprojects {
     tasks.withType(JavaCompile).configureEach {
         javaCompiler = javaToolchains.compilerFor {
@@ -32,6 +45,6 @@ allprojects {
     }
 }
 
-task clean(type: Delete) {
-    delete rootProject.buildDir
+tasks.register('clean', Delete) {
+    delete rootProject.layout.buildDirectory
 }

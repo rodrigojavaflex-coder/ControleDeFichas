@@ -1,0 +1,114 @@
+<div class="folha-entity-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar tipo de pendência' : 'Novo tipo de pendência' }}</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  }
+
+  @if (!loading) {
+    <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="form-group">
+        <label class="form-label" for="tipo-pendencia-unidade">Unidade *</label>
+        <select
+          id="tipo-pendencia-unidade"
+          class="form-control"
+          formControlName="unidade"
+          [class.error]="form.controls.unidade.invalid && form.controls.unidade.touched">
+          <option value="">Selecione</option>
+          @for (item of unidades; track item) {
+            <option [value]="item">{{ item }}</option>
+          }
+        </select>
+        @if (form.controls.unidade.invalid && form.controls.unidade.touched) {
+          <div class="error-message">Informe a unidade.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="tipo-pendencia-nome">Nome *</label>
+        <input
+          id="tipo-pendencia-nome"
+          type="text"
+          class="form-control"
+          formControlName="nome"
+          maxlength="80"
+          [class.error]="form.controls.nome.invalid && form.controls.nome.touched"
+        />
+        @if (form.controls.nome.invalid && form.controls.nome.touched) {
+          <div class="error-message">Informe o nome do tipo.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="tipo-pendencia-descricao">Descrição *</label>
+        <textarea
+          id="tipo-pendencia-descricao"
+          class="form-control"
+          formControlName="descricao"
+          rows="4"
+          maxlength="2000"
+          [class.error]="form.controls.descricao.invalid && form.controls.descricao.touched"
+        ></textarea>
+        @if (form.controls.descricao.invalid && form.controls.descricao.touched) {
+          <div class="error-message">Informe a descrição do tipo.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="tipo-pendencia-responsavel">Responsável *</label>
+        <select
+          id="tipo-pendencia-responsavel"
+          class="form-control"
+          formControlName="responsavelId"
+          [class.error]="form.controls.responsavelId.invalid && form.controls.responsavelId.touched">
+          <option value="">Selecione</option>
+          @for (item of responsaveis; track item.id) {
+            <option [value]="item.id">{{ item.nome }}</option>
+          }
+        </select>
+        <div class="form-help">Referência de quem deve tratar. Qualquer usuário com permissão web pode resolver.</div>
+        @if (form.controls.responsavelId.invalid && form.controls.responsavelId.touched) {
+          <div class="error-message">Selecione o responsável.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input id="tipo-pendencia-ativo" type="checkbox" formControlName="ativo" />
+          <label class="form-label" for="tipo-pendencia-ativo">Ativo</label>
+        </div>
+        <div class="form-help">Tipo inativo não aparece ao registrar pendência.</div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancelar" [disabled]="isSubmitting" (click)="cancelar()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+          {{ isSubmitting ? 'Salvando...' : (isEditMode ? 'Atualizar' : 'Cadastrar') }}
+        </button>
+      </div>
+    </form>
+  }
+</div>
+
+@if (salvo) {
+  <div class="modal-overlay nao-clicavel">
+    <div class="modal-conteudo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Tipo de pendência</h3>
+        <button type="button" class="modal-fechar" (click)="fecharSucesso()" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>Tipo de pendência salvo.</p>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-salvar" (click)="fecharSucesso()">Fechar</button>
+      </div>
+    </div>
+  </div>
+}

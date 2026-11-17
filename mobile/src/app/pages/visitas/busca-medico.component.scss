@@ -1,0 +1,155 @@
+.busca-medico--caixa {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--ion-color-step-50, #f8fafc);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+}
+
+.busca-medico--filtro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.campo-caixa-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ion-color-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.busca-medico ion-searchbar {
+  padding: 0;
+  --background: transparent;
+  --box-shadow: none;
+}
+
+.abas-filtro {
+  display: flex;
+  width: 100%;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);
+}
+
+.abas-filtro__btn {
+  position: relative;
+  flex: 1;
+  margin: 0;
+  padding: 8px 6px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ion-color-medium, #92949c);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.abas-filtro__btn::after {
+  content: '';
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  bottom: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.abas-filtro__btn--ativa {
+  color: var(--ion-color-primary, #3880ff);
+}
+
+.abas-filtro__btn--ativa::after {
+  background: var(--ion-color-primary, #3880ff);
+}
+
+.abas-filtro__btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.abas-filtro__btn:focus-visible {
+  outline: 2px solid var(--ion-color-primary, #3880ff);
+  outline-offset: -2px;
+}
+
+.medico-escolhido,
+.sugestoes button {
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 10px;
+  background: var(--ion-color-step-50, #f8fafc);
+}
+
+.medico-escolhido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+
+  strong,
+  span {
+    display: block;
+  }
+
+  span {
+    font-size: 0.78rem;
+    color: var(--ion-color-medium);
+  }
+
+  button {
+    border: 0;
+    background: transparent;
+    color: var(--ion-color-danger, #eb445a);
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+.sugestoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sugestoes button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  color: inherit;
+  cursor: pointer;
+
+  strong,
+  span {
+    display: block;
+  }
+
+  span {
+    font-size: 0.78rem;
+    color: var(--ion-color-medium);
+  }
+}
+
+.estado {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ion-color-medium);
+}
+
+.estado--erro {
+  color: var(--ion-color-danger);
+}

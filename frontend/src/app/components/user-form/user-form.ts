@@ -88,6 +88,19 @@ export class UserFormComponent implements OnInit {
     this.carregarFuncionariosComerciais(unidade);
   }
 
+  rotuloFuncionarioVinculo(f: FuncionarioComercialVinculo): string {
+    const cargo = (f.cargo ?? '').trim();
+    const nome = (f.nome ?? '').trim();
+    const base = cargo ? `${cargo} — ${nome}` : nome;
+    const codigo =
+      f.codigoVendedorErp != null && f.codigoVendedorErp > 0
+        ? f.codigoVendedorErp
+        : f.painelCodigoRepresentante != null && f.painelCodigoRepresentante > 0
+          ? f.painelCodigoRepresentante
+          : null;
+    return codigo != null ? `${base} (${codigo})` : base;
+  }
+
   private carregarFuncionariosComerciais(
     unidade: Unidade | string | null | undefined,
   ): void {

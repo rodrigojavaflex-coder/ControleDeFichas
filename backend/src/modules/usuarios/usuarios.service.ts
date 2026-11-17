@@ -297,10 +297,7 @@ export class UsuariosService {
           ? updateUsuarioDto.unidade
           : user.unidade,
       );
-    } else if (
-      updateUsuarioDto.unidade !== undefined &&
-      user.funcionario?.id
-    ) {
+    } else if (updateUsuarioDto.unidade !== undefined && user.funcionario?.id) {
       user.funcionario = await this.resolverFuncionarioComercial(
         user.funcionario.id,
         updateUsuarioDto.unidade,
@@ -481,15 +478,26 @@ export class UsuariosService {
     return this.perfilRepository.find();
   }
 
-  async listarFuncionariosComerciais(
-    unidade?: Unidade,
-  ): Promise<
-    { id: string; nome: string; unidade: Unidade; codigoVendedorErp: number }[]
+  async listarFuncionariosComerciais(unidade?: Unidade): Promise<
+    {
+      id: string;
+      nome: string;
+      unidade: Unidade;
+      cargo: string | null;
+      codigoVendedorErp: number | null;
+      painelCodigoRepresentante: number | null;
+    }[]
   > {
     const qb = this.funcionarioRepository
       .createQueryBuilder('f')
-      .where('f.codigoVendedorErp IS NOT NULL')
-      .andWhere('f.codigoVendedorErp > 0')
+      .leftJoinAndSelect('f.cargo', 'cargo')
+      .where(
+        `(
+          (f.codigoVendedorErp IS NOT NULL AND f.codigoVendedorErp > 0)
+          OR
+          (f.painelCodigoRepresentante IS NOT NULL AND f.painelCodigoRepresentante > 0)
+        )`,
+      )
       .orderBy('f.nome', 'ASC');
     if (unidade) {
       qb.andWhere('f.unidade = :unidade', { unidade });
@@ -499,7 +507,15 @@ export class UsuariosService {
       id: f.id,
       nome: f.nome,
       unidade: f.unidade,
-      codigoVendedorErp: f.codigoVendedorErp!,
+      cargo: f.cargo?.descricao?.trim() || null,
+      codigoVendedorErp:
+        f.codigoVendedorErp != null && f.codigoVendedorErp > 0
+          ? f.codigoVendedorErp
+          : null,
+      painelCodigoRepresentante:
+        f.painelCodigoRepresentante != null && f.painelCodigoRepresentante > 0
+          ? f.painelCodigoRepresentante
+          : null,
     }));
   }
 
@@ -518,12 +534,15 @@ export class UsuariosService {
         `Funcionário com ID ${funcionarioId} não encontrado`,
       );
     }
-    if (
-      funcionario.codigoVendedorErp == null ||
-      funcionario.codigoVendedorErp <= 0
-    ) {
+    const temVendedor =
+      funcionario.codigoVendedorErp != null &&
+      funcionario.codigoVendedorErp > 0;
+    const temPainel =
+      funcionario.painelCodigoRepresentante != null &&
+      funcionario.painelCodigoRepresentante > 0;
+    if (!temVendedor && !temPainel) {
       throw new BadRequestException(
-        'Funcionário sem código de vendedor ERP — não gera card comercial.',
+        'Funcionário precisa de código de vendedor ERP ou código representante painel.',
       );
     }
     if (unidadeUsuario && funcionario.unidade !== unidadeUsuario) {

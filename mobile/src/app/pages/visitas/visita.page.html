@@ -1,0 +1,520 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>{{ tituloPagina }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="visita-page">
+  @if (carregando) {
+    <p class="estado page-shell">Carregando…</p>
+  } @else if (visita) {
+    <div class="page-shell visita-shell">
+      <!-- 1. Médico / visita -->
+      <section class="card-medico" [class.card-medico--collapsed]="!cardAberto('medico')">
+        <button
+          type="button"
+          class="card-toggle"
+          (click)="alternarCard('medico')"
+          [attr.aria-expanded]="cardAberto('medico')">
+          <div class="card-toggle__titulo">
+            <span class="status-pill" [class.aberta]="visita.status === 'ABERTA'">
+              {{ rotuloStatus(visita.status) }}
+            </span>
+            <h1>{{ visita.prescritorNome }}</h1>
+          </div>
+          @if (cardAberto('medico')) {
+              <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon>
+            } @else {
+              <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+            }
+        </button>
+
+        @if (podeTrocarMedico()) {
+          <div class="card-medico-topo card-medico-topo--sempre">
+            <ion-button
+              fill="solid"
+              size="small"
+              class="btn-voltar-header"
+              (click)="trocarMedico()">
+              Trocar médico
+            </ion-button>
+          </div>
+        }
+
+        @if (cardAberto('medico')) {
+          <div class="card-medico-corpo">
+            <div class="medico-chips">
+              <div class="chip">
+                <span class="chip-label">CRM</span>
+                <strong>{{ rotuloCrm(visita.crm, visita.uf) || '—' }}</strong>
+              </div>
+              <div class="chip">
+                <span class="chip-label">Unidade</span>
+                <strong>{{ visita.unidade }}</strong>
+              </div>
+              <div class="chip">
+                <span class="chip-label">Início</span>
+                <strong>{{ formatarDataHora(visita.dataHoraInicio) }}</strong>
+              </div>
+              @if (visita.dataHoraFim) {
+                <div class="chip">
+                  <span class="chip-label">Fim</span>
+                  <strong>{{ formatarDataHora(visita.dataHoraFim) }}</strong>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </section>
+
+      @if (!modoFormulario) {
+        @if (carregandoPainel && !painel) {
+          <p class="estado">Carregando painel…</p>
+        } @else if (painel) {
+          <!-- 2. Pendências -->
+          <section class="container-bloco">
+            <button
+              type="button"
+              class="card-toggle"
+              (click)="alternarCard('pendencias')"
+              [attr.aria-expanded]="cardAberto('pendencias')">
+              <h2>Pendências em aberto</h2>
+              @if (cardAberto('pendencias')) {
+              <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon>
+            } @else {
+              <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+            }
+            </button>
+            @if (cardAberto('pendencias')) {
+              @if (painel.pendencias.length === 0) {
+                <p class="painel-vazio">Nenhuma pendência em aberto.</p>
+              } @else {
+                <ul class="painel-lista">
+                  @for (item of painel.pendencias; track item.id) {
+                    <li>
+                      @if (item.visitaId) {
+                        <button
+                          type="button"
+                          class="painel-lista__btn"
+                          (click)="abrirConsultaVisita(item.visitaId, true)">
+                          <strong>{{ item.tipoVisitaNome || 'Visita' }}</strong>
+                          <span>{{ formatarDataHora(item.dataHoraInicio) }}</span>
+                          @if (item.visitadorNome) {
+                            <span>{{ item.visitadorNome }}</span>
+                          }
+                          <p>{{ item.pendencia }}</p>
+                        </button>
+                      } @else {
+                        <div class="painel-lista__btn">
+                          <strong>Pendência</strong>
+                          <span>{{ formatarDataHora(item.dataHoraInicio) }}</span>
+                          @if (item.visitadorNome) {
+                            <span>{{ item.visitadorNome }}</span>
+                          }
+                          <p>{{ item.pendencia }}</p>
+                        </div>
+                      }
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          </section>
+
+          <!-- 3. Histórico -->
+          <section class="container-bloco">
+            <button
+              type="button"
+              class="card-toggle"
+              (click)="alternarCard('historico')"
+              [attr.aria-expanded]="cardAberto('historico')">
+              <h2>Histórico de visitas (12 meses)</h2>
+              @if (cardAberto('historico')) {
+              <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon>
+            } @else {
+              <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+            }
+            </button>
+            @if (cardAberto('historico')) {
+              @if (painel.historicoVisitas.length === 0) {
+                <p class="painel-vazio">Nenhuma visita no período.</p>
+              } @else {
+                <div class="tabela-scroll">
+                  <table class="painel-table">
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Dias</th>
+                        <th>Tipo</th>
+                        <th>Abordagem</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of painel.historicoVisitas; track item.id) {
+                        <tr
+                          class="painel-table__row--click"
+                          (click)="abrirConsultaVisita(item.id, false)"
+                          tabindex="0"
+                          (keydown.enter)="abrirConsultaVisita(item.id, false)">
+                          <td>{{ formatarDataCurta(item.data) }}</td>
+                          <td>{{ item.dias ?? '—' }}</td>
+                          <td>{{ item.tipoVisitaNome || '—' }}</td>
+                          <td>{{ item.abordagem }}</td>
+                          <td class="col-ver-mais">
+                            <button
+                              type="button"
+                              class="btn-ver-mais"
+                              (click)="$event.stopPropagation(); abrirConsultaVisita(item.id, false)">
+                              Ver mais
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            }
+          </section>
+
+          <!-- 4. Competência -->
+          <section class="container-bloco painel-nav-mes-card">
+            <button
+              type="button"
+              class="card-toggle"
+              (click)="alternarCard('competencia')"
+              [attr.aria-expanded]="cardAberto('competencia')">
+              <h2>Competência</h2>
+              @if (cardAberto('competencia')) {
+              <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon>
+            } @else {
+              <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+            }
+            </button>
+            @if (cardAberto('competencia')) {
+              <div class="painel-nav-mes">
+                <ion-button
+                  class="painel-nav-mes__btn"
+                  fill="clear"
+                  (click)="mesAnterior(); $event.stopPropagation()"
+                  [disabled]="carregandoPainel"
+                  aria-label="Mês anterior">
+                  <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+                </ion-button>
+                <div class="painel-nav-mes__centro">
+                  <span class="painel-nav-mes__label">Mês selecionado</span>
+                  <strong>{{ competenciaRotulo }}</strong>
+                </div>
+                <ion-button
+                  class="painel-nav-mes__btn"
+                  fill="clear"
+                  (click)="mesProximo(); $event.stopPropagation()"
+                  [disabled]="carregandoPainel || !podeAvancarMes"
+                  aria-label="Próximo mês">
+                  <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+                </ion-button>
+              </div>
+            }
+          </section>
+
+          <!-- 5. Orçamentos -->
+          <section class="container-bloco">
+            <button
+              type="button"
+              class="card-toggle"
+              (click)="alternarCard('orcamentos')"
+              [attr.aria-expanded]="cardAberto('orcamentos')">
+              <h2>Orçamentos do mês de {{ competenciaRotulo }}</h2>
+              @if (cardAberto('orcamentos')) {
+              <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon>
+            } @else {
+              <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+            }
+            </button>
+            @if (cardAberto('orcamentos')) {
+              <div class="resumo-orc">
+                <div class="resumo-orc__card resumo-orc__card--ok">
+                  <span class="resumo-orc__badge">Aprovados</span>
+                  <strong class="resumo-orc__qtd">{{ painel.aprovados.quantidade }}</strong>
+                  <em class="resumo-orc__valor">{{ formatarMoeda(painel.aprovados.valor) }}</em>
+                  <small class="resumo-orc__hint">quantidade · valor total</small>
+                </div>
+                <div class="resumo-orc__card resumo-orc__card--nok">
+                  <span class="resumo-orc__badge">Rejeitados</span>
+                  <strong class="resumo-orc__qtd">{{ painel.rejeitados.quantidade }}</strong>
+                  <em class="resumo-orc__valor">{{ formatarMoeda(painel.rejeitados.valor) }}</em>
+                  <small class="resumo-orc__hint">quantidade · valor total</small>
+                </div>
+              </div>
+              @if (totalOrcamentosMes > 0) {
+                <div class="resumo-orc__rodape">
+                  <div class="resumo-orc__barra" aria-hidden="true">
+                    <span
+                      class="resumo-orc__barra-ok"
+                      [style.width.%]="percentualAprovacaoMes"></span>
+                  </div>
+                  <p class="resumo-orc__taxa">
+                    {{ percentualAprovacaoMes }}% de aprovação
+                    <span>· {{ totalOrcamentosMes }} orçamentos</span>
+                  </p>
+                </div>
+              } @else {
+                <p class="painel-vazio">Nenhum orçamento neste mês.</p>
+              }
+            }
+          </section>
+
+          <!-- 6. Ativos -->
+          <section class="container-bloco">
+            <button
+              type="button"
+              class="card-toggle"
+              (click)="alternarCard('ativos')"
+              [attr.aria-expanded]="cardAberto('ativos')">
+              <h2>Ativos (top 10) de {{ competenciaRotulo }}</h2>
+              @if (cardAberto('ativos')) {
+              <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon>
+            } @else {
+              <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+            }
+            </button>
+            @if (cardAberto('ativos')) {
+              <h3 class="painel-subtitulo painel-subtitulo--ok">Mais aprovados</h3>
+              @if (painel.ativosMaisAprovados.length === 0) {
+                <p class="painel-vazio">Sem ativos aprovados no mês.</p>
+              } @else {
+                <div class="tabela-scroll">
+                  <table class="painel-table painel-table--ativos">
+                    <thead>
+                      <tr>
+                        <th class="col-pos">#</th>
+                        <th>Ativo</th>
+                        <th class="col-num">Qtd</th>
+                        <th class="col-num">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (ativo of painel.ativosMaisAprovados; track ativo.nome; let i = $index) {
+                        <tr>
+                          <td class="col-pos">{{ i + 1 }}</td>
+                          <td>{{ ativo.nome }}</td>
+                          <td class="col-num">{{ ativo.quantidade }}</td>
+                          <td class="col-num">{{ formatarMoeda(ativo.valor) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+
+              <h3 class="painel-subtitulo painel-subtitulo--nok">Mais rejeitados</h3>
+              @if (painel.ativosMaisRejeitados.length === 0) {
+                <p class="painel-vazio">Sem ativos rejeitados no mês.</p>
+              } @else {
+                <div class="tabela-scroll">
+                  <table class="painel-table painel-table--ativos">
+                    <thead>
+                      <tr>
+                        <th class="col-pos">#</th>
+                        <th>Ativo</th>
+                        <th class="col-num">Qtd</th>
+                        <th class="col-num">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (ativo of painel.ativosMaisRejeitados; track ativo.nome; let i = $index) {
+                        <tr>
+                          <td class="col-pos">{{ i + 1 }}</td>
+                          <td>{{ ativo.nome }}</td>
+                          <td class="col-num">{{ ativo.quantidade }}</td>
+                          <td class="col-num">{{ formatarMoeda(ativo.valor) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            }
+          </section>
+
+          <!-- 7. Mapa -->
+          <section class="container-bloco">
+            <button
+              type="button"
+              class="card-toggle"
+              (click)="alternarCard('mapa')"
+              [attr.aria-expanded]="cardAberto('mapa')">
+              <h2>Localização do início</h2>
+              @if (cardAberto('mapa')) {
+              <ion-icon name="chevron-up-outline" aria-hidden="true"></ion-icon>
+            } @else {
+              <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+            }
+            </button>
+            @if (cardAberto('mapa')) {
+              <app-visita-mapa
+                [latitude]="painel.latitudeInicio"
+                [longitude]="painel.longitudeInicio"
+                [titulo]="painel.prescritorNome">
+              </app-visita-mapa>
+            }
+          </section>
+        }
+      } @else if (visita.status !== 'ABERTA' || somenteConsulta) {
+        <section class="container-bloco">
+          <h2>Dados da visita</h2>
+          <div class="visita-campos">
+            <div class="campo-caixa">
+              <span class="campo-caixa-label">Tipo de visita</span>
+              <p class="campo-leitura">{{ visita.tipoVisitaNome || '—' }}</p>
+            </div>
+            <div class="campo-caixa campo-caixa--texto">
+              <span class="campo-caixa-label">Descrição da visita</span>
+              <p class="campo-leitura">{{ visita.descricao?.trim() || '—' }}</p>
+            </div>
+            <div class="campo-caixa campo-caixa--texto">
+              <span class="campo-caixa-label">Pendências/Solicitações</span>
+              <p class="campo-leitura">{{ visita.pendencia?.trim() || '—' }}</p>
+            </div>
+            <div class="campo-caixa campo-caixa--texto campo-caixa--material">
+              <span class="campo-caixa-label">Material</span>
+              <p class="campo-leitura">{{ visita.material?.trim() || '—' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="container-bloco container-bloco--midias">
+          <app-visita-midias
+            [visitaId]="visita.id"
+            [aberta]="visita.status === 'ABERTA' && !somenteConsulta"
+            [podeAlterar]="podeEditarCampos()">
+          </app-visita-midias>
+        </section>
+      } @else {
+        <section class="container-bloco">
+          <h2>Dados da visita</h2>
+          <div class="visita-campos">
+            <div class="campo-caixa campo-caixa--tipo">
+              <span class="campo-caixa-label">Tipo de visita</span>
+              <ion-select
+                [(ngModel)]="tipoVisitaId"
+                interface="popover"
+                placeholder="Selecione o tipo"
+                class="campo-caixa-select">
+                @for (tipo of tipos; track tipo.id) {
+                  <ion-select-option [value]="tipo.id">{{ tipo.nome }}</ion-select-option>
+                }
+              </ion-select>
+            </div>
+
+            <div class="campo-caixa campo-caixa--texto">
+              <span class="campo-caixa-label">Descrição da visita *</span>
+              <ion-textarea
+                [(ngModel)]="descricao"
+                autoGrow="true"
+                rows="5"
+                class="campo-alto"
+                placeholder="Descreva a visita">
+              </ion-textarea>
+            </div>
+
+            <div class="campo-caixa campo-caixa--texto">
+              <span class="campo-caixa-label">Pendências/Solicitações</span>
+              <ion-textarea
+                [(ngModel)]="pendencia"
+                autoGrow="true"
+                rows="4"
+                class="campo-alto"
+                placeholder="Descreva as solicitações ou pendências">
+              </ion-textarea>
+            </div>
+
+            <div class="campo-caixa campo-caixa--tipo">
+              <span class="campo-caixa-label">
+                Tipo da pendência{{ temTextoPendencia() ? ' *' : '' }}
+              </span>
+              <ion-select
+                [(ngModel)]="tipoPendenciaId"
+                interface="popover"
+                placeholder="Selecione o tipo"
+                class="campo-caixa-select"
+                [disabled]="!temTextoPendencia()">
+                @for (tipo of tiposPendencia; track tipo.id) {
+                  <ion-select-option [value]="tipo.id">{{ tipo.nome }}</ion-select-option>
+                }
+              </ion-select>
+            </div>
+
+            <div class="campo-caixa campo-caixa--texto campo-caixa--material">
+              <span class="campo-caixa-label">Material</span>
+              <ion-textarea
+                [(ngModel)]="material"
+                autoGrow="true"
+                rows="2"
+                placeholder="Informe os materiais">
+              </ion-textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="container-bloco container-bloco--midias">
+          <app-visita-midias
+            [visitaId]="visita.id"
+            [aberta]="true"
+            [podeAlterar]="podeEditarCampos()">
+          </app-visita-midias>
+        </section>
+      }
+    </div>
+  }
+
+  <app-visita-consulta-modal
+    [aberto]="modalConsultaAberto"
+    [visitaId]="modalConsultaVisitaId"
+    [origemAgenda]="false"
+    [permitirAcoes]="modalConsultaAcoes"
+    (fechado)="fecharConsultaVisita()"
+    (excluida)="aposExcluirConsultaVisita()">
+  </app-visita-consulta-modal>
+</ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      @if (visita && !carregando && podeExcluir()) {
+        <ion-button class="btn-excluir" fill="solid" color="danger" (click)="excluir()">
+          Excluir
+        </ion-button>
+      }
+      @if (
+        visita &&
+        !carregando &&
+        !somenteConsulta &&
+        visita.status === 'ABERTA' &&
+        podeAlterar() &&
+        !modoFormulario
+      ) {
+        <ion-button class="btn-encerrar" (click)="abrirFormulario()">
+          Finalizar
+        </ion-button>
+      }
+      @if (
+        visita &&
+        !carregando &&
+        !somenteConsulta &&
+        visita.status === 'ABERTA' &&
+        podeAlterar() &&
+        modoFormulario
+      ) {
+        <ion-button class="btn-encerrar" (click)="abrirOpcoesEncerrar()">
+          Encerrar a visita
+        </ion-button>
+      }
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

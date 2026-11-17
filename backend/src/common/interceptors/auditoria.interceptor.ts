@@ -478,6 +478,16 @@ export class AuditoriaInterceptor implements NestInterceptor {
 
     const pathSegment = segments[0].toLowerCase();
 
+    if (pathSegment === 'tipos-visita') {
+      return 'tipos_visita';
+    }
+    if (pathSegment === 'tipos-pendencia') {
+      return 'tipos_pendencia';
+    }
+    if (pathSegment === 'visitas') {
+      return 'visitas';
+    }
+
     // ✅ ESCALÁVEL: Usa descoberta automática
     const entityMap = this.getAllEntityTables();
 

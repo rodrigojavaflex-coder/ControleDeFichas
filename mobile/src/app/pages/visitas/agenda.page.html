@@ -1,0 +1,180 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Calendário de Visitas</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="agenda-page">
+  <div class="page-shell agenda-shell">
+    <div class="agenda-nav">
+      <ion-button
+        class="agenda-nav__btn"
+        fill="clear"
+        (click)="mesAnterior()"
+        [disabled]="carregando"
+        aria-label="Mês anterior">
+        <ion-icon slot="icon-only" name="chevron-back-outline"></ion-icon>
+      </ion-button>
+      <ion-button
+        class="agenda-nav__btn"
+        fill="clear"
+        (click)="mesProximo()"
+        [disabled]="carregando || !podeAvancarMes"
+        aria-label="Próximo mês">
+        <ion-icon slot="icon-only" name="chevron-forward-outline"></ion-icon>
+      </ion-button>
+      <ion-button
+        class="agenda-nav__hoje"
+        fill="outline"
+        size="small"
+        (click)="irHoje()"
+        [disabled]="carregando">
+        <ion-icon slot="start" name="today-outline"></ion-icon>
+        Hoje
+      </ion-button>
+      <strong class="agenda-nav__mes">{{ rotuloMes }}</strong>
+    </div>
+
+    @if (carregando) {
+      <p class="estado">Carregando agenda…</p>
+    } @else if (erro) {
+      <p class="estado estado--erro">{{ erro }}</p>
+    } @else {
+      <div class="agenda-grade" role="grid" aria-label="Calendário do mês">
+        <div class="agenda-grade__head">
+          @for (s of semanas; track s) {
+            <span>{{ s }}</span>
+          }
+        </div>
+        <div class="agenda-grade__body">
+          @for (celula of celulas; track $index) {
+            <button
+              type="button"
+              class="agenda-dia"
+              [class.agenda-dia--vazio]="celula.foraMes"
+              [class.agenda-dia--hoje]="celula.hoje"
+              [class.agenda-dia--sel]="celula.data === diaSelecionado"
+              [class.agenda-dia--feriado]="celula.feriado"
+              [class.agenda-dia--fds]="celula.fimDeSemana && !celula.feriado"
+              [disabled]="celula.foraMes || !celula.data"
+              (click)="selecionarDia(celula)">
+              @if (celula.diaNumero != null) {
+                <span class="agenda-dia__num">{{ celula.diaNumero }}</span>
+                @if (celula.feriado) {
+                  <span
+                    class="agenda-chip agenda-chip--feriado"
+                    [title]="celula.feriadoDescricao || 'Feriado'">
+                    {{ celula.feriadoDescricao || 'Feriado' }}
+                  </span>
+                }
+                @if (celula.quantidadeVisitas > 0) {
+                  <span class="agenda-chip agenda-chip--visita">
+                    {{ celula.quantidadeVisitas }}
+                    {{ celula.quantidadeVisitas === 1 ? 'visita' : 'visitas' }}
+                  </span>
+                }
+                @if (celula.quantidadeAgendamentos > 0) {
+                  <span class="agenda-chip agenda-chip--agenda">
+                    {{ celula.quantidadeAgendamentos }}
+                    {{ celula.quantidadeAgendamentos === 1 ? 'agendamento' : 'agendamentos' }}
+                  </span>
+                }
+              }
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (diaSelecionado) {
+        <section class="agenda-lista container-bloco">
+          <div class="agenda-lista__cab">
+            <h2>
+              {{ diaSelecionado.slice(8, 10) }}/{{ diaSelecionado.slice(5, 7) }}/{{ diaSelecionado.slice(0, 4) }}
+            </h2>
+          </div>
+
+          @if (listaAgendamentosDia.length > 0) {
+            <h3 class="agenda-lista__sub">Agendamentos</h3>
+            <ul class="agenda-lista__ul">
+              @for (item of listaAgendamentosDia; track item.id) {
+                <li class="agenda-lista__row">
+                  <button
+                    type="button"
+                    class="agenda-lista__item agenda-lista__item--agenda"
+                    [disabled]="!podeAbrirAgendamento"
+                    (click)="abrirAgendamento(item)">
+                    <strong>{{ item.prescritorNome }}</strong>
+                    <span>{{ rotuloCrm(item.crm, item.uf) || '—' }}</span>
+                    @if (item.hora) {
+                      <em>{{ item.hora }}</em>
+                    }
+                    @if (item.observacao) {
+                      <span>{{ item.observacao }}</span>
+                    }
+                  </button>
+                  @if (podeExcluirAgendamento) {
+                    <ion-button
+                      fill="clear"
+                      color="danger"
+                      aria-label="Excluir agendamento"
+                      (click)="confirmarExcluirAgendamento(item)">
+                      <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                    </ion-button>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
+          <h3 class="agenda-lista__sub">Visitas realizadas</h3>
+          @if (listaDia.length === 0) {
+            <p class="painel-vazio">Nenhuma visita neste dia.</p>
+          } @else {
+            <ul class="agenda-lista__ul">
+              @for (item of listaDia; track item.id) {
+                <li>
+                  <button type="button" class="agenda-lista__item" (click)="abrirVisita(item.id)">
+                    <strong>{{ item.prescritorNome }}</strong>
+                    <span>
+                      {{ rotuloCrm(item.crm, item.uf) || '—' }}
+                      · {{ item.tipoVisitaNome }}
+                      · {{ rotuloStatus(item.status) }}
+                    </span>
+                    <em>{{ formatarDataHora(item.dataHoraInicio) }}</em>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+    }
+  </div>
+
+  <app-visita-consulta-modal
+    [aberto]="modalAberto"
+    [visitaId]="modalVisitaId"
+    [origemAgenda]="true"
+    (fechado)="fecharModal()"
+    (excluida)="aposExcluirVisita()">
+  </app-visita-consulta-modal>
+</ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      @if (podeCriarAgendamento) {
+        <ion-button class="btn-encerrar" fill="solid" (click)="irAgendar()">
+          Agendar
+        </ion-button>
+      }
+      <ion-button class="btn-consulta" fill="solid" (click)="irConsultar()">
+        Consultar agendamento
+      </ion-button>
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

@@ -112,6 +112,8 @@ export class AuditoriaController {
     Permission.FOLHA_SETOR_AUDIT,
     Permission.FOLHA_VERBA_AUDIT,
     Permission.FOLHA_LANCAMENTO_READ,
+    Permission.TIPOS_VISITA_AUDIT,
+    Permission.VISITAS_AUDIT,
   )
   @ApiOperation({
     summary: 'Buscar histórico de auditoria por entidade',

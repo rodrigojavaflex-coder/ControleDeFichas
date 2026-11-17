@@ -1,0 +1,252 @@
+.abas-visitas,
+.abas-filtro {
+  display: flex;
+  width: 100%;
+  gap: 0;
+  padding: 0 8px;
+}
+
+.aba-visitas__btn,
+.abas-filtro__btn {
+  position: relative;
+  flex: 1;
+  margin: 0;
+  padding: 12px 8px 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ion-color-medium, #92949c);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.aba-visitas__btn::after,
+.abas-filtro__btn::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.aba-visitas__btn:focus-visible,
+.abas-filtro__btn:focus-visible {
+  outline: 2px solid var(--ion-color-primary, #3880ff);
+  outline-offset: -2px;
+}
+
+.aba-visitas__btn--ativa,
+.abas-filtro__btn--ativa {
+  color: var(--ion-color-primary, #3880ff);
+}
+
+.aba-visitas__btn--ativa::after,
+.abas-filtro__btn--ativa::after {
+  background: var(--ion-color-primary, #3880ff);
+}
+
+.abas-filtro__btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.filtro-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 12px;
+  background: var(--ion-card-background, var(--ion-background-color, #fff));
+}
+
+.campo-label {
+  display: block;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ion-color-medium, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.filtro-card .abas-filtro {
+  padding: 0;
+  border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);
+}
+
+.filtro-card .abas-filtro__btn {
+  padding: 8px 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.filtro-card ion-searchbar {
+  padding: 0;
+}
+
+.carteira-shell {
+  padding-top: 4px;
+  padding-bottom: 24px;
+}
+
+.estado,
+.aviso {
+  margin: 16px 0;
+  color: var(--ion-text-color);
+}
+
+.aviso {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ion-color-light);
+}
+
+.unidade-chip {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+}
+
+.meta-linha {
+  margin-top: 2px !important;
+  font-size: 0.8rem !important;
+  color: var(--ion-color-medium) !important;
+}
+
+.carregar-mais {
+  padding: 12px 0 8px;
+  max-width: 360px;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+
+  p {
+    margin: 0;
+  }
+}
+
+.lista-grid {
+  background: transparent;
+  padding: 0;
+}
+
+.lista-card {
+  --background: var(--ion-card-background, var(--ion-background-color, #fff));
+  --border-color: var(--ion-color-step-150, #e2e8f0);
+  --padding-start: 14px;
+  --inner-padding-end: 10px;
+  margin: 0 0 8px;
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 12px;
+}
+
+.hist-card {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 12px;
+  background: var(--ion-card-background, var(--ion-background-color, #fff));
+  color: var(--ion-text-color, #0f172a);
+  cursor: pointer;
+}
+
+.hist-card:focus-visible {
+  outline: 2px solid var(--ion-color-primary, #3880ff);
+  outline-offset: 2px;
+}
+
+.hist-card__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+
+  h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  ion-badge {
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+}
+
+.hist-card p {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: var(--ion-color-medium, #64748b);
+}
+
+.hist-card__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.hist-dias {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.hist-dias--padrao {
+  background: var(--ion-color-step-150, #e2e8f0);
+  color: var(--ion-text-color, #1e293b);
+}
+
+.btn-ver-mais {
+  margin: 0;
+  min-height: 32px;
+  height: 32px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  --border-radius: 8px;
+  --padding-start: 10px;
+  --padding-end: 10px;
+}
+
+@media (min-width: 768px) {
+  .abas-visitas,
+  ion-header .abas-filtro {
+    max-width: var(--app-page-max);
+    margin: 0 auto;
+    padding-left: var(--app-page-pad);
+    padding-right: var(--app-page-pad);
+  }
+
+  /* Lista mantém 1 item por linha (igual celular), só com largura limitada. */
+  .carregar-mais {
+    margin-top: 8px;
+  }
+}

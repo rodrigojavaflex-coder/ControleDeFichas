@@ -16,6 +16,10 @@ import { VisitacaoAcompanhamentoDetalheDto } from './dto/visitacao-acompanhament
 import { VisitacaoPainelMedicoRepresentanteDto } from '../visitacao-painel-medico/dto/visitacao-painel-medico-representante.dto';
 import { VisitacaoAcompanhamentoOpcoesFiltroDto } from './dto/visitacao-acompanhamento-opcoes-filtro.dto';
 import { FecharVisitacaoDto } from './dto/fechar-visitacao.dto';
+import {
+  FindVisitacaoAcompanhamentoMeuDto,
+  VisitacaoAcompanhamentoMeuHomeDto,
+} from './dto/visitacao-acompanhamento-meu-home.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
@@ -35,6 +39,23 @@ class VisitacaoAcompanhamentoRepresentantesQueryDto {
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 export class VisitacaoAcompanhamentoController {
   constructor(private readonly service: VisitacaoAcompanhamentoService) {}
+
+  @Get('meu')
+  @Permissions(
+    Permission.VISITACAO_ACOMPANHAMENTO_READ,
+    Permission.VISITAS_READ,
+  )
+  @ApiOperation({
+    summary:
+      'Home do app: resumo do representante do funcionário vinculado (só se painel configurado)',
+  })
+  @ApiResponse({ status: 200, type: VisitacaoAcompanhamentoMeuHomeDto })
+  meu(
+    @Req() req: { user: Usuario },
+    @Query() query: FindVisitacaoAcompanhamentoMeuDto,
+  ): Promise<VisitacaoAcompanhamentoMeuHomeDto> {
+    return this.service.findMeuHome(req.user, query);
+  }
 
   @Get('representantes')
   @Permissions(Permission.VISITACAO_ACOMPANHAMENTO_READ)

@@ -4,14 +4,11 @@
       <ion-menu-button menu="main-menu"></ion-menu-button>
     </ion-buttons>
     <ion-title>Sobre</ion-title>
-    <ion-buttons slot="end">
-      <ion-button fill="solid" (click)="voltar()">Voltar</ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <div class="sobre-page">
+  <div class="sobre-page page-shell page-shell--narrow">
     <div class="sobre-hero">
       <div class="sobre-logo" aria-hidden="true">{{ inicialApp() }}</div>
       <h1>{{ appName() }}</h1>
@@ -41,3 +38,11 @@
     </ion-card>
   </div>
 </ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

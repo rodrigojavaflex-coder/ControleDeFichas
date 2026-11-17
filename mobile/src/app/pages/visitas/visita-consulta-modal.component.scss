@@ -1,0 +1,248 @@
+.visita-consulta-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 12px 12px
+    calc(12px + var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  background: rgba(15, 23, 42, 0.55);
+  pointer-events: auto;
+}
+
+.visita-consulta-overlay.nao-clicavel {
+  /* Clique no fundo não fecha — só X / Fechar / ações. */
+}
+
+.visita-consulta-painel {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(640px, 100%);
+  max-height: 100%;
+  min-height: 0;
+  flex-shrink: 1;
+  border-radius: 18px 18px 14px 14px;
+  background: var(--ion-card-background, #fff);
+  color: var(--ion-text-color, #0f172a);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+}
+
+.visita-consulta-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);
+
+  h1 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+}
+
+.visita-consulta-fechar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--ion-color-step-50, #f1f5f9);
+  color: inherit;
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 1.35rem;
+  }
+}
+
+.visita-consulta-corpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.visita-consulta-estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 28px 12px;
+  color: var(--ion-color-medium);
+
+  &--erro {
+    color: var(--ion-color-danger);
+  }
+}
+
+.visita-consulta-bloco {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  background: var(--ion-color-step-50, #f8fafc);
+
+  h2 {
+    margin: 8px 0 10px;
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--ion-color-medium);
+  }
+}
+
+.visita-consulta-bloco--midias {
+  background: transparent;
+  border: 0;
+  padding: 0;
+
+  h3 {
+    padding: 0 4px;
+  }
+}
+
+.visita-consulta-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #dbeafe;
+  color: #1d4ed8;
+
+  &.aberta {
+    background: #fef3c7;
+    color: #b45309;
+  }
+}
+
+.link-trocar {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ion-color-primary, #c6284a);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.visita-consulta-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0;
+
+  div {
+    min-width: 0;
+  }
+
+  dt {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--ion-color-medium);
+  }
+
+  dd {
+    margin: 2px 0 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    word-break: break-word;
+  }
+}
+
+.visita-consulta-texto {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.visita-consulta-rodape {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--ion-color-step-150, #e2e8f0);
+
+  ion-button {
+    margin: 0;
+    max-width: 100%;
+    min-height: 40px;
+    height: 40px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0;
+    --border-radius: 8px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .visita-consulta-overlay {
+    align-items: center;
+  }
+
+  .visita-consulta-painel {
+    border-radius: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .visita-consulta-painel {
+    background: #1e293b;
+    color: #f8fafc;
+  }
+
+  .visita-consulta-bloco {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .visita-consulta-fechar {
+    background: #334155;
+  }
+
+  .status-pill {
+    background: #1e3a8a;
+    color: #bfdbfe;
+
+    &.aberta {
+      background: #78350f;
+      color: #fde68a;
+    }
+  }
+}

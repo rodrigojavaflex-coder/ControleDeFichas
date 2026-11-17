@@ -40,6 +40,7 @@ export default registerAs('app', () => {
     port: parseInt(process.env.PORT || '3000', 10),
     environment,
     jwtSecret: process.env.JWT_SECRET || '',
+    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
     cors: {
       origins,
       methods: parseList(process.env.CORS_METHODS, [

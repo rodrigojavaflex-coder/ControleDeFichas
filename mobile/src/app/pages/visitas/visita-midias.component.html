@@ -1,0 +1,159 @@
+<div class="midias">
+  <section class="midia-bloco">
+    <div class="midia-bloco-cabecalho">
+      <div class="midia-bloco-titulo">
+        <ion-icon name="camera-outline" aria-hidden="true"></ion-icon>
+        <div>
+          <strong>Fotos</strong>
+          <span>{{ fotos.length === 1 ? '1 anexo' : fotos.length + ' anexos' }}</span>
+        </div>
+      </div>
+      @if (podeEditar) {
+        <ion-button fill="outline" (click)="escolherFoto()">Adicionar</ion-button>
+      }
+    </div>
+    @if (fotos.length === 0) {
+      <p class="midia-bloco-vazio">Nenhuma foto adicionada.</p>
+    } @else {
+      <ul class="midia-lista">
+        @for (foto of fotos; track foto.id) {
+          <li>
+            @if (previews.get(foto.id); as url) {
+              <button
+                type="button"
+                class="midia-foto-btn"
+                (click)="ampliarFoto(foto)"
+                [attr.aria-label]="'Ampliar ' + (foto.nomeArquivo || 'foto')">
+                <img [src]="url" [alt]="foto.nomeArquivo" />
+              </button>
+            }
+            <p>{{ foto.nomeArquivo }}</p>
+            @if (podeEditar) {
+              <ion-button
+                fill="clear"
+                color="danger"
+                (click)="remover(foto)"
+                aria-label="Excluir foto">
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+              </ion-button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="midia-bloco">
+    <div class="midia-bloco-cabecalho">
+      <div class="midia-bloco-titulo">
+        <ion-icon name="mic-outline" aria-hidden="true"></ion-icon>
+        <div>
+          <strong>Áudios</strong>
+          <span>{{ audios.length === 1 ? '1 anexo' : audios.length + ' anexos' }}</span>
+        </div>
+      </div>
+      @if (podeEditar) {
+        <ion-button
+          fill="outline"
+          (click)="abrirGravacaoAudio()"
+          [disabled]="gravando || gravacaoPreparando">
+          Gravar
+        </ion-button>
+      }
+    </div>
+    @if (audios.length === 0) {
+      <p class="midia-bloco-vazio">Nenhum áudio gravado.</p>
+    } @else {
+      <ul class="midia-lista midia-lista--audio">
+        @for (audio of audios; track audio.id) {
+          <li>
+            <div class="midia-audio-info">
+              <p>{{ audio.nomeArquivo }}</p>
+              @if (previews.get(audio.id); as url) {
+                <audio class="audio-player" [src]="url" controls preload="none"></audio>
+              }
+            </div>
+            @if (podeEditar) {
+              <ion-button
+                fill="clear"
+                color="danger"
+                (click)="remover(audio)"
+                aria-label="Excluir áudio">
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+              </ion-button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>
+
+@if (fotoAmpliadaUrl) {
+  <div
+    class="foto-ampliada-overlay nao-clicavel"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="fotoAmpliadaNome">
+    <button
+      type="button"
+      class="foto-ampliada-fechar"
+      (click)="fecharFotoAmpliada()"
+      aria-label="Fechar">
+      <ion-icon name="close-outline"></ion-icon>
+    </button>
+    <img
+      class="foto-ampliada-img"
+      [src]="fotoAmpliadaUrl"
+      [alt]="fotoAmpliadaNome"
+      (click)="$event.stopPropagation()" />
+    <p class="foto-ampliada-nome">{{ fotoAmpliadaNome }}</p>
+    <ion-button fill="outline" color="light" (click)="fecharFotoAmpliada()">
+      Fechar
+    </ion-button>
+  </div>
+}
+
+@if (exibirModalGravacao) {
+  <div
+    class="gravacao-audio-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="gravacao-audio-titulo-el">
+    <div class="gravacao-audio-panel">
+      @if (gravacaoPreparando) {
+        <h1 id="gravacao-audio-titulo-el" class="gravacao-audio-titulo">
+          Preparando gravação
+        </h1>
+        <p class="gravacao-audio-sub">Aguarde enquanto o microfone é ativado.</p>
+        <ion-spinner class="gravacao-audio-spinner" name="crescent"></ion-spinner>
+      } @else {
+        <h1 id="gravacao-audio-titulo-el" class="gravacao-audio-titulo">
+          Gravando áudio
+        </h1>
+        <p class="gravacao-audio-sub">
+          Fale próximo ao microfone. Toque em finalizar para salvar na lista.
+        </p>
+        <div class="gravacao-audio-pulse-wrap" aria-hidden="true">
+          <span class="gravacao-audio-pulse"></span>
+        </div>
+        <p class="gravacao-audio-timer" aria-live="polite">
+          {{ tempoGravacaoFormatado }}
+        </p>
+        <p class="gravacao-audio-legenda">Duração</p>
+        <div class="gravacao-audio-botoes">
+          <ion-button expand="block" color="danger" (click)="finalizarGravacao()">
+            Parar e salvar áudio
+          </ion-button>
+          <ion-button
+            expand="block"
+            fill="outline"
+            color="medium"
+            (click)="descartarGravacao()">
+            Descartar gravação
+          </ion-button>
+        </div>
+      }
+    </div>
+  </div>
+}

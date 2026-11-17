@@ -161,17 +161,17 @@
     </div>
 
     <div class="form-group">
-      <label for="funcionarioId" class="form-label">Funcionário comercial</label>
+      <label for="funcionarioId" class="form-label">Funcionário vinculado</label>
       <select id="funcionarioId" class="form-control" formControlName="funcionarioId">
         <option value="">Nenhum</option>
         @for (f of funcionariosComerciais; track f.id) {
           <option [value]="f.id">
-            {{ f.nome }} ({{ f.codigoVendedorErp }})
+            {{ rotuloFuncionarioVinculo(f) }}
           </option>
         }
       </select>
       <div class="form-help">
-        Vínculo do card de acompanhamento na tela inicial. Somente funcionários com código de vendedor ERP.
+        Vínculo do card comercial e das Visitas Médicas. Lista quem tem código de vendedor ERP ou código representante painel.
       </div>
     </div>
 

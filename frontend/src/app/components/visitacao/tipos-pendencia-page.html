@@ -1,0 +1,125 @@
+<div class="folha-lista-container folha-tipos">
+  @if (!pode().r) {
+    <div class="alert alert-error">Você não possui permissão para visualizar tipos de pendência.</div>
+  } @else {
+    <section class="filters">
+      <div class="filter-group">
+        <label for="tipos-pendencia-unidade">Unidade</label>
+        <select
+          id="tipos-pendencia-unidade"
+          class="form-control"
+          [(ngModel)]="unidade"
+          (ngModelChange)="carregar()"
+          [disabled]="unidadeDisabled">
+          @if (!unidadeDisabled) {
+            <option value="">Todas</option>
+          }
+          @for (item of unidades; track item) {
+            <option [value]="item">{{ item }}</option>
+          }
+        </select>
+      </div>
+      @if (pode().c) {
+        <button type="button" class="btn btn-novo" (click)="novo()" [disabled]="carregando || (!unidadeDisabled && !unidade)">
+          Novo tipo
+        </button>
+      }
+    </section>
+
+    @if (carregando) {
+      <div class="loading">Carregando tipos de pendência…</div>
+    } @else {
+      <div class="table-container">
+        <table class="folha-data-table">
+          <thead>
+            <tr>
+              <th>Unidade</th>
+              <th>Nome</th>
+              <th>Descrição</th>
+              <th>Responsável</th>
+              <th>Ativo</th>
+              @if (temAcoes()) {
+                <th>Ações</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of lista; track item.id) {
+              <tr>
+                <td>{{ item.unidade }}</td>
+                <td>{{ item.nome }}</td>
+                <td>{{ item.descricao }}</td>
+                <td>{{ item.responsavelNome || '—' }}</td>
+                <td>
+                  <span class="folha-badge-ativo" [class.sim]="item.ativo" [class.nao]="!item.ativo">
+                    {{ item.ativo ? 'Sim' : 'Não' }}
+                  </span>
+                </td>
+                @if (temAcoes()) {
+                  <td class="action-buttons">
+                    @if (pode().u) {
+                      <button type="button" class="btn btn-sm btn-editar" (click)="editar(item)">Editar</button>
+                      <button
+                        type="button"
+                        [ngClass]="item.ativo ? 'btn btn-sm btn-cancelar' : 'btn btn-sm btn-baixa'"
+                        (click)="alternarAtivo(item)">
+                        {{ item.ativo ? 'Inativar' : 'Ativar' }}
+                      </button>
+                    }
+                    @if (pode().a) {
+                      <button type="button" class="btn btn-sm btn-auditoria" (click)="abrirAuditoria(item)">
+                        <i class="fas fa-history"></i>
+                        Auditoria
+                      </button>
+                    }
+                    @if (pode().d) {
+                      <button type="button" class="btn btn-sm btn-excluir" (click)="pedirExclusao(item)">Excluir</button>
+                    }
+                  </td>
+                }
+              </tr>
+            } @empty {
+              <tr class="no-data">
+                <td [attr.colspan]="temAcoes() ? 6 : 5">
+                  <i class="fas fa-inbox"></i> Nenhum tipo de pendência cadastrado
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+@if (auditoriaAlvo) {
+  <app-historico-auditoria
+    entidade="tipos_pendencia"
+    [entidadeId]="auditoriaAlvo.id"
+    [fieldLabels]="rotulosAuditoria"
+    [showModal]="true"
+    (modalClosed)="fecharAuditoria()">
+  </app-historico-auditoria>
+}
+
+@if (excluirAlvo) {
+  <div class="modal-overlay nao-clicavel">
+    <div class="modal-conteudo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Excluir tipo de pendência</h3>
+        <button type="button" class="modal-fechar" (click)="cancelarExclusao()" [disabled]="excluindo" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>Excluir o tipo "{{ excluirAlvo.nome }}"? Tipo já usado em pendência deve ser inativado.</p>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-cancelar" (click)="cancelarExclusao()" [disabled]="excluindo">Cancelar</button>
+        <button type="button" class="btn btn-excluir" (click)="confirmarExclusao()" [disabled]="excluindo">
+          {{ excluindo ? 'Excluindo...' : 'Excluir' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

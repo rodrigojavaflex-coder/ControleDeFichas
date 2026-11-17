@@ -1,0 +1,108 @@
+<div class="folha-entity-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar faixa de cor' : 'Nova faixa de cor' }}</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  }
+
+  @if (!loading) {
+    <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="form-group">
+        <label class="form-label" for="cor-dias-unidade">Unidade *</label>
+        <select
+          id="cor-dias-unidade"
+          class="form-control"
+          formControlName="unidade"
+          [class.error]="form.controls.unidade.invalid && form.controls.unidade.touched">
+          <option value="">Selecione</option>
+          @for (item of unidades; track item) {
+            <option [value]="item">{{ item }}</option>
+          }
+        </select>
+        @if (form.controls.unidade.invalid && form.controls.unidade.touched) {
+          <div class="error-message">Informe a unidade.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="cor-dias-limite">Mais de (dias) *</label>
+        <input
+          id="cor-dias-limite"
+          type="number"
+          min="0"
+          max="3650"
+          class="form-control"
+          formControlName="diasAcimaDe"
+          [class.error]="form.controls.diasAcimaDe.invalid && form.controls.diasAcimaDe.touched"
+        />
+        <div class="form-help">
+          A cor vale quando a visita tem mais dias do que este número.
+          Ex.: 5 pinta a partir de 6 dias; 10 pinta a partir de 11.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="cor-dias-hex">Cor *</label>
+        <div class="cor-linha">
+          <input
+            type="color"
+            class="cor-picker"
+            [value]="form.controls.cor.value"
+            (input)="aoCor($event)"
+            aria-label="Selecionar cor"
+          />
+          <input
+            id="cor-dias-hex"
+            type="text"
+            class="form-control"
+            formControlName="cor"
+            maxlength="7"
+            placeholder="#F5C518"
+            [class.error]="form.controls.cor.invalid && form.controls.cor.touched"
+          />
+        </div>
+        @if (form.controls.cor.invalid && form.controls.cor.touched) {
+          <div class="error-message">Informe a cor no formato #RRGGBB.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input id="cor-dias-ativo" type="checkbox" formControlName="ativo" />
+          <label class="form-label" for="cor-dias-ativo">Ativo</label>
+        </div>
+        <div class="form-help">Faixa inativa não colore o histórico do aplicativo.</div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancelar" [disabled]="isSubmitting" (click)="cancelar()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+          {{ isSubmitting ? 'Salvando...' : (isEditMode ? 'Atualizar' : 'Cadastrar') }}
+        </button>
+      </div>
+    </form>
+  }
+</div>
+
+@if (salvo) {
+  <div class="modal-overlay nao-clicavel">
+    <div class="modal-conteudo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Cores dos dias</h3>
+        <button type="button" class="modal-fechar" (click)="fecharSucesso()" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>Faixa de cor salva.</p>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-salvar" (click)="fecharSucesso()">Fechar</button>
+      </div>
+    </div>
+  </div>
+}

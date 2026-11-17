@@ -1,93 +1,197 @@
 <ion-app>
-  <ion-menu
-    *ngIf="isAuthenticated && isNative"
-    menuId="main-menu"
-    contentId="main-content"
-  >
-    <ion-header>
-      <ion-toolbar>
-        <ion-title></ion-title>
-        <ion-buttons slot="end">
-          <ion-button (click)="fecharMenu()">x</ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
-    <ion-content class="menu-content">
-      <div class="profile-card" *ngIf="user">
-        <div class="profile-header">
-          <div class="avatar">{{ user.nome.slice(0, 1) }}</div>
-          <div class="profile-title">
-            <h1>Olá, {{ user.nome }}</h1>
-            <p>{{ user.email }}</p>
+  <ion-split-pane contentId="main-content" when="(min-width: 768px)">
+    <ion-menu
+      *ngIf="isAuthenticated"
+      menuId="main-menu"
+      contentId="main-content"
+    >
+      <ion-header>
+        <ion-toolbar>
+          <ion-title></ion-title>
+          <ion-buttons slot="end" class="menu-close-buttons">
+            <ion-button (click)="fecharMenu()">x</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="menu-content">
+        <div class="profile-card" *ngIf="user">
+          <div class="profile-header">
+            <button
+              type="button"
+              class="avatar-wrap"
+              [attr.aria-expanded]="notificacoesAbertas"
+              [attr.aria-label]="
+                notificacoesAbertas
+                  ? 'Fechar notificações'
+                  : 'Abrir notificações'
+              "
+              (click)="alternarNotificacoes()">
+              <div class="avatar">{{ user.nome.slice(0, 1) }}</div>
+              @if (totalAlertas > 0) {
+                <span class="avatar-badge">
+                  {{ totalAlertas > 99 ? '99+' : totalAlertas }}
+                </span>
+              }
+            </button>
+            <div class="profile-title">
+              <h1>Olá, {{ user.nome }}</h1>
+              <p>{{ user.email }}</p>
+            </div>
           </div>
+          @if (notificacoesAbertas) {
+            <div class="notificacoes-bloco" aria-label="Notificações">
+              <span class="detail-label">Notificações</span>
+
+              @if (podeVisitasAgenda()) {
+                <button
+                  type="button"
+                  class="notif-row"
+                  (click)="abrirNotificacaoAgenda()">
+                  <span class="notif-row__texto">
+                    <strong>Visitas</strong>
+                    <small>Agendamentos da semana</small>
+                  </span>
+                  <span
+                    class="notif-row__qtd"
+                    [class.notif-row__qtd--ativa]="agendamentosProximos > 0">
+                    {{ agendamentosProximos }}
+                  </span>
+                </button>
+              }
+
+              @if (podePendencias()) {
+                <button
+                  type="button"
+                  class="notif-row"
+                  (click)="abrirNotificacaoPendencias('ABERTA')">
+                  <span class="notif-row__texto">
+                    <strong>Pendências abertas</strong>
+                    <small>Aguardando tratamento</small>
+                  </span>
+                  <span
+                    class="notif-row__qtd"
+                    [class.notif-row__qtd--ativa]="pendenciasAbertas > 0">
+                    {{ pendenciasAbertas }}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  class="notif-row"
+                  (click)="abrirNotificacaoPendencias('RESOLVIDA')">
+                  <span class="notif-row__texto">
+                    <strong>Resolvidas</strong>
+                    <small>Aguardando validação</small>
+                  </span>
+                  <span
+                    class="notif-row__qtd"
+                    [class.notif-row__qtd--warn]="pendenciasAConcluir > 0">
+                    {{ pendenciasAConcluir }}
+                  </span>
+                </button>
+              }
+
+              @if (!podeVisitasAgenda() && !podePendencias()) {
+                <p class="notif-vazio">Nenhuma notificação disponível.</p>
+              }
+            </div>
+          }
         </div>
-        <div class="profile-details">
-          <div class="perfis-block">
-            <span class="detail-label">Perfis</span>
-            @if (profileNames.length === 0) {
-              <span class="detail-value">Sem perfil</span>
-            } @else {
-              <div class="perfil-chips">
-                @for (nome of profileNames; track $index) {
-                  <span class="perfil-chip">{{ nome }}</span>
-                }
-              </div>
+
+        <ion-list class="menu-list">
+          <ion-item
+            lines="none"
+            button
+            detail="true"
+            class="menu-item"
+            (click)="goTo('/home')"
+          >
+            <ion-icon name="home-outline" slot="start" class="menu-item-icon"></ion-icon>
+            <ion-label class="menu-item-label">Início</ion-label>
+          </ion-item>
+          <ion-item
+            *ngIf="podeVisitas()"
+            lines="none"
+            button
+            detail="true"
+            class="menu-item"
+            (click)="goTo('/visitas')"
+          >
+            <ion-icon name="people-outline" slot="start" class="menu-item-icon"></ion-icon>
+            <ion-label class="menu-item-label">Visitas</ion-label>
+          </ion-item>
+          <ion-item
+            *ngIf="podePendencias()"
+            lines="none"
+            button
+            detail="true"
+            class="menu-item"
+            (click)="goTo('/pendencias')"
+          >
+            <ion-icon name="clipboard-outline" slot="start" class="menu-item-icon"></ion-icon>
+            <ion-label class="menu-item-label">Pendências</ion-label>
+            @if (badgePendenciasMenu > 0) {
+              <span slot="end" class="menu-badge">
+                {{ badgePendenciasMenu > 99 ? '99+' : badgePendenciasMenu }}
+              </span>
             }
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Status</span>
-            <span class="detail-badge" [class.active]="userAtivo">
-              {{ userAtivo ? 'Ativo' : 'Inativo' }}
-            </span>
-          </div>
+          </ion-item>
+          <ion-item
+            *ngIf="podeVisitasAgenda()"
+            lines="none"
+            button
+            detail="true"
+            class="menu-item"
+            (click)="goTo('/visitas/agenda')"
+          >
+            <ion-icon name="calendar-outline" slot="start" class="menu-item-icon"></ion-icon>
+            <ion-label class="menu-item-label">Agenda de visitas</ion-label>
+          </ion-item>
+          <ion-item
+            lines="none"
+            button
+            detail="true"
+            class="menu-item"
+            (click)="goTo('/configuracoes')"
+          >
+            <ion-icon name="settings-outline" slot="start" class="menu-item-icon"></ion-icon>
+            <ion-label class="menu-item-label">Configurações</ion-label>
+          </ion-item>
+          <ion-item
+            lines="none"
+            button
+            detail="true"
+            class="menu-item"
+            (click)="goTo('/alterar-senha')"
+          >
+            <ion-icon name="key-outline" slot="start" class="menu-item-icon"></ion-icon>
+            <ion-label class="menu-item-label">Alterar senha</ion-label>
+          </ion-item>
+          <ion-item
+            lines="none"
+            button
+            detail="true"
+            class="menu-item"
+            (click)="goTo('/sobre')"
+          >
+            <ion-icon name="information-circle-outline" slot="start" class="menu-item-icon"></ion-icon>
+            <ion-label class="menu-item-label">Sobre</ion-label>
+          </ion-item>
+        </ion-list>
+        <div class="menu-footer">
+          <ion-button
+            expand="block"
+            color="danger"
+            (click)="logout()">
+            <ion-icon name="log-out-outline" slot="start"></ion-icon>
+            Sair
+          </ion-button>
         </div>
-      </div>
+      </ion-content>
+    </ion-menu>
 
-      <ion-list class="menu-list">
-        <ion-item
-          lines="none"
-          button
-          detail="true"
-          class="menu-item"
-          (click)="goTo('/configuracoes')"
-        >
-          <ion-icon name="settings-outline" slot="start" class="menu-item-icon"></ion-icon>
-          <ion-label class="menu-item-label">Configurações</ion-label>
-        </ion-item>
-        <ion-item
-          lines="none"
-          button
-          detail="true"
-          class="menu-item"
-          (click)="goTo('/alterar-senha')"
-        >
-          <ion-icon name="key-outline" slot="start" class="menu-item-icon"></ion-icon>
-          <ion-label class="menu-item-label">Alterar senha</ion-label>
-        </ion-item>
-        <ion-item
-          lines="none"
-          button
-          detail="true"
-          class="menu-item"
-          (click)="goTo('/sobre')"
-        >
-          <ion-icon name="information-circle-outline" slot="start" class="menu-item-icon"></ion-icon>
-          <ion-label class="menu-item-label">Sobre</ion-label>
-        </ion-item>
-      </ion-list>
-      <div class="menu-footer">
-        <ion-button
-          expand="block"
-          color="danger"
-          (click)="logout()">
-          <ion-icon name="log-out-outline" slot="start"></ion-icon>
-          Sair
-        </ion-button>
-      </div>
-    </ion-content>
-  </ion-menu>
-
-  <ion-router-outlet id="main-content"></ion-router-outlet>
+    <ion-router-outlet id="main-content"></ion-router-outlet>
+  </ion-split-pane>
 
   @if (updateRequired()) {
     <div class="app-update-overlay" role="alertdialog" aria-modal="true" aria-labelledby="app-update-title">

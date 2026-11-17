@@ -1,0 +1,74 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Consultar agendamentos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="agenda-consultar-page">
+  <div class="page-shell agenda-shell">
+    <app-busca-medico
+      label="Médico"
+      searchbarId="busca-medico-consultar"
+      [medico]="consultaMedico"
+      (medicoChange)="onConsultaMedicoChange($event)">
+    </app-busca-medico>
+
+    @if (consultaCarregando) {
+      <p class="estado">Buscando agendamentos…</p>
+    } @else if (consultaErro) {
+      <p class="estado estado--erro">{{ consultaErro }}</p>
+    } @else if (consultaLista.length === 0) {
+      <p class="painel-vazio">
+        {{
+          consultaMedico
+            ? 'Nenhum agendamento futuro para este médico.'
+            : 'Nenhum agendamento futuro.'
+        }}
+      </p>
+    } @else {
+      <ul class="agenda-lista__ul">
+        @for (item of consultaLista; track item.id) {
+          <li class="agenda-lista__row">
+            <button
+              type="button"
+              class="agenda-lista__item agenda-lista__item--agenda"
+              [disabled]="!podeAbrirAgendamento"
+              (click)="abrirAgendamento(item)">
+              <strong>
+                {{ item.data.slice(8, 10) }}/{{ item.data.slice(5, 7) }}/{{ item.data.slice(0, 4) }}
+                @if (item.hora) {
+                  · {{ item.hora }}
+                }
+              </strong>
+              <span>{{ item.prescritorNome }}</span>
+              <span>{{ rotuloCrm(item.crm, item.uf) || '—' }}</span>
+              @if (item.observacao) {
+                <span>{{ item.observacao }}</span>
+              }
+            </button>
+            @if (podeExcluirAgendamento) {
+              <ion-button
+                fill="clear"
+                color="danger"
+                aria-label="Excluir agendamento"
+                (click)="confirmarExcluir(item)">
+                <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+              </ion-button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

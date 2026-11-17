@@ -369,6 +369,37 @@ export class NavigationComponent implements OnInit, OnDestroy {
       ],
     },
     {
+      label: 'Visitas Médicas',
+      icon: 'feather-users',
+      requiredPermissions: [],
+      children: [
+        {
+          label: 'Tipos de Visita',
+          route: '/visita-medica/tipos-visita',
+          icon: 'feather-list',
+          requiredPermissions: [Permission.TIPOS_VISITA_READ],
+        },
+        {
+          label: 'Cores dos dias',
+          route: '/visita-medica/cores-dias',
+          icon: 'feather-sliders',
+          requiredPermissions: [Permission.VISITA_COR_DIAS_READ],
+        },
+        {
+          label: 'Pendências',
+          route: '/visita-medica/pendencias',
+          icon: 'feather-file-text',
+          requiredPermissions: [Permission.PENDENCIAS_WEB_READ],
+        },
+        {
+          label: 'Tipos de Pendência',
+          route: '/visita-medica/tipos-pendencia',
+          icon: 'feather-layers',
+          requiredPermissions: [Permission.TIPOS_PENDENCIA_READ],
+        },
+      ],
+    },
+    {
       label: 'Comercial',
       icon: 'feather-briefcase',
       requiredPermissions: [],

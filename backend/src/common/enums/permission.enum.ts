@@ -201,6 +201,43 @@ export enum Permission {
   VISITACAO_COMISSAO_CREATE = 'visitacao-comissao:create',
   VISITACAO_COMISSAO_UPDATE = 'visitacao-comissao:update',
   VISITACAO_COMISSAO_DELETE = 'visitacao-comissao:delete',
+  /** Visitas de campo — cadastro de tipos de visita. */
+  TIPOS_VISITA_READ = 'tipos-visita:read',
+  TIPOS_VISITA_CREATE = 'tipos-visita:create',
+  TIPOS_VISITA_UPDATE = 'tipos-visita:update',
+  TIPOS_VISITA_DELETE = 'tipos-visita:delete',
+  TIPOS_VISITA_AUDIT = 'tipos-visita:audit',
+  /** Visitas de campo — cor do rótulo de dias no histórico do app. */
+  VISITA_COR_DIAS_READ = 'visita-cor-dias:read',
+  VISITA_COR_DIAS_CREATE = 'visita-cor-dias:create',
+  VISITA_COR_DIAS_UPDATE = 'visita-cor-dias:update',
+  VISITA_COR_DIAS_DELETE = 'visita-cor-dias:delete',
+  VISITA_COR_DIAS_AUDIT = 'visita-cor-dias:audit',
+  /** Visitas de campo — execução no aplicativo. */
+  VISITAS_READ = 'visitas:read',
+  VISITAS_CREATE = 'visitas:create',
+  VISITAS_UPDATE = 'visitas:update',
+  VISITAS_DELETE = 'visitas:delete',
+  /** Alterar ou excluir visita de outro usuário, no escopo da unidade. */
+  VISITAS_GERIR = 'visitas:gerir',
+  VISITAS_AUDIT = 'visitas:audit',
+  /** Agenda/calendário de visitas no app. */
+  VISITAS_AGENDA_READ = 'visitas-agenda:read',
+  VISITAS_AGENDA_CREATE = 'visitas-agenda:create',
+  VISITAS_AGENDA_UPDATE = 'visitas-agenda:update',
+  VISITAS_AGENDA_DELETE = 'visitas-agenda:delete',
+  /** Pendências/solicitações no aplicativo, fora da tela de visitas. */
+  PENDENCIAS_READ = 'pendencias:read',
+  PENDENCIAS_CREATE = 'pendencias:create',
+  /** Tela web de pendências: lista da unidade e tratamento. */
+  PENDENCIAS_WEB_READ = 'pendencias-web:read',
+  PENDENCIAS_WEB_UPDATE = 'pendencias-web:update',
+  /** Cadastro de tipos de pendência/solicitação. */
+  TIPOS_PENDENCIA_READ = 'tipos-pendencia:read',
+  TIPOS_PENDENCIA_CREATE = 'tipos-pendencia:create',
+  TIPOS_PENDENCIA_UPDATE = 'tipos-pendencia:update',
+  TIPOS_PENDENCIA_DELETE = 'tipos-pendencia:delete',
+  TIPOS_PENDENCIA_AUDIT = 'tipos-pendencia:audit',
 
   /** Comercial — acompanhamento de vendas por vendedor. */
   COMERCIAL_ACOMPANHAMENTO_READ = 'comercial-acompanhamento:read',
@@ -639,6 +676,136 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.VISITACAO_COMISSAO_DELETE,
       label: 'Excluir faixas de comissão',
+    },
+  ],
+  'Visitas Médicas — Tipos': [
+    {
+      key: Permission.TIPOS_VISITA_READ,
+      label: 'Visualizar tipos de visita',
+    },
+    {
+      key: Permission.TIPOS_VISITA_CREATE,
+      label: 'Incluir tipos de visita',
+    },
+    {
+      key: Permission.TIPOS_VISITA_UPDATE,
+      label: 'Editar tipos de visita',
+    },
+    {
+      key: Permission.TIPOS_VISITA_DELETE,
+      label: 'Excluir tipos de visita',
+    },
+    {
+      key: Permission.TIPOS_VISITA_AUDIT,
+      label: 'Visualizar auditoria',
+    },
+  ],
+  'Visitas Médicas — Cores dos dias': [
+    {
+      key: Permission.VISITA_COR_DIAS_READ,
+      label: 'Visualizar cores dos dias da visita',
+    },
+    {
+      key: Permission.VISITA_COR_DIAS_CREATE,
+      label: 'Incluir cores dos dias da visita',
+    },
+    {
+      key: Permission.VISITA_COR_DIAS_UPDATE,
+      label: 'Editar cores dos dias da visita',
+    },
+    {
+      key: Permission.VISITA_COR_DIAS_DELETE,
+      label: 'Excluir cores dos dias da visita',
+    },
+    {
+      key: Permission.VISITA_COR_DIAS_AUDIT,
+      label: 'Visualizar auditoria',
+    },
+  ],
+  'Visitas Médicas — Visitas (app)': [
+    {
+      key: Permission.VISITAS_READ,
+      label: 'Visualizar carteira e visitas',
+    },
+    {
+      key: Permission.VISITAS_CREATE,
+      label: 'Iniciar visita',
+    },
+    {
+      key: Permission.VISITAS_UPDATE,
+      label: 'Encerrar e alterar a própria visita',
+    },
+    {
+      key: Permission.VISITAS_DELETE,
+      label: 'Excluir a própria visita',
+    },
+    {
+      key: Permission.VISITAS_GERIR,
+      label: 'Alterar ou excluir visita da equipe',
+    },
+    {
+      key: Permission.VISITAS_AUDIT,
+      label: 'Visualizar auditoria',
+    },
+  ],
+  'Visitas Médicas — Agenda (app)': [
+    {
+      key: Permission.VISITAS_AGENDA_READ,
+      label: 'Visualizar agenda/calendário de visitas (app)',
+    },
+    {
+      key: Permission.VISITAS_AGENDA_CREATE,
+      label: 'Agendar visita no calendário (app)',
+    },
+    {
+      key: Permission.VISITAS_AGENDA_UPDATE,
+      label: 'Alterar agendamento no calendário (app)',
+    },
+    {
+      key: Permission.VISITAS_AGENDA_DELETE,
+      label: 'Excluir agendamento no calendário (app)',
+    },
+  ],
+  'Visitas Médicas — Pendências (app)': [
+    {
+      key: Permission.PENDENCIAS_READ,
+      label: 'Visualizar pendências no aplicativo',
+    },
+    {
+      key: Permission.PENDENCIAS_CREATE,
+      label: 'Registrar pendências no aplicativo',
+    },
+  ],
+  'Visitas Médicas — Pendências (web)': [
+    {
+      key: Permission.PENDENCIAS_WEB_READ,
+      label: 'Visualizar pendências no web',
+    },
+    {
+      key: Permission.PENDENCIAS_WEB_UPDATE,
+      label: 'Tratar pendências no web',
+    },
+  ],
+  'Visitas Médicas — Tipos de pendência': [
+    {
+      key: Permission.TIPOS_PENDENCIA_READ,
+      label: 'Visualizar tipos de pendência',
+    },
+    {
+      key: Permission.TIPOS_PENDENCIA_CREATE,
+      label: 'Incluir tipos de pendência',
+    },
+    {
+      key: Permission.TIPOS_PENDENCIA_UPDATE,
+      label: 'Editar tipos de pendência',
+    },
+    {
+      key: Permission.TIPOS_PENDENCIA_DELETE,
+      label: 'Excluir tipos de pendência',
+    },
+    {
+      key: Permission.TIPOS_PENDENCIA_AUDIT,
+      label: 'Visualizar auditoria',
     },
   ],
   'Home — Cards': [

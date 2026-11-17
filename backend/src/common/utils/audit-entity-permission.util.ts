@@ -16,6 +16,9 @@ const PERMISSOES_HISTORICO_POR_ENTIDADE: Record<string, Permission[]> = {
   folha_setor: [Permission.FOLHA_SETOR_AUDIT],
   folha_verba: [Permission.FOLHA_VERBA_AUDIT],
   folha_item: [Permission.FOLHA_LANCAMENTO_READ, Permission.AUDIT_VIEW],
+  tipos_visita: [Permission.TIPOS_VISITA_AUDIT],
+  tipos_pendencia: [Permission.TIPOS_PENDENCIA_AUDIT],
+  visitas: [Permission.VISITAS_AUDIT],
 };
 
 export function assertPermissaoHistoricoEntidade(

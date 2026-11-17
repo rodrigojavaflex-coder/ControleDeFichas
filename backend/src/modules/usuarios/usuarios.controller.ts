@@ -96,7 +96,7 @@ export class UsuariosController {
   )
   @ApiOperation({
     summary:
-      'Funcionários com código de vendedor ERP para vínculo no cadastro de usuário',
+      'Funcionários com código de vendedor ERP ou código representante painel para vínculo no cadastro de usuário',
   })
   @ApiQuery({ name: 'unidade', required: false, enum: Unidade })
   listarFuncionariosComerciais(@Query('unidade') unidade?: Unidade) {

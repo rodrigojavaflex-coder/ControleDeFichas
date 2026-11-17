@@ -15,6 +15,102 @@
   box-sizing: border-box;
 }
 
+/* Loading padrão do app (logo + círculo) — usado pelo boot e AppLoadingService */
+.app-brand-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--ion-background-color, #ffffff);
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.app-brand-loading.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.app-brand-loading__mark {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-brand-loading__logo {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  z-index: 1;
+}
+
+.app-brand-loading__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--ion-color-step-150, #e8edf3);
+  border-top-color: #c6284a;
+  animation: app-brand-spin 0.75s linear infinite;
+  box-sizing: border-box;
+}
+
+.app-brand-loading__text {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ion-color-medium, #64748b);
+}
+
+@keyframes app-brand-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-brand-loading__ring {
+    animation: none;
+  }
+}
+
+/* Layout adaptativo (tablet ≥ 768px) */
+:root {
+  --app-tablet-min: 768px;
+  --app-page-max: 1100px;
+  --app-page-pad: 16px;
+}
+
+.page-shell {
+  width: 100%;
+  max-width: var(--app-page-max);
+  margin: 0 auto;
+  padding-left: var(--app-page-pad);
+  padding-right: var(--app-page-pad);
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --app-page-pad: 24px;
+  }
+
+  .page-shell--narrow {
+    max-width: 720px;
+  }
+
+  .visita-alerta .alert-wrapper {
+    max-width: 420px;
+  }
+}
+
 /*
   Android WebView < 140 devolve env(safe-area-inset-*) = 0.
   O Capacitor 8 injeta --safe-area-inset-* com o valor nativo.
@@ -32,13 +128,192 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
-ion-footer .footer-actions .btn-voltar {
-  flex: 0 0 30%;
-  min-width: 0;
-  font-size: 1.05rem;
-  --background: var(--ion-color-primary, #3880ff) !important;
-  --background-hover: var(--ion-color-primary-shade, #3171e0) !important;
-  --background-activated: var(--ion-color-primary-tint, #4c8dff) !important;
-  --color: #ffffff !important;
+/* Voltar / ações no mesmo padrão da tela de Configurações */
+ion-button.btn-voltar-header {
+  margin: 0 4px 0 0;
+  min-height: 36px;
+  height: 36px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  --border-radius: 8px;
+  --padding-start: 14px;
+  --padding-end: 14px;
+  --background: var(--ion-color-primary, #3880ff);
+  --background-hover: var(--ion-color-primary-shade, #3171e0);
+  --background-activated: var(--ion-color-primary-tint, #4c8dff);
+  --color: #ffffff;
+}
+
+/* Voltar no rodapé: sempre o primeiro botão a partir da direita. */
+ion-footer.app-base-footer {
+  box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.08);
+}
+
+ion-footer.app-base-footer ion-toolbar {
+  --min-height: 64px;
+  --background: var(--ion-background-color, #ffffff);
+  --border-width: 1px 0 0;
+  --border-color: var(--ion-color-step-150, #e2e8f0);
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+}
+
+ion-footer.app-base-footer .footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+}
+
+ion-footer.app-base-footer .footer-actions ion-button {
+  margin: 0;
+  min-height: 40px;
+  height: 40px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  --border-radius: 8px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+ion-footer.app-base-footer .btn-voltar {
+  order: 1;
+  flex: 0 0 auto;
+  --background: var(--ion-color-primary, #3880ff);
+  --background-hover: var(--ion-color-primary-shade, #3171e0);
+  --background-activated: var(--ion-color-primary-tint, #4c8dff);
+  --color: #ffffff;
   --border-width: 0;
+}
+
+ion-footer.app-base-footer .footer-actions ion-button.btn-encerrar {
+  order: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 46px;
+  height: 46px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  --border-radius: 12px;
+  --background: #f5930a;
+  --background-hover: #d97f08;
+  --background-activated: #fbab2e;
+  --color: #ffffff;
+  --border-width: 0;
+}
+
+@media (min-width: 768px) {
+  ion-footer.app-base-footer .footer-actions {
+    gap: 12px;
+  }
+
+  ion-footer.app-base-footer .footer-actions ion-button.btn-encerrar {
+    flex: 0 0 240px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  ion-footer.app-base-footer {
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Alertas da visita — layout mais legível */
+.visita-alerta {
+  --backdrop-opacity: 0.45;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.visita-alerta .alert-wrapper {
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22);
+  max-width: 340px;
+}
+
+.visita-alerta .alert-head {
+  padding: 18px 20px 6px;
+}
+
+.visita-alerta .alert-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ion-text-color, #0f172a);
+}
+
+.visita-alerta .alert-message {
+  padding: 6px 20px 8px;
+  font-size: 0.98rem;
+  line-height: 1.45;
+  color: var(--ion-color-medium-shade, #475569);
+}
+
+.visita-alerta .alert-button-group {
+  padding: 8px 12px 12px;
+}
+
+.visita-alerta .alert-button {
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  border-radius: 10px;
+}
+
+.visita-alerta .visita-alerta-ok {
+  color: var(--ion-color-primary, #3880ff) !important;
+}
+
+.visita-alerta--sucesso .alert-title {
+  color: var(--ion-color-success, #2dd36f);
+}
+
+.visita-alerta--sucesso .alert-wrapper {
+  border-top: 4px solid var(--ion-color-success, #2dd36f);
+}
+
+.visita-alerta--aviso .alert-wrapper {
+  border-top: 4px solid #f5930a;
+}
+
+.visita-alerta--aviso .alert-title {
+  color: #d97f08;
+}
+
+.visita-alerta--erro .alert-wrapper {
+  border-top: 4px solid var(--ion-color-danger, #eb445a);
+}
+
+.visita-alerta--erro .alert-title {
+  color: var(--ion-color-danger, #eb445a);
+}
+
+.visita-alerta--confirmacao .alert-wrapper {
+  border-top: 4px solid var(--ion-color-primary, #3880ff);
+}
+
+.visita-alerta--encerrar .alert-wrapper {
+  max-width: 360px;
+}
+
+.visita-alerta--encerrar .alert-button-group {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.visita-alerta--encerrar .alert-button {
+  margin: 0;
+  min-height: 42px;
+  justify-content: center;
+}
+
+.visita-alerta .visita-alerta-cancelar {
+  color: var(--ion-color-medium-shade, #64748b) !important;
 }

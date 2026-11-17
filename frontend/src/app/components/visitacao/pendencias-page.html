@@ -1,0 +1,199 @@
+<div class="folha-lista-container pendencias-page">
+  @if (!podeVer()) {
+    <div class="alert alert-error">Você não possui permissão para visualizar pendências.</div>
+  } @else {
+    <section class="filters">
+      <div class="filter-group">
+        <label for="pendencias-unidade">Unidade</label>
+        <select
+          id="pendencias-unidade"
+          class="form-control"
+          [(ngModel)]="unidade"
+          (ngModelChange)="carregar()"
+          [disabled]="unidadeDisabled">
+          @if (!unidadeDisabled) {
+            <option value="">Todas</option>
+          }
+          @for (item of unidades; track item) {
+            <option [value]="item">{{ item }}</option>
+          }
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="pendencias-situacao">Situação</label>
+        <select id="pendencias-situacao" class="form-control" [(ngModel)]="status" (ngModelChange)="carregar()">
+          <option value="ABERTA">Abertas</option>
+          <option value="RESOLVIDA">Resolvidas</option>
+          <option value="CONCLUIDA">Concluídas</option>
+          <option value="REABERTA">Reabertas</option>
+          <option value="todas">Todas</option>
+        </select>
+      </div>
+      <div class="filter-group filter-group-grow">
+        <label for="pendencias-busca">Busca</label>
+        <input
+          id="pendencias-busca"
+          class="form-control"
+          type="search"
+          [(ngModel)]="busca"
+          (ngModelChange)="aoBuscar()"
+          placeholder="Médico, visitador ou texto"
+          maxlength="80" />
+      </div>
+    </section>
+
+    @if (carregando) {
+      <div class="loading">Carregando pendências…</div>
+    } @else {
+      <div class="table-container">
+        <table class="folha-data-table">
+          <thead>
+            <tr>
+              <th>Registrada em</th>
+              <th>Unidade</th>
+              <th>Tipo</th>
+              <th>Responsável</th>
+              <th>Médico</th>
+              <th>Visitador</th>
+              <th>Pendência</th>
+              <th>Situação</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of lista; track item.id) {
+              <tr>
+                <td>{{ quando(item.criadoEm) }}</td>
+                <td>{{ item.unidade || '—' }}</td>
+                <td>{{ item.tipoPendenciaNome || '—' }}</td>
+                <td>{{ item.responsavelNome || '—' }}</td>
+                <td>{{ medico(item) }}</td>
+                <td>{{ item.visitadorNome || '—' }}</td>
+                <td class="pendencias-texto">{{ item.texto }}</td>
+                <td>
+                  <span class="pendencias-status" [ngClass]="classeStatus(item.status)">
+                    {{ rotuloStatus(item.status) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="pendencias-acoes">
+                    <button type="button" class="btn btn-sm btn-cancelar" (click)="abrirHistorico(item)">
+                      Histórico
+                    </button>
+                    @if (podeTratar() && podeResolver(item)) {
+                      <button type="button" class="btn btn-sm btn-editar" (click)="pedirTratamento(item)">
+                        Resolver
+                      </button>
+                    }
+                    @if (podeTratar() && podeReabrir(item)) {
+                      <button type="button" class="btn btn-sm btn-editar" (click)="pedirTratamento(item)">
+                        Reabrir
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr class="no-data">
+                <td colspan="9">
+                  <i class="fas fa-inbox"></i> Nenhuma pendência encontrada
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
+
+@if (tratarAlvo) {
+  <div class="modal-overlay nao-clicavel">
+    <div class="modal-conteudo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">{{ podeResolver(tratarAlvo) ? 'Resolver pendência' : 'Reabrir pendência' }}</h3>
+        <button type="button" class="modal-fechar" (click)="cancelarTratamento()" [disabled]="tratando" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>{{ tratarAlvo.texto }}</p>
+        <label class="pendencias-campo" for="pendencias-descricao">
+          {{ podeResolver(tratarAlvo) ? 'O que foi feito' : 'Motivo da reabertura' }}
+        </label>
+        <textarea
+          id="pendencias-descricao"
+          class="pendencias-descricao"
+          [(ngModel)]="descricao"
+          rows="4"
+          maxlength="2000"
+          [placeholder]="podeResolver(tratarAlvo) ? 'Descreva o que foi feito' : 'Descreva o que ainda precisa de tratamento'"
+          [disabled]="tratando">
+        </textarea>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-cancelar" (click)="cancelarTratamento()" [disabled]="tratando">Cancelar</button>
+        <button
+          type="button"
+          class="btn btn-editar"
+          (click)="confirmarTratamento()"
+          [disabled]="tratando || !descricao.trim()">
+          {{ tratando ? 'Salvando...' : (podeResolver(tratarAlvo) ? 'Resolver' : 'Reabrir') }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (historicoAlvo) {
+  <div class="modal-overlay nao-clicavel">
+    <div class="modal-conteudo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Histórico da pendência</h3>
+        <button type="button" class="modal-fechar" (click)="fecharHistorico()" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>{{ historicoAlvo.texto }}</p>
+        @if (carregandoHistorico) {
+          <p>Carregando histórico…</p>
+        } @else if (historico.length === 0) {
+          <p>Nenhum registro de situação.</p>
+        } @else {
+          <ul class="pendencias-historico">
+            @for (item of historico; track item.id) {
+              <li>
+                <strong>{{ rotuloStatus(item.status) }}</strong>
+                <span>{{ quando(item.criadoEm) }} · {{ item.usuarioNome || 'Usuário não identificado' }}</span>
+                <p>{{ item.descricao }}</p>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-editar" (click)="fecharHistorico()">Fechar</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (sucesso) {
+  <div class="modal-overlay nao-clicavel">
+    <div class="modal-conteudo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Pendências</h3>
+        <button type="button" class="modal-fechar" (click)="fecharSucesso()" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>{{ sucesso }}</p>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-editar" (click)="fecharSucesso()">Fechar</button>
+      </div>
+    </div>
+  </div>
+}

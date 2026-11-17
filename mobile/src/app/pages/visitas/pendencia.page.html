@@ -1,0 +1,275 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>{{ modoCriacao ? 'Nova pendência' : 'Pendências' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="page-shell pendencia-shell">
+    @if (modoCriacao) {
+      <section class="container-bloco">
+        <h2>Nova pendência</h2>
+        <div class="campo-caixa campo-caixa--texto">
+          <span class="campo-caixa-label">Descrição *</span>
+          <ion-textarea
+            [(ngModel)]="texto"
+            autoGrow="true"
+            rows="5"
+            class="campo-alto"
+            placeholder="Descreva a solicitação ou pendência">
+          </ion-textarea>
+        </div>
+
+        <div class="campo-caixa campo-caixa--tipo">
+          <span class="campo-caixa-label">Tipo *</span>
+          <ion-select
+            id="tipo-pendencia"
+            [(ngModel)]="tipoPendenciaId"
+            interface="popover"
+            placeholder="Selecione o tipo"
+            class="campo-caixa-select">
+            @for (tipo of tiposPendencia; track tipo.id) {
+              <ion-select-option [value]="tipo.id">{{ tipo.nome }}</ion-select-option>
+            }
+          </ion-select>
+        </div>
+
+        <app-busca-medico
+          label="Médico"
+          searchbarId="busca-medico-criacao"
+          [medico]="medicoCriacao"
+          [painelDisponivel]="painelDisponivel"
+          (medicoChange)="onMedicoCriacaoChange($event)">
+        </app-busca-medico>
+      </section>
+    } @else {
+      <section class="filtro-card" aria-label="Período">
+        <span class="campo-label">Período</span>
+        <app-periodo-filtro
+          [mostrarDias]="false"
+          (alterado)="aoFiltrarPeriodo($event)">
+        </app-periodo-filtro>
+      </section>
+
+      <section class="filtro-card" aria-label="Médico">
+        <span class="campo-label">Médico</span>
+        <app-busca-medico
+          variante="filtro"
+          searchbarId="busca-medico-filtro"
+          [medico]="medicoFiltro"
+          [painelDisponivel]="painelDisponivel"
+          (medicoChange)="onMedicoFiltroChange($event)">
+        </app-busca-medico>
+      </section>
+
+      <section class="filtro-card" aria-label="Situação">
+        <span class="campo-label">Situação</span>
+        <div class="chips" role="group">
+          @for (opcao of statusOpcoes; track opcao.valor) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--ativo]="statusFiltro === opcao.valor"
+              (click)="selecionarStatus(opcao.valor)">
+              {{ opcao.rotulo }}
+            </button>
+          }
+        </div>
+      </section>
+
+      <section class="filtro-card" aria-label="Tipo">
+        <span class="campo-label">Tipo</span>
+        <div class="chips" role="group">
+          <button
+            type="button"
+            class="chip"
+            [class.chip--ativo]="tipoFiltroId === ''"
+            (click)="selecionarTipo('')">
+            Todos
+          </button>
+          @for (tipo of tiposPendencia; track tipo.id) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--ativo]="tipoFiltroId === tipo.id"
+              (click)="selecionarTipo(tipo.id)">
+              {{ tipo.nome }}
+            </button>
+          }
+        </div>
+      </section>
+
+      @if (periodoIncompleto) {
+        <p class="estado">Informe a data inicial e a data final.</p>
+      } @else if (carregando && lista.length === 0) {
+        <p class="estado">Carregando…</p>
+      } @else if (lista.length === 0) {
+        <p class="estado">Nenhuma pendência encontrada.</p>
+      } @else {
+        @if (total > 0) {
+          <p class="contador">{{ lista.length }} de {{ total }}</p>
+        }
+        <div class="lista-pendencias">
+          @for (item of lista; track item.id) {
+            <article class="pend-card">
+              <header class="pend-card__topo">
+                <div class="pend-card__titulo">
+                  <h2>{{ item.prescritorNome || 'Sem médico' }}</h2>
+                  @if (item.tipoPendenciaNome) {
+                    <span class="pend-card__tipo">{{ item.tipoPendenciaNome }}</span>
+                  }
+                </div>
+                <ion-badge [color]="corStatus(item.status)">
+                  {{ rotuloStatus(item.status) }}
+                </ion-badge>
+              </header>
+
+              <p class="pend-card__meta">
+                @if (item.crm) {
+                  {{ rotuloCrm(item.crm, item.uf ?? '') }}
+                } @else {
+                  Sem CRM
+                }
+                @if (item.noPainel === true) {
+                  · No painel
+                } @else if (item.noPainel === false) {
+                  · Fora do painel
+                }
+              </p>
+              <p class="pend-card__meta">{{ formatarDataHora(item.criadoEm) }}</p>
+              <p class="pend-card__texto">{{ item.texto }}</p>
+              @if (item.status === 'RESOLVIDA' && item.ultimaDescricao) {
+                <p class="pend-card__feito">
+                  <strong>O que foi feito:</strong> {{ item.ultimaDescricao }}
+                </p>
+              }
+
+              <footer class="pend-card__rodape">
+                <span class="pend-dias" [attr.title]="'Tempo desde o registro'">
+                  {{ rotuloDias(item) }}
+                </span>
+                <div class="pend-card__acoes">
+                  <button type="button" class="btn-historico" (click)="abrirHistorico(item)">
+                    Ver histórico
+                  </button>
+                  @if (item.status === 'RESOLVIDA' && concluirId !== item.id) {
+                    <button type="button" class="btn-concluir" (click)="abrirConcluir(item)">
+                      Concluir
+                    </button>
+                  }
+                </div>
+              </footer>
+
+              @if (concluirId === item.id) {
+                <ion-textarea
+                  [(ngModel)]="descricaoConclusao"
+                  autoGrow="true"
+                  rows="3"
+                  placeholder="Descreva o que foi feito"
+                  [disabled]="concluindo">
+                </ion-textarea>
+                <div class="pend-card__rodape">
+                  <span></span>
+                  <div class="pend-card__acoes">
+                    <button type="button" class="btn-historico" (click)="cancelarConcluir()" [disabled]="concluindo">
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-concluir"
+                      (click)="concluir(item)"
+                      [disabled]="concluindo || !descricaoConclusao.trim()">
+                      {{ concluindo ? 'Salvando…' : 'Confirmar' }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </article>
+          }
+        </div>
+        @if (hasMore) {
+          <div class="carregar-mais">
+            <ion-button
+              expand="block"
+              fill="outline"
+              [disabled]="carregandoMais"
+              (click)="carregarMais()">
+              {{ carregandoMais ? 'Carregando…' : 'Carregar mais' }}
+            </ion-button>
+          </div>
+        }
+      }
+    }
+  </div>
+</ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      @if (!modoCriacao && podeRegistrar()) {
+        <ion-button class="btn-encerrar" fill="solid" (click)="abrirCriacao()">
+          Nova pendência
+        </ion-button>
+      }
+      @if (modoCriacao && podeRegistrar()) {
+        <ion-button class="btn-encerrar" fill="solid" (click)="registrar()">
+          Registrar
+        </ion-button>
+      }
+      <ion-button class="btn-voltar" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>
+
+@if (historicoAberto) {
+  <div
+    class="historico-overlay nao-clicavel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="historico-titulo">
+    <div class="historico-painel" (click)="$event.stopPropagation()">
+      <header class="historico-cabecalho">
+        <h2 id="historico-titulo">Histórico</h2>
+        <button
+          type="button"
+          class="historico-fechar"
+          (click)="fecharHistorico()"
+          aria-label="Fechar">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </header>
+      <p class="historico-subtitulo">{{ historicoTitulo }}</p>
+      <div class="historico-corpo">
+        @if (carregandoHistorico) {
+          <div class="historico-estado">
+            <ion-spinner name="crescent"></ion-spinner>
+            <p>Carregando histórico…</p>
+          </div>
+        } @else if (historico.length === 0) {
+          <p class="historico-estado">Nenhum registro de situação.</p>
+        } @else {
+          <ul class="historico">
+            @for (registro of historico; track registro.id) {
+              <li>
+                <strong>{{ rotuloStatus(registro.status) }}</strong>
+                <span>
+                  {{ formatarDataHora(registro.criadoEm) }}
+                  · {{ registro.usuarioNome || 'Usuário não identificado' }}
+                </span>
+                <p>{{ registro.descricao }}</p>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+      <footer class="historico-rodape">
+        <ion-button fill="solid" class="btn-voltar" (click)="fecharHistorico()">
+          Fechar
+        </ion-button>
+      </footer>
+    </div>
+  </div>
+}

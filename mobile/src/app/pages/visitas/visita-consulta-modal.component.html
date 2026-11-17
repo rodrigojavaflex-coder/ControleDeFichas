@@ -1,0 +1,106 @@
+@if (aberto) {
+  <div
+    class="visita-consulta-overlay nao-clicavel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="visita-consulta-titulo">
+    <div class="visita-consulta-painel" (click)="$event.stopPropagation()">
+      <header class="visita-consulta-cabecalho">
+        <h1 id="visita-consulta-titulo">Consulta da visita</h1>
+        <button
+          type="button"
+          class="visita-consulta-fechar"
+          (click)="fechar()"
+          aria-label="Fechar">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </header>
+
+      <div class="visita-consulta-corpo">
+        @if (carregando) {
+          <div class="visita-consulta-estado">
+            <ion-spinner name="crescent"></ion-spinner>
+            <p>Carregando…</p>
+          </div>
+        } @else if (erro) {
+          <p class="visita-consulta-estado visita-consulta-estado--erro">{{ erro }}</p>
+        } @else if (visita) {
+          <section class="visita-consulta-bloco">
+            <div class="visita-consulta-topo">
+              <span class="status-pill" [class.aberta]="visita.status === 'ABERTA'">
+                {{ rotuloStatus(visita.status) }}
+              </span>
+              @if (podeTrocarMedico) {
+                <ion-button
+                  fill="solid"
+                  size="small"
+                  class="btn-voltar-header"
+                  (click)="trocarMedico()">
+                  Trocar médico
+                </ion-button>
+              }
+            </div>
+            <h2>{{ visita.prescritorNome }}</h2>
+            <dl class="visita-consulta-meta">
+              <div>
+                <dt>CRM</dt>
+                <dd>{{ rotuloCrm(visita.crm, visita.uf) || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Unidade</dt>
+                <dd>{{ visita.unidade }}</dd>
+              </div>
+              <div>
+                <dt>Tipo</dt>
+                <dd>{{ visita.tipoVisitaNome || '—' }}</dd>
+              </div>
+              <div>
+                <dt>Início</dt>
+                <dd>{{ formatarDataHora(visita.dataHoraInicio) }}</dd>
+              </div>
+              @if (visita.dataHoraFim) {
+                <div>
+                  <dt>Fim</dt>
+                  <dd>{{ formatarDataHora(visita.dataHoraFim) }}</dd>
+                </div>
+              }
+            </dl>
+          </section>
+
+          <section class="visita-consulta-bloco">
+            <h3>Descrição</h3>
+            <p class="visita-consulta-texto">{{ visita.descricao?.trim() || '—' }}</p>
+          </section>
+
+          <section class="visita-consulta-bloco">
+            <h3>Pendências/Solicitações</h3>
+            <p class="visita-consulta-texto">{{ visita.pendencia?.trim() || '—' }}</p>
+          </section>
+
+          <section class="visita-consulta-bloco">
+            <h3>Material</h3>
+            <p class="visita-consulta-texto">{{ visita.material?.trim() || '—' }}</p>
+          </section>
+
+          <section class="visita-consulta-bloco visita-consulta-bloco--midias">
+            <h3>Anexos</h3>
+            <app-visita-midias
+              [visitaId]="visita.id"
+              [aberta]="false"
+              [podeAlterar]="false">
+            </app-visita-midias>
+          </section>
+        }
+      </div>
+
+      <footer class="visita-consulta-rodape">
+        @if (visita && podeExcluir) {
+          <ion-button color="danger" fill="solid" (click)="excluir()">
+            Excluir
+          </ion-button>
+        }
+        <ion-button fill="outline" (click)="fechar()">Fechar</ion-button>
+      </footer>
+    </div>
+  </div>
+}

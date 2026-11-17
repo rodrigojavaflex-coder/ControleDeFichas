@@ -1,0 +1,5 @@
+export enum StatusVisita {
+  ABERTA = 'ABERTA',
+  CONCLUIDA = 'CONCLUIDA',
+  PENDENCIA_ABERTA = 'PENDENCIA_ABERTA',
+}

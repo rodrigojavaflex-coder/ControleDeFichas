@@ -15,22 +15,28 @@ import {
   IonList,
   IonMenu,
   IonRouterOutlet,
+  IonSplitPane,
   IonTitle,
   IonToolbar,
   MenuController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
+  calendarOutline,
+  clipboardOutline,
   cloudDownloadOutline,
+  homeOutline,
   informationCircleOutline,
   keyOutline,
   logOutOutline,
+  peopleOutline,
   settingsOutline,
 } from 'ionicons/icons';
 import { AuthService } from './services/auth.service';
 import { AppUpdateRequiredService } from './services/app-update-required.service';
 import { MobileVersionCheckService } from './services/mobile-version-check.service';
-import { Perfil, Usuario } from './models/usuario.model';
+import { PendenciasAlertaService } from './services/pendencias-alerta.service';
+import { Usuario } from './models/usuario.model';
 
 @Component({
   selector: 'app-root',
@@ -51,6 +57,7 @@ import { Perfil, Usuario } from './models/usuario.model';
     IonItem,
     IonLabel,
     IonMenu,
+    IonSplitPane,
     IonButton,
     IonIcon,
   ],
@@ -62,6 +69,7 @@ export class AppComponent {
   private menuController = inject(MenuController);
   private appUpdateRequired = inject(AppUpdateRequiredService);
   private mobileVersionCheck = inject(MobileVersionCheckService);
+  private pendenciasAlerta = inject(PendenciasAlertaService);
 
   readonly updateRequired = this.appUpdateRequired.required;
   readonly updateMessage = this.appUpdateRequired.message;
@@ -71,21 +79,14 @@ export class AppComponent {
   user: Usuario | null = null;
   isAuthenticated = false;
   isNative = Capacitor.getPlatform() !== 'web';
+  totalAlertas = 0;
+  pendenciasAbertas = 0;
+  pendenciasAConcluir = 0;
+  agendamentosProximos = 0;
+  notificacoesAbertas = false;
 
-  get profileNames(): string[] {
-    return this.getUserProfiles()
-      .map((perfil) => perfil.nomePerfil?.trim() ?? '')
-      .filter((nome) => nome.length > 0);
-  }
-
-  get userAtivo(): boolean {
-    if (!this.user) {
-      return false;
-    }
-    if (typeof this.user.ativo === 'boolean') {
-      return this.user.ativo;
-    }
-    return (this.user.status ?? '').toUpperCase() === 'ATIVO';
+  get badgePendenciasMenu(): number {
+    return this.pendenciasAbertas + this.pendenciasAConcluir;
   }
 
   constructor() {
@@ -95,6 +96,10 @@ export class AppComponent {
       informationCircleOutline,
       keyOutline,
       cloudDownloadOutline,
+      peopleOutline,
+      homeOutline,
+      calendarOutline,
+      clipboardOutline,
     });
 
     this.authService.currentUser$.subscribe((user) => {
@@ -105,10 +110,50 @@ export class AppComponent {
 
     this.authService.isAuthenticated$.subscribe((isAuthenticated) => {
       this.isAuthenticated = isAuthenticated;
+      if (isAuthenticated) {
+        void this.pendenciasAlerta.atualizar();
+      }
+    });
+
+    this.pendenciasAlerta.resumo$.subscribe((resumo) => {
+      this.totalAlertas = resumo.total;
+      this.pendenciasAbertas = resumo.pendenciasAbertas;
+      this.pendenciasAConcluir = resumo.pendenciasAConcluir;
+      this.agendamentosProximos = resumo.agendamentosProximos;
     });
 
     void this.configureSystemBars();
     this.mobileVersionCheck.checkAgainstServer().subscribe();
+  }
+
+  alternarNotificacoes(): void {
+    this.notificacoesAbertas = !this.notificacoesAbertas;
+  }
+
+  async abrirNotificacaoAgenda(): Promise<void> {
+    await this.menuController.close();
+    await this.router.navigate(['/visitas/agenda']);
+  }
+
+  async abrirNotificacaoPendencias(
+    situacao: 'ABERTA' | 'RESOLVIDA',
+  ): Promise<void> {
+    await this.menuController.close();
+    await this.router.navigate(['/pendencias'], {
+      queryParams: { situacao },
+    });
+  }
+
+  podeVisitas(): boolean {
+    return this.authService.hasPermission('visitas:read');
+  }
+
+  podeVisitasAgenda(): boolean {
+    return this.authService.hasPermission('visitas-agenda:read');
+  }
+
+  podePendencias(): boolean {
+    return this.authService.hasAnyPermission(['pendencias:read', 'pendencias:create']);
   }
 
   fecharMenu(): void {
@@ -125,7 +170,7 @@ export class AppComponent {
 
   async goTo(route: string): Promise<void> {
     await this.menuController.close();
-    await this.router.navigate([route]);
+    await this.router.navigate([route], { queryParams: {} });
   }
 
   async logout(): Promise<void> {
@@ -147,16 +192,4 @@ export class AppComponent {
     await this.authService.logout();
   }
 
-  private getUserProfiles(): Perfil[] {
-    if (!this.user) {
-      return [];
-    }
-    if (Array.isArray(this.user.perfis) && this.user.perfis.length > 0) {
-      return this.user.perfis;
-    }
-    if (this.user.perfil) {
-      return [this.user.perfil];
-    }
-    return [];
-  }
 }

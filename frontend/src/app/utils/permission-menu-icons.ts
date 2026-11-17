@@ -10,6 +10,7 @@ export const PERMISSION_MODULE_ICON_KEYS: Record<string, string> = {
   orcamentos: 'feather-file-text',
   producao: 'feather-layers',
   visitacao: 'feather-user-plus',
+  'visitas-medicas': 'feather-users',
 };
 
 /** Ícones das telas/grupos (labels de PERMISSION_MODULE_CONFIG.groupKeys). */
@@ -47,6 +48,12 @@ export const PERMISSION_GROUP_ICON_KEYS: Record<string, string> = {
   'Visitação — Análise': 'feather-bar-chart-2',
   'Visitação — Configuração Metas': 'feather-target',
   'Visitação — Configuração Comissões': 'feather-dollar-sign',
+  'Visitas Médicas — Tipos': 'feather-list',
+  'Visitas Médicas — Cores dos dias': 'feather-sliders',
+  'Visitas Médicas — Visitas (app)': 'feather-users',
+  'Visitas Médicas — Pendências (app)': 'feather-user',
+  'Visitas Médicas — Pendências (web)': 'feather-file-text',
+  'Visitas Médicas — Tipos de pendência': 'feather-layers',
 };
 
 export function getPermissionModuleIconKey(moduleKey: string): string {

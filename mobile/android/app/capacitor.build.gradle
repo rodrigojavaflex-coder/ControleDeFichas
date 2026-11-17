@@ -11,8 +11,12 @@ apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
     implementation project(':aparajita-capacitor-biometric-auth')
     implementation project(':capacitor-app')
+    implementation project(':capacitor-camera')
+    implementation project(':capacitor-filesystem')
+    implementation project(':capacitor-geolocation')
     implementation project(':capacitor-preferences')
     implementation project(':capacitor-secure-storage-plugin')
+    implementation project(':capacitor-voice-recorder')
 
 }
 

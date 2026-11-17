@@ -1,0 +1,95 @@
+.agenda-agendar-page {
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 12px;
+  --padding-bottom: 24px;
+}
+
+.agenda-shell {
+  padding-bottom: 16px;
+}
+
+.estado {
+  margin: 12px 0;
+  color: var(--ion-color-medium);
+}
+
+.estado--erro {
+  color: var(--ion-color-danger);
+}
+
+.agenda-form__medico-fix {
+  strong {
+    font-size: 0.95rem;
+  }
+
+  span:not(.campo-caixa-label) {
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+  }
+}
+
+.agenda-form__campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--ion-color-step-50, #f8fafc);
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+}
+
+.agenda-form__campo .campo-caixa-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ion-color-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.agenda-form__input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 10px;
+  background: var(--ion-card-background, #fff);
+  color: var(--ion-text-color);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.agenda-form__aviso-data {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+}
+
+.agenda-form__aviso-data--feriado {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.agenda-form__campo ion-input {
+  margin: 0;
+  --background: var(--ion-card-background, #fff);
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  border: 1px solid var(--ion-color-step-150, #e2e8f0);
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.agenda-form__campo ion-textarea {
+  margin: 0;
+  --background: transparent;
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  font-weight: 500;
+}

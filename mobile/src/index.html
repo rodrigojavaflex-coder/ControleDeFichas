@@ -4,9 +4,92 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Sistemas Farma Mais</title>
-  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2">
+  <base href="/">
+  <link rel="icon" type="image/png" href="favicon.png?v=8">
+  <link rel="preload" href="boot-logo.png" as="image">
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+    }
+
+    /* Loading padrão (boot) — logo + círculo, visível no primeiro paint */
+    .app-brand-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background: #ffffff;
+      transition: opacity 0.28s ease, visibility 0.28s ease;
+    }
+
+    .app-brand-loading.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .app-brand-loading__mark {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-brand-loading__logo {
+      width: 84px;
+      height: 84px;
+      object-fit: contain;
+      z-index: 1;
+    }
+
+    .app-brand-loading__ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid #e8edf3;
+      border-top-color: #c6284a;
+      animation: app-brand-spin 0.75s linear infinite;
+      box-sizing: border-box;
+    }
+
+    .app-brand-loading__text {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 0.92rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #64748b;
+    }
+
+    @keyframes app-brand-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .app-brand-loading__ring {
+        animation: none;
+        border-top-color: #c6284a;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div id="app-boot-loader" class="app-brand-loading" aria-live="polite" aria-busy="true" role="status">
+    <div class="app-brand-loading__mark" aria-hidden="true">
+      <img class="app-brand-loading__logo" src="boot-logo.png" alt="" width="84" height="84" decoding="async" fetchpriority="high" />
+      <span class="app-brand-loading__ring"></span>
+    </div>
+    <p class="app-brand-loading__text">Carregando…</p>
+  </div>
   <app-root></app-root>
 </body>
 </html>

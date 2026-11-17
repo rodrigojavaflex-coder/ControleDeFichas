@@ -504,6 +504,28 @@
   }
 }
 
+@media (min-width: 768px) {
+  .login-wrapper {
+    padding: calc(1.5rem + var(--ion-safe-area-top, 0px)) 1.5rem
+      calc(1.5rem + var(--ion-safe-area-bottom, 0px));
+  }
+
+  .login-card {
+    max-width: 480px;
+    padding: 2.25rem;
+  }
+
+  .saved-account-card {
+    flex-basis: 100%;
+  }
+
+  .saved-accounts {
+    flex-direction: column;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+}
+
 .login-version {
   margin: 1.25rem 0 0;
   padding-top: 0.75rem;

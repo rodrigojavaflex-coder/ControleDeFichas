@@ -1,0 +1,81 @@
+<div class="folha-entity-form-container">
+  <div class="form-header">
+    <h2>{{ isEditMode ? 'Editar tipo de visita' : 'Novo tipo de visita' }}</h2>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Carregando...</div>
+  }
+
+  @if (!loading) {
+    <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="salvar()">
+      <div class="form-group">
+        <label class="form-label" for="tipo-visita-unidade">Unidade *</label>
+        <select
+          id="tipo-visita-unidade"
+          class="form-control"
+          formControlName="unidade"
+          [class.error]="form.controls.unidade.invalid && form.controls.unidade.touched">
+          <option value="">Selecione</option>
+          @for (item of unidades; track item) {
+            <option [value]="item">{{ item }}</option>
+          }
+        </select>
+        @if (form.controls.unidade.invalid && form.controls.unidade.touched) {
+          <div class="error-message">Informe a unidade.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="tipo-visita-nome">Nome *</label>
+        <input
+          id="tipo-visita-nome"
+          type="text"
+          class="form-control"
+          formControlName="nome"
+          maxlength="80"
+          [class.error]="form.controls.nome.invalid && form.controls.nome.touched"
+        />
+        @if (form.controls.nome.invalid && form.controls.nome.touched) {
+          <div class="error-message">Informe o nome do tipo de visita.</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-row">
+          <input id="tipo-visita-ativo" type="checkbox" formControlName="ativo" />
+          <label class="form-label" for="tipo-visita-ativo">Ativo</label>
+        </div>
+        <div class="form-help">Tipo inativo não aparece na hora de iniciar a visita.</div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-cancelar" [disabled]="isSubmitting" (click)="cancelar()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+          {{ isSubmitting ? 'Salvando...' : (isEditMode ? 'Atualizar' : 'Cadastrar') }}
+        </button>
+      </div>
+    </form>
+  }
+</div>
+
+@if (salvo) {
+  <div class="modal-overlay nao-clicavel">
+    <div class="modal-conteudo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h3 class="modal-titulo">Tipo de visita</h3>
+        <button type="button" class="modal-fechar" (click)="fecharSucesso()" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <p>Tipo de visita salvo.</p>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-salvar" (click)="fecharSucesso()">Fechar</button>
+      </div>
+    </div>
+  </div>
+}

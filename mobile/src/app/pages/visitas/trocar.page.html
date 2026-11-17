@@ -1,0 +1,113 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Trocar médico</ion-title>
+  </ion-toolbar>
+  @if (carteira?.vinculoOk) {
+    <ion-toolbar>
+      <div class="abas-filtro" role="tablist" aria-label="Filtro do painel">
+        <button
+          type="button"
+          role="tab"
+          class="abas-filtro__btn"
+          [class.abas-filtro__btn--ativa]="filtroPainel === 'todos'"
+          [attr.aria-selected]="filtroPainel === 'todos'"
+          (click)="selecionarFiltroPainel('todos')">
+          Todos
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="abas-filtro__btn"
+          [class.abas-filtro__btn--ativa]="filtroPainel === 'no_painel'"
+          [attr.aria-selected]="filtroPainel === 'no_painel'"
+          [disabled]="!carteira?.painelDisponivel"
+          (click)="selecionarFiltroPainel('no_painel')">
+          No painel
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="abas-filtro__btn"
+          [class.abas-filtro__btn--ativa]="filtroPainel === 'fora_painel'"
+          [attr.aria-selected]="filtroPainel === 'fora_painel'"
+          [disabled]="!carteira?.painelDisponivel"
+          (click)="selecionarFiltroPainel('fora_painel')">
+          Fora
+        </button>
+      </div>
+    </ion-toolbar>
+  }
+  <ion-toolbar>
+    <ion-searchbar
+      [value]="busca"
+      placeholder="Nome ou CRM"
+      debounce="0"
+      (ionInput)="aoBuscar($event)">
+    </ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="carteira-page">
+  <div class="page-shell carteira-shell">
+    @if (carregando && medicos.length === 0) {
+      <p class="estado">Carregando…</p>
+    } @else {
+      @if (carteira?.unidade) {
+        <p class="unidade-chip">
+          Unidade {{ carteira?.unidade }}
+          @if (total > 0) {
+            · {{ lista().length }} de {{ total }}
+          }
+        </p>
+      }
+      <ion-list lines="none" class="lista-grid">
+        @for (medico of lista(); track medico.prescritorId ?? medico.crm + medico.uf + medico.pfcrm) {
+          <ion-item button detail="true" class="lista-card" (click)="escolher(medico)">
+            <ion-label>
+              <h2>{{ medico.nome }}</h2>
+              <p>{{ rotuloCrm(medico.crm, medico.uf) }}</p>
+              <p class="meta-linha">
+                {{ medico.profissao }}
+                · {{ medico.noPainel ? 'No painel' : 'Fora do painel' }}
+              </p>
+            </ion-label>
+          </ion-item>
+        } @empty {
+          <ion-item lines="none" class="lista-empty">
+            <ion-label>
+              <ion-note>
+                {{
+                  carteira?.vinculoOk
+                    ? 'Nenhum outro médico encontrado.'
+                    : 'Vínculo necessário para listar médicos.'
+                }}
+              </ion-note>
+            </ion-label>
+          </ion-item>
+        }
+      </ion-list>
+      @if (hasMore) {
+        <div class="carregar-mais">
+          <ion-button
+            expand="block"
+            fill="outline"
+            [disabled]="carregandoMais"
+            (click)="carregarMais()">
+            {{ carregandoMais ? 'Carregando…' : 'Carregar mais' }}
+          </ion-button>
+        </div>
+      }
+    }
+  </div>
+</ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

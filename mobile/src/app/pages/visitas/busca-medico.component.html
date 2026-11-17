@@ -1,0 +1,75 @@
+<div
+  class="busca-medico"
+  [class.busca-medico--caixa]="variante === 'caixa'"
+  [class.busca-medico--filtro]="variante === 'filtro'">
+  @if (variante === 'caixa') {
+    <span class="campo-caixa-label" [id]="searchbarId + '-label'">{{ label }}</span>
+  }
+
+  <div class="abas-filtro" role="tablist" aria-label="Filtro do painel na busca de médicos">
+    <button
+      type="button"
+      role="tab"
+      class="abas-filtro__btn"
+      [class.abas-filtro__btn--ativa]="filtroPainel === 'todos'"
+      (click)="selecionarFiltroPainel('todos')">
+      Todos
+    </button>
+    <button
+      type="button"
+      role="tab"
+      class="abas-filtro__btn"
+      [class.abas-filtro__btn--ativa]="filtroPainel === 'no_painel'"
+      [disabled]="!painelOk"
+      (click)="selecionarFiltroPainel('no_painel')">
+      No painel
+    </button>
+    <button
+      type="button"
+      role="tab"
+      class="abas-filtro__btn"
+      [class.abas-filtro__btn--ativa]="filtroPainel === 'fora_painel'"
+      [disabled]="!painelOk"
+      (click)="selecionarFiltroPainel('fora_painel')">
+      Fora
+    </button>
+  </div>
+
+  @if (!podeBuscar) {
+    <p class="estado estado--erro">
+      Sem permissão para buscar médicos.
+    </p>
+  } @else if (medico) {
+    <div class="medico-escolhido">
+      <div>
+        <strong>{{ medico.nome }}</strong>
+        <span>{{ rotuloCrm(medico.crm, medico.uf) }}</span>
+      </div>
+      <button type="button" (click)="limpar()">Remover</button>
+    </div>
+  } @else {
+    <ion-searchbar
+      [id]="searchbarId"
+      [attr.aria-labelledby]="variante === 'caixa' ? searchbarId + '-label' : null"
+      [value]="busca"
+      placeholder="Nome ou CRM"
+      debounce="0"
+      (ionInput)="aoBuscar($event)">
+    </ion-searchbar>
+    @if (buscando && sugestoes.length === 0) {
+      <p class="estado">Buscando…</p>
+    }
+    @if (sugestoes.length > 0) {
+      <ul class="sugestoes">
+        @for (item of sugestoes; track item.id) {
+          <li>
+            <button type="button" (click)="escolher(item)">
+              <strong>{{ item.nome }}</strong>
+              <span>{{ rotuloCrm(item.crm, item.uf) }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  }
+</div>

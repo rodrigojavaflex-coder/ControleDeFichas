@@ -29,6 +29,11 @@ import { ProducaoPainelModule } from './modules/producao-painel/producao-painel.
 import { VisitacaoPainelMedicoModule } from './modules/visitacao-painel-medico/visitacao-painel-medico.module';
 import { VisitacaoAcompanhamentoModule } from './modules/visitacao-acompanhamento/visitacao-acompanhamento.module';
 import { VisitacaoMetaModule } from './modules/visitacao-meta/visitacao-meta.module';
+import { TiposVisitaModule } from './modules/tipos-visita/tipos-visita.module';
+import { TiposPendenciaModule } from './modules/tipos-pendencia/tipos-pendencia.module';
+import { VisitaCoresDiasModule } from './modules/visita-cores-dias/visita-cores-dias.module';
+import { SolicitacoesModule } from './modules/solicitacoes/solicitacoes.module';
+import { VisitasModule } from './modules/visitas/visitas.module';
 import { ComercialMetaModule } from './modules/comercial-meta/comercial-meta.module';
 import { ComercialAcompanhamentoModule } from './modules/comercial-acompanhamento/comercial-acompanhamento.module';
 import { ComercialAnaliseModule } from './modules/comercial-analise/comercial-analise.module';
@@ -81,6 +86,11 @@ import { Configuracao } from './modules/configuracao/entities/configuracao.entit
     VisitacaoPainelMedicoModule,
     VisitacaoAcompanhamentoModule,
     VisitacaoMetaModule,
+    TiposVisitaModule,
+    TiposPendenciaModule,
+    VisitaCoresDiasModule,
+    VisitasModule,
+    SolicitacoesModule,
     ComercialMetaModule,
     ComercialAcompanhamentoModule,
     ComercialAnaliseModule,

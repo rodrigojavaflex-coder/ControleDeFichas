@@ -10,7 +10,9 @@ export interface FuncionarioComercialVinculo {
   id: string;
   nome: string;
   unidade: Unidade;
+  cargo?: string | null;
   codigoVendedorErp?: number | null;
+  painelCodigoRepresentante?: number | null;
 }
 
 export enum Permission {
@@ -178,6 +180,32 @@ export enum Permission {
   VISITACAO_COMISSAO_CREATE = 'visitacao-comissao:create',
   VISITACAO_COMISSAO_UPDATE = 'visitacao-comissao:update',
   VISITACAO_COMISSAO_DELETE = 'visitacao-comissao:delete',
+  TIPOS_VISITA_READ = 'tipos-visita:read',
+  TIPOS_VISITA_CREATE = 'tipos-visita:create',
+  TIPOS_VISITA_UPDATE = 'tipos-visita:update',
+  TIPOS_VISITA_DELETE = 'tipos-visita:delete',
+  TIPOS_VISITA_AUDIT = 'tipos-visita:audit',
+  VISITA_COR_DIAS_READ = 'visita-cor-dias:read',
+  VISITA_COR_DIAS_CREATE = 'visita-cor-dias:create',
+  VISITA_COR_DIAS_UPDATE = 'visita-cor-dias:update',
+  VISITA_COR_DIAS_DELETE = 'visita-cor-dias:delete',
+  VISITA_COR_DIAS_AUDIT = 'visita-cor-dias:audit',
+  VISITAS_READ = 'visitas:read',
+  VISITAS_CREATE = 'visitas:create',
+  VISITAS_UPDATE = 'visitas:update',
+  VISITAS_DELETE = 'visitas:delete',
+  VISITAS_GERIR = 'visitas:gerir',
+  VISITAS_AUDIT = 'visitas:audit',
+  VISITAS_AGENDA_READ = 'visitas-agenda:read',
+  PENDENCIAS_READ = 'pendencias:read',
+  PENDENCIAS_CREATE = 'pendencias:create',
+  PENDENCIAS_WEB_READ = 'pendencias-web:read',
+  PENDENCIAS_WEB_UPDATE = 'pendencias-web:update',
+  TIPOS_PENDENCIA_READ = 'tipos-pendencia:read',
+  TIPOS_PENDENCIA_CREATE = 'tipos-pendencia:create',
+  TIPOS_PENDENCIA_UPDATE = 'tipos-pendencia:update',
+  TIPOS_PENDENCIA_DELETE = 'tipos-pendencia:delete',
+  TIPOS_PENDENCIA_AUDIT = 'tipos-pendencia:audit',
 
   COMERCIAL_ACOMPANHAMENTO_READ = 'comercial-acompanhamento:read',
   COMERCIAL_ACOMPANHAMENTO_COMISSAO = 'comercial-acompanhamento:comissao',

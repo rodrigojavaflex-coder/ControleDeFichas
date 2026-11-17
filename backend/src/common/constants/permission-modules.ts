@@ -79,6 +79,19 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
     ],
   },
   {
+    key: 'visitas-medicas',
+    label: 'Visitas Médicas',
+    groupKeys: [
+      'Visitas Médicas — Tipos',
+      'Visitas Médicas — Cores dos dias',
+      'Visitas Médicas — Visitas (app)',
+      'Visitas Médicas — Agenda (app)',
+      'Visitas Médicas — Pendências (app)',
+      'Visitas Médicas — Pendências (web)',
+      'Visitas Médicas — Tipos de pendência',
+    ],
+  },
+  {
     key: 'comercial',
     label: 'Comercial',
     groupKeys: [

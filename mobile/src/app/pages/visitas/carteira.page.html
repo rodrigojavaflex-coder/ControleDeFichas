@@ -1,0 +1,250 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Visitas</ion-title>
+  </ion-toolbar>
+  <ion-toolbar>
+    <div class="abas-visitas" role="tablist" aria-label="Visitas">
+      <button
+        type="button"
+        role="tab"
+        class="aba-visitas__btn"
+        [class.aba-visitas__btn--ativa]="aba === 'carteira'"
+        [attr.aria-selected]="aba === 'carteira'"
+        (click)="selecionarAba('carteira')">
+        Médicos
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="aba-visitas__btn"
+        [class.aba-visitas__btn--ativa]="aba === 'historico'"
+        [attr.aria-selected]="aba === 'historico'"
+        (click)="selecionarAba('historico')">
+        Histórico
+      </button>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="carteira-page" #conteudo>
+  <div class="page-shell carteira-shell">
+    @if (aba === 'carteira') {
+      <section class="filtro-card" aria-label="Médico">
+        <span class="campo-label">Médico</span>
+        <div class="abas-filtro" role="tablist" aria-label="Filtro do painel na busca de médicos">
+          <button
+            type="button"
+            role="tab"
+            class="abas-filtro__btn"
+            [class.abas-filtro__btn--ativa]="filtroPainel === 'todos'"
+            [attr.aria-selected]="filtroPainel === 'todos'"
+            (click)="selecionarFiltroPainel('todos')">
+            Todos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="abas-filtro__btn"
+            [class.abas-filtro__btn--ativa]="filtroPainel === 'no_painel'"
+            [attr.aria-selected]="filtroPainel === 'no_painel'"
+            [disabled]="!carteira?.painelDisponivel"
+            (click)="selecionarFiltroPainel('no_painel')">
+            No painel
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="abas-filtro__btn"
+            [class.abas-filtro__btn--ativa]="filtroPainel === 'fora_painel'"
+            [attr.aria-selected]="filtroPainel === 'fora_painel'"
+            [disabled]="!carteira?.painelDisponivel"
+            (click)="selecionarFiltroPainel('fora_painel')">
+            Fora
+          </button>
+        </div>
+        <ion-searchbar
+          [value]="busca"
+          placeholder="Nome ou CRM"
+          debounce="0"
+          (ionInput)="aoBuscar($event)">
+        </ion-searchbar>
+      </section>
+      @if (carteira?.vinculoOk === false) {
+        <p class="aviso">{{ carteira?.vinculoMensagem }}</p>
+      }
+      @if (carteira?.unidade) {
+        <p class="unidade-chip">
+          Unidade {{ carteira?.unidade }}
+          @if (total > 0) {
+            · {{ medicosLista.length }} de {{ total }}
+          }
+        </p>
+      }
+      @if (carteira?.visitaAberta) {
+        <div class="banner">
+          <p>Visita em andamento com {{ carteira?.visitaAberta?.prescritorNome }}</p>
+          <ion-button size="small" (click)="continuarAberta()">Continuar</ion-button>
+        </div>
+      }
+      @if (carregando && medicosLista.length === 0) {
+        <p class="estado">Carregando…</p>
+      } @else {
+      <ion-list lines="none" class="lista-grid">
+        @for (medico of medicosLista; track medico.prescritorId ?? medico.crm + medico.uf + medico.pfcrm) {
+          <ion-item button detail="true" class="lista-card" (click)="abrirMedico(medico)">
+            <ion-label>
+              <h2>{{ medico.nome }}</h2>
+              <p>{{ rotuloCrm(medico.crm, medico.uf) }}</p>
+              <p class="meta-linha">
+                {{ medico.profissao }}
+                · {{ medico.noPainel ? 'No painel' : 'Fora do painel' }}
+              </p>
+            </ion-label>
+            <ion-badge
+              slot="end"
+              [color]="medico.diasSemVisita == null ? 'warning' : 'medium'">
+              {{ medico.rotuloDias }}
+            </ion-badge>
+          </ion-item>
+        } @empty {
+          <ion-item lines="none" class="lista-empty">
+            <ion-label>
+              <ion-note>
+                {{ carteira?.vinculoOk ? 'Nenhum prescritor encontrado.' : 'Vínculo necessário para listar médicos.' }}
+              </ion-note>
+            </ion-label>
+          </ion-item>
+        }
+      </ion-list>
+      @if (hasMore) {
+        <div class="carregar-mais">
+          <ion-button
+            expand="block"
+            fill="outline"
+            [disabled]="carregandoMais"
+            (click)="carregarMais()">
+            {{ carregandoMais ? 'Carregando…' : 'Carregar mais' }}
+          </ion-button>
+        </div>
+      }
+      }
+    } @else {
+      <section class="filtro-card" aria-label="Médico">
+        <span class="campo-label">Médico</span>
+        <div class="abas-filtro" role="tablist" aria-label="Filtro do painel na busca de médicos">
+          <button
+            type="button"
+            role="tab"
+            class="abas-filtro__btn"
+            [class.abas-filtro__btn--ativa]="filtroPainel === 'todos'"
+            [attr.aria-selected]="filtroPainel === 'todos'"
+            (click)="selecionarFiltroPainel('todos')">
+            Todos
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="abas-filtro__btn"
+            [class.abas-filtro__btn--ativa]="filtroPainel === 'no_painel'"
+            [attr.aria-selected]="filtroPainel === 'no_painel'"
+            [disabled]="!carteira?.painelDisponivel"
+            (click)="selecionarFiltroPainel('no_painel')">
+            No painel
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="abas-filtro__btn"
+            [class.abas-filtro__btn--ativa]="filtroPainel === 'fora_painel'"
+            [attr.aria-selected]="filtroPainel === 'fora_painel'"
+            [disabled]="!carteira?.painelDisponivel"
+            (click)="selecionarFiltroPainel('fora_painel')">
+            Fora
+          </button>
+        </div>
+        <ion-searchbar
+          [value]="busca"
+          placeholder="Nome ou CRM"
+          debounce="0"
+          (ionInput)="aoBuscar($event)">
+        </ion-searchbar>
+      </section>
+      <section class="filtro-card" aria-label="Período">
+        <span class="campo-label">Período</span>
+        <app-periodo-filtro
+          [mostrarDias]="false"
+          (alterado)="aoFiltrarPeriodo($event)">
+        </app-periodo-filtro>
+      </section>
+      <section class="filtro-card" aria-label="Dias">
+        <span class="campo-label">Dias</span>
+        <app-periodo-filtro
+          [somenteDias]="true"
+          (diasAlterado)="aoFiltrarDias($event)">
+        </app-periodo-filtro>
+      </section>
+      @if (carregandoHistorico) {
+        <p class="estado">Carregando…</p>
+      } @else if (periodoIncompleto) {
+        <p class="estado">Informe a data inicial e a data final.</p>
+      } @else {
+      <div class="lista-historico">
+        @for (visita of listaHistorico(); track visita.id) {
+          <article class="hist-card" (click)="verMais(visita)">
+            <header class="hist-card__topo">
+              <h2>{{ visita.prescritorNome }}</h2>
+              <ion-badge [color]="visita.status === 'ABERTA' ? 'primary' : 'medium'">
+                {{ rotuloStatus(visita.status) }}
+              </ion-badge>
+            </header>
+            <p>
+              {{ rotuloCrm(visita.crm, visita.uf) || 'CRM —' }}
+              · {{ visita.noPainel ? 'No painel' : 'Fora do painel' }}
+            </p>
+            <p>{{ visita.tipoVisitaNome }} · {{ formatarDataHora(visita.dataHoraFim || visita.dataHoraInicio) }}</p>
+            <footer class="hist-card__rodape">
+              <span
+                class="hist-dias"
+                [class.hist-dias--padrao]="!fundoDias(visita)"
+                [style.background]="fundoDias(visita)"
+                [style.color]="textoDias(visita)">
+                {{ visita.rotuloDias }}
+              </span>
+              <ion-button
+                size="small"
+                class="btn-ver-mais"
+                (click)="$event.stopPropagation(); verMais(visita)">
+                Ver mais
+              </ion-button>
+            </footer>
+          </article>
+        } @empty {
+          <p class="estado">
+            {{ filtroDias || periodo ? 'Nenhuma visita encontrada.' : 'Nenhuma visita registrada.' }}
+          </p>
+        }
+      </div>
+      }
+    }
+  </div>
+</ion-content>
+
+<app-visita-consulta-modal
+  [aberto]="modalAberto"
+  [visitaId]="modalVisitaId"
+  [permitirAcoes]="true"
+  [origemHistorico]="true"
+  (fechado)="fecharModal()"
+  (excluida)="aposExcluirHistorico()">
+</app-visita-consulta-modal>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

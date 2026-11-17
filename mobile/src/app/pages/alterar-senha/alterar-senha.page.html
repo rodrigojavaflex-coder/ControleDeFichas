@@ -4,9 +4,6 @@
       <ion-menu-button menu="main-menu"></ion-menu-button>
     </ion-buttons>
     <ion-title>Alterar senha</ion-title>
-    <ion-buttons slot="end">
-      <ion-button fill="solid" (click)="voltar()">Voltar</ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -121,3 +118,11 @@
     </div>
   </div>
 </ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

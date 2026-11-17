@@ -4,14 +4,11 @@
       <ion-menu-button menu="main-menu"></ion-menu-button>
     </ion-buttons>
     <ion-title>Configurações</ion-title>
-    <ion-buttons slot="end">
-      <ion-button fill="solid" (click)="voltar()">Voltar</ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <div class="config-page">
+  <div class="config-page page-shell page-shell--narrow">
     <div class="config-hero">
       <div class="config-logo" aria-hidden="true">
         <ion-icon name="settings-outline"></ion-icon>
@@ -73,3 +70,11 @@
     </section>
   </div>
 </ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

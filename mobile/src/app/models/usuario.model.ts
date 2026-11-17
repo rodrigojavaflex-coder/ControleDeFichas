@@ -5,6 +5,8 @@ export interface Perfil {
   descricao?: string;
 }
 
+export type UnidadeUsuario = 'INHUMAS' | 'NERÓPOLIS' | 'UBERABA';
+
 export interface Usuario {
   id: string;
   nome: string;
@@ -14,6 +16,7 @@ export interface Usuario {
   ativo?: boolean;
   status?: string;
   tema?: string;
+  unidade?: UnidadeUsuario | null;
 }
 
 export interface AuthResponse {

@@ -1,0 +1,19 @@
+.cor-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cor-picker {
+  width: 48px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  cursor: pointer;
+}
+
+.cor-linha .form-control {
+  max-width: 140px;
+}

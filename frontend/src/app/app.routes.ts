@@ -138,6 +138,10 @@ const PERMS = {
   visitacaoAnalise: [Permission.VISITACAO_ANALISE_READ],
   visitacaoMetas: [Permission.VISITACAO_META_READ],
   visitacaoComissoes: [Permission.VISITACAO_COMISSAO_READ],
+  tiposVisita: [Permission.TIPOS_VISITA_READ],
+  visitaCoresDias: [Permission.VISITA_COR_DIAS_READ],
+  pendenciasWeb: [Permission.PENDENCIAS_WEB_READ],
+  tiposPendencia: [Permission.TIPOS_PENDENCIA_READ],
   comercialAcompanhamento: [Permission.COMERCIAL_ACOMPANHAMENTO_READ],
   comercialAnalise: [Permission.COMERCIAL_ANALISE_READ],
   comercialMetas: [Permission.COMERCIAL_META_READ],
@@ -594,6 +598,110 @@ export const routes: Routes = [
       ),
     canActivate: guarded,
     data: { permissions: [...PERMS.visitacaoComissoes] },
+  },
+  {
+    path: 'visita-medica/tipos-visita',
+    loadComponent: () =>
+      import('./components/visitacao/tipos-visita-page').then(
+        (m) => m.TiposVisitaPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.tiposVisita] },
+  },
+  {
+    path: 'visita-medica/cores-dias',
+    loadComponent: () =>
+      import('./components/visitacao/visita-cores-dias-page').then(
+        (m) => m.VisitaCoresDiasPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.visitaCoresDias] },
+  },
+  {
+    path: 'visita-medica/pendencias',
+    loadComponent: () =>
+      import('./components/visitacao/pendencias-page').then(
+        (m) => m.PendenciasPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.pendenciasWeb] },
+  },
+  {
+    path: 'visita-medica/tipos-pendencia',
+    loadComponent: () =>
+      import('./components/visitacao/tipos-pendencia-page').then(
+        (m) => m.TiposPendenciaPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.tiposPendencia] },
+  },
+  {
+    path: 'visita-medica/tipos-pendencia/new',
+    loadComponent: () =>
+      import('./components/visitacao/tipo-pendencia-form').then(
+        (m) => m.TipoPendenciaForm,
+      ),
+    canActivate: guarded,
+    data: { permissions: [Permission.TIPOS_PENDENCIA_CREATE] },
+  },
+  {
+    path: 'visita-medica/tipos-pendencia/edit/:id',
+    loadComponent: () =>
+      import('./components/visitacao/tipo-pendencia-form').then(
+        (m) => m.TipoPendenciaForm,
+      ),
+    canActivate: guarded,
+    data: { permissions: [Permission.TIPOS_PENDENCIA_UPDATE] },
+  },
+  {
+    path: 'visita-medica/cores-dias/new',
+    loadComponent: () =>
+      import('./components/visitacao/visita-cor-dia-form').then(
+        (m) => m.VisitaCorDiaForm,
+      ),
+    canActivate: guarded,
+    data: { permissions: [Permission.VISITA_COR_DIAS_CREATE] },
+  },
+  {
+    path: 'visita-medica/cores-dias/edit/:id',
+    loadComponent: () =>
+      import('./components/visitacao/visita-cor-dia-form').then(
+        (m) => m.VisitaCorDiaForm,
+      ),
+    canActivate: guarded,
+    data: { permissions: [Permission.VISITA_COR_DIAS_UPDATE] },
+  },
+  {
+    path: 'visita-medica/tipos-visita/new',
+    loadComponent: () =>
+      import('./components/visitacao/tipo-visita-form').then(
+        (m) => m.TipoVisitaForm,
+      ),
+    canActivate: guarded,
+    data: { permissions: [Permission.TIPOS_VISITA_CREATE] },
+  },
+  {
+    path: 'visita-medica/tipos-visita/edit/:id',
+    loadComponent: () =>
+      import('./components/visitacao/tipo-visita-form').then(
+        (m) => m.TipoVisitaForm,
+      ),
+    canActivate: guarded,
+    data: { permissions: [Permission.TIPOS_VISITA_UPDATE] },
+  },
+  {
+    path: 'visitacao/tipos-visita',
+    redirectTo: '/visita-medica/tipos-visita',
+    pathMatch: 'full',
+  },
+  {
+    path: 'visitacao/tipos-visita/new',
+    redirectTo: '/visita-medica/tipos-visita/new',
+    pathMatch: 'full',
+  },
+  {
+    path: 'visitacao/tipos-visita/edit/:id',
+    redirectTo: '/visita-medica/tipos-visita/edit/:id',
   },
   {
     path: 'visitacao/metas',

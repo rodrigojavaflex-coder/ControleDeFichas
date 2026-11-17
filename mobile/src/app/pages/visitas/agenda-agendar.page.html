@@ -1,0 +1,86 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-menu-button menu="main-menu"></ion-menu-button>
+    </ion-buttons>
+    <ion-title>{{ editando ? 'Editar agendamento' : 'Agendar visita' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="agenda-agendar-page">
+  <div class="page-shell agenda-shell">
+    @if (formMedicoTravado && formMedico) {
+      <div class="agenda-form__campo agenda-form__medico-fix">
+        <span class="campo-caixa-label">Médico</span>
+        <strong>{{ formMedico.nome }}</strong>
+        <span>{{ rotuloCrm(formMedico.crm, formMedico.uf) || '—' }}</span>
+      </div>
+    } @else {
+      <app-busca-medico
+        label="Médico"
+        searchbarId="busca-medico-agendar"
+        [medico]="formMedico"
+        (medicoChange)="onMedicoChange($event)">
+      </app-busca-medico>
+    }
+
+    <label class="agenda-form__campo">
+      <span class="campo-caixa-label">Data</span>
+      <input
+        type="date"
+        class="agenda-form__input"
+        [min]="dataMinima"
+        [(ngModel)]="dataSelecionada"
+        (ngModelChange)="aoAlterarData()" />
+      @if (avisoData) {
+        <span
+          class="agenda-form__aviso-data"
+          [class.agenda-form__aviso-data--feriado]="avisoDataFeriado">
+          {{ avisoData }}
+        </span>
+      }
+    </label>
+
+    <label class="agenda-form__campo">
+      <span class="campo-caixa-label">Hora</span>
+      <ion-input
+        type="text"
+        inputmode="numeric"
+        maxlength="5"
+        placeholder="HH:mm"
+        [(ngModel)]="formHora"
+        (ionInput)="aoDigitarHora($event)"
+        autocomplete="off">
+      </ion-input>
+    </label>
+
+    <div class="agenda-form__campo">
+      <span class="campo-caixa-label">Observação (opcional)</span>
+      <ion-textarea
+        rows="3"
+        autoGrow="true"
+        placeholder="Anotações da visita agendada"
+        [(ngModel)]="formObs">
+      </ion-textarea>
+    </div>
+
+    @if (formErro) {
+      <p class="estado estado--erro">{{ formErro }}</p>
+    }
+  </div>
+</ion-content>
+
+<ion-footer class="app-base-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button
+        class="btn-encerrar"
+        fill="solid"
+        (click)="salvar()"
+        [disabled]="salvando || !podeSalvar || !formMedico || !dataSelecionada">
+        {{ salvando ? 'Salvando…' : 'Salvar' }}
+      </ion-button>
+      <ion-button class="btn-voltar" fill="solid" (click)="voltar()">Voltar</ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>
