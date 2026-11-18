@@ -12,7 +12,8 @@
       role="tab"
       class="abas-filtro__btn"
       [class.abas-filtro__btn--ativa]="filtroPainel === 'todos'"
-      (click)="selecionarFiltroPainel('todos')">
+      [attr.aria-selected]="filtroPainel === 'todos'"
+      (click)="selecionarFiltroPainel('todos', $event)">
       Todos
     </button>
     <button
@@ -20,8 +21,9 @@
       role="tab"
       class="abas-filtro__btn"
       [class.abas-filtro__btn--ativa]="filtroPainel === 'no_painel'"
+      [attr.aria-selected]="filtroPainel === 'no_painel'"
       [disabled]="!painelOk"
-      (click)="selecionarFiltroPainel('no_painel')">
+      (click)="selecionarFiltroPainel('no_painel', $event)">
       No painel
     </button>
     <button
@@ -29,8 +31,9 @@
       role="tab"
       class="abas-filtro__btn"
       [class.abas-filtro__btn--ativa]="filtroPainel === 'fora_painel'"
+      [attr.aria-selected]="filtroPainel === 'fora_painel'"
       [disabled]="!painelOk"
-      (click)="selecionarFiltroPainel('fora_painel')">
+      (click)="selecionarFiltroPainel('fora_painel', $event)">
       Fora
     </button>
   </div>

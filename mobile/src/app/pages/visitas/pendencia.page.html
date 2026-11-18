@@ -155,38 +155,18 @@
                   <button type="button" class="btn-historico" (click)="abrirHistorico(item)">
                     Ver histórico
                   </button>
-                  @if (item.status === 'RESOLVIDA' && concluirId !== item.id) {
+                  @if (podeResolver(item)) {
+                    <button type="button" class="btn-resolver" (click)="abrirResolver(item)">
+                      Resolver
+                    </button>
+                  }
+                  @if (podeConcluir(item)) {
                     <button type="button" class="btn-concluir" (click)="abrirConcluir(item)">
                       Concluir
                     </button>
                   }
                 </div>
               </footer>
-
-              @if (concluirId === item.id) {
-                <ion-textarea
-                  [(ngModel)]="descricaoConclusao"
-                  autoGrow="true"
-                  rows="3"
-                  placeholder="Descreva o que foi feito"
-                  [disabled]="concluindo">
-                </ion-textarea>
-                <div class="pend-card__rodape">
-                  <span></span>
-                  <div class="pend-card__acoes">
-                    <button type="button" class="btn-historico" (click)="cancelarConcluir()" [disabled]="concluindo">
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      class="btn-concluir"
-                      (click)="concluir(item)"
-                      [disabled]="concluindo || !descricaoConclusao.trim()">
-                      {{ concluindo ? 'Salvando…' : 'Confirmar' }}
-                    </button>
-                  </div>
-                </div>
-              }
             </article>
           }
         </div>
@@ -223,6 +203,121 @@
     </div>
   </ion-toolbar>
 </ion-footer>
+
+@if (concluirAberto && concluirItem) {
+  <div
+    class="historico-overlay nao-clicavel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="concluir-titulo">
+    <div class="historico-painel" (click)="$event.stopPropagation()">
+      <header class="historico-cabecalho">
+        <h2 id="concluir-titulo">Concluir pendência</h2>
+        <button
+          type="button"
+          class="historico-fechar"
+          (click)="fecharConcluir()"
+          [disabled]="salvandoConcluir"
+          aria-label="Fechar">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </header>
+      <p class="historico-subtitulo">
+        {{ concluirItem.prescritorNome?.trim() || concluirItem.tipoPendenciaNome || 'Pendência' }}
+      </p>
+      <div class="historico-corpo">
+        <p class="resolver-texto">{{ concluirItem.texto }}</p>
+        @if (concluirItem.ultimaDescricao) {
+          <p class="resolver-texto resolver-texto--feito">
+            <strong>O que foi feito:</strong> {{ concluirItem.ultimaDescricao }}
+          </p>
+        }
+        <div class="campo-caixa campo-caixa--texto">
+          <span class="campo-caixa-label">Confirmação *</span>
+          <ion-textarea
+            [(ngModel)]="descricaoConclusao"
+            autoGrow="true"
+            rows="5"
+            class="campo-alto"
+            placeholder="Descreva o que foi feito"
+            [disabled]="salvandoConcluir">
+          </ion-textarea>
+        </div>
+      </div>
+      <footer class="historico-rodape historico-rodape--acoes">
+        <ion-button
+          fill="outline"
+          class="btn-voltar"
+          (click)="fecharConcluir()"
+          [disabled]="salvandoConcluir">
+          Cancelar
+        </ion-button>
+        <ion-button
+          fill="solid"
+          class="btn-concluir-modal"
+          (click)="confirmarConcluir()"
+          [disabled]="salvandoConcluir || !descricaoConclusao.trim()">
+          {{ salvandoConcluir ? 'Salvando…' : 'Confirmar' }}
+        </ion-button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (resolverAberto && resolverItem) {
+  <div
+    class="historico-overlay nao-clicavel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="resolver-titulo">
+    <div class="historico-painel" (click)="$event.stopPropagation()">
+      <header class="historico-cabecalho">
+        <h2 id="resolver-titulo">Resolver pendência</h2>
+        <button
+          type="button"
+          class="historico-fechar"
+          (click)="fecharResolver()"
+          [disabled]="salvandoResolver"
+          aria-label="Fechar">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </header>
+      <p class="historico-subtitulo">
+        {{ resolverItem.prescritorNome?.trim() || resolverItem.tipoPendenciaNome || 'Pendência' }}
+      </p>
+      <div class="historico-corpo">
+        <p class="resolver-texto">{{ resolverItem.texto }}</p>
+        <div class="campo-caixa campo-caixa--texto">
+          <span class="campo-caixa-label">O que foi feito *</span>
+          <ion-textarea
+            [(ngModel)]="descricaoResolver"
+            autoGrow="true"
+            rows="5"
+            class="campo-alto"
+            placeholder="Descreva o que foi feito"
+            [disabled]="salvandoResolver">
+          </ion-textarea>
+        </div>
+      </div>
+      <footer class="historico-rodape historico-rodape--acoes">
+        <ion-button
+          fill="outline"
+          class="btn-voltar"
+          (click)="fecharResolver()"
+          [disabled]="salvandoResolver">
+          Cancelar
+        </ion-button>
+        <ion-button
+          fill="solid"
+          class="btn-resolver-modal"
+          (click)="confirmarResolver()"
+          [disabled]="salvandoResolver || !descricaoResolver.trim()">
+          {{ salvandoResolver ? 'Salvando…' : 'Confirmar' }}
+        </ion-button>
+      </footer>
+    </div>
+  </div>
+}
 
 @if (historicoAberto) {
   <div

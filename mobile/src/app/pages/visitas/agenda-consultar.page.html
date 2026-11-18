@@ -5,17 +5,19 @@
     </ion-buttons>
     <ion-title>Consultar agendamentos</ion-title>
   </ion-toolbar>
-</ion-header>
-
-<ion-content class="agenda-consultar-page">
-  <div class="page-shell agenda-shell">
+  <ion-toolbar class="agenda-consultar-filtro">
     <app-busca-medico
       label="Médico"
+      variante="filtro"
       searchbarId="busca-medico-consultar"
       [medico]="consultaMedico"
       (medicoChange)="onConsultaMedicoChange($event)">
     </app-busca-medico>
+  </ion-toolbar>
+</ion-header>
 
+<ion-content class="agenda-consultar-page" #conteudo>
+  <div class="page-shell agenda-shell">
     @if (consultaCarregando) {
       <p class="estado">Buscando agendamentos…</p>
     } @else if (consultaErro) {

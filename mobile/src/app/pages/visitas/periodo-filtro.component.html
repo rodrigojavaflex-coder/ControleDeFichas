@@ -88,7 +88,7 @@
 
 @if (somenteDias || mostrarDias) {
   <div class="periodo-filtro periodo-filtro--dias">
-    <div class="periodo-filtro__opcoes" role="group" aria-label="Filtro por dias da visita">
+    <div class="periodo-filtro__opcoes" role="group" aria-label="Filtro por dias desde a visita">
       <button
         type="button"
         class="periodo-filtro__btn"
@@ -115,7 +115,7 @@
     </div>
     @if (modoDias) {
       <label class="periodo-filtro__campo">
-        <span>Dias</span>
+        <span>Número de dias</span>
         <input
           type="number"
           min="0"
@@ -127,7 +127,15 @@
           placeholder="Ex.: 5" />
       </label>
       <p class="periodo-filtro__aviso">
-        {{ modoDias === 'mais' ? 'Visitas com mais dias que o número.' : 'Visitas com menos dias que o número.' }}
+        @if (modoDias === 'mais') {
+          Mostra visitas com mais dias do que o número informado (ex.: 5 → há mais de 5 dias).
+        } @else {
+          Mostra visitas com menos dias do que o número informado (ex.: 5 → há menos de 5 dias).
+        }
+      </p>
+    } @else {
+      <p class="periodo-filtro__aviso">
+        Selecione Mais de ou Menos de e informe o número de dias.
       </p>
     }
   </div>

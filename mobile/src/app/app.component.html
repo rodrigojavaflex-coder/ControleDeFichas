@@ -121,6 +121,17 @@
             <ion-label class="menu-item-label">Visitas</ion-label>
           </ion-item>
           <ion-item
+            *ngIf="podeVisitas()"
+            lines="none"
+            button
+            detail="true"
+            class="menu-item"
+            (click)="goTo('/visitas/historico')"
+          >
+            <ion-icon name="time-outline" slot="start" class="menu-item-icon"></ion-icon>
+            <ion-label class="menu-item-label">Histórico</ion-label>
+          </ion-item>
+          <ion-item
             *ngIf="podePendencias()"
             lines="none"
             button

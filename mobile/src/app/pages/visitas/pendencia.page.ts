@@ -102,9 +102,14 @@ export class PendenciaPage {
   periodoIncompleto = false;
   statusFiltro: StatusFiltroPendencia = 'todas';
   tipoFiltroId = '';
-  concluirId: string | null = null;
+  concluirAberto = false;
+  concluirItem: SolicitacaoResumo | null = null;
   descricaoConclusao = '';
-  concluindo = false;
+  salvandoConcluir = false;
+  resolverAberto = false;
+  resolverItem: SolicitacaoResumo | null = null;
+  descricaoResolver = '';
+  salvandoResolver = false;
   historicoAberto = false;
   historicoTitulo = '';
   historico: SolicitacaoHistoricoItem[] = [];
@@ -301,25 +306,75 @@ export class PendenciaPage {
     return item.rotuloDias?.trim() || '—';
   }
 
+  podeResolver(item: SolicitacaoResumo): boolean {
+    return item.status === 'ABERTA' || item.status === 'REABERTA';
+  }
+
+  podeConcluir(item: SolicitacaoResumo): boolean {
+    return item.status === 'RESOLVIDA';
+  }
+
+  abrirResolver(item: SolicitacaoResumo): void {
+    this.resolverItem = item;
+    this.descricaoResolver = '';
+    this.resolverAberto = true;
+  }
+
+  fecharResolver(): void {
+    if (this.salvandoResolver) return;
+    this.resolverAberto = false;
+    this.resolverItem = null;
+    this.descricaoResolver = '';
+  }
+
+  async confirmarResolver(): Promise<void> {
+    const item = this.resolverItem;
+    const descricao = this.descricaoResolver.trim();
+    if (!item || !descricao || this.salvandoResolver) return;
+    this.salvandoResolver = true;
+    try {
+      await this.loading.show('Resolvendo pendência…');
+      await firstValueFrom(this.visitas.resolverSolicitacao(item.id, descricao));
+      this.resolverAberto = false;
+      this.resolverItem = null;
+      this.descricaoResolver = '';
+      await this.loading.dismiss();
+      await this.avisar('Pendência resolvida.');
+      await this.carregar(true);
+      void this.pendenciasAlerta.atualizar();
+    } catch (error) {
+      await this.avisar(
+        this.erros.fromApi(error, 'Não foi possível resolver a pendência.'),
+      );
+    } finally {
+      this.salvandoResolver = false;
+      await this.loading.dismiss();
+    }
+  }
+
   abrirConcluir(item: SolicitacaoResumo): void {
-    this.concluirId = item.id;
+    this.concluirItem = item;
+    this.descricaoConclusao = '';
+    this.concluirAberto = true;
+  }
+
+  fecharConcluir(): void {
+    if (this.salvandoConcluir) return;
+    this.concluirAberto = false;
+    this.concluirItem = null;
     this.descricaoConclusao = '';
   }
 
-  cancelarConcluir(): void {
-    if (this.concluindo) return;
-    this.concluirId = null;
-    this.descricaoConclusao = '';
-  }
-
-  async concluir(item: SolicitacaoResumo): Promise<void> {
+  async confirmarConcluir(): Promise<void> {
+    const item = this.concluirItem;
     const descricao = this.descricaoConclusao.trim();
-    if (!descricao || this.concluindo) return;
-    this.concluindo = true;
+    if (!item || !descricao || this.salvandoConcluir) return;
+    this.salvandoConcluir = true;
     try {
       await this.loading.show('Concluindo pendência…');
       await firstValueFrom(this.visitas.concluirSolicitacao(item.id, descricao));
-      this.concluirId = null;
+      this.concluirAberto = false;
+      this.concluirItem = null;
       this.descricaoConclusao = '';
       await this.loading.dismiss();
       await this.avisar('Pendência concluída.');
@@ -330,7 +385,7 @@ export class PendenciaPage {
         this.erros.fromApi(error, 'Não foi possível concluir a pendência.'),
       );
     } finally {
-      this.concluindo = false;
+      this.salvandoConcluir = false;
       await this.loading.dismiss();
     }
   }

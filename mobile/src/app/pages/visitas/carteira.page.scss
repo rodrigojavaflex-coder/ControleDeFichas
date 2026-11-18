@@ -78,6 +78,21 @@
   letter-spacing: 0.03em;
 }
 
+.campo-ajuda {
+  margin: 2px 0 8px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--ion-color-medium, #64748b);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+
+  strong {
+    color: var(--ion-text-color, #1e293b);
+    font-weight: 700;
+  }
+}
+
 .filtro-card .abas-filtro {
   padding: 0;
   border-bottom: 1px solid var(--ion-color-step-150, #e2e8f0);

@@ -55,7 +55,7 @@ declare global {
           [class.mapa-container--oculto]="!!erro || carregando"></div>
       }
 
-      @if (!carregando && temCoordenada && nomeMarcador) {
+      @if (!carregando && temCoordenada && nomeMarcador && usarFallback) {
         <div class="mapa-marcador-nome" aria-hidden="true">{{ nomeMarcador }}</div>
       }
 
@@ -85,13 +85,13 @@ declare global {
       .mapa-iframe {
         display: block;
         width: 100%;
-        height: 240px;
+        height: 480px;
         border: 0;
       }
       .mapa-container--oculto {
         position: absolute;
         inset: 0;
-        height: 240px;
+        height: 480px;
         opacity: 0;
         pointer-events: none;
       }

@@ -19,6 +19,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/visitas/carteira.page').then((m) => m.CarteiraVisitasPage),
     canActivate: [authGuard],
+    data: { tela: 'carteira' },
+  },
+  {
+    path: 'visitas/historico',
+    loadComponent: () =>
+      import('./pages/visitas/carteira.page').then((m) => m.CarteiraVisitasPage),
+    canActivate: [authGuard],
+    data: { tela: 'historico' },
   },
   {
     path: 'visitas/agenda',

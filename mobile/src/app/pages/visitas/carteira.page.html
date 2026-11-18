@@ -3,29 +3,7 @@
     <ion-buttons slot="start">
       <ion-menu-button menu="main-menu"></ion-menu-button>
     </ion-buttons>
-    <ion-title>Visitas</ion-title>
-  </ion-toolbar>
-  <ion-toolbar>
-    <div class="abas-visitas" role="tablist" aria-label="Visitas">
-      <button
-        type="button"
-        role="tab"
-        class="aba-visitas__btn"
-        [class.aba-visitas__btn--ativa]="aba === 'carteira'"
-        [attr.aria-selected]="aba === 'carteira'"
-        (click)="selecionarAba('carteira')">
-        Médicos
-      </button>
-      <button
-        type="button"
-        role="tab"
-        class="aba-visitas__btn"
-        [class.aba-visitas__btn--ativa]="aba === 'historico'"
-        [attr.aria-selected]="aba === 'historico'"
-        (click)="selecionarAba('historico')">
-        Histórico
-      </button>
-    </div>
+    <ion-title>{{ tituloTela }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -179,8 +157,14 @@
           (alterado)="aoFiltrarPeriodo($event)">
         </app-periodo-filtro>
       </section>
-      <section class="filtro-card" aria-label="Dias">
-        <span class="campo-label">Dias</span>
+      <section class="filtro-card" aria-label="Dias desde a visita">
+        <span class="campo-label">Dias desde a visita</span>
+        <p class="campo-ajuda">
+          Conta quantos dias se passaram desde a visita (data de encerramento ou,
+          se ainda aberta, a de início). Use <strong>Mais de</strong> ou
+          <strong>Menos de</strong> com um número — ex.: Mais de 5 lista visitas
+          há mais de 5 dias.
+        </p>
         <app-periodo-filtro
           [somenteDias]="true"
           (diasAlterado)="aoFiltrarDias($event)">

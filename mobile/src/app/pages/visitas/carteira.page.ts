@@ -1,6 +1,6 @@
 import { Component, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   AlertController,
   IonBadge,
@@ -70,6 +70,7 @@ export class CarteiraVisitasPage {
   private readonly visitas = inject(VisitasService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly rota = inject(ActivatedRoute);
   private readonly geo = inject(GeolocalizacaoService);
   private readonly alertas = inject(AlertController);
   private readonly loading = inject(AppLoadingService);
@@ -102,7 +103,13 @@ export class CarteiraVisitasPage {
   readonly rotuloStatus = rotuloStatusVisita;
 
   ionViewWillEnter(): void {
+    const tela = this.rota.snapshot.data['tela'];
+    this.aba = tela === 'historico' ? 'historico' : 'carteira';
     void this.carregar();
+  }
+
+  get tituloTela(): string {
+    return this.aba === 'historico' ? 'Histórico' : 'Visitas';
   }
 
   ionViewDidEnter(): void {
@@ -123,13 +130,6 @@ export class CarteiraVisitasPage {
         void this.carregarMedicos(true);
       }
     }, 350);
-  }
-
-  selecionarAba(valor: 'carteira' | 'historico'): void {
-    const proxima = valor === 'historico' ? 'historico' : 'carteira';
-    if (proxima === this.aba) return;
-    this.aba = proxima;
-    setTimeout(() => this.liberarRolagem(), 0);
   }
 
   async selecionarFiltroPainel(valor: FiltroPainelVisita): Promise<void> {
@@ -327,16 +327,42 @@ export class CarteiraVisitasPage {
   private async carregar(): Promise<void> {
     this.carregando = true;
     try {
-      const [historico, faixas] = await Promise.all([
-        firstValueFrom(this.visitas.minhas(this.periodo, this.filtroDias)),
-        firstValueFrom(this.visitas.coresDias()).catch(() => [] as VisitaCorDiaAtiva[]),
-      ]);
-      this.historico = historico;
-      this.faixasCor = faixas;
-      await this.carregarMedicos(true);
+      if (this.aba === 'historico') {
+        const [historico, faixas] = await Promise.all([
+          firstValueFrom(this.visitas.minhas(this.periodo, this.filtroDias)),
+          firstValueFrom(this.visitas.coresDias()).catch(
+            () => [] as VisitaCorDiaAtiva[],
+          ),
+        ]);
+        this.historico = historico;
+        this.faixasCor = faixas;
+        // Painel disponível também no histórico (chips No painel / Fora).
+        const meta = await firstValueFrom(
+          this.visitas.carteira({
+            filtroPainel: 'todos',
+            page: 1,
+            limit: 1,
+            busca: '',
+          }),
+        ).catch(() => null);
+        if (meta) {
+          this.carteira = {
+            ...(this.carteira ?? meta),
+            ...meta,
+            medicos: this.carteira?.medicos ?? [],
+          };
+        }
+      } else {
+        await this.carregarMedicos(true);
+      }
     } catch (error) {
       await this.avisar(
-        this.erros.fromApi(error, 'Não foi possível carregar as visitas.'),
+        this.erros.fromApi(
+          error,
+          this.aba === 'historico'
+            ? 'Não foi possível carregar o histórico.'
+            : 'Não foi possível carregar as visitas.',
+        ),
       );
     } finally {
       this.carregando = false;
@@ -345,8 +371,8 @@ export class CarteiraVisitasPage {
   }
 
   /**
-   * Depois de encerrar a visita, o ion-content fica com o gesto de rolagem
-   * preso e a troca Médicos/Histórico não responde. Recria o overflow.
+   * Depois de encerrar a visita, o ion-content pode ficar com o gesto de rolagem
+   * preso. Recria o overflow ao entrar na tela.
    */
   private liberarRolagem(): void {
     const content = this.conteudo;
@@ -399,7 +425,7 @@ export class CarteiraVisitasPage {
 
   private async avisar(mensagem: string): Promise<void> {
     const alerta = await this.alertas.create({
-      header: 'Visitas',
+      header: this.tituloTela,
       message: mensagem,
       buttons: ['OK'],
     });

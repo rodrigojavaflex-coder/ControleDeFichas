@@ -31,6 +31,7 @@ import {
   logOutOutline,
   peopleOutline,
   settingsOutline,
+  timeOutline,
 } from 'ionicons/icons';
 import { AuthService } from './services/auth.service';
 import { AppUpdateRequiredService } from './services/app-update-required.service';
@@ -100,6 +101,7 @@ export class AppComponent {
       homeOutline,
       calendarOutline,
       clipboardOutline,
+      timeOutline,
     });
 
     this.authService.currentUser$.subscribe((user) => {

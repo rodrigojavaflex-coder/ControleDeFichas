@@ -15,6 +15,7 @@ import { ConcluirSolicitacaoDto } from './dto/concluir-solicitacao.dto';
 import { CreateSolicitacaoDto } from './dto/create-solicitacao.dto';
 import { FindGestaoSolicitacoesDto } from './dto/find-gestao-solicitacoes.dto';
 import { FindSolicitacoesDto } from './dto/find-solicitacoes.dto';
+import { ResolverSolicitacaoDto } from './dto/resolver-solicitacao.dto';
 import { TratarSolicitacaoDto } from './dto/tratar-solicitacao.dto';
 import { SolicitacoesService } from './solicitacoes.service';
 import {
@@ -105,6 +106,26 @@ export class SolicitacoesController {
     return this.service.tratar(req.user.id, id, dto);
   }
 
+  @Patch(':id/resolver')
+  @Permissions(Permission.PENDENCIAS_READ, Permission.PENDENCIAS_CREATE)
+  @ApiOperation({
+    summary:
+      'Visitador que registrou resolve a própria pendência aberta/reaberta (app)',
+  })
+  @ApiResponse({ status: 200 })
+  @ApiResponse({
+    status: 400,
+    description: 'Descrição ausente, não é o registrador ou situação inválida',
+  })
+  @ApiResponse({ status: 404, description: 'Pendência não encontrada' })
+  resolver(
+    @Req() req: ReqUsuario,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ResolverSolicitacaoDto,
+  ): Promise<SolicitacaoResumo> {
+    return this.service.resolver(req.user.id, id, dto);
+  }
+
   @Patch(':id/concluir')
   @Permissions(Permission.PENDENCIAS_READ)
   @ApiOperation({ summary: 'Visitador que registrou conclui a pendência resolvida' })
@@ -120,7 +141,11 @@ export class SolicitacoesController {
   }
 
   @Get(':id/historico')
-  @Permissions(Permission.PENDENCIAS_WEB_READ, Permission.PENDENCIAS_READ)
+  @Permissions(
+    Permission.PENDENCIAS_WEB_READ,
+    Permission.PENDENCIAS_READ,
+    Permission.PENDENCIAS_CREATE,
+  )
   @ApiOperation({ summary: 'Histórico de situação da pendência' })
   @ApiResponse({ status: 200 })
   @ApiResponse({ status: 403, description: 'Pendência de outro visitador ou unidade' })

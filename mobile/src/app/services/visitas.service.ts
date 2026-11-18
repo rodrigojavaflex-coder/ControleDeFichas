@@ -300,6 +300,12 @@ export class VisitasService {
     return this.http.get<SolicitacoesListaPaginada>(this.apiSolicitacoes, { params });
   }
 
+  resolverSolicitacao(id: string, descricao: string): Observable<SolicitacaoResumo> {
+    return this.http.patch<SolicitacaoResumo>(`${this.apiSolicitacoes}/${id}/resolver`, {
+      descricao,
+    });
+  }
+
   concluirSolicitacao(id: string, descricao: string): Observable<SolicitacaoResumo> {
     return this.http.patch<SolicitacaoResumo>(`${this.apiSolicitacoes}/${id}/concluir`, {
       descricao,

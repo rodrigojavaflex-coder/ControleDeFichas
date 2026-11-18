@@ -15,6 +15,7 @@ import { ConcluirSolicitacaoDto } from './dto/concluir-solicitacao.dto';
 import { CreateSolicitacaoDto } from './dto/create-solicitacao.dto';
 import { FindGestaoSolicitacoesDto } from './dto/find-gestao-solicitacoes.dto';
 import { FindSolicitacoesDto } from './dto/find-solicitacoes.dto';
+import { ResolverSolicitacaoDto } from './dto/resolver-solicitacao.dto';
 import { TratarSolicitacaoDto } from './dto/tratar-solicitacao.dto';
 import { SolicitacaoHistorico } from './entities/solicitacao-historico.entity';
 import { Solicitacao } from './entities/solicitacao.entity';
@@ -380,6 +381,45 @@ export class SolicitacoesService {
     return this.gestaoPorId(id);
   }
 
+  /**
+   * Visitador que registrou atende a própria pendência (ABERTA/REABERTA → RESOLVIDA).
+   */
+  async resolver(
+    usuarioId: string,
+    id: string,
+    dto: ResolverSolicitacaoDto,
+  ): Promise<SolicitacaoResumo> {
+    const atual = await this.solicitacoes.findOne({ where: { id } });
+    if (!atual) {
+      throw new NotFoundException('Pendência não encontrada.');
+    }
+    if (atual.visitadorId !== usuarioId) {
+      throw new BadRequestException(
+        'Só o visitador que registrou pode resolver esta pendência.',
+      );
+    }
+    if (
+      atual.status !== StatusSolicitacao.ABERTA &&
+      atual.status !== StatusSolicitacao.REABERTA
+    ) {
+      throw new BadRequestException(
+        'Só uma pendência aberta ou reaberta pode ser resolvida pelo visitador.',
+      );
+    }
+    await this.solicitacoes.manager.transaction(async (manager) => {
+      await manager.getRepository(Solicitacao).update(id, {
+        status: StatusSolicitacao.RESOLVIDA,
+      });
+      await this.registrarHistorico(manager, {
+        solicitacaoId: id,
+        status: StatusSolicitacao.RESOLVIDA,
+        descricao: dto.descricao,
+        usuarioId,
+      });
+    });
+    return this.resumo(id);
+  }
+
   async concluir(
     usuarioId: string,
     id: string,
@@ -450,7 +490,9 @@ export class SolicitacoesService {
     }
     const permissoes = getUsuarioPermissoes(usuario);
     const web = permissoes.includes(Permission.PENDENCIAS_WEB_READ);
-    const app = permissoes.includes(Permission.PENDENCIAS_READ);
+    const app =
+      permissoes.includes(Permission.PENDENCIAS_READ) ||
+      permissoes.includes(Permission.PENDENCIAS_CREATE);
     const mesmaUnidade =
       !usuario.unidade || atual.unidade === usuario.unidade;
     const dono = atual.visitadorId === usuario.id;

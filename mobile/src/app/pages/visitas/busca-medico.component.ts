@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   Input,
@@ -30,6 +31,7 @@ import {
 export class BuscaMedicoComponent implements OnInit, OnChanges, OnDestroy {
   private readonly visitas = inject(VisitasService);
   private readonly auth = inject(AuthService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   @Input() label = 'Médico';
   /** `caixa` = formulário (padrão pendências); `filtro` = bloco de filtros. */
@@ -59,10 +61,7 @@ export class BuscaMedicoComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['painelDisponivel'] && this.painelDisponivel != null) {
-      this.painelOk = this.painelDisponivel;
-      if (!this.painelOk && this.filtroPainel !== 'todos') {
-        this.filtroPainel = 'todos';
-      }
+      this.aplicarPainel(this.painelDisponivel);
     }
   }
 
@@ -79,7 +78,11 @@ export class BuscaMedicoComponent implements OnInit, OnChanges, OnDestroy {
     ]);
   }
 
-  selecionarFiltroPainel(valor: FiltroPainelVisita): void {
+  selecionarFiltroPainel(valor: FiltroPainelVisita, evento?: Event): void {
+    evento?.preventDefault();
+    evento?.stopPropagation();
+    this.soltarTeclado();
+
     if (
       (valor === 'no_painel' || valor === 'fora_painel') &&
       !this.painelOk
@@ -88,9 +91,30 @@ export class BuscaMedicoComponent implements OnInit, OnChanges, OnDestroy {
     }
     if (this.filtroPainel === valor) return;
     this.filtroPainel = valor;
+    this.cdr.detectChanges();
+
+    // Com médico já escolhido, a troca de filtro só faz sentido na nova busca.
+    if (this.medico) {
+      this.medico = null;
+      this.sugestoes = [];
+      this.busca = '';
+      this.medicoChange.emit(null);
+      this.cdr.detectChanges();
+      return;
+    }
+
     const termo = this.busca.trim();
     if (termo.length >= 2) {
       void this.buscar(termo);
+    } else {
+      this.sugestoes = [];
+    }
+  }
+
+  private soltarTeclado(): void {
+    const ativo = document.activeElement;
+    if (ativo instanceof HTMLElement) {
+      ativo.blur();
     }
   }
 
@@ -127,7 +151,7 @@ export class BuscaMedicoComponent implements OnInit, OnChanges, OnDestroy {
         const carteira = await firstValueFrom(
           this.visitas.carteira({ page: 1, limit: 1 }),
         );
-        this.painelOk = !!carteira.painelDisponivel;
+        this.aplicarPainel(!!carteira.painelDisponivel);
         return;
       }
       if (
@@ -136,11 +160,29 @@ export class BuscaMedicoComponent implements OnInit, OnChanges, OnDestroy {
         const lista = await firstValueFrom(
           this.visitas.minhasSolicitacoes({ page: 1, limit: 1 }),
         );
-        this.painelOk = !!lista.painelDisponivel;
+        this.aplicarPainel(!!lista.painelDisponivel);
+        return;
+      }
+      // Agenda sem visitas/pendências: libera os filtros; a API devolve [] se não houver painel.
+      if (
+        this.auth.hasAnyPermission([
+          'visitas-agenda:read',
+          'visitas-agenda:create',
+        ])
+      ) {
+        this.aplicarPainel(true);
       }
     } catch {
-      this.painelOk = false;
+      this.aplicarPainel(false);
     }
+  }
+
+  private aplicarPainel(ok: boolean): void {
+    this.painelOk = ok;
+    if (!ok && this.filtroPainel !== 'todos') {
+      this.filtroPainel = 'todos';
+    }
+    this.cdr.detectChanges();
   }
 
   private async buscar(termo: string): Promise<void> {

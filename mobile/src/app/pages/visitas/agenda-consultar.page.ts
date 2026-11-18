@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
@@ -55,6 +55,7 @@ export class AgendaConsultarPage {
   private readonly erros = inject(ErrorMessageService);
   private readonly alertCtrl = inject(AlertController);
   private readonly alertas = inject(PendenciasAlertaService);
+  @ViewChild('conteudo') private conteudo?: IonContent;
 
   consultaMedico: MedicoPendenciaOpcao | null = null;
   consultaLista: AgendaAgendamentoItem[] = [];
@@ -84,6 +85,10 @@ export class AgendaConsultarPage {
       return;
     }
     void this.carregarConsulta();
+  }
+
+  ionViewDidEnter(): void {
+    this.liberarRolagem();
   }
 
   async onConsultaMedicoChange(
@@ -146,7 +151,24 @@ export class AgendaConsultarPage {
       );
     } finally {
       this.consultaCarregando = false;
+      setTimeout(() => this.liberarRolagem(), 0);
     }
+  }
+
+  /** Evita ion-content “preso” após teclado/foco, que bloqueia toque nos filtros. */
+  private liberarRolagem(): void {
+    const content = this.conteudo;
+    if (!content) return;
+    void content
+      .getScrollElement()
+      .then((scroll) => {
+        scroll.style.overflowY = 'hidden';
+        scroll.style.pointerEvents = 'auto';
+        requestAnimationFrame(() => {
+          scroll.style.overflowY = '';
+        });
+      })
+      .catch(() => undefined);
   }
 
   private async excluir(id: string): Promise<void> {
