@@ -1821,6 +1821,32 @@ export class FolhaLancamentosPage implements OnInit {
     return Number.isNaN(n) ? '—' : this.formatoMoedaCapaLista.format(n);
   }
 
+  /** Quantidade de capas/funcionários na lista carregada. */
+  quantidadeFuncionariosLista(): number {
+    return this.capasNaCompetencia.length;
+  }
+
+  totalReceitasLista(): number {
+    return this.capasNaCompetencia.reduce(
+      (acc, row) => acc + (FolhaLancamentosPage.parseDecimalFinanceiro(row.totalReceitas) || 0),
+      0,
+    );
+  }
+
+  totalDespesasLista(): number {
+    return this.capasNaCompetencia.reduce(
+      (acc, row) => acc + (FolhaLancamentosPage.parseDecimalFinanceiro(row.totalDespesas) || 0),
+      0,
+    );
+  }
+
+  totalLiquidoLista(): number {
+    return this.capasNaCompetencia.reduce(
+      (acc, row) => acc + (FolhaLancamentosPage.parseDecimalFinanceiro(row.liquido) || 0),
+      0,
+    );
+  }
+
   private static parseDecimalFinanceiro(valor: unknown): number {
     if (valor === null || valor === undefined || valor === '') return 0;
     if (typeof valor === 'number') return Number.isFinite(valor) ? valor : Number.NaN;

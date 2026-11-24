@@ -57,7 +57,7 @@
 - **`GET …/folha/funcionarios/lancamento`** com **`ano`** e **`mes`** devolve apenas funcionários que atendem **estes mesmos critérios** (útil para integrações e consistência com o carregamento em lote).
 - O campo **`folhaMensal`** em **`folha_tipo`** pode permanecer no cadastro como **metadado**; **não** restringe mais o uso de **`carregar-competencia`** na API.
 - **`POST …/folha/capas`** com um **`funcionarioId`** segue disponível para **obter ou criar** a capa de **um** funcionário, sujeito às mesmas validações de elegibilidade e de lote (RN-005, RN-006).
-- **UI:** após Carregar, exibe-se uma **lista** de capas (funcionário + totais resumidos) com **checkbox** (cabeçalho seleciona todos; clique no checkbox seleciona a linha para o arquivo PagBank). **Clique na linha** abre a folha em **modal** (`nao-clicavel`) com receitas/despesas e ações da capa — **edição** somente com lote aberto; com lote fechado, **somente leitura** e ações de **recibo** (RN-015).
+- **UI:** após Carregar, exibe-se uma **lista** de capas (funcionário + totais resumidos) com **checkbox** (cabeçalho seleciona todos; clique no checkbox seleciona a linha para o arquivo PagBank). No **rodapé da lista**, exibe-se **quantidade de funcionários** e a **soma** das colunas Receitas, Despesas e Líquido. **Clique na linha** abre a folha em **modal** (`nao-clicavel`) com receitas/despesas e ações da capa — **edição** somente com lote aberto; com lote fechado, **somente leitura** e ações de **recibo** (RN-015).
 
 ### RN-003 — Exclusão de verba no cadastro
 

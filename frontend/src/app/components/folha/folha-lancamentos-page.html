@@ -183,6 +183,7 @@
               />
             </span>
             <span class="folha-lancamentos-func-col-nome">Funcionário</span>
+            <span class="folha-lancamentos-func-col-qtd">Qtd</span>
             <span class="folha-lancamentos-func-col-num">Receitas</span>
             <span class="folha-lancamentos-func-col-num">Despesas</span>
             <span class="folha-lancamentos-func-col-num">Líquido</span>
@@ -224,6 +225,7 @@
                     <span class="folha-lancamentos-capa-chip-congelada" title="Folha congelada">Congelada</span>
                   }
                 </span>
+                <span class="folha-lancamentos-func-col-qtd">1</span>
                 <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(row.totalReceitas) }}</span>
                 <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(row.totalDespesas) }}</span>
                 <span class="folha-lancamentos-func-col-num folha-lancamentos-func-col-liquido">{{
@@ -232,6 +234,31 @@
               </div>
             </article>
           }
+          <div
+            class="folha-lancamentos-func-totais-row folha-lancamentos-func-totais-row--com-check"
+            role="status"
+            [attr.aria-label]="
+              'Totais da lista: ' +
+              quantidadeFuncionariosLista() +
+              ' funcionários; receitas ' +
+              moedaListaCapa(totalReceitasLista()) +
+              '; despesas ' +
+              moedaListaCapa(totalDespesasLista()) +
+              '; líquido ' +
+              moedaListaCapa(totalLiquidoLista())
+            "
+          >
+            <span class="folha-lancamentos-func-col-check" aria-hidden="true"></span>
+            <span class="folha-lancamentos-func-col-nome folha-lancamentos-func-totais-rotulo">Total</span>
+            <span class="folha-lancamentos-func-col-qtd folha-lancamentos-func-totais-qtd">{{
+              quantidadeFuncionariosLista()
+            }}</span>
+            <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(totalReceitasLista()) }}</span>
+            <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(totalDespesasLista()) }}</span>
+            <span class="folha-lancamentos-func-col-num folha-lancamentos-func-col-liquido">{{
+              moedaListaCapa(totalLiquidoLista())
+            }}</span>
+          </div>
         </div>
       }
     </section>

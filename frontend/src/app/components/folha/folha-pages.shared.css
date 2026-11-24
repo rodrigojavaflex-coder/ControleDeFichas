@@ -670,6 +670,7 @@ body.theme-dark .folha-lancamentos-funcionarios-table-wrap {
   display: grid;
   grid-template-columns:
     minmax(0, 1fr)
+    minmax(3.25rem, 4rem)
     minmax(6.5rem, 8rem)
     minmax(6.5rem, 8rem)
     minmax(6.5rem, 8rem);
@@ -690,9 +691,104 @@ body.theme-dark .folha-lancamentos-funcionarios-table-wrap {
   grid-template-columns:
     2rem
     minmax(0, 1fr)
+    minmax(3.25rem, 4rem)
     minmax(6.5rem, 8rem)
     minmax(6.5rem, 8rem)
     minmax(6.5rem, 8rem);
+}
+
+.folha-lancamentos-func-col-qtd {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.folha-lancamentos-funcionario-linha .folha-lancamentos-func-col-qtd {
+  font-size: 1rem;
+}
+
+.folha-lancamentos-func-header-row .folha-lancamentos-func-col-qtd {
+  font-size: inherit;
+}
+
+.folha-lancamentos-func-totais-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(3.25rem, 4rem)
+    minmax(6.5rem, 8rem)
+    minmax(6.5rem, 8rem)
+    minmax(6.5rem, 8rem);
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.75rem;
+  border-top: 2px solid var(--border-color, #cbd5e1);
+  background: color-mix(in srgb, var(--focus-ring-color, #3b82f6) 8%, var(--bg-secondary, #f1f5f9));
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-sizing: border-box;
+}
+
+.folha-lancamentos-func-totais-row--com-check {
+  grid-template-columns:
+    2rem
+    minmax(0, 1fr)
+    minmax(3.25rem, 4rem)
+    minmax(6.5rem, 8rem)
+    minmax(6.5rem, 8rem)
+    minmax(6.5rem, 8rem);
+}
+
+.folha-lancamentos-func-totais-rotulo {
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.folha-lancamentos-func-totais-qtd {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.folha-lancamentos-func-totais-row .folha-lancamentos-func-col-num {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.folha-lancamentos-func-totais-row .folha-lancamentos-func-col-liquido {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+[data-theme='dark'] .folha-lancamentos-func-totais-row,
+body.theme-dark .folha-lancamentos-func-totais-row {
+  border-top-color: var(--border-color, #475569);
+  background: color-mix(in srgb, var(--focus-ring-color, #60a5fa) 14%, var(--bg-secondary, #1e293b));
+}
+
+[data-theme='dark'] .folha-lancamentos-func-totais-rotulo,
+[data-theme='dark'] .folha-lancamentos-func-totais-qtd,
+[data-theme='dark'] .folha-lancamentos-func-totais-row .folha-lancamentos-func-col-num,
+body.theme-dark .folha-lancamentos-func-totais-rotulo,
+body.theme-dark .folha-lancamentos-func-totais-qtd,
+body.theme-dark .folha-lancamentos-func-totais-row .folha-lancamentos-func-col-num {
+  color: var(--text-primary, #f8fafc);
+}
+
+[data-theme='dark'] .folha-lancamentos-func-col-qtd,
+body.theme-dark .folha-lancamentos-func-col-qtd {
+  color: var(--text-primary, #f1f5f9);
+}
+
+[data-theme='dark'] .folha-lancamentos-func-header-row .folha-lancamentos-func-col-qtd,
+body.theme-dark .folha-lancamentos-func-header-row .folha-lancamentos-func-col-qtd {
+  color: var(--text-secondary, #94a3b8);
 }
 
 
@@ -714,7 +810,7 @@ body.theme-dark .folha-lancamentos-funcionario-card {
   border-bottom-color: var(--border-color, #334155);
 }
 
-.folha-lancamentos-funcionario-card:last-child {
+.folha-lancamentos-funcionario-card:last-of-type {
   border-bottom: none;
 }
 
@@ -854,6 +950,7 @@ body.theme-dark .folha-lancamentos-capa-chip-fora-elegibilidade {
   grid-template-columns:
     2rem
     minmax(0, 1fr)
+    minmax(3.25rem, 4rem)
     minmax(6.5rem, 8rem)
     minmax(6.5rem, 8rem)
     minmax(6.5rem, 8rem);
@@ -2529,8 +2626,10 @@ body.theme-dark .folha-lancamentos-itens-total-liquido .folha-lancamentos-itens-
   }
 
   .folha-lancamentos-func-header-row,
+  .folha-lancamentos-funcionario-linha--com-check,
+  .folha-lancamentos-func-totais-row,
   .folha-lancamentos-funcionario-row {
-    min-width: 26rem;
+    min-width: 30rem;
   }
 }
 
