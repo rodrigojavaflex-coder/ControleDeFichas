@@ -134,7 +134,7 @@ export class AppComponent {
 
   async abrirNotificacaoAgenda(): Promise<void> {
     await this.menuController.close();
-    await this.router.navigate(['/visitas/agenda']);
+    await this.router.navigate(['/visitas/agenda/consultar']);
   }
 
   async abrirNotificacaoPendencias(

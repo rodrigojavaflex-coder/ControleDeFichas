@@ -20,7 +20,7 @@ import {
   IonToolbar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { closeOutline } from 'ionicons/icons';
+import { chevronDownOutline, chevronUpOutline, closeOutline } from 'ionicons/icons';
 import { firstValueFrom } from 'rxjs';
 import { AppLoadingService } from '../../services/app-loading.service';
 import { AuthService } from '../../services/auth.service';
@@ -79,9 +79,10 @@ export class PendenciaPage {
   private readonly pendenciasAlerta = inject(PendenciasAlertaService);
 
   constructor() {
-    addIcons({ closeOutline });
+    addIcons({ closeOutline, chevronDownOutline, chevronUpOutline });
   }
 
+  filtrosAbertos = false;
   modoCriacao = false;
   texto = '';
   tipoPendenciaId = '';
@@ -129,8 +130,32 @@ export class PendenciaPage {
     return this.auth.hasPermission('pendencias:create');
   }
 
+  alternarFiltros(): void {
+    this.filtrosAbertos = !this.filtrosAbertos;
+  }
+
+  get resumoFiltros(): string {
+    const partes: string[] = [];
+    if (this.periodo) {
+      partes.push(this.rotuloPeriodo(this.periodo));
+    }
+    if (this.medicoFiltro?.nome?.trim()) {
+      partes.push(this.medicoFiltro.nome.trim());
+    }
+    if (this.statusFiltro !== 'todas') {
+      const opcao = this.statusOpcoes.find((o) => o.valor === this.statusFiltro);
+      partes.push(opcao?.rotulo ?? this.statusFiltro);
+    }
+    if (this.tipoFiltroId) {
+      const tipo = this.tiposPendencia.find((t) => t.id === this.tipoFiltroId);
+      partes.push(tipo?.nome ?? 'Tipo');
+    }
+    return partes.length > 0 ? partes.join(' · ') : 'Nenhum filtro aplicado';
+  }
+
   ionViewWillEnter(): void {
     this.modoCriacao = false;
+    this.filtrosAbertos = false;
     const situacao = this.rota.snapshot.queryParamMap.get('situacao');
     if (
       situacao === 'ABERTA' ||
@@ -415,6 +440,36 @@ export class PendenciaPage {
     this.historicoTitulo = '';
     this.historico = [];
     this.carregandoHistorico = false;
+  }
+
+  private rotuloPeriodo(filtro: PeriodoHistoricoFiltro): string {
+    if (filtro.periodo === 'ano' && filtro.ano != null) {
+      return String(filtro.ano);
+    }
+    if (filtro.periodo === 'mes' && filtro.ano != null && filtro.mes != null) {
+      const meses = [
+        'Jan',
+        'Fev',
+        'Mar',
+        'Abr',
+        'Mai',
+        'Jun',
+        'Jul',
+        'Ago',
+        'Set',
+        'Out',
+        'Nov',
+        'Dez',
+      ];
+      return `${meses[filtro.mes - 1]}/${filtro.ano}`;
+    }
+    if (filtro.periodo === 'personalizado') {
+      if (filtro.dataInicio && filtro.dataFim) {
+        return `${filtro.dataInicio} → ${filtro.dataFim}`;
+      }
+      return 'Personalizado';
+    }
+    return 'Período';
   }
 
   private async garantirTipos(): Promise<void> {

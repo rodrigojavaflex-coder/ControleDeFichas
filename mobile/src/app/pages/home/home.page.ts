@@ -136,7 +136,7 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   async abrirAgenda(): Promise<void> {
-    await this.router.navigate(['/visitas/agenda']);
+    await this.router.navigate(['/visitas/agenda/consultar']);
   }
 
   async abrirPendencias(situacao: 'ABERTA' | 'RESOLVIDA'): Promise<void> {

@@ -662,7 +662,7 @@ export class AuthService {
 
     if (!this.apiBaseUrlLogged) {
       this.apiBaseUrlLogged = true;
-      console.info(`[App Farma +] API Base URL: ${baseUrl} (platform: ${platform})`);
+      console.info(`[Gestão Farma] API Base URL: ${baseUrl} (platform: ${platform})`);
     }
 
     return baseUrl;

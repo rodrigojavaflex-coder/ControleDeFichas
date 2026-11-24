@@ -46,60 +46,83 @@
         </app-busca-medico>
       </section>
     } @else {
-      <section class="filtro-card" aria-label="Período">
-        <span class="campo-label">Período</span>
-        <app-periodo-filtro
-          [mostrarDias]="false"
-          (alterado)="aoFiltrarPeriodo($event)">
-        </app-periodo-filtro>
-      </section>
+      <section class="filtros-painel" [class.filtros-painel--aberto]="filtrosAbertos">
+        <button
+          type="button"
+          class="filtros-painel__toggle"
+          (click)="alternarFiltros()"
+          [attr.aria-expanded]="filtrosAbertos">
+          <span class="filtros-painel__titulo">
+            <strong>Filtros</strong>
+            @if (!filtrosAbertos) {
+              <small>{{ resumoFiltros }}</small>
+            }
+          </span>
+          <ion-icon
+            [name]="filtrosAbertos ? 'chevron-up-outline' : 'chevron-down-outline'"
+            aria-hidden="true">
+          </ion-icon>
+        </button>
 
-      <section class="filtro-card" aria-label="Médico">
-        <span class="campo-label">Médico</span>
-        <app-busca-medico
-          variante="filtro"
-          searchbarId="busca-medico-filtro"
-          [medico]="medicoFiltro"
-          [painelDisponivel]="painelDisponivel"
-          (medicoChange)="onMedicoFiltroChange($event)">
-        </app-busca-medico>
-      </section>
+        @if (filtrosAbertos) {
+          <div class="filtros-painel__corpo">
+            <section class="filtro-card" aria-label="Período">
+              <span class="campo-label">Período</span>
+              <app-periodo-filtro
+                [mostrarDias]="false"
+                (alterado)="aoFiltrarPeriodo($event)">
+              </app-periodo-filtro>
+            </section>
 
-      <section class="filtro-card" aria-label="Situação">
-        <span class="campo-label">Situação</span>
-        <div class="chips" role="group">
-          @for (opcao of statusOpcoes; track opcao.valor) {
-            <button
-              type="button"
-              class="chip"
-              [class.chip--ativo]="statusFiltro === opcao.valor"
-              (click)="selecionarStatus(opcao.valor)">
-              {{ opcao.rotulo }}
-            </button>
-          }
-        </div>
-      </section>
+            <section class="filtro-card" aria-label="Médico">
+              <span class="campo-label">Médico</span>
+              <app-busca-medico
+                variante="filtro"
+                searchbarId="busca-medico-filtro"
+                [medico]="medicoFiltro"
+                [painelDisponivel]="painelDisponivel"
+                (medicoChange)="onMedicoFiltroChange($event)">
+              </app-busca-medico>
+            </section>
 
-      <section class="filtro-card" aria-label="Tipo">
-        <span class="campo-label">Tipo</span>
-        <div class="chips" role="group">
-          <button
-            type="button"
-            class="chip"
-            [class.chip--ativo]="tipoFiltroId === ''"
-            (click)="selecionarTipo('')">
-            Todos
-          </button>
-          @for (tipo of tiposPendencia; track tipo.id) {
-            <button
-              type="button"
-              class="chip"
-              [class.chip--ativo]="tipoFiltroId === tipo.id"
-              (click)="selecionarTipo(tipo.id)">
-              {{ tipo.nome }}
-            </button>
-          }
-        </div>
+            <section class="filtro-card" aria-label="Situação">
+              <span class="campo-label">Situação</span>
+              <div class="chips" role="group">
+                @for (opcao of statusOpcoes; track opcao.valor) {
+                  <button
+                    type="button"
+                    class="chip"
+                    [class.chip--ativo]="statusFiltro === opcao.valor"
+                    (click)="selecionarStatus(opcao.valor)">
+                    {{ opcao.rotulo }}
+                  </button>
+                }
+              </div>
+            </section>
+
+            <section class="filtro-card" aria-label="Tipo">
+              <span class="campo-label">Tipo</span>
+              <div class="chips" role="group">
+                <button
+                  type="button"
+                  class="chip"
+                  [class.chip--ativo]="tipoFiltroId === ''"
+                  (click)="selecionarTipo('')">
+                  Todos
+                </button>
+                @for (tipo of tiposPendencia; track tipo.id) {
+                  <button
+                    type="button"
+                    class="chip"
+                    [class.chip--ativo]="tipoFiltroId === tipo.id"
+                    (click)="selecionarTipo(tipo.id)">
+                    {{ tipo.nome }}
+                  </button>
+                }
+              </div>
+            </section>
+          </div>
+        }
       </section>
 
       @if (periodoIncompleto) {

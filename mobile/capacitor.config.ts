@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.sistemasfarmamais.app',
-  appName: 'App Farma +',
+  appName: 'Gestão Farma',
   webDir: 'dist/browser',
   server: {
     androidScheme: 'https',

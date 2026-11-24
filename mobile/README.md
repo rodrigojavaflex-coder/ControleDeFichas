@@ -1,8 +1,8 @@
-# App Farma +
+# Gestão Farma
 
 Aplicativo mobile (Ionic 7 + Angular 20 + Capacitor 8) do Sistemas Farma Mais.
 
-- **Nome na tela:** App Farma +
+- **Nome na tela:** Gestão Farma
 - **Pacote Android:** `com.sistemasfarmamais.app`
 - **API desenvolvimento:** `https://api-dev.sistemasfarmamais.com/api` (túnel para `localhost:3000`; o backend do OMNI precisa estar parado)
 - **API produção:** `https://controledefichas.onrender.com/api`

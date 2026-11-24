@@ -42,7 +42,7 @@ import {
 export class SobrePage implements OnInit {
   private router = inject(Router);
 
-  readonly appName = signal('App Farma +');
+  readonly appName = signal('Gestão Farma');
   readonly appVersion = signal(APP_VERSION);
   readonly buildVersion = signal(APP_BUILD);
   readonly versaoDataExibicao = computed(() => {
@@ -59,7 +59,7 @@ export class SobrePage implements OnInit {
       const info = await App.getInfo();
       this.appName.set(info.name || this.appName());
     } catch {
-      this.appName.set('App Farma +');
+      this.appName.set('Gestão Farma');
     }
     this.appVersion.set(APP_VERSION);
     this.buildVersion.set(APP_BUILD);

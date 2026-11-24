@@ -9,6 +9,7 @@ import {
   IonContent,
   IonFooter,
   IonHeader,
+  IonIcon,
   IonItem,
   IonLabel,
   IonList,
@@ -18,6 +19,8 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { chevronDownOutline, chevronUpOutline } from 'ionicons/icons';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { AppLoadingService } from '../../services/app-loading.service';
@@ -62,6 +65,7 @@ import { VisitaConsultaModalComponent } from './visita-consulta-modal.component'
     IonNote,
     IonBadge,
     IonButton,
+    IonIcon,
     PeriodoFiltroComponent,
     VisitaConsultaModalComponent,
   ],
@@ -81,6 +85,7 @@ export class CarteiraVisitasPage {
   private readonly pageSize = 40;
 
   aba: 'carteira' | 'historico' = 'carteira';
+  filtrosAbertos = false;
   filtroPainel: FiltroPainelVisita = 'todos';
   busca = '';
   page = 1;
@@ -102,14 +107,66 @@ export class CarteiraVisitasPage {
   readonly rotuloCrm = rotuloCrm;
   readonly rotuloStatus = rotuloStatusVisita;
 
+  constructor() {
+    addIcons({ chevronDownOutline, chevronUpOutline });
+  }
+
   ionViewWillEnter(): void {
     const tela = this.rota.snapshot.data['tela'];
     this.aba = tela === 'historico' ? 'historico' : 'carteira';
+    this.filtrosAbertos = false;
     void this.carregar();
   }
 
   get tituloTela(): string {
     return this.aba === 'historico' ? 'Histórico' : 'Visitas';
+  }
+
+  alternarFiltros(): void {
+    this.filtrosAbertos = !this.filtrosAbertos;
+  }
+
+  get resumoFiltrosHistorico(): string {
+    const partes: string[] = [];
+    if (this.filtroPainel === 'no_painel') partes.push('No painel');
+    if (this.filtroPainel === 'fora_painel') partes.push('Fora');
+    if (this.busca.trim()) partes.push(this.busca.trim());
+    if (this.periodo) partes.push(this.rotuloPeriodo(this.periodo));
+    if (this.filtroDias) {
+      const pref = this.filtroDias.comparacao === 'mais' ? 'Mais de' : 'Menos de';
+      partes.push(`${pref} ${this.filtroDias.dias} dias`);
+    }
+    return partes.length > 0 ? partes.join(' · ') : 'Nenhum filtro aplicado';
+  }
+
+  private rotuloPeriodo(filtro: PeriodoHistoricoFiltro): string {
+    if (filtro.periodo === 'ano' && filtro.ano != null) {
+      return String(filtro.ano);
+    }
+    if (filtro.periodo === 'mes' && filtro.ano != null && filtro.mes != null) {
+      const meses = [
+        'Jan',
+        'Fev',
+        'Mar',
+        'Abr',
+        'Mai',
+        'Jun',
+        'Jul',
+        'Ago',
+        'Set',
+        'Out',
+        'Nov',
+        'Dez',
+      ];
+      return `${meses[filtro.mes - 1]}/${filtro.ano}`;
+    }
+    if (filtro.periodo === 'personalizado') {
+      if (filtro.dataInicio && filtro.dataFim) {
+        return `${filtro.dataInicio} → ${filtro.dataFim}`;
+      }
+      return 'Personalizado';
+    }
+    return 'Período';
   }
 
   ionViewDidEnter(): void {

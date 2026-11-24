@@ -110,65 +110,88 @@
       }
       }
     } @else {
-      <section class="filtro-card" aria-label="Médico">
-        <span class="campo-label">Médico</span>
-        <div class="abas-filtro" role="tablist" aria-label="Filtro do painel na busca de médicos">
-          <button
-            type="button"
-            role="tab"
-            class="abas-filtro__btn"
-            [class.abas-filtro__btn--ativa]="filtroPainel === 'todos'"
-            [attr.aria-selected]="filtroPainel === 'todos'"
-            (click)="selecionarFiltroPainel('todos')">
-            Todos
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="abas-filtro__btn"
-            [class.abas-filtro__btn--ativa]="filtroPainel === 'no_painel'"
-            [attr.aria-selected]="filtroPainel === 'no_painel'"
-            [disabled]="!carteira?.painelDisponivel"
-            (click)="selecionarFiltroPainel('no_painel')">
-            No painel
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="abas-filtro__btn"
-            [class.abas-filtro__btn--ativa]="filtroPainel === 'fora_painel'"
-            [attr.aria-selected]="filtroPainel === 'fora_painel'"
-            [disabled]="!carteira?.painelDisponivel"
-            (click)="selecionarFiltroPainel('fora_painel')">
-            Fora
-          </button>
-        </div>
-        <ion-searchbar
-          [value]="busca"
-          placeholder="Nome ou CRM"
-          debounce="0"
-          (ionInput)="aoBuscar($event)">
-        </ion-searchbar>
-      </section>
-      <section class="filtro-card" aria-label="Período">
-        <span class="campo-label">Período</span>
-        <app-periodo-filtro
-          [mostrarDias]="false"
-          (alterado)="aoFiltrarPeriodo($event)">
-        </app-periodo-filtro>
-      </section>
-      <section class="filtro-card" aria-label="Dias desde a visita">
-        <span class="campo-label">Dias desde a visita</span>
-        <p class="campo-ajuda">
-          Conta quantos dias se passaram desde a visita (data de encerramento ou,
-          se ainda aberta, a de início). Use <strong>Mais de</strong> ou
-          <strong>Menos de</strong> com um número — ex.: Mais de 5 lista visitas
-          há mais de 5 dias.
-        </p>
-        <app-periodo-filtro
-          [somenteDias]="true"
-          (diasAlterado)="aoFiltrarDias($event)">
-        </app-periodo-filtro>
+      <section class="filtros-painel" [class.filtros-painel--aberto]="filtrosAbertos">
+        <button
+          type="button"
+          class="filtros-painel__toggle"
+          (click)="alternarFiltros()"
+          [attr.aria-expanded]="filtrosAbertos">
+          <span class="filtros-painel__titulo">
+            <strong>Filtros</strong>
+            @if (!filtrosAbertos) {
+              <small>{{ resumoFiltrosHistorico }}</small>
+            }
+          </span>
+          <ion-icon
+            [name]="filtrosAbertos ? 'chevron-up-outline' : 'chevron-down-outline'"
+            aria-hidden="true">
+          </ion-icon>
+        </button>
+
+        @if (filtrosAbertos) {
+          <div class="filtros-painel__corpo">
+            <section class="filtro-card" aria-label="Médico">
+              <span class="campo-label">Médico</span>
+              <div class="abas-filtro" role="tablist" aria-label="Filtro do painel na busca de médicos">
+                <button
+                  type="button"
+                  role="tab"
+                  class="abas-filtro__btn"
+                  [class.abas-filtro__btn--ativa]="filtroPainel === 'todos'"
+                  [attr.aria-selected]="filtroPainel === 'todos'"
+                  (click)="selecionarFiltroPainel('todos')">
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  class="abas-filtro__btn"
+                  [class.abas-filtro__btn--ativa]="filtroPainel === 'no_painel'"
+                  [attr.aria-selected]="filtroPainel === 'no_painel'"
+                  [disabled]="!carteira?.painelDisponivel"
+                  (click)="selecionarFiltroPainel('no_painel')">
+                  No painel
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  class="abas-filtro__btn"
+                  [class.abas-filtro__btn--ativa]="filtroPainel === 'fora_painel'"
+                  [attr.aria-selected]="filtroPainel === 'fora_painel'"
+                  [disabled]="!carteira?.painelDisponivel"
+                  (click)="selecionarFiltroPainel('fora_painel')">
+                  Fora
+                </button>
+              </div>
+              <ion-searchbar
+                [value]="busca"
+                placeholder="Nome ou CRM"
+                debounce="0"
+                (ionInput)="aoBuscar($event)">
+              </ion-searchbar>
+            </section>
+            <section class="filtro-card" aria-label="Período">
+              <span class="campo-label">Período</span>
+              <app-periodo-filtro
+                [mostrarDias]="false"
+                (alterado)="aoFiltrarPeriodo($event)">
+              </app-periodo-filtro>
+            </section>
+            <section class="filtro-card" aria-label="Dias desde a visita">
+              <span class="campo-label">Dias desde a visita</span>
+              <p class="campo-ajuda">
+                Conta quantos dias se passaram desde a visita (data de encerramento ou,
+                se ainda aberta, a de início). Use <strong>Mais de</strong> ou
+                <strong>Menos de</strong> com um número — ex.: Mais de 5 lista visitas
+                há mais de 5 dias.
+              </p>
+              <app-periodo-filtro
+                [somenteDias]="true"
+                (diasAlterado)="aoFiltrarDias($event)">
+              </app-periodo-filtro>
+            </section>
+          </div>
+        }
       </section>
       @if (carregandoHistorico) {
         <p class="estado">Carregando…</p>
