@@ -454,6 +454,16 @@ export class FolhaService {
     );
   }
 
+  /** Download XLSX PagBank — lote fechado (RN-017). */
+  gerarArquivoPagamento(body: {
+    unidade: Unidade;
+    capaIds: string[];
+  }): Observable<Blob> {
+    return this.http.post(`${base}/capas/gerar-arquivo-pagamento`, body, {
+      responseType: 'blob',
+    });
+  }
+
   enviarRecibosWhatsappMassa(body: {
     unidade: Unidade;
     ano: number;

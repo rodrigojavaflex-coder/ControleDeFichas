@@ -188,6 +188,46 @@ export class CreateFuncionarioFolhaDto {
   chavePix?: string | null;
 
   @ApiPropertyOptional({
+    maxLength: 10,
+    nullable: true,
+    description: 'Código do banco (somente dígitos; ex.: 290 PagBank).',
+    example: '290',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(0, 10)
+  @Matches(/^$|^\d+$/, {
+    message: 'Banco deve conter apenas números.',
+  })
+  bancoNumero?: string | null;
+
+  @ApiPropertyOptional({
+    maxLength: 20,
+    nullable: true,
+    description: 'Número da conta (somente dígitos).',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(0, 20)
+  @Matches(/^$|^\d+$/, {
+    message: 'Conta deve conter apenas números.',
+  })
+  contaBancaria?: string | null;
+
+  @ApiPropertyOptional({
+    maxLength: 2,
+    nullable: true,
+    description: 'Dígito da conta (somente dígitos).',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(0, 2)
+  @Matches(/^$|^\d+$/, {
+    message: 'Dígito da conta deve conter apenas números.',
+  })
+  digitoConta?: string | null;
+
+  @ApiPropertyOptional({
     type: [FuncionarioEventoFixoLinhaDto],
     description:
       'Eventos fixos (verba + ref + valor). Copiados para a capa na primeira vez que a folha for gerada.',

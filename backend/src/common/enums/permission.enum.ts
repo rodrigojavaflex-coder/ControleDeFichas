@@ -118,6 +118,8 @@ export enum Permission {
   FOLHA_LANCAMENTO_LIBERAR_CAPA = 'folha-lancamento:liberar-capa',
   /** Envia recibo da folha por WhatsApp na tela de Lançamento (individual). */
   FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP = 'folha-lancamento:enviar-recibo-whatsapp',
+  /** Gera arquivo XLSX de pagamento PagBank (lote fechado — RN-017). */
+  FOLHA_LANCAMENTO_GERAR_ARQUIVO_PAGAMENTO = 'folha-lancamento:gerar-arquivo-pagamento',
 
   // Folha — Controle (competência / folha_fechamento)
   FOLHA_FECHAMENTO_READ = 'folha-fechamento:read',
@@ -471,6 +473,10 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP,
       label: 'Enviar recibo por WhatsApp (lançamento — individual)',
+    },
+    {
+      key: Permission.FOLHA_LANCAMENTO_GERAR_ARQUIVO_PAGAMENTO,
+      label: 'Gerar arquivo de pagamento PagBank (XLSX)',
     },
   ],
   'Folha — Controle': [

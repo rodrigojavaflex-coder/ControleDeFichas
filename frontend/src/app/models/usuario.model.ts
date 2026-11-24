@@ -126,6 +126,7 @@ export enum Permission {
   FOLHA_LANCAMENTO_CONGELAR_CAPA = 'folha-lancamento:congelar-capa',
   FOLHA_LANCAMENTO_LIBERAR_CAPA = 'folha-lancamento:liberar-capa',
   FOLHA_LANCAMENTO_ENVIAR_RECIBO_WHATSAPP = 'folha-lancamento:enviar-recibo-whatsapp',
+  FOLHA_LANCAMENTO_GERAR_ARQUIVO_PAGAMENTO = 'folha-lancamento:gerar-arquivo-pagamento',
 
   FOLHA_FECHAMENTO_READ = 'folha-fechamento:read',
   FOLHA_FECHAMENTO_REGISTRAR_ABERTURA = 'folha-fechamento:registrar-abertura',

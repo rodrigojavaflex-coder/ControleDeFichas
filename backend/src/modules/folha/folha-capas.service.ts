@@ -3,9 +3,10 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { FolhaCapa } from './entities/folha-capa.entity';
 import { FolhaItem } from './entities/folha-item.entity';
 import { FolhaTipo } from './entities/folha-tipo.entity';
@@ -21,7 +22,14 @@ import { CreateFolhaItemDto } from './dto/create-folha-item.dto';
 import { UpdateFolhaItemDto } from './dto/update-folha-item.dto';
 import { FolhaMovimentoTipo } from '../../common/enums/folha-movimento-tipo.enum';
 import { CarregarFolhaCompetenciaDto } from './dto/carregar-folha-competencia.dto';
+import { GerarArquivoPagamentoDto } from './dto/gerar-arquivo-pagamento.dto';
 import { funcionarioElegivelNovaCapaNaCompetencia } from './utils/folha-competencia.util';
+import {
+  gerarWorkbookPagbankFolha,
+  LinhaPagamentoPagbank,
+  sanitizarNomeFavorecidoPagbank,
+  somenteDigitos,
+} from './utils/folha-pagbank-xlsx.util';
 
 /** Resposta útil ao frontend para totais e bloqueios */
 export interface FolhaCapaDetalheDto {
@@ -38,6 +46,8 @@ export interface FolhaCapaDetalheDto {
 
 @Injectable()
 export class FolhaCapasService {
+  private readonly logger = new Logger(FolhaCapasService.name);
+
   constructor(
     @InjectRepository(FolhaCapa)
     private readonly capaRepo: Repository<FolhaCapa>,
@@ -614,6 +624,141 @@ export class FolhaCapasService {
     if (!capa)
       throw new NotFoundException('Capa não encontrada após atualização.');
     return capa;
+  }
+
+  /**
+   * Gera XLSX PagBank (modelo v2.0) para capas selecionadas.
+   * Exige lote fechado (RN-017). Linhas inválidas (sem conta / líquido ≤ 0 / sem CPF/nome)
+   * são rejeitadas com 400 listando os nomes.
+   */
+  async gerarArquivoPagamentoXlsx(
+    usuario: Usuario,
+    dto: GerarArquivoPagamentoDto,
+  ): Promise<{ buffer: Buffer; fileName: string; quantidade: number }> {
+    assertUnidadeFolha(usuario, dto.unidade);
+
+    const uniqueIds = [...new Set(dto.capaIds)];
+    const capas = await this.capaRepo.find({
+      where: { id: In(uniqueIds) },
+      relations: [
+        'folhaTipo',
+        'funcionario',
+        'itens',
+        'itens.folhaVerba',
+      ],
+    });
+
+    if (capas.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        'Uma ou mais folhas selecionadas não foram encontradas.',
+      );
+    }
+
+    const primeira = capas[0];
+    const ano = primeira.ano;
+    const mes = primeira.mes;
+    const tipoId = primeira.folhaTipo?.id;
+    if (!tipoId) {
+      throw new BadRequestException('Tipo de folha inválido na capa.');
+    }
+
+    for (const c of capas) {
+      if (c.funcionario?.unidade !== dto.unidade) {
+        throw new BadRequestException(
+          `A folha de ${c.funcionario?.nome ?? c.id} não pertence à unidade informada.`,
+        );
+      }
+      if (
+        c.ano !== ano ||
+        c.mes !== mes ||
+        c.folhaTipo?.id !== tipoId
+      ) {
+        throw new BadRequestException(
+          'Todas as folhas selecionadas devem ser da mesma competência e tipo.',
+        );
+      }
+    }
+
+    await this.fechamentoSvc.assertLoteFechado(
+      dto.unidade,
+      ano,
+      mes,
+      tipoId,
+    );
+
+    const avisos: string[] = [];
+    const linhas: LinhaPagamentoPagbank[] = [];
+
+    const ordenadas = [...capas].sort((a, b) =>
+      String(a.funcionario?.nome ?? '').localeCompare(
+        String(b.funcionario?.nome ?? ''),
+        'pt-BR',
+      ),
+    );
+
+    for (const capa of ordenadas) {
+      const det = this.calcularDetalhe(capa);
+      const f = capa.funcionario;
+      const nome = f?.nome?.trim() || '—';
+      const problemas: string[] = [];
+
+      const banco = somenteDigitos(f?.bancoNumero);
+      const conta = somenteDigitos(f?.contaBancaria);
+      const digito = somenteDigitos(f?.digitoConta);
+      if (!banco || !conta || !digito) {
+        problemas.push('sem dados bancários (banco, conta e dígito)');
+      }
+
+      const cpf = somenteDigitos(f?.cpf);
+      if (!cpf) {
+        problemas.push('sem CPF');
+      }
+
+      const nomeFav = sanitizarNomeFavorecidoPagbank(f?.nome ?? '');
+      if (!nomeFav) {
+        problemas.push('nome inválido para o arquivo');
+      }
+
+      if (!(det.liquido > 0)) {
+        problemas.push(`líquido ${det.liquido <= 0 ? '≤ 0' : 'inválido'}`);
+      }
+
+      if (problemas.length > 0) {
+        avisos.push(`${nome}: ${problemas.join('; ')}`);
+        continue;
+      }
+
+      linhas.push({
+        bancoNumero: banco,
+        contaBancaria: conta,
+        digitoConta: digito,
+        nomeFavorecido: nomeFav,
+        cpfCnpj: cpf,
+        valor: det.liquido,
+      });
+    }
+
+    if (avisos.length > 0) {
+      throw new BadRequestException({
+        message:
+          'Não é possível gerar o arquivo com os funcionários selecionados. Corrija ou desmarque os avisados.',
+        avisos,
+      });
+    }
+
+    if (linhas.length === 0) {
+      throw new BadRequestException(
+        'Nenhum funcionário válido para gerar o arquivo de pagamento.',
+      );
+    }
+
+    const buffer = await gerarWorkbookPagbankFolha(linhas);
+    const mesPad = String(mes).padStart(2, '0');
+    const fileName = `folha-pagamento-${dto.unidade}-${ano}-${mesPad}.xlsx`;
+    this.logger.log(
+      `Arquivo PagBank gerado: ${fileName} (${linhas.length} linhas) por usuário ${usuario.id}`,
+    );
+    return { buffer, fileName, quantidade: linhas.length };
   }
 
   private calcularDetalhe(capa: FolhaCapa): FolhaCapaDetalheDto {

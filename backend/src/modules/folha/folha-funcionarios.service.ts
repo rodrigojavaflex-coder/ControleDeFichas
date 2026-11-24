@@ -104,6 +104,11 @@ export class FolhaFuncionariosService {
       naoReceberReciboWhatsapp: dto.naoReceberReciboWhatsapp ?? false,
       tipoPix: dto.tipoPix ?? null,
       chavePix: dto.chavePix?.trim() ? dto.chavePix.trim() : null,
+      bancoNumero: dto.bancoNumero?.trim() ? dto.bancoNumero.trim() : null,
+      contaBancaria: dto.contaBancaria?.trim()
+        ? dto.contaBancaria.trim()
+        : null,
+      digitoConta: dto.digitoConta?.trim() ? dto.digitoConta.trim() : null,
     };
     const entity = this.funcionarioRepo.create(payload as Funcionario);
     this.assertFuncionarioCamposObrigatorios(entity);
@@ -450,6 +455,21 @@ export class FolhaFuncionariosService {
     }
     if (dto.chavePix !== undefined) {
       entity.chavePix = dto.chavePix?.trim() ? dto.chavePix.trim() : null;
+    }
+    if (dto.bancoNumero !== undefined) {
+      entity.bancoNumero = dto.bancoNumero?.trim()
+        ? dto.bancoNumero.trim()
+        : null;
+    }
+    if (dto.contaBancaria !== undefined) {
+      entity.contaBancaria = dto.contaBancaria?.trim()
+        ? dto.contaBancaria.trim()
+        : null;
+    }
+    if (dto.digitoConta !== undefined) {
+      entity.digitoConta = dto.digitoConta?.trim()
+        ? dto.digitoConta.trim()
+        : null;
     }
     this.assertFuncionarioCamposObrigatorios(entity);
     await this.funcionarioRepo.save(entity);

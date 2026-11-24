@@ -246,6 +246,49 @@
             }
           </div>
         </div>
+
+        <div class="form-row form-row-3">
+          <div class="form-group">
+            <label class="form-label" for="ff-banco">Banco</label>
+            <input
+              id="ff-banco"
+              type="text"
+              class="form-control"
+              formControlName="bancoNumero"
+              maxlength="10"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Ex.: 290"
+            />
+            <div class="form-help">Código do banco (PagBank = 290). Somente números.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-conta">Conta</label>
+            <input
+              id="ff-conta"
+              type="text"
+              class="form-control"
+              formControlName="contaBancaria"
+              maxlength="20"
+              inputmode="numeric"
+              autocomplete="off"
+            />
+            <div class="form-help">Somente números.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ff-digito-conta">Dígito</label>
+            <input
+              id="ff-digito-conta"
+              type="text"
+              class="form-control"
+              formControlName="digitoConta"
+              maxlength="2"
+              inputmode="numeric"
+              autocomplete="off"
+            />
+            <div class="form-help">Somente números.</div>
+          </div>
+        </div>
       </section>
 
       <section

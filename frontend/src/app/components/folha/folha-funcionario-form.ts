@@ -47,6 +47,9 @@ interface FolhaFuncFormValue {
   participaFolhaPagamento: boolean;
   tipoPix: TipoChavePixFolha | null;
   chavePix: string;
+  bancoNumero: string;
+  contaBancaria: string;
+  digitoConta: string;
 }
 
 @Component({
@@ -222,6 +225,24 @@ export class FolhaFuncionarioFormComponent implements OnInit {
             (c: AbstractControl): ValidationErrors | null =>
               this.chavePixFormato(c),
           ],
+        ],
+        bancoNumero: [
+          '',
+          [
+            Validators.maxLength(10),
+            Validators.pattern(/^$|^\d+$/),
+          ],
+        ],
+        contaBancaria: [
+          '',
+          [
+            Validators.maxLength(20),
+            Validators.pattern(/^$|^\d+$/),
+          ],
+        ],
+        digitoConta: [
+          '',
+          [Validators.maxLength(2), Validators.pattern(/^$|^\d+$/)],
         ],
       },
       {
@@ -857,6 +878,9 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           naoReceberReciboWhatsapp: f.naoReceberReciboWhatsapp ?? false,
           tipoPix: tipo,
           chavePix: f.chavePix ?? '',
+          bancoNumero: f.bancoNumero ?? '',
+          contaBancaria: f.contaBancaria ?? '',
+          digitoConta: f.digitoConta ?? '',
         });
         this.aplicarLinhasEventoFixosDaApi(f.eventosFixos);
         this.loading = false;
@@ -889,6 +913,12 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       payload['tipoPix'] = null;
       payload['chavePix'] = null;
     }
+    const banco = (v.bancoNumero || '').trim();
+    payload['bancoNumero'] = banco || null;
+    const conta = (v.contaBancaria || '').trim();
+    payload['contaBancaria'] = conta || null;
+    const digito = (v.digitoConta || '').trim();
+    payload['digitoConta'] = digito || null;
     const cpf = v.cpf.trim();
     if (cpf) payload['cpf'] = cpf;
 

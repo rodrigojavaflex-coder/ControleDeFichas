@@ -12,6 +12,8 @@ import {
   HttpStatus,
   UseGuards,
   Req,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -19,13 +21,16 @@ import {
   ApiOperation,
   ApiTags,
   ApiQuery,
+  ApiProduces,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { FolhaCapasService } from './folha-capas.service';
 import { QueryFolhaCapaDto } from './dto/query-folha-capa.dto';
 import { CreateFolhaCapaDto } from './dto/create-folha-capa.dto';
 import { CreateFolhaItemDto } from './dto/create-folha-item.dto';
 import { UpdateFolhaItemDto } from './dto/update-folha-item.dto';
 import { CarregarFolhaCompetenciaDto } from './dto/carregar-folha-competencia.dto';
+import { GerarArquivoPagamentoDto } from './dto/gerar-arquivo-pagamento.dto';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permission } from '../../common/enums/permission.enum';
@@ -80,6 +85,31 @@ export class FolhaCapasController {
     @Req() req: { user: Usuario },
   ) {
     return this.service.carregarCompetenciaLancamento(req.user, dto);
+  }
+
+  @Post('gerar-arquivo-pagamento')
+  @Permissions(Permission.FOLHA_LANCAMENTO_GERAR_ARQUIVO_PAGAMENTO)
+  @HttpCode(HttpStatus.OK)
+  @ApiProduces(
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @ApiOperation({
+    summary:
+      'Gera XLSX PagBank (modelo folha v2.0) para capas selecionadas — exige lote fechado (RN-017)',
+  })
+  async gerarArquivoPagamento(
+    @Body() dto: GerarArquivoPagamentoDto,
+    @Req() req: { user: Usuario },
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.service.gerarArquivoPagamentoXlsx(req.user, dto);
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+    });
+    return new StreamableFile(buffer);
   }
 
   @Get()

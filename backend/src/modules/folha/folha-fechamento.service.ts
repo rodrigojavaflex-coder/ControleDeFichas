@@ -83,6 +83,33 @@ export class FolhaFechamentoService {
     }
   }
 
+  /** Exige competência registrada e lote fechado (ex.: arquivo de pagamento — RN-017). */
+  async assertLoteFechado(
+    unidade: Unidade,
+    ano: number,
+    mes: number,
+    tipoId: string,
+  ): Promise<void> {
+    const row = await this.fechamentoRepo.findOne({
+      where: {
+        unidade,
+        ano,
+        mes,
+        folhaTipo: { id: tipoId },
+      },
+    });
+    if (!row) {
+      throw new BadRequestException(
+        'Competência não registrada. Não é possível gerar o arquivo de pagamento.',
+      );
+    }
+    if (!row.fechado) {
+      throw new BadRequestException(
+        'O arquivo de pagamento só pode ser gerado com o lote fechado.',
+      );
+    }
+  }
+
   /** Registra abertura da competência (linha em `folha_fechamento` com `fechado = false`). */
   async registrarAbertura(
     unidade: Unidade,

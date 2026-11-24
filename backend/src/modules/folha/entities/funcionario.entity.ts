@@ -114,6 +114,31 @@ export class Funcionario extends BaseEntity {
   @Column({ type: 'varchar', length: 200, nullable: true })
   chavePix?: string | null;
 
+  @ApiProperty({
+    required: false,
+    maxLength: 10,
+    description: 'Código do banco (ex.: 290 PagBank) para arquivo de pagamento.',
+    example: '290',
+  })
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  bancoNumero?: string | null;
+
+  @ApiProperty({
+    required: false,
+    maxLength: 20,
+    description: 'Número da conta bancária (somente dígitos).',
+  })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  contaBancaria?: string | null;
+
+  @ApiProperty({
+    required: false,
+    maxLength: 2,
+    description: 'Dígito da conta bancária (somente dígitos).',
+  })
+  @Column({ type: 'varchar', length: 2, nullable: true })
+  digitoConta?: string | null;
+
   @ApiProperty({ default: true })
   @Column({ default: true })
   ativo: boolean;

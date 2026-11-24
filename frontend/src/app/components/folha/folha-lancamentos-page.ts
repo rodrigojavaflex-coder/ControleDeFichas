@@ -98,6 +98,15 @@ export class FolhaLancamentosPage implements OnInit {
   showLiberarCapaModal = false;
   showEnviarReciboWhatsappModal = false;
 
+  /** Capas marcadas para o arquivo de pagamento PagBank (RN-017). */
+  capasSelecionadasArquivo = new Set<string>();
+  gerandoArquivoPagamento = false;
+  showArquivoPagamentoAvisosModal = false;
+  arquivoPagamentoAvisosMensagem = '';
+  arquivoPagamentoAvisosDetalhes: string[] = [];
+  /** IDs válidos pendentes de confirmação após o modal de avisos. */
+  capaIdsArquivoPendentes: string[] = [];
+
   /** Modal de filtros do relatório Folha por Evento. */
   showFiltroRelatorioEventoModal = false;
   /** verbaId → incluir no relatório (padrão: todos true ao abrir o modal). */
@@ -1654,6 +1663,7 @@ export class FolhaLancamentosPage implements OnInit {
     this.fecharTodosModaisItem();
     this.detalhe = null;
     this.capasNaCompetencia = [];
+    this.limparSelecaoArquivoPagamento();
     this.statusLote = null;
     this.atualizarStatusInicial();
   }
@@ -1753,6 +1763,7 @@ export class FolhaLancamentosPage implements OnInit {
     msgs: { vazioAberta?: string; vazioFechada?: string },
   ): void {
     this.capasNaCompetencia = rows;
+    this.limparSelecaoArquivoPagamento();
     this.fecharTodosModaisItem();
     this.detalhe = null;
     this.carregando = false;
@@ -1821,18 +1832,47 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   ariaLabelListaCapa(row: FolhaCapaDetalheResponse): string {
-    return `${this.nomeParaCapa(row)}. Líquido ${this.moedaListaCapa(row.liquido)}`;
+    return `${this.nomeParaCapa(row)}. Líquido ${this.moedaListaCapa(row.liquido)}. Abrir folha`;
   }
 
-  /** Alterna a capa em edição no próprio card; segundo clique na mesma linha recolhe. */
-  selecionarCapaParaEdicao(row: FolhaCapaDetalheResponse): void {
-    if (this.detalhe?.capa.id === row.capa.id) {
-      this.detalhe = null;
-      this.fecharTodosModaisItem();
-      return;
-    }
+  /** Clique na linha abre o modal da folha (checkbox permanece só para seleção do arquivo). */
+  abrirModalFolhaCapa(row: FolhaCapaDetalheResponse, event?: Event): void {
+    event?.preventDefault();
     this.fecharTodosModaisItem();
     this.detalhe = row;
+  }
+
+  fecharModalFolhaCapa(): void {
+    this.fecharTodosModaisItem();
+    this.detalhe = null;
+  }
+
+  indiceCapaModalAtual(): number {
+    if (!this.detalhe) return -1;
+    return this.capasNaCompetencia.findIndex(
+      (c) => c.capa.id === this.detalhe!.capa.id,
+    );
+  }
+
+  podeIrParaCapaAnterior(): boolean {
+    return this.indiceCapaModalAtual() > 0;
+  }
+
+  podeIrParaProximaCapa(): boolean {
+    const i = this.indiceCapaModalAtual();
+    return i >= 0 && i < this.capasNaCompetencia.length - 1;
+  }
+
+  irParaCapaAnterior(): void {
+    const i = this.indiceCapaModalAtual();
+    if (i <= 0) return;
+    this.abrirModalFolhaCapa(this.capasNaCompetencia[i - 1]);
+  }
+
+  irParaProximaCapa(): void {
+    const i = this.indiceCapaModalAtual();
+    if (i < 0 || i >= this.capasNaCompetencia.length - 1) return;
+    this.abrirModalFolhaCapa(this.capasNaCompetencia[i + 1]);
   }
 
   private static quantidadeFormatadaInicial(q: unknown): string {
@@ -1856,7 +1896,7 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   capaEhSelecionadaNaGrade(row: FolhaCapaDetalheResponse): boolean {
-    return this.detalhe?.capa.id === row.capa.id;
+    return this.capaSelecionadaNoArquivo(row.capa.id);
   }
 
   private atualizarOuInserirCapaNaLista(d: FolhaCapaDetalheResponse): void {
@@ -2046,5 +2086,181 @@ export class FolhaLancamentosPage implements OnInit {
   private telefoneFuncionarioAtualValido(): boolean {
     const telefone = this.detalhe?.capa?.funcionario?.telefone?.trim();
     return !!telefone;
+  }
+
+  podeGerarArquivoPagamento(): boolean {
+    return this.auth.hasPermission(
+      Permission.FOLHA_LANCAMENTO_GERAR_ARQUIVO_PAGAMENTO,
+    );
+  }
+
+  desabilitarBotaoArquivoPagamento(): boolean {
+    if (this.gerandoArquivoPagamento) return true;
+    if (!this.podeGerarArquivoPagamento()) return true;
+    if (!this.statusLote?.registrada || !this.statusLote.fechado) return true;
+    if (!this.unidadeApi()) return true;
+    return this.capasSelecionadasArquivo.size === 0;
+  }
+
+  capaSelecionadaNoArquivo(capaId: string): boolean {
+    return this.capasSelecionadasArquivo.has(capaId);
+  }
+
+  todasCapasSelecionadasNoArquivo(): boolean {
+    if (this.capasNaCompetencia.length === 0) return false;
+    return this.capasNaCompetencia.every((r) =>
+      this.capasSelecionadasArquivo.has(r.capa.id),
+    );
+  }
+
+  alternarSelecaoCapaArquivo(capaId: string, event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+    const next = new Set(this.capasSelecionadasArquivo);
+    if (next.has(capaId)) next.delete(capaId);
+    else next.add(capaId);
+    this.capasSelecionadasArquivo = next;
+  }
+
+  alternarSelecaoTodasCapasArquivo(event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.todasCapasSelecionadasNoArquivo()) {
+      this.capasSelecionadasArquivo = new Set();
+      return;
+    }
+    this.capasSelecionadasArquivo = new Set(
+      this.capasNaCompetencia.map((r) => r.capa.id),
+    );
+  }
+
+  limparSelecaoArquivoPagamento(): void {
+    this.capasSelecionadasArquivo = new Set();
+  }
+
+  solicitarGerarArquivoPagamento(): void {
+    if (this.desabilitarBotaoArquivoPagamento()) return;
+    const selecionadas = this.capasNaCompetencia.filter((r) =>
+      this.capasSelecionadasArquivo.has(r.capa.id),
+    );
+    if (selecionadas.length === 0) {
+      this.errors.show('Selecione ao menos um funcionário.', 'Arquivo de pagamento');
+      return;
+    }
+
+    const avisos: string[] = [];
+    const validas: FolhaCapaDetalheResponse[] = [];
+    for (const row of selecionadas) {
+      const f = row.capa.funcionario;
+      const nome = f?.nome?.trim() || '—';
+      const problemas: string[] = [];
+      const banco = String(f?.bancoNumero ?? '').replace(/\D/g, '');
+      const conta = String(f?.contaBancaria ?? '').replace(/\D/g, '');
+      const digito = String(f?.digitoConta ?? '').replace(/\D/g, '');
+      if (!banco || !conta || !digito) {
+        problemas.push('sem dados bancários (banco, conta e dígito)');
+      }
+      const cpf = String(f?.cpf ?? '').replace(/\D/g, '');
+      if (!cpf) problemas.push('sem CPF');
+      if (!(Number(row.liquido) > 0)) {
+        problemas.push('líquido ≤ 0');
+      }
+      if (problemas.length > 0) {
+        avisos.push(`${nome}: ${problemas.join('; ')}`);
+      } else {
+        validas.push(row);
+      }
+    }
+
+    if (avisos.length > 0) {
+      this.arquivoPagamentoAvisosDetalhes = avisos;
+      this.capaIdsArquivoPendentes = validas.map((r) => r.capa.id);
+      if (validas.length === 0) {
+        this.arquivoPagamentoAvisosMensagem =
+          'Nenhum dos selecionados pode entrar no arquivo. Corrija o cadastro ou o líquido e tente novamente.';
+      } else {
+        this.arquivoPagamentoAvisosMensagem = `${avisos.length} funcionário(s) serão omitidos. Deseja gerar o arquivo apenas com os ${validas.length} válido(s)?`;
+      }
+      this.showArquivoPagamentoAvisosModal = true;
+      return;
+    }
+
+    this.executarGeracaoArquivoPagamento(validas.map((r) => r.capa.id));
+  }
+
+  confirmarArquivoPagamentoAvisosModal(): void {
+    const ids = [...this.capaIdsArquivoPendentes];
+    this.fecharArquivoPagamentoAvisosModal();
+    if (ids.length === 0) return;
+    this.executarGeracaoArquivoPagamento(ids);
+  }
+
+  fecharArquivoPagamentoAvisosModal(): void {
+    this.showArquivoPagamentoAvisosModal = false;
+    this.arquivoPagamentoAvisosMensagem = '';
+    this.arquivoPagamentoAvisosDetalhes = [];
+    this.capaIdsArquivoPendentes = [];
+  }
+
+  private executarGeracaoArquivoPagamento(capaIds: string[]): void {
+    const un = this.unidadeApi();
+    if (!un || capaIds.length === 0) return;
+    this.gerandoArquivoPagamento = true;
+    this.folha.gerarArquivoPagamento({ unidade: un, capaIds }).subscribe({
+      next: (blob) => {
+        this.gerandoArquivoPagamento = false;
+        const mesPad = String(this.mes).padStart(2, '0');
+        const fileName = `folha-pagamento-${un}-${this.ano}-${mesPad}.xlsx`;
+        this.baixarBlob(blob, fileName);
+        this.errors.show(
+          `Arquivo gerado com ${capaIds.length} funcionário(s).`,
+          'Arquivo de pagamento',
+        );
+      },
+      error: async (e: unknown) => {
+        this.gerandoArquivoPagamento = false;
+        const msg = await this.mensagemErroBlobOuJson(e);
+        this.errors.show(msg, 'Arquivo de pagamento');
+      },
+    });
+  }
+
+  private baixarBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private async mensagemErroBlobOuJson(e: unknown): Promise<string> {
+    const err = e as {
+      error?: Blob | { message?: string | string[]; avisos?: string[] };
+      message?: string;
+    };
+    if (err?.error instanceof Blob) {
+      try {
+        const text = await err.error.text();
+        const parsed = JSON.parse(text) as {
+          message?: string | string[];
+          avisos?: string[];
+        };
+        const base = Array.isArray(parsed.message)
+          ? parsed.message.join(' ')
+          : parsed.message || 'Erro ao gerar o arquivo.';
+        if (parsed.avisos?.length) {
+          return `${base}\n${parsed.avisos.join('\n')}`;
+        }
+        return base;
+      } catch {
+        return 'Erro ao gerar o arquivo de pagamento.';
+      }
+    }
+    const msg = (err?.error as { message?: string | string[] } | undefined)
+      ?.message;
+    if (Array.isArray(msg)) return msg.join(' ');
+    if (typeof msg === 'string') return msg;
+    return err?.message || 'Erro ao gerar o arquivo de pagamento.';
   }
 }

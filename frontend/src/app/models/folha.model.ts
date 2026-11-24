@@ -49,6 +49,10 @@ export interface FuncionarioFolha {
   naoReceberReciboWhatsapp?: boolean;
   tipoPix?: TipoChavePixFolha | null;
   chavePix?: string | null;
+  /** Código do banco (ex.: 290 PagBank) — arquivo de pagamento XLSX. */
+  bancoNumero?: string | null;
+  contaBancaria?: string | null;
+  digitoConta?: string | null;
   criadoEm: string;
   atualizadoEm: string;
   /** Eventos padrão copiados na primeira geração da capa mensal (RN-013). */
