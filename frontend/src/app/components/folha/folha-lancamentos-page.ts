@@ -1800,6 +1800,19 @@ export class FolhaLancamentosPage implements OnInit {
     return this.nomeFuncionario(row.capa.funcionario);
   }
 
+  /** Iniciais para o avatar do modal (1ª letra do 1º e do último nome). */
+  iniciaisNomeFuncionario(row: FolhaCapaDetalheResponse): string {
+    const partes = this.nomeParaCapa(row)
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (partes.length === 0) return '?';
+    if (partes.length === 1) return partes[0].slice(0, 2).toLocaleUpperCase('pt-BR');
+    const a = partes[0][0] ?? '';
+    const b = partes[partes.length - 1][0] ?? '';
+    return `${a}${b}`.toLocaleUpperCase('pt-BR');
+  }
+
   /**
    * Valores monetários na grade principal; evita `CurrencyPipe` (entradas string/omitidas pela API ficam vazias).
    */

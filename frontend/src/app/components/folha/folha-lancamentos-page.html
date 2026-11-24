@@ -248,21 +248,30 @@
       >
         <div class="modal-cabecalho folha-lancamentos-capa-modal-cabecalho">
           <div class="folha-lancamentos-capa-modal-cabecalho-main">
-            <h2 id="lac-capa-modal-title" class="folha-lancamentos-capa-modal-titulo">
-              {{ nomeParaCapa(detalhe) }}
-            </h2>
-            <div class="folha-lancamentos-capa-modal-meta" aria-label="Unidade, competência e cargo">
-              <span class="folha-lancamentos-card-func-meta-chip" title="Unidade">{{
-                detalhe.capa.funcionario.unidade
-              }}</span>
+            <div class="folha-lancamentos-capa-modal-identidade">
               <span
-                class="folha-lancamentos-card-func-meta-chip folha-lancamentos-card-func-meta-competencia"
-                title="Competência"
-                >{{ referenciaCompetencia }}</span
+                class="folha-lancamentos-capa-modal-avatar"
+                aria-hidden="true"
+                >{{ iniciaisNomeFuncionario(detalhe) }}</span
               >
-              <span class="folha-lancamentos-card-func-meta-chip" title="Cargo">{{
-                detalhe.capa.funcionario.cargo?.descricao?.trim() || '—'
-              }}</span>
+              <div class="folha-lancamentos-capa-modal-identidade-texto">
+                <h2 id="lac-capa-modal-title" class="folha-lancamentos-capa-modal-titulo">
+                  {{ nomeParaCapa(detalhe) }}
+                </h2>
+                <div class="folha-lancamentos-capa-modal-meta" aria-label="Unidade, competência e cargo">
+                  <span class="folha-lancamentos-card-func-meta-chip" title="Unidade">{{
+                    detalhe.capa.funcionario.unidade
+                  }}</span>
+                  <span
+                    class="folha-lancamentos-card-func-meta-chip folha-lancamentos-card-func-meta-competencia"
+                    title="Competência"
+                    >{{ referenciaCompetencia }}</span
+                  >
+                  <span class="folha-lancamentos-card-func-meta-chip" title="Cargo">{{
+                    detalhe.capa.funcionario.cargo?.descricao?.trim() || '—'
+                  }}</span>
+                </div>
+              </div>
             </div>
           </div>
           <button
@@ -276,6 +285,19 @@
           </button>
         </div>
         <div class="modal-corpo folha-lancamentos-capa-modal-corpo">
+          @if (detalhe.capa.congelada && !loteFechadoParaCompetencia()) {
+            <div class="alert alert-warning folha-lancamentos-capa-congelada-msg" role="status">
+              Folha <strong>congelada</strong> — não é possível alterar eventos nem o cadastro do funcionário até
+              <strong>Liberar</strong>.
+            </div>
+          }
+          @if (!capaElegivelCarregar(detalhe) && !loteFechadoParaCompetencia()) {
+            <div class="alert alert-warning folha-lancamentos-capa-fora-elegibilidade-msg" role="status">
+              Folha <strong>fora do carregamento automático</strong> (funcionário inativo ou inelegível nesta competência).
+              Visualize os eventos e use <strong>Excluir</strong> para remover esta capa do lote, se aplicável.
+            </div>
+          }
+
           <div class="folha-lancamentos-func-grid-totais-wrap">
             <div class="folha-lancamentos-func-grid-scroll folha-lancamentos-mov-colunas-duplex">
               <div
@@ -290,11 +312,12 @@
                     @if (podeIncluirEventoPorModal()) {
                       <button
                         type="button"
-                        class="btn btn-sm btn-novo"
+                        class="btn btn-sm btn-novo folha-lancamentos-capa-modal-btn-add"
                         [disabled]="carregando || salvandoModalLancamento"
                         (click)="abrirModalInclusao(FolhaMovimentoTipo.RECEITA)"
                       >
-                        Incluir
+                        <i class="fas fa-plus" aria-hidden="true"></i>
+                        Adicionar Receita
                       </button>
                     }
                   </div>
@@ -313,45 +336,53 @@
                         <div class="folha-lancamentos-ev-col-acoes">
                           <div class="folha-lancamentos-func-acoes-buttons" role="group" aria-label="Ações do lançamento">
                             @if (podeBotaoEditarItem()) {
-                              <button type="button" class="btn btn-sm btn-editar" (click)="abrirModalEdicaoItem(it)">
-                                Editar
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-editar folha-lancamentos-capa-modal-btn-icone"
+                                (click)="abrirModalEdicaoItem(it)"
+                                title="Editar"
+                                aria-label="Editar lançamento"
+                              >
+                                <i class="fas fa-pen" aria-hidden="true"></i>
                               </button>
                             }
                             @if (podeAuditarLinhaEvento()) {
                               <button
                                 type="button"
-                                class="btn btn-sm btn-auditoria"
+                                class="btn btn-sm btn-auditoria folha-lancamentos-capa-modal-btn-icone"
                                 (click)="abrirAuditoriaFolhaItem(it.id)"
                                 title="Histórico de alterações deste lançamento"
+                                aria-label="Auditoria do lançamento"
                               >
-                                Auditoria
+                                <i class="fas fa-history" aria-hidden="true"></i>
                               </button>
                             }
                             @if (podeRemoverItem()) {
-                              <button type="button" class="btn btn-sm btn-excluir" (click)="solicitarRemoverItem(it.id)">Remover</button>
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-excluir folha-lancamentos-capa-modal-btn-icone"
+                                (click)="solicitarRemoverItem(it.id)"
+                                title="Remover"
+                                aria-label="Remover lançamento"
+                              >
+                                <i class="fas fa-trash" aria-hidden="true"></i>
+                              </button>
                             }
                           </div>
                         </div>
                       }
                     </div>
                   }
-                  <div class="folha-lancamentos-mov-panel-total-divider" aria-hidden="true"></div>
-                  <div
-                    class="folha-lancamentos-evento-linha folha-lancamentos-evento-linha--total folha-lancamentos-evento-linha--total-receitas"
-                    role="status"
-                    [attr.aria-label]="'Total de receitas desta folha: ' + moedaListaCapa(detalhe.totalReceitas)"
-                  >
-                    <div class="folha-lancamentos-ev-col-ev folha-lancamentos-ev-col-ev--linha-total">
-                      <span class="folha-lancamentos-painel-total-rotulo">Receita total</span>
-                    </div>
-                    <div class="folha-lancamentos-ev-col-ref folha-lancamentos-ev-col-ref--linha-total" aria-hidden="true">—</div>
-                    <div class="folha-lancamentos-ev-col-valor folha-lancamentos-ev-col-valor--linha-total">{{
-                      moedaListaCapa(detalhe.totalReceitas)
-                    }}</div>
-                    @if (mostrarColunaAcoesLinha()) {
-                      <div class="folha-lancamentos-ev-col-acoes folha-lancamentos-ev-col-acoes--total-empty" aria-hidden="true"></div>
-                    }
-                  </div>
+                </div>
+                <div
+                  class="folha-lancamentos-mov-panel-rodape folha-lancamentos-mov-panel-rodape--receitas"
+                  role="status"
+                  [attr.aria-label]="'Total de receitas desta folha: ' + moedaListaCapa(detalhe.totalReceitas)"
+                >
+                  <span class="folha-lancamentos-painel-total-rotulo">Receita total</span>
+                  <span class="folha-lancamentos-mov-panel-rodape-valor">{{
+                    moedaListaCapa(detalhe.totalReceitas)
+                  }}</span>
                 </div>
               </div>
 
@@ -367,11 +398,12 @@
                     @if (podeIncluirEventoPorModal()) {
                       <button
                         type="button"
-                        class="btn btn-sm btn-novo"
+                        class="btn btn-sm btn-novo folha-lancamentos-capa-modal-btn-add"
                         [disabled]="carregando || salvandoModalLancamento"
                         (click)="abrirModalInclusao(FolhaMovimentoTipo.DESPESA)"
                       >
-                        Incluir
+                        <i class="fas fa-plus" aria-hidden="true"></i>
+                        Adicionar Despesa
                       </button>
                     }
                   </div>
@@ -390,81 +422,69 @@
                         <div class="folha-lancamentos-ev-col-acoes">
                           <div class="folha-lancamentos-func-acoes-buttons" role="group" aria-label="Ações do lançamento">
                             @if (podeBotaoEditarItem()) {
-                              <button type="button" class="btn btn-sm btn-editar" (click)="abrirModalEdicaoItem(it)">
-                                Editar
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-editar folha-lancamentos-capa-modal-btn-icone"
+                                (click)="abrirModalEdicaoItem(it)"
+                                title="Editar"
+                                aria-label="Editar lançamento"
+                              >
+                                <i class="fas fa-pen" aria-hidden="true"></i>
                               </button>
                             }
                             @if (podeAuditarLinhaEvento()) {
                               <button
                                 type="button"
-                                class="btn btn-sm btn-auditoria"
+                                class="btn btn-sm btn-auditoria folha-lancamentos-capa-modal-btn-icone"
                                 (click)="abrirAuditoriaFolhaItem(it.id)"
                                 title="Histórico de alterações deste lançamento"
+                                aria-label="Auditoria do lançamento"
                               >
-                                Auditoria
+                                <i class="fas fa-history" aria-hidden="true"></i>
                               </button>
                             }
                             @if (podeRemoverItem()) {
-                              <button type="button" class="btn btn-sm btn-excluir" (click)="solicitarRemoverItem(it.id)">Remover</button>
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-excluir folha-lancamentos-capa-modal-btn-icone"
+                                (click)="solicitarRemoverItem(it.id)"
+                                title="Remover"
+                                aria-label="Remover lançamento"
+                              >
+                                <i class="fas fa-trash" aria-hidden="true"></i>
+                              </button>
                             }
                           </div>
                         </div>
                       }
                     </div>
                   }
-                  <div class="folha-lancamentos-mov-panel-total-divider" aria-hidden="true"></div>
-                  <div
-                    class="folha-lancamentos-evento-linha folha-lancamentos-evento-linha--total folha-lancamentos-evento-linha--total-despesas"
-                    role="status"
-                    [attr.aria-label]="'Total de despesas desta folha: ' + moedaListaCapa(detalhe.totalDespesas)"
-                  >
-                    <div class="folha-lancamentos-ev-col-ev folha-lancamentos-ev-col-ev--linha-total">
-                      <span class="folha-lancamentos-painel-total-rotulo">Despesa total</span>
-                    </div>
-                    <div class="folha-lancamentos-ev-col-ref folha-lancamentos-ev-col-ref--linha-total" aria-hidden="true">—</div>
-                    <div class="folha-lancamentos-ev-col-valor folha-lancamentos-ev-col-valor--linha-total">{{
-                      moedaListaCapa(detalhe.totalDespesas)
-                    }}</div>
-                    @if (mostrarColunaAcoesLinha()) {
-                      <div class="folha-lancamentos-ev-col-acoes folha-lancamentos-ev-col-acoes--total-empty" aria-hidden="true"></div>
-                    }
-                  </div>
+                </div>
+                <div
+                  class="folha-lancamentos-mov-panel-rodape folha-lancamentos-mov-panel-rodape--despesas"
+                  role="status"
+                  [attr.aria-label]="'Total de despesas desta folha: ' + moedaListaCapa(detalhe.totalDespesas)"
+                >
+                  <span class="folha-lancamentos-painel-total-rotulo">Despesa total</span>
+                  <span class="folha-lancamentos-mov-panel-rodape-valor">{{
+                    moedaListaCapa(detalhe.totalDespesas)
+                  }}</span>
                 </div>
               </div>
             </div>
+
             <aside
               class="folha-lancamentos-itens-totais folha-lancamentos-itens-totais--vertical"
               role="group"
-              aria-label="Totais e congelamento da folha"
+              aria-label="Totais e ações da folha"
             >
-              @if (detalhe.capa.congelada && !loteFechadoParaCompetencia()) {
-                <div class="alert alert-warning folha-lancamentos-capa-congelada-msg" role="status">
-                  Folha <strong>congelada</strong> — não é possível alterar eventos nem o cadastro do funcionário até
-                  <strong>Liberar</strong>.
-                </div>
-              }
-              @if (!capaElegivelCarregar(detalhe) && !loteFechadoParaCompetencia()) {
-                <div class="alert alert-warning folha-lancamentos-capa-fora-elegibilidade-msg" role="status">
-                  Folha <strong>fora do carregamento automático</strong> (funcionário inativo ou inelegível nesta competência).
-                  Visualize os eventos e use <strong>Excluir</strong> para remover esta capa do lote, se aplicável.
-                </div>
-              }
+              <div class="folha-lancamentos-itens-total-linha folha-lancamentos-itens-total-liquido">
+                <span class="folha-lancamentos-itens-total-rotulo">Líquido</span>
+                <span class="folha-lancamentos-itens-total-valor">{{
+                  moedaListaCapa(detalhe.liquido)
+                }}</span>
+              </div>
               <div class="folha-lancamentos-itens-congelar-slot">
-                @if (podeExcluirCapa()) {
-                  <button
-                    type="button"
-                    class="btn btn-excluir folha-lancamentos-btn-excluir-capa"
-                    [disabled]="excluindoCapa"
-                    (click)="solicitarExcluirCapa()"
-                    title="Excluir esta folha e todos os eventos lançados (lote aberto)"
-                  >
-                    @if (excluindoCapa) {
-                      Excluindo…
-                    } @else {
-                      Excluir
-                    }
-                  </button>
-                }
                 @if (podeImprimirRelatorioCapa()) {
                   <button
                     type="button"
@@ -472,7 +492,8 @@
                     (click)="imprimirRelatorioCapaFolha()"
                     title="Abrir recibo de pagamento para impressão ou PDF"
                   >
-                    Recibo
+                    <i class="fas fa-file-alt" aria-hidden="true"></i>
+                    Gerar Recibo
                   </button>
                 }
                 @if (podeCongelarCapa()) {
@@ -486,7 +507,8 @@
                     @if (salvandoCongelacaoCapa) {
                       Salvando…
                     } @else {
-                      Congelar
+                      <i class="fas fa-lock" aria-hidden="true"></i>
+                      Congelar Lançamentos
                     }
                   </button>
                 } @else if (podeLiberarCapa()) {
@@ -500,6 +522,7 @@
                     @if (salvandoCongelacaoCapa) {
                       Salvando…
                     } @else {
+                      <i class="fas fa-unlock" aria-hidden="true"></i>
                       Liberar
                     }
                   </button>
@@ -515,16 +538,27 @@
                     @if (enviandoReciboWhatsapp) {
                       Enviando...
                     } @else {
+                      <i class="fab fa-whatsapp" aria-hidden="true"></i>
                       Enviar recibo
                     }
                   </button>
                 }
-              </div>
-              <div class="folha-lancamentos-itens-total-linha folha-lancamentos-itens-total-liquido">
-                <span class="folha-lancamentos-itens-total-rotulo">Líquido</span>
-                <span class="folha-lancamentos-itens-total-valor">{{
-                  moedaListaCapa(detalhe.liquido)
-                }}</span>
+                @if (podeExcluirCapa()) {
+                  <button
+                    type="button"
+                    class="btn btn-excluir folha-lancamentos-btn-excluir-capa"
+                    [disabled]="excluindoCapa"
+                    (click)="solicitarExcluirCapa()"
+                    title="Excluir esta folha e todos os eventos lançados (lote aberto)"
+                  >
+                    @if (excluindoCapa) {
+                      Excluindo…
+                    } @else {
+                      <i class="fas fa-trash" aria-hidden="true"></i>
+                      Excluir Folha
+                    }
+                  </button>
+                }
               </div>
             </aside>
           </div>
@@ -533,21 +567,23 @@
           <div class="folha-lancamentos-capa-modal-nav">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-secondary folha-lancamentos-capa-modal-btn-nav"
               [disabled]="!podeIrParaCapaAnterior()"
               (click)="irParaCapaAnterior()"
               title="Funcionário anterior"
             >
+              <i class="fas fa-arrow-left" aria-hidden="true"></i>
               Anterior
             </button>
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-secondary folha-lancamentos-capa-modal-btn-nav"
               [disabled]="!podeIrParaProximaCapa()"
               (click)="irParaProximaCapa()"
               title="Próximo funcionário"
             >
               Próximo
+              <i class="fas fa-arrow-right" aria-hidden="true"></i>
             </button>
           </div>
           <button type="button" class="btn btn-cancelar" (click)="fecharModalFolhaCapa()">Fechar</button>
@@ -560,6 +596,8 @@
     <div class="folha-lancamentos-item-modal-backdrop" role="presentation">
       <div
         class="folha-lancamentos-item-modal"
+        [class.folha-lancamentos-item-modal--receita]="modalInclusaoTipo === FolhaMovimentoTipo.RECEITA"
+        [class.folha-lancamentos-item-modal--despesa]="modalInclusaoTipo === FolhaMovimentoTipo.DESPESA"
         role="dialog"
         aria-modal="true"
         aria-labelledby="lac-modal-inc-title"
@@ -658,6 +696,8 @@
     <div class="folha-lancamentos-item-modal-backdrop" role="presentation">
       <div
         class="folha-lancamentos-item-modal"
+        [class.folha-lancamentos-item-modal--receita]="modalEdicaoMovimentoTipo === FolhaMovimentoTipo.RECEITA"
+        [class.folha-lancamentos-item-modal--despesa]="modalEdicaoMovimentoTipo === FolhaMovimentoTipo.DESPESA"
         role="dialog"
         aria-modal="true"
         aria-labelledby="lac-modal-edit-title"

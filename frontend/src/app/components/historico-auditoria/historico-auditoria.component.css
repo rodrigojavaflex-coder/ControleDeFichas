@@ -1,10 +1,28 @@
+/*
+ * Host sobe a camada quando aberto: evita ficar atrás de overlays de página
+ * (capa 11000, item 12000, confirmação 12500) por stacking context do ancestral.
+ */
+:host.historico-auditoria-host--open {
+  position: fixed;
+  inset: 0;
+  z-index: 14000;
+  display: block;
+  pointer-events: none;
+}
+
+:host.historico-auditoria-host--open .historico-auditoria-modal,
+:host.historico-auditoria-host--open .historico-auditoria-overlay,
+:host.historico-auditoria-host--open .historico-auditoria-content {
+  pointer-events: auto;
+}
+
 .historico-auditoria-modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 1000;
+  z-index: 14000;
   display: flex;
   align-items: center;
   justify-content: center;

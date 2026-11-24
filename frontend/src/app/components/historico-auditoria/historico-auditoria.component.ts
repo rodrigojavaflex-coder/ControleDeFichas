@@ -20,6 +20,9 @@ export interface HistoricoAuditoriaItem extends Auditoria {
   selector: 'app-historico-auditoria',
   standalone: true,
   imports: [CommonModule, AuditoriaDadosViewComponent],
+  host: {
+    '[class.historico-auditoria-host--open]': 'showModal',
+  },
   template: `
     <div class="historico-auditoria-modal" *ngIf="showModal">
       <div class="historico-auditoria-overlay" (click)="closeModal()"></div>
