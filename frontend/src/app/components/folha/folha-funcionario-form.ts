@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -73,6 +73,15 @@ export class FolhaFuncionarioFormComponent implements OnInit {
   private pageCtx = inject(PageContextService);
   private auth = inject(AuthService);
 
+  /**
+   * Quando true, o form roda embutido (ex.: modal em Lançamentos): não navega nem altera PageContext.
+   */
+  @Input() embedInModal = false;
+  /** Id do funcionário ao abrir em modo embed (edição/visualização). */
+  @Input() embedFuncionarioId: string | null = null;
+  /** Emitido ao fechar no modo embed (`saved` indica se houve PATCH/POST bem-sucedido). */
+  @Output() closed = new EventEmitter<{ saved: boolean }>();
+
   form: FormGroup;
   isEditMode = false;
   funcionarioId?: string;
@@ -80,6 +89,8 @@ export class FolhaFuncionarioFormComponent implements OnInit {
   isSubmitting = false;
   error: string | null = null;
   entidade: FuncionarioFolha | null = null;
+  /** Somente leitura: tem `folha-funcionario:read` sem `:update` (modo embed). */
+  somenteLeitura = false;
 
   Unidade = Unidade;
   unidades = Object.values(Unidade);
@@ -258,7 +269,6 @@ export class FolhaFuncionarioFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.aplicarFiltroUnidadeRetornoDaQuery();
-    const id = this.route.snapshot.paramMap.get('id');
     this.applyUnidadeFromUsuario();
 
     this.form.get('tipoPix')?.valueChanges.subscribe(() => {
@@ -269,6 +279,12 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       this.form.updateValueAndValidity({ emitEvent: false });
     });
 
+    if (this.embedInModal) {
+      this.iniciarModoEmbed();
+      return;
+    }
+
+    const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.isEditMode = true;
       this.funcionarioId = id;
@@ -309,6 +325,27 @@ export class FolhaFuncionarioFormComponent implements OnInit {
     });
   }
 
+  private iniciarModoEmbed(): void {
+    const id = this.embedFuncionarioId?.trim() ?? '';
+    if (!id) {
+      this.errors.show('Funcionário não informado.', 'Cadastro');
+      this.fecharEmbed(false);
+      return;
+    }
+    if (!this.auth.hasPermission(Permission.FOLHA_FUNCIONARIO_READ)) {
+      this.errors.show(
+        'Você não possui permissão para visualizar o cadastro.',
+        'Acesso negado',
+      );
+      this.fecharEmbed(false);
+      return;
+    }
+    this.isEditMode = true;
+    this.funcionarioId = id;
+    this.somenteLeitura = !this.auth.hasPermission(Permission.FOLHA_FUNCIONARIO_UPDATE);
+    this.carregarOpcoesCatalogo(() => this.loadFuncionario(id));
+  }
+
   private aplicarFiltroUnidadeRetornoDaQuery(): void {
     const q = this.route.snapshot.queryParamMap.get('unidade')?.trim();
     if (q && this.unidades.includes(q as Unidade)) {
@@ -316,11 +353,19 @@ export class FolhaFuncionarioFormComponent implements OnInit {
     }
   }
 
-  private voltarParaLista(): void {
+  private voltarParaLista(saved = false): void {
+    if (this.embedInModal) {
+      this.fecharEmbed(saved);
+      return;
+    }
     const queryParams = this.filtroUnidadeRetorno
       ? { unidade: this.filtroUnidadeRetorno }
       : {};
     void this.router.navigate(['/folha/funcionarios'], { queryParams });
+  }
+
+  private fecharEmbed(saved: boolean): void {
+    this.closed.emit({ saved });
   }
 
   get nomeCtrl() {
@@ -883,12 +928,18 @@ export class FolhaFuncionarioFormComponent implements OnInit {
           digitoConta: f.digitoConta ?? '',
         });
         this.aplicarLinhasEventoFixosDaApi(f.eventosFixos);
+        if (this.somenteLeitura) {
+          this.form.disable({ emitEvent: false });
+        }
         this.loading = false;
       },
       error: () => {
         this.loading = false;
         this.error = 'Erro ao carregar funcionário.';
         this.errors.show(this.error!, 'Erro');
+        if (this.embedInModal) {
+          this.fecharEmbed(false);
+        }
       },
     });
   }
@@ -995,6 +1046,7 @@ export class FolhaFuncionarioFormComponent implements OnInit {
   }
 
   onSubmit(): void {
+    if (this.somenteLeitura) return;
     if (this.form.invalid || this.isSubmitting) {
       if (this.form.invalid) this.form.markAllAsTouched();
       return;
@@ -1013,14 +1065,14 @@ export class FolhaFuncionarioFormComponent implements OnInit {
     if (this.isEditMode && this.funcionarioId) {
       this.folha.patchFuncionario(this.funcionarioId, body).subscribe({
         next: () => {
-          void this.voltarParaLista();
+          void this.voltarParaLista(true);
         },
         error: (e: { error?: { message?: string } }) => this.handleSaveErr(e),
       });
       return;
     }
     this.folha.criarFuncionario(body as { unidade: Unidade }).subscribe({
-      next: () => void this.voltarParaLista(),
+      next: () => void this.voltarParaLista(true),
       error: (e: { error?: { message?: string } }) => this.handleSaveErr(e),
     });
   }
@@ -1033,6 +1085,6 @@ export class FolhaFuncionarioFormComponent implements OnInit {
   }
 
   onCancel(): void {
-    void this.voltarParaLista();
+    void this.voltarParaLista(false);
   }
 }

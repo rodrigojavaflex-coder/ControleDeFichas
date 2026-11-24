@@ -18,6 +18,7 @@ import { Permission, Unidade } from '../../models/usuario.model';
 import { nomeMesPt } from './folha-meses';
 import { HistoricoAuditoriaComponent } from '../historico-auditoria/historico-auditoria.component';
 import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal';
+import { FolhaFuncionarioFormComponent } from './folha-funcionario-form';
 import { ConfiguracaoService } from '../../services/configuracao.service';
 import { Configuracao } from '../../models/configuracao.model';
 import { environment } from '../../../environments/environment';
@@ -30,6 +31,7 @@ import { environment } from '../../../environments/environment';
     FormsModule,
     HistoricoAuditoriaComponent,
     ConfirmationModalComponent,
+    FolhaFuncionarioFormComponent,
   ],
   templateUrl: './folha-lancamentos-page.html',
 })
@@ -250,12 +252,75 @@ export class FolhaLancamentosPage implements OnInit {
     };
   }
 
+  /** Modal de cadastro do funcionário aberto a partir da grid (embed). */
+  modalFuncionarioId: string | null = null;
+  modalFuncionarioNome: string | null = null;
+
   /** Histórico de alterações por `folha_item` (alinha auditoria gravada como `folha_item` na API). */
   podeAuditarLinhaEvento(): boolean {
     return (
       this.auth.hasPermission(Permission.AUDIT_VIEW) ||
       this.auth.hasPermission(Permission.FOLHA_LANCAMENTO_READ)
     );
+  }
+
+  /** Abrir cadastro do funcionário a partir da lista (exige `folha-funcionario:read`). */
+  podeAbrirCadastroFuncionario(): boolean {
+    return this.auth.hasPermission(Permission.FOLHA_FUNCIONARIO_READ);
+  }
+
+  podeEditarCadastroFuncionario(): boolean {
+    return this.auth.hasPermission(Permission.FOLHA_FUNCIONARIO_UPDATE);
+  }
+
+  tituloModalCadastroFuncionario(): string {
+    const nome = (this.modalFuncionarioNome ?? '').trim() || '—';
+    return this.podeEditarCadastroFuncionario()
+      ? `Editando Funcionário: ${nome}`
+      : `Ver Funcionário: ${nome}`;
+  }
+
+  abrirModalCadastroFuncionario(row: FolhaCapaDetalheResponse, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!this.podeAbrirCadastroFuncionario()) return;
+    const id = row.capa.funcionario?.id?.trim();
+    if (!id) {
+      this.errors.show('Funcionário da capa sem identificador.', 'Cadastro');
+      return;
+    }
+    this.fecharTodosModaisItem();
+    this.modalFuncionarioNome = this.nomeParaCapa(row);
+    this.modalFuncionarioId = id;
+  }
+
+  fecharModalCadastroFuncionario(_ev?: { saved: boolean }): void {
+    this.modalFuncionarioId = null;
+    this.modalFuncionarioNome = null;
+    this.recarregarListaCapasAposCadastroFuncionario();
+  }
+
+  /** Recarrega capas da competência (aberto = POST; fechado = GET) para refletir banco/conta/etc. */
+  private recarregarListaCapasAposCadastroFuncionario(): void {
+    const un = this.unidadeApi();
+    if (!un || !this.tipoId?.trim() || !this.statusLote?.registrada) return;
+    this.carregando = true;
+    this.dispatchCargaCapaDepoisDoStatus(un);
+  }
+
+  textoBancoLista(row: FolhaCapaDetalheResponse): string {
+    const v = String(row.capa.funcionario?.bancoNumero ?? '').trim();
+    return v || '—';
+  }
+
+  textoContaLista(row: FolhaCapaDetalheResponse): string {
+    const v = String(row.capa.funcionario?.contaBancaria ?? '').trim();
+    return v || '—';
+  }
+
+  textoDigitoContaLista(row: FolhaCapaDetalheResponse): string {
+    const v = String(row.capa.funcionario?.digitoConta ?? '').trim();
+    return v || '—';
   }
 
   /** Competência com lote aberto e capa expandida não congelada (edição de eventos). */

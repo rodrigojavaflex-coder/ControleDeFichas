@@ -183,6 +183,10 @@
               />
             </span>
             <span class="folha-lancamentos-func-col-nome">Funcionário</span>
+            <span class="folha-lancamentos-func-col-banco">Banco</span>
+            <span class="folha-lancamentos-func-col-conta">Conta</span>
+            <span class="folha-lancamentos-func-col-digito">Dígito</span>
+            <span class="folha-lancamentos-func-col-spacer" aria-hidden="true"></span>
             <span class="folha-lancamentos-func-col-qtd">Qtd</span>
             <span class="folha-lancamentos-func-col-num">Receitas</span>
             <span class="folha-lancamentos-func-col-num">Despesas</span>
@@ -215,7 +219,20 @@
                   />
                 </span>
                 <span class="folha-lancamentos-func-col-nome">
-                  {{ nomeParaCapa(row) }}
+                  <span class="folha-lancamentos-func-nome-linha">
+                    <span class="folha-lancamentos-func-nome-texto">{{ nomeParaCapa(row) }}</span>
+                    @if (podeAbrirCadastroFuncionario()) {
+                      <a
+                        href="#"
+                        class="folha-lancamentos-func-link-cadastro"
+                        (click)="abrirModalCadastroFuncionario(row, $event)"
+                        title="Abrir cadastro do funcionário"
+                        [attr.aria-label]="'Cadastro de ' + nomeParaCapa(row)"
+                      >
+                        Ver Funcionário
+                      </a>
+                    }
+                  </span>
                   @if (!capaElegivelCarregar(row)) {
                     <span class="folha-lancamentos-capa-chip-fora-elegibilidade" title="Fora do Carregar automático (ex.: inativo ou demissão posterior à competência). Use Excluir se a folha não deve constar no lote.">
                       Fora do carregamento
@@ -225,6 +242,16 @@
                     <span class="folha-lancamentos-capa-chip-congelada" title="Folha congelada">Congelada</span>
                   }
                 </span>
+                <span class="folha-lancamentos-func-col-banco" [title]="textoBancoLista(row)">{{
+                  textoBancoLista(row)
+                }}</span>
+                <span class="folha-lancamentos-func-col-conta" [title]="textoContaLista(row)">{{
+                  textoContaLista(row)
+                }}</span>
+                <span class="folha-lancamentos-func-col-digito" [title]="textoDigitoContaLista(row)">{{
+                  textoDigitoContaLista(row)
+                }}</span>
+                <span class="folha-lancamentos-func-col-spacer" aria-hidden="true"></span>
                 <span class="folha-lancamentos-func-col-qtd">1</span>
                 <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(row.totalReceitas) }}</span>
                 <span class="folha-lancamentos-func-col-num">{{ moedaListaCapa(row.totalDespesas) }}</span>
@@ -250,6 +277,10 @@
           >
             <span class="folha-lancamentos-func-col-check" aria-hidden="true"></span>
             <span class="folha-lancamentos-func-col-nome folha-lancamentos-func-totais-rotulo">Total</span>
+            <span class="folha-lancamentos-func-col-banco" aria-hidden="true"></span>
+            <span class="folha-lancamentos-func-col-conta" aria-hidden="true"></span>
+            <span class="folha-lancamentos-func-col-digito" aria-hidden="true"></span>
+            <span class="folha-lancamentos-func-col-spacer" aria-hidden="true"></span>
             <span class="folha-lancamentos-func-col-qtd folha-lancamentos-func-totais-qtd">{{
               quantidadeFuncionariosLista()
             }}</span>
@@ -800,6 +831,54 @@
             {{ salvandoModalLancamento ? 'Salvando…' : 'Salvar' }}
           </button>
         </footer>
+      </div>
+    </div>
+  }
+
+  @if (modalFuncionarioId) {
+    <div
+      class="modal-overlay nao-clicavel folha-lancamentos-func-cadastro-modal-overlay"
+      role="presentation"
+    >
+      <div
+        class="modal-conteudo folha-lancamentos-func-cadastro-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lac-func-cadastro-title"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="modal-cabecalho folha-lancamentos-func-cadastro-modal-cabecalho">
+          <div class="folha-lancamentos-func-cadastro-modal-cabecalho-textos">
+            <h2
+              id="lac-func-cadastro-title"
+              class="folha-lancamentos-func-cadastro-modal-titulo"
+              [title]="tituloModalCadastroFuncionario()"
+            >
+              {{ tituloModalCadastroFuncionario() }}
+            </h2>
+            @if (!podeEditarCadastroFuncionario()) {
+              <p class="folha-lancamentos-func-cadastro-modal-subtitulo">
+                Somente visualização — sem permissão para editar.
+              </p>
+            }
+          </div>
+          <button
+            type="button"
+            class="modal-fechar"
+            (click)="fecharModalCadastroFuncionario()"
+            aria-label="Fechar"
+            title="Fechar"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-corpo folha-lancamentos-func-cadastro-modal-corpo">
+          <app-folha-funcionario-form
+            [embedInModal]="true"
+            [embedFuncionarioId]="modalFuncionarioId"
+            (closed)="fecharModalCadastroFuncionario($event)"
+          />
+        </div>
       </div>
     </div>
   }

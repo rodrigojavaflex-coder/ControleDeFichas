@@ -57,7 +57,7 @@
 - **`GET …/folha/funcionarios/lancamento`** com **`ano`** e **`mes`** devolve apenas funcionários que atendem **estes mesmos critérios** (útil para integrações e consistência com o carregamento em lote).
 - O campo **`folhaMensal`** em **`folha_tipo`** pode permanecer no cadastro como **metadado**; **não** restringe mais o uso de **`carregar-competencia`** na API.
 - **`POST …/folha/capas`** com um **`funcionarioId`** segue disponível para **obter ou criar** a capa de **um** funcionário, sujeito às mesmas validações de elegibilidade e de lote (RN-005, RN-006).
-- **UI:** após Carregar, exibe-se uma **lista** de capas (funcionário + totais resumidos) com **checkbox** (cabeçalho seleciona todos; clique no checkbox seleciona a linha para o arquivo PagBank). No **rodapé da lista**, exibe-se **quantidade de funcionários** e a **soma** das colunas Receitas, Despesas e Líquido. **Clique na linha** abre a folha em **modal** (`nao-clicavel`) com receitas/despesas e ações da capa — **edição** somente com lote aberto; com lote fechado, **somente leitura** e ações de **recibo** (RN-015).
+- **UI:** após Carregar, exibe-se uma **lista** de capas (funcionário + totais resumidos, **banco/conta/dígito**) com **checkbox** (cabeçalho seleciona todos; clique no checkbox seleciona a linha para o arquivo PagBank). No **rodapé da lista**, exibe-se **quantidade de funcionários** e a **soma** das colunas Receitas, Despesas e Líquido. Com permissão **`folha-funcionario:read`**, botão ao lado do nome abre o **cadastro do funcionário em modal** (`nao-clicavel`); com **`folha-funcionario:update`** permite editar; ao fechar, a lista de capas é **recarregada**. **Clique na linha** abre a folha em **modal** (`nao-clicavel`) com receitas/despesas e ações da capa — **edição** somente com lote aberto; com lote fechado, **somente leitura** e ações de **recibo** (RN-015).
 
 ### RN-003 — Exclusão de verba no cadastro
 
@@ -167,7 +167,7 @@
 - Geração do arquivo **somente** com **lote fechado** (unidade + ano + mês + tipo de folha) — alinhado à **RN-006**.
 - Formato atual: **XLSX** no layout do modelo PagBank Folha de Pagamento **v2.0** (CNAB240 fica para etapa futura).
 - Cadastro do funcionário: **`bancoNumero`**, **`contaBancaria`**, **`digitoConta`** (abaixo do Pix); obrigatórios na geração para cada linha incluída. Nome no arquivo é sanitizado (apenas letras/espaços); CPF só dígitos; valor = **líquido** da capa (receitas − despesas).
-- **UI (Lançamento):** checkbox por funcionário + “selecionar todos” no cabeçalho; botão **Arquivo PagBank** exige permissão **`folha-lancamento:gerar-arquivo-pagamento`**, lote fechado e ao menos um selecionado.
+- **UI (Lançamento):** checkbox por funcionário + “selecionar todos” no cabeçalho; colunas **banco/conta/dígito** na grade; botão **Arquivo PagBank** exige permissão **`folha-lancamento:gerar-arquivo-pagamento`**, lote fechado e ao menos um selecionado.
 - **Avisos em modal:** funcionários selecionados **sem conta completa** (banco/conta/dígito) e/ou com **líquido ≤ 0** (e sem CPF) são listados; se houver válidos, o usuário pode **Gerar apenas válidos**; se nenhum válido, apenas **Fechar**.
 - **API:** `POST …/folha/capas/gerar-arquivo-pagamento` com `{ unidade, capaIds[] }`; responde o arquivo binário; rejeita se o lote não estiver fechado ou se algum `capaId` enviado for inválido para o arquivo.
 

@@ -1,7 +1,20 @@
-<div class="folha-entity-form-container">
-  <div class="form-header">
-    <h2>{{ isEditMode ? 'Editar funcionário' : 'Novo funcionário' }}</h2>
-  </div>
+<div class="folha-entity-form-container" [class.folha-entity-form-container--embed]="embedInModal">
+  @if (!embedInModal) {
+    <div class="form-header">
+      <h2>
+        @if (somenteLeitura) {
+          Funcionário
+        } @else if (isEditMode) {
+          Editar funcionário
+        } @else {
+          Novo funcionário
+        }
+      </h2>
+      @if (somenteLeitura) {
+        <p class="form-header-sub">Somente visualização — sem permissão para editar.</p>
+      }
+    </div>
+  }
 
   @if (loading) {
     <div class="loading">Carregando cadastro...</div>
@@ -13,6 +26,7 @@
 
   @if (!loading) {
     <form class="folha-entity-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="folha-entity-form-scroll">
       <section
         class="folha-form-block folha-form-block--pessoais"
         aria-labelledby="ff-h-pessoais"
@@ -393,16 +407,18 @@
       >
         <h3 id="ff-h-ev-fix" class="folha-form-block-title">Eventos fixos</h3>
 
-        <div class="folha-eventos-fixos-toolbar">
-          <button
-            type="button"
-            class="btn btn-sm btn-novo"
-            (click)="abrirModalNovoEventoFixo()"
-            [disabled]="loading || isSubmitting"
-          >
-            Incluir evento fixo
-          </button>
-        </div>
+        @if (!somenteLeitura) {
+          <div class="folha-eventos-fixos-toolbar">
+            <button
+              type="button"
+              class="btn btn-sm btn-novo"
+              (click)="abrirModalNovoEventoFixo()"
+              [disabled]="loading || isSubmitting"
+            >
+              Incluir evento fixo
+            </button>
+          </div>
+        }
 
         @if (!linhasEventoFixo.length) {
           <p class="form-help folha-funcionario-evt-fixo-lista-vazia">
@@ -430,42 +446,47 @@
                   <span class="folha-funcionario-evt-fixo-resumo-valor">{{ row.valorTexto || '—' }}</span>
                 </div>
                 <div class="folha-eventos-fixos-col-acoes folha-eventos-fixos-acoes-dupla">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-editar"
-                    (click)="abrirModalEditarEventoFixo($index)"
-                    [disabled]="loading || isSubmitting"
-                    title="Editar evento fixo"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-excluir"
-                    (click)="solicitarRemoverLinhaEventoFixo($index)"
-                    [disabled]="loading || isSubmitting"
-                    title="Remover evento fixo"
-                  >
-                    Remover
-                  </button>
+                  @if (!somenteLeitura) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-editar"
+                      (click)="abrirModalEditarEventoFixo($index)"
+                      [disabled]="loading || isSubmitting"
+                      title="Editar evento fixo"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-excluir"
+                      (click)="solicitarRemoverLinhaEventoFixo($index)"
+                      [disabled]="loading || isSubmitting"
+                      title="Remover evento fixo"
+                    >
+                      Remover
+                    </button>
+                  }
                 </div>
               </div>
             }
           </div>
         }
       </section>
+      </div>
 
       <div class="form-actions">
         <button type="button" class="btn btn-cancelar" (click)="onCancel()" [disabled]="isSubmitting">
-          Cancelar
+          {{ embedInModal || somenteLeitura ? 'Fechar' : 'Cancelar' }}
         </button>
-        <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
-          @if (!isSubmitting) {
-            <span>{{ isEditMode ? 'Atualizar' : 'Cadastrar' }}</span>
-          } @else {
-            <span>Salvando...</span>
-          }
-        </button>
+        @if (!somenteLeitura) {
+          <button type="submit" class="btn btn-salvar" [disabled]="form.invalid || isSubmitting">
+            @if (!isSubmitting) {
+              <span>{{ isEditMode ? 'Atualizar' : 'Cadastrar' }}</span>
+            } @else {
+              <span>Salvando...</span>
+            }
+          </button>
+        }
       </div>
     </form>
   }
