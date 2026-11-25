@@ -89,6 +89,30 @@ export class HomeWidgetComercialAnaliseComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Deep-link: mesmo recorte do card (semanas + comparar as 2 fechadas).
+   */
+  queryParamsAnalise(card: ComercialAnaliseHomeUnidadeCard): Record<string, string> {
+    const params: Record<string, string> = {
+      unidade: card.unidade,
+      modo: 'semanas',
+      leitura: 'comparar',
+      dimensao: 'vendedor',
+      base: 'totalVendido',
+      metrica: 'valor',
+    };
+    const atual = this.resumo?.semanaAtual;
+    const anterior = this.resumo?.semanaAnterior;
+    if (atual?.inicio) {
+      params['competencia'] = atual.inicio.slice(0, 7);
+    }
+    if (this.temComparacao && anterior?.key && atual?.key) {
+      params['s1'] = anterior.key;
+      params['s2'] = atual.key;
+    }
+    return params;
+  }
+
+  /**
    * 1º e 2º nome; com 2 partes devolve em duas linhas
    * (ex.: GABRIELA\nGARCIA) para caber na coluna do card.
    */

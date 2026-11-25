@@ -111,6 +111,18 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   competenciaSemanas: string | null = null;
   s1: string | null = null;
   s2: string | null = null;
+  /**
+   * Deep-link do card da home (`modo=semanas&leitura=comparar&s1&s2`).
+   * Consome após resolver s1/s2; as keys ficam em `homeSemanasFixas`
+   * para sobreviver à 2ª /opcoes (vendedores).
+   */
+  private homeDeepLink: {
+    competencia: string | null;
+    s1: string | null;
+    s2: string | null;
+  } | null = null;
+  private homeSemanasFixas: { s1: string; s2: string } | null = null;
+
   /** Vendedores marcados; padrão = todos ao carregar o combo. */
   funcionarioIdsFiltro: string[] = [];
 
@@ -155,6 +167,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       return;
     }
     this.initializeUnidadeFilter();
+    this.aplicarDeepLinkHome();
     this.atualizarPageContext();
     this.reloadSub = this.reload$
       .pipe(
@@ -438,6 +451,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
 
   onModoChange(modo: ComercialAnaliseModo): void {
+    this.limparDeepLinkHome();
     this.modo = modo;
     this.dados = null;
     this.resetFiltrosFaixa();
@@ -495,6 +509,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
   }
 
   onLeituraChange(leitura: ComercialAnaliseLeitura): void {
+    this.limparDeepLinkHome();
     this.leitura = leitura;
     this.dados = null;
     this.atualizarPageContext();
@@ -513,6 +528,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     this.competenciasRanking = this.ordenarKeys(values);
   }
   onCompetenciaSemanasChange(competencia: string | null): void {
+    this.limparDeepLinkHome();
     this.competenciaSemanas = competencia;
     this.s1 = null;
     this.s2 = null;
@@ -520,10 +536,12 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     this.carregarOpcoes(false);
   }
   onS1Change(s1: string | null): void {
+    this.limparDeepLinkHome();
     this.s1 = s1;
     this.onFiltroChange();
   }
   onS2Change(s2: string | null): void {
+    this.limparDeepLinkHome();
     this.s2 = s2;
     this.onFiltroChange();
   }
@@ -1048,8 +1066,18 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
         this.competenciasDisponiveis[this.competenciasDisponiveis.length - 1]
           ?.key ??
         null;
-      this.competenciaSemanas = ultima;
-      const anoUltima = this.anoDeKey(ultima) || this.anoCorrente;
+      if (this.homeDeepLink?.competencia) {
+        const daHome = this.homeDeepLink.competencia;
+        this.competenciaSemanas = this.competenciasDisponiveis.some(
+          (c) => c.key === daHome,
+        )
+          ? daHome
+          : ultima;
+      } else {
+        this.competenciaSemanas = ultima;
+      }
+      const anoUltima =
+        this.anoDeKey(this.competenciaSemanas) || this.anoCorrente;
       const ano = this.competenciasDisponiveis.some((c) => this.anoDe(c) === anoUltima)
         ? anoUltima
         : this.competenciasDisponiveis.some((c) => this.anoDe(c) === this.anoCorrente)
@@ -1062,7 +1090,7 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       this.aplicarSelecaoRanking(true);
       // Evolução por último: padrão = duas últimas competências do ano.
       this.aplicarSelecaoEvolucao(true);
-      this.aplicarSemanasPadrao(true);
+      this.aplicarSemanasAposOpcoes(true);
     } else {
       this.funcionarioIdsFiltro = marcarTodosVendedores
         ? this.vendedores.map((v) => v.funcionarioId)
@@ -1071,12 +1099,21 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
         unidadesValidas.has(u),
       );
       this.podarSelecao();
-      if (opcoes.competenciaSemanas) {
+      if (this.homeDeepLink?.competencia) {
+        const daHome = this.homeDeepLink.competencia;
+        if (this.competenciasDisponiveis.some((c) => c.key === daHome)) {
+          this.competenciaSemanas = daHome;
+        } else if (opcoes.competenciaSemanas) {
+          this.competenciaSemanas = opcoes.competenciaSemanas;
+        } else {
+          this.aplicarCompetenciaSemanasPadrao(false);
+        }
+      } else if (opcoes.competenciaSemanas) {
         this.competenciaSemanas = opcoes.competenciaSemanas;
       } else {
         this.aplicarCompetenciaSemanasPadrao(false);
       }
-      this.aplicarSemanasPadrao(false);
+      this.aplicarSemanasAposOpcoes(false);
     }
     return precisaVendedores;
   }
@@ -1132,6 +1169,78 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
       this.s1 = null;
       this.s2 = null;
     }
+  }
+
+  /** Prefere deep-link da home; senão padrão da competência. */
+  private aplicarSemanasAposOpcoes(forcar: boolean): void {
+    if (this.homeDeepLink) {
+      this.aplicarSemanasHomeDeepLink();
+      return;
+    }
+    if (this.homeSemanasFixas) {
+      const keys = new Set(this.semanas.map((s) => s.key));
+      if (
+        keys.has(this.homeSemanasFixas.s1) &&
+        keys.has(this.homeSemanasFixas.s2)
+      ) {
+        this.s1 = this.homeSemanasFixas.s1;
+        this.s2 = this.homeSemanasFixas.s2;
+        return;
+      }
+      this.homeSemanasFixas = null;
+    }
+    this.aplicarSemanasPadrao(forcar);
+  }
+
+  /**
+   * Aplica s1/s2 vindos do card da home. Match por key; se a semana
+   * calendário cruzar mês, tenta por início; senão usa 2 últimas fechadas.
+   */
+  private aplicarSemanasHomeDeepLink(): void {
+    if (!this.homeDeepLink) {
+      this.aplicarSemanasPadrao(true);
+      return;
+    }
+    if (!this.semanas.length) {
+      return;
+    }
+    const s1 = this.resolverSemanaNaLista(this.homeDeepLink.s1);
+    const s2 = this.resolverSemanaNaLista(this.homeDeepLink.s2);
+    if (s1 && s2 && s1 !== s2) {
+      this.s1 = s1;
+      this.s2 = s2;
+      this.homeSemanasFixas = { s1, s2 };
+      this.homeDeepLink = null;
+      return;
+    }
+    const fechadas = this.semanas.filter((s) => !s.previa);
+    if (fechadas.length >= 2) {
+      this.s1 = fechadas[fechadas.length - 2].key;
+      this.s2 = fechadas[fechadas.length - 1].key;
+      this.homeSemanasFixas = { s1: this.s1, s2: this.s2 };
+    } else {
+      this.aplicarSemanasPadrao(true);
+      this.homeSemanasFixas = null;
+    }
+    this.homeDeepLink = null;
+  }
+
+  private resolverSemanaNaLista(key: string | null): string | null {
+    if (!key) return null;
+    if (this.semanas.some((s) => s.key === key)) return key;
+    const [inicio, fim] = key.split('_');
+    if (!inicio || !fim) return null;
+    const exata = this.semanas.find(
+      (s) => s.inicio === inicio && s.fim === fim,
+    );
+    if (exata) return exata.key;
+    const porInicio = this.semanas.find((s) => s.inicio === inicio);
+    return porInicio?.key ?? null;
+  }
+
+  private limparDeepLinkHome(): void {
+    this.homeDeepLink = null;
+    this.homeSemanasFixas = null;
   }
 
   /** Padrão do mês em Semanas = última competência com movimento (no ano filtrado). */
@@ -1203,8 +1312,66 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     // Card da home: /comercial/analise?unidade=INHUMAS (gestão).
     const daUrl = this.unidadeDaQuery();
     this.unidadeFilter = daUrl ?? '';
-    if (daUrl) {
-      this.limparQueryUnidade();
+  }
+
+  /**
+   * Card da home: modo semanas + comparar as 2 fechadas (+ unidade).
+   * Query limpa com replaceUrl após aplicar.
+   */
+  private aplicarDeepLinkHome(): void {
+    const q = this.route.snapshot.queryParamMap;
+    const modoRaw = String(q.get('modo') ?? '').trim().toLowerCase();
+    const temDeepLink =
+      modoRaw === 'semanas' ||
+      !!q.get('s1') ||
+      !!q.get('s2') ||
+      !!q.get('competencia');
+    if (temDeepLink) {
+      this.modo = 'semanas';
+      const leituraRaw = String(q.get('leitura') ?? '')
+        .trim()
+        .toLowerCase();
+      this.leitura =
+        leituraRaw === 'evolucao' ? 'evolucao' : 'comparar';
+      const dimensaoRaw = String(q.get('dimensao') ?? '')
+        .trim()
+        .toLowerCase();
+      if (dimensaoRaw === 'vendedor' || dimensaoRaw === 'unidade') {
+        this.dimensao = dimensaoRaw;
+      }
+      const baseRaw = String(q.get('base') ?? '').trim();
+      if (baseRaw) {
+        this.base = baseRaw as ComercialAnaliseBase;
+      }
+      const metricaRaw = String(q.get('metrica') ?? '')
+        .trim()
+        .toLowerCase();
+      if (
+        metricaRaw === 'valor' ||
+        metricaRaw === 'quantidade' ||
+        metricaRaw === 'ticketMedio'
+      ) {
+        this.metrica = metricaRaw;
+      }
+      const competencia = String(q.get('competencia') ?? '')
+        .trim();
+      const s1 = String(q.get('s1') ?? '').trim() || null;
+      const s2 = String(q.get('s2') ?? '').trim() || null;
+      const competenciaOk = /^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)
+        ? competencia
+        : null;
+      this.homeDeepLink = {
+        competencia: competenciaOk,
+        s1,
+        s2,
+      };
+      if (competenciaOk) {
+        this.competenciaSemanas = competenciaOk;
+        this.anosFiltro = [Number(competenciaOk.slice(0, 4))];
+      }
+    }
+    if (temDeepLink || this.unidadeDaQuery()) {
+      this.limparQueryHome();
     }
   }
 
@@ -1217,10 +1384,20 @@ export class ComercialAnalisePage implements OnInit, OnDestroy {
     return this.unidadesDisponiveis.find((u) => u === raw) ?? null;
   }
 
-  private limparQueryUnidade(): void {
+  private limparQueryHome(): void {
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { unidade: null },
+      queryParams: {
+        unidade: null,
+        modo: null,
+        leitura: null,
+        competencia: null,
+        s1: null,
+        s2: null,
+        base: null,
+        metrica: null,
+        dimensao: null,
+      },
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
