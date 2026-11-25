@@ -268,6 +268,14 @@ export const HOME_SHORTCUTS_CATALOG: readonly HomeShortcutDef[] = [
     ],
   },
   {
+    id: 'orcamento-imagem',
+    label: 'Gerar imagem',
+    route: '/orcamentos/gerar-imagem',
+    icon: 'feather-image',
+    category: 'Orçamentos',
+    requiredPermissions: [Permission.ORCAMENTO_IMAGEM_GERAR],
+  },
+  {
     id: 'orcamentos-motivos-rejeicao',
     label: 'Motivos de rejeição',
     route: '/orcamentos/motivos-rejeicao',

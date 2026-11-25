@@ -1,0 +1,140 @@
+<div class="orcamento-imagem-page">
+  <section class="orcamento-imagem-card">
+    <div class="orcamento-imagem-filtros">
+      <label class="orcamento-imagem-campo orcamento-imagem-campo--dobro">
+        <span class="orcamento-imagem-rotulo">Unidade</span>
+        <span class="orcamento-imagem-medida" aria-hidden="true">Unidade</span>
+        <select
+          class="form-control"
+          [value]="unidade()"
+          [disabled]="unidadeTravada()"
+          (change)="definirUnidade($event)">
+          @if (!unidadeTravada()) {
+            <option value="">Selecione</option>
+          }
+          @for (item of unidades; track item) {
+            <option [value]="item">{{ item }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="orcamento-imagem-campo orcamento-imagem-campo--dobro">
+        <span class="orcamento-imagem-rotulo">Orçamento</span>
+        <span class="orcamento-imagem-medida" aria-hidden="true">Orçamento</span>
+        <input
+          class="form-control"
+          type="number"
+          min="1"
+          inputmode="numeric"
+          [value]="nrorc()"
+          (input)="definirNrorc($event)" />
+      </label>
+
+      <label class="orcamento-imagem-campo">
+        <span class="orcamento-imagem-rotulo">Fórmula (Opcional)</span>
+        <input
+          class="form-control"
+          type="text"
+          maxlength="10"
+          placeholder="Todas"
+          [value]="serieo()"
+          (input)="definirSerieo($event)" />
+      </label>
+
+      <label class="orcamento-imagem-campo">
+        <span class="orcamento-imagem-rotulo">Dias de validade</span>
+        <input
+          class="form-control"
+          type="number"
+          min="1"
+          max="365"
+          [value]="diasValidade()"
+          (input)="definirDias($event)" />
+      </label>
+
+      <div class="orcamento-imagem-acoes">
+        <button
+          type="button"
+          class="btn btn-salvar"
+          [disabled]="gerando() || !faixasProntas()"
+          (click)="gerar()">
+          {{ gerando() ? 'Gerando...' : 'Gerar' }}
+        </button>
+        @if (podeAlterarFaixa()) {
+          <button type="button" class="btn btn-editar" (click)="abrirFaixas()">
+            Alterar imagens
+          </button>
+        }
+        @if (imagemUrl()) {
+          <button type="button" class="btn btn-imprimir" (click)="copiar()">
+            Copiar imagem
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (avisoFaixas()) {
+      <p class="orcamento-imagem-aviso">{{ avisoFaixas() }}</p>
+    }
+
+    @if (imagemUrl(); as url) {
+      <figure class="orcamento-imagem-preview">
+        <img [src]="url" alt="Imagem do orçamento gerada" />
+      </figure>
+    }
+  </section>
+</div>
+
+@if (podeAlterarFaixa() && modalFaixas()) {
+  <div class="modal-overlay nao-clicavel" role="presentation">
+    <div class="modal-conteudo modal-grande" role="dialog" aria-modal="true" aria-labelledby="orcamento-imagem-faixas-titulo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h2 id="orcamento-imagem-faixas-titulo" class="modal-titulo">Imagens da unidade</h2>
+        <button type="button" class="modal-fechar" (click)="fecharFaixas()" [disabled]="gravandoFaixa() !== null" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <div class="orcamento-imagem-faixas">
+          <article>
+            <h3>Topo</h3>
+            @if (topoUrl(); as url) {
+              <img [src]="url" alt="Topo da imagem do orçamento" />
+            } @else {
+              <p class="orcamento-imagem-vazio">Nenhuma imagem de topo.</p>
+            }
+            <label class="btn btn-salvar btn-sm orcamento-imagem-upload">
+              {{ gravandoFaixa() === 'TOPO' ? 'Gravando...' : 'Alterar topo' }}
+              <input
+                type="file"
+                accept="image/png"
+                [disabled]="gravandoFaixa() !== null"
+                (change)="selecionarFaixa('TOPO', $event)" />
+            </label>
+          </article>
+          <article>
+            <h3>Rodapé</h3>
+            @if (rodapeUrl(); as url) {
+              <img [src]="url" alt="Rodapé da imagem do orçamento" />
+            } @else {
+              <p class="orcamento-imagem-vazio">Nenhuma imagem de rodapé.</p>
+            }
+            <label class="btn btn-salvar btn-sm orcamento-imagem-upload">
+              {{ gravandoFaixa() === 'RODAPE' ? 'Gravando...' : 'Alterar rodapé' }}
+              <input
+                type="file"
+                accept="image/png"
+                [disabled]="gravandoFaixa() !== null"
+                (change)="selecionarFaixa('RODAPE', $event)" />
+            </label>
+          </article>
+        </div>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-cancelar" (click)="fecharFaixas()" [disabled]="gravandoFaixa() !== null">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+}

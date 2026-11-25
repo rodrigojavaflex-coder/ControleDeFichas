@@ -3,6 +3,12 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
+  GerarOrcamentoImagemRequest,
+  OrcamentoImagem,
+  OrcamentoImagemFaixaTipo,
+} from '../models/orcamento-imagem.model';
+import { Unidade } from '../models/usuario.model';
+import {
   BulkUpdateRejeitadosDto,
   CreateOrcamentoMotivoRejeicaoDto,
   FindOrcamentosDto,
@@ -148,6 +154,35 @@ export class OrcamentosService {
     return this.http.get<OrcamentosDashboardOpcoesFiltro>(
       `${this.baseUrl}/dashboard/opcoes-filtro`,
       { params: this.buildDashboardParams(filters) },
+    );
+  }
+
+  gerarImagem(body: GerarOrcamentoImagemRequest): Observable<OrcamentoImagem> {
+    return this.http.post<OrcamentoImagem>(`${this.baseUrl}/imagem`, body);
+  }
+
+  obterFaixaImagem(unidade: Unidade, tipo: OrcamentoImagemFaixaTipo): Observable<Blob> {
+    const params = new HttpParams()
+      .set('unidade', unidade)
+      .set('tipo', tipo);
+    return this.http.get(`${this.baseUrl}/imagem-faixa`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  salvarFaixaImagem(
+    unidade: Unidade,
+    tipo: OrcamentoImagemFaixaTipo,
+    arquivo: File,
+  ): Observable<{ unidade: string; tipo: string }> {
+    const dados = new FormData();
+    dados.append('unidade', unidade);
+    dados.append('tipo', tipo);
+    dados.append('arquivo', arquivo);
+    return this.http.put<{ unidade: string; tipo: string }>(
+      `${this.baseUrl}/imagem-faixa`,
+      dados,
     );
   }
 

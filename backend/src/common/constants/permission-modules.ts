@@ -53,7 +53,12 @@ export const PERMISSION_MODULE_CONFIG: PermissionModuleConfig[] = [
   {
     key: 'orcamentos',
     label: 'Orçamentos',
-    groupKeys: ['Orçamentos — Motivos', 'Orçamentos', 'Orçamentos — Dashboard'],
+    groupKeys: [
+      'Orçamentos — Motivos',
+      'Orçamentos',
+      'Orçamentos — Imagem',
+      'Orçamentos — Dashboard',
+    ],
   },
   {
     key: 'producao',

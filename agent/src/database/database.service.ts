@@ -8,6 +8,8 @@ import {
   CaixaPagamentoRow,
   CaixaRequisicaoFormulaRow,
   CaixaRequisicaoPagaRow,
+  OrcamentoComposicaoAtivoRow,
+  OrcamentoComposicaoFormulaRow,
   OrcamentoRow,
   ValorCompraRow,
 } from './database.types';
@@ -587,6 +589,151 @@ export class DatabaseService {
         });
       });
     });
+  }
+
+  /**
+   * Capa, fórmulas e ativos de um orçamento (leitura na hora da imagem).
+   * Série é filtrada no serviço: a consulta traz todas as fórmulas do número.
+   */
+  async buscarComposicaoOrcamento(
+    unit: number,
+    nrorc: number,
+  ): Promise<{
+    formulas: OrcamentoComposicaoFormulaRow[];
+    ativos: OrcamentoComposicaoAtivoRow[];
+  }> {
+    const sqlFormulas = `
+      SELECT
+        o.serieo AS serieo,
+        o.volume AS volume,
+        ${this.sqlTextoOctets('o.univol', 'univol', 10)},
+        o.qtcont AS qtcont,
+        ${this.sqlTextoOctets('o.unicont', 'unicont', 10)},
+        o.qtfor AS qtfor,
+        o.prcobr AS preco_cobrado,
+        COALESCE(o.vrdsc, 0) AS desconto_formula,
+        ${this.sqlTextoOctets('cap.nomepa', 'paciente', 120)}
+      FROM fc15100 o
+      JOIN fc15000 cap
+        ON cap.cdfil = o.cdfil
+       AND cap.nrorc = o.nrorc
+      WHERE o.cdfil = ?
+        AND o.nrorc = ?
+    `;
+    const sqlAtivos = `
+      SELECT
+        cmp.serieo AS serieo,
+        cmp.itemid AS itemid,
+        cmp.quant AS quant,
+        ${this.sqlTextoOctets('cmp.descr', 'descr_cmp', 200)},
+        ${this.sqlTextoOctets('prod.descr', 'descr_prod', 200)},
+        ${this.sqlTextoOctets('prod.descrprd', 'descr_prd', 200)},
+        ${this.sqlTextoOctets('cmp.unida', 'unida', 20)}
+      FROM fc15110 cmp
+      LEFT JOIN fc03000 prod ON prod.cdpro = cmp.cdpro
+      WHERE cmp.cdfil = ?
+        AND cmp.nrorc = ?
+        AND UPPER(TRIM(cmp.tpcmp)) = 'C'
+        AND UPPER(TRIM(COALESCE(cmp.indelicmp, 'N'))) <> 'S'
+        AND UPPER(TRIM(COALESCE(cmp.indqsp, 'N'))) <> 'S'
+        AND UPPER(TRIM(COALESCE(cmp.indveiculo, 'N'))) <> 'S'
+      ORDER BY cmp.itemid
+    `;
+    const params = [unit, nrorc];
+    const options = this.getConnectOptions();
+    const charset = this.getDbCharset();
+
+    return new Promise((resolve, reject) => {
+      Firebird.attach(options, (attachErr: Error, db: any) => {
+        if (attachErr) {
+          this.logger.error('Erro ao conectar ao banco', attachErr);
+          return reject(
+            new InternalServerErrorException('Erro de conexão ao banco.'),
+          );
+        }
+
+        db.query(sqlFormulas, params, (formulaErr: Error, formulaResult: any[]) => {
+          if (formulaErr) {
+            db.detach();
+            this.logger.error(
+              `Erro ao consultar fórmulas do orçamento: ${formulaErr.message}`,
+              formulaErr,
+            );
+            this.logger.error(`SQL: ${sqlFormulas.trim()}`);
+            this.logger.error(`Parâmetros: ${JSON.stringify(params)}`);
+            return reject(
+              new InternalServerErrorException('Erro ao consultar orçamentos.'),
+            );
+          }
+
+          db.query(sqlAtivos, params, (ativoErr: Error, ativoResult: any[]) => {
+            db.detach();
+            if (ativoErr) {
+              this.logger.error(
+                `Erro ao consultar ativos do orçamento: ${ativoErr.message}`,
+                ativoErr,
+              );
+              this.logger.error(`SQL: ${sqlAtivos.trim()}`);
+              this.logger.error(`Parâmetros: ${JSON.stringify(params)}`);
+              return reject(
+                new InternalServerErrorException('Erro ao consultar orçamentos.'),
+              );
+            }
+
+            const formulas = (formulaResult ?? []).map((row) =>
+              this.mapComposicaoFormulaRow(converterObjetoFirebird(row, charset)),
+            );
+            const ativos = (ativoResult ?? []).map((row) =>
+              this.mapComposicaoAtivoRow(converterObjetoFirebird(row, charset)),
+            );
+            this.logger.log(
+              `Composição do orçamento ${unit}-${nrorc}: ${formulas.length} fórmula(s), ${ativos.length} ativo(s)`,
+            );
+            resolve({ formulas, ativos });
+          });
+        });
+      });
+    });
+  }
+
+  private mapComposicaoFormulaRow(row: any): OrcamentoComposicaoFormulaRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+    const numero = (value: unknown): number => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    };
+    return {
+      serieo: String(get('serieo') ?? '').trim(),
+      volume: numero(get('volume')),
+      univol: this.textoCampoFirebird(get('univol')).trim(),
+      qtcont: numero(get('qtcont')),
+      unicont: this.textoCampoFirebird(get('unicont')).trim(),
+      qtfor: numero(get('qtfor')),
+      precoCobrado: numero(get('preco_cobrado')),
+      desconto: numero(get('desconto_formula')),
+      paciente: this.textoCampoFirebird(get('paciente')).trim(),
+    };
+  }
+
+  private mapComposicaoAtivoRow(row: any): OrcamentoComposicaoAtivoRow {
+    const get = (key: string) =>
+      row[key] ?? row[key.toLowerCase()] ?? row[key.toUpperCase()];
+    const numero = (value: unknown): number => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const descricao =
+      this.textoCampoFirebird(get('descr_cmp')).trim() ||
+      this.textoCampoFirebird(get('descr_prod')).trim() ||
+      this.textoCampoFirebird(get('descr_prd')).trim();
+    return {
+      serieo: String(get('serieo') ?? '').trim(),
+      itemid: numero(get('itemid')),
+      descricao,
+      quantidade: numero(get('quant')),
+      unidade: this.textoCampoFirebird(get('unida')).trim(),
+    };
   }
 
   async buscarOrcamentosPorPeriodo(

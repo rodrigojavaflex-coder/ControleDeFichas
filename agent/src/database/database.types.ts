@@ -211,6 +211,28 @@ export interface OrcamentoRow {
   principios_ativos?: string | null;
 }
 
+/** Fórmula do orçamento para a imagem (FC15100 + capa FC15000). */
+export interface OrcamentoComposicaoFormulaRow {
+  serieo: string;
+  volume: number;
+  univol: string;
+  qtcont: number;
+  unicont: string;
+  qtfor: number;
+  precoCobrado: number;
+  desconto: number;
+  paciente: string;
+}
+
+/** Componente impresso em ATIVOS (FC15110). */
+export interface OrcamentoComposicaoAtivoRow {
+  serieo: string;
+  itemid: number;
+  descricao: string;
+  quantidade: number;
+  unidade: string;
+}
+
 /** Orçamento excluído no ERP (FC01M20 ORCAMENTO) — RN-ORC-008 */
 export interface OrcamentoExclusaoRow {
   filial: number;

@@ -153,6 +153,11 @@ export enum Permission {
   /** Orçamentos — visualização de valores monetários no dashboard. */
   ORCAMENTO_DASHBOARD_VIEW_VALORES = 'orcamento-dashboard:view-valores',
 
+  /** Orçamentos — gerar imagem para o cliente. */
+  ORCAMENTO_IMAGEM_GERAR = 'orcamento-imagem:gerar',
+  /** Orçamentos — alterar topo e rodapé da imagem, por unidade. */
+  ORCAMENTO_IMAGEM_UPDATE = 'orcamento-imagem:update',
+
   /** Produção — configuração de etapas remuneradas e vínculo por funcionário. */
   PRODUCAO_CONFIG_READ = 'producao-config:read',
   PRODUCAO_CONFIG_UPDATE = 'producao-config:update',
@@ -553,6 +558,16 @@ export const PERMISSION_GROUPS = {
     {
       key: Permission.ORCAMENTO_PRINT,
       label: 'Imprimir',
+    },
+  ],
+  'Orçamentos — Imagem': [
+    {
+      key: Permission.ORCAMENTO_IMAGEM_GERAR,
+      label: 'Gerar imagem do orçamento',
+    },
+    {
+      key: Permission.ORCAMENTO_IMAGEM_UPDATE,
+      label: 'Alterar topo e rodapé da imagem do orçamento',
     },
   ],
   'Orçamentos — Dashboard': [

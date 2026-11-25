@@ -152,6 +152,12 @@ export class NavigationComponent implements OnInit, OnDestroy {
             Permission.ORCAMENTO_APROVADO_READ,
           ],
         },
+        {
+          label: 'Gerar Imagem',
+          route: '/orcamentos/gerar-imagem',
+          icon: 'feather-image',
+          requiredPermissions: [Permission.ORCAMENTO_IMAGEM_GERAR],
+        },
       ],
     },
     {

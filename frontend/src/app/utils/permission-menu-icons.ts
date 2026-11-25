@@ -38,6 +38,7 @@ export const PERMISSION_GROUP_ICON_KEYS: Record<string, string> = {
   'Folha — Atendimento WhatsApp': 'brand-whatsapp',
   'Orçamentos — Motivos': 'feather-list',
   Orçamentos: 'feather-file-text',
+  'Orçamentos — Imagem': 'feather-image',
   'Orçamentos — Dashboard': 'feather-bar-chart-2',
   'Produção — Configuração': 'feather-settings',
   'Produção — Acompanhamento': 'feather-activity',

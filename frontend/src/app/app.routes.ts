@@ -114,6 +114,7 @@ const PERMS = {
   ],
   folhaWhatsapp: [Permission.FOLHA_WHATSAPP_READ],
   orcamentosDashboard: [Permission.ORCAMENTO_DASHBOARD_READ],
+  orcamentoImagem: [Permission.ORCAMENTO_IMAGEM_GERAR],
   orcamentos: [
     Permission.ORCAMENTO_REJEITADO_READ,
     Permission.ORCAMENTO_APROVADO_READ,
@@ -752,6 +753,15 @@ export const routes: Routes = [
       ),
     canActivate: guarded,
     data: { permissions: [...PERMS.orcamentosDashboard] },
+  },
+  {
+    path: 'orcamentos/gerar-imagem',
+    loadComponent: () =>
+      import('./components/orcamentos/orcamento-gerar-imagem-page').then(
+        (m) => m.OrcamentoGerarImagemPage,
+      ),
+    canActivate: guarded,
+    data: { permissions: [...PERMS.orcamentoImagem] },
   },
   {
     path: 'orcamentos',

@@ -3,6 +3,7 @@ import { OrcamentosService } from './orcamentos.service';
 import { OrcamentoExclusaoRow, OrcamentoRow } from '../database/database.types';
 import { OrcamentosPeriodoDto } from './dto/orcamentos-periodo.dto';
 import { OrcamentosExclusoesDto } from './dto/orcamentos-exclusoes.dto';
+import { OrcamentosComposicaoDto } from './dto/orcamentos-composicao.dto';
 
 @Controller('v1/orcamentos')
 export class OrcamentosController {
@@ -37,6 +38,15 @@ export class OrcamentosController {
       body.end,
     );
     return { orcamentos };
+  }
+
+  @Post('composicao')
+  async composicao(@Body() body: OrcamentosComposicaoDto) {
+    return this.orcamentosService.buscarComposicao(
+      body.unit,
+      body.nrorc,
+      body.serieo,
+    );
   }
 
   @Post('exclusoes')

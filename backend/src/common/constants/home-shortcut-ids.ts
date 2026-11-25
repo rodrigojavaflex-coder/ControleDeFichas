@@ -22,6 +22,7 @@ export const HOME_SHORTCUT_IDS = [
   'orcamentos',
   'orcamentos-rejeitados',
   'orcamentos-motivos-rejeicao',
+  'orcamento-imagem',
   'relatorios-baixas',
   'relatorios-fechamento-caixa',
   'relatorios-acompanhar-vendas',
