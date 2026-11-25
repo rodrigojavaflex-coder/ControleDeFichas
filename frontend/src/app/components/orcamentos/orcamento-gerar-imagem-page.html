@@ -61,17 +61,12 @@
         <button
           type="submit"
           class="btn btn-salvar"
-          [disabled]="gerando() || !faixasProntas()">
-          {{ gerando() ? 'Gerando...' : 'Gerar' }}
+          [disabled]="buscando()">
+          {{ buscando() ? 'Buscando...' : 'Gerar texto' }}
         </button>
         @if (podeAlterarFaixa()) {
           <button type="button" class="btn btn-editar" (click)="abrirFaixas()">
             Alterar imagens
-          </button>
-        }
-        @if (imagemUrl()) {
-          <button type="button" class="btn btn-imprimir" (click)="copiar()">
-            Copiar imagem
           </button>
         }
       </div>
@@ -81,13 +76,61 @@
       <p class="orcamento-imagem-aviso">{{ avisoFaixas() }}</p>
     }
 
-    @if (imagemUrl(); as url) {
-      <figure class="orcamento-imagem-preview">
-        <img [src]="url" alt="Imagem do orçamento gerada" />
-      </figure>
+    @if (composicao()) {
+      <div class="orcamento-imagem-editor">
+        <ng-container *ngTemplateOutlet="barraEditor" />
+        <div
+          #editorTexto
+          class="orcamento-imagem-texto"
+          contenteditable="true"
+          role="textbox"
+          aria-label="Texto da imagem"
+          (input)="aoEditarTexto()">
+        </div>
+        <ng-container *ngTemplateOutlet="barraEditor" />
+      </div>
+      <ng-template #barraEditor>
+        <div class="orcamento-imagem-editor-barra" role="toolbar" aria-label="Editar texto da imagem">
+          <div class="orcamento-imagem-editor-formatos">
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="negrito()">Negrito</button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="sublinhar()">Sublinhar</button>
+            <button type="button" (mousedown)="$event.preventDefault()" (click)="maiuscula()">Maiúscula</button>
+          </div>
+          <button
+            type="button"
+            class="btn btn-imprimir"
+            [disabled]="gerando() || !faixasProntas()"
+            (click)="gerarImagem()">
+            {{ gerando() ? 'Gerando...' : 'Gerar imagem' }}
+          </button>
+        </div>
+      </ng-template>
     }
+
   </section>
 </div>
+
+@if (modalImagem() && imagemUrl(); as url) {
+  <div class="modal-overlay nao-clicavel" role="presentation">
+    <div class="modal-conteudo modal-extra-grande" role="dialog" aria-modal="true" aria-labelledby="orcamento-imagem-gerada-titulo" (click)="$event.stopPropagation()">
+      <div class="modal-cabecalho">
+        <h2 id="orcamento-imagem-gerada-titulo" class="modal-titulo">Imagem do orçamento</h2>
+        <button type="button" class="modal-fechar" (click)="fecharImagem()" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <figure class="orcamento-imagem-preview">
+          <img [src]="url" alt="Imagem do orçamento gerada" />
+        </figure>
+      </div>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-cancelar" (click)="fecharImagem()">Fechar</button>
+        <button type="button" class="btn btn-imprimir" (click)="copiar()">Copiar imagem</button>
+      </div>
+    </div>
+  </div>
+}
 
 @if (podeAlterarFaixa() && modalFaixas()) {
   <div class="modal-overlay nao-clicavel" role="presentation">

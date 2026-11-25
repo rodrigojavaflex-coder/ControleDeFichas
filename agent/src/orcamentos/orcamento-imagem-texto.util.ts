@@ -19,8 +19,8 @@ export function formatarQuantidadeAtivo(valor: number): string {
 
 /**
  * Linha de embalagem da imagem.
- * UNICONT de cápsula: doses × cápsulas por dose.
- * UNIVOL CAP sem conteúdo em cápsula: só o volume em caps.
+ * Cápsula com QTCONT > 0: doses × cápsulas por dose.
+ * Cápsula sem conteúdo por dose: só o volume em caps.
  */
 export function textoEmbalagemOrcamento(input: {
   volume: number;
@@ -37,7 +37,9 @@ export function textoEmbalagemOrcamento(input: {
   const univol = input.univol.trim().toUpperCase();
   const unicont = input.unicont.trim().toUpperCase();
 
-  if (unicont.startsWith('CAP') && input.qtcont > 0) {
+  const capsula =
+    unicont.startsWith('CAP') || univol === 'CAP' || univol === 'CPS';
+  if (capsula && input.qtcont > 0) {
     const caps = input.volume * input.qtcont;
     return (
       `${prefixo}${formatarQuantidadeImagem(input.volume)} doses ` +

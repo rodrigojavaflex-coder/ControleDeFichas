@@ -138,8 +138,81 @@
   cursor: not-allowed;
 }
 
+.orcamento-imagem-editor {
+  margin-top: 1.25rem;
+  max-width: 800px;
+}
+
+.orcamento-imagem-editor-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.orcamento-imagem-editor-barra:last-child {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+}
+
+.orcamento-imagem-editor-formatos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.orcamento-imagem-editor-formatos button {
+  min-width: 2rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.orcamento-imagem-editor-formatos button:hover {
+  background: var(--cor-superficie-hover, var(--bg-card));
+}
+
+.orcamento-imagem-editor-formatos button:focus-visible,
+.orcamento-imagem-texto:focus {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 2px;
+}
+
+.orcamento-imagem-texto {
+  max-width: 800px;
+  min-height: 8rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.orcamento-imagem-texto p,
+.orcamento-imagem-texto strong,
+.orcamento-imagem-texto span {
+  margin: 0 0 0.35rem;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.orcamento-imagem-texto-forte {
+  font-weight: 700;
+}
+
+.orcamento-imagem-texto hr {
+  border: 0;
+  border-top: 1px dashed var(--border-color);
+  margin: 0.75rem 0;
+}
+
 .orcamento-imagem-preview {
-  margin: 1.25rem 0 0;
+  margin: 0;
   max-width: 800px;
 }
 

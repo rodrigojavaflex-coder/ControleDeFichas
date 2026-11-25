@@ -1,4 +1,5 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, effect, inject, signal, viewChild } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PageContextService } from '../../services/page-context.service';
 import { AuthService } from '../../services/auth.service';
@@ -12,12 +13,15 @@ import {
 import { extrairMensagemErroApi } from '../../utils/mensagem-erro-api.util';
 import {
   carregarImagem,
-  desenharOrcamentoImagem,
+  desenharLinhasOrcamentoImagem,
+  htmlTextoOrcamentoImagem,
+  lerTextoEditado,
 } from './orcamento-imagem-canvas';
 
 @Component({
   selector: 'app-orcamento-gerar-imagem',
   standalone: true,
+  imports: [NgTemplateOutlet],
   templateUrl: './orcamento-gerar-imagem-page.html',
   styleUrl: './orcamento-gerar-imagem-page.css',
 })
@@ -35,14 +39,30 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
   readonly diasValidade = signal('5');
   readonly podeAlterarFaixa = signal(false);
   readonly modalFaixas = signal(false);
+  readonly buscando = signal(false);
   readonly gerando = signal(false);
+  readonly composicao = signal<OrcamentoImagem | null>(null);
   readonly gravandoFaixa = signal<OrcamentoImagemFaixaTipo | null>(null);
   readonly topoUrl = signal<string | null>(null);
   readonly rodapeUrl = signal<string | null>(null);
   readonly imagemUrl = signal<string | null>(null);
+  readonly modalImagem = signal(false);
 
+  private readonly editorTexto = viewChild<ElementRef<HTMLElement>>('editorTexto');
   private png: Blob | null = null;
   private cargaFaixa = 0;
+
+  constructor() {
+    effect(() => {
+      const dados = this.composicao();
+      const editor = this.editorTexto()?.nativeElement;
+      if (!dados || !editor || editor.dataset['preenchido'] === '1') {
+        return;
+      }
+      editor.innerHTML = htmlTextoOrcamentoImagem(dados);
+      editor.dataset['preenchido'] = '1';
+    });
+  }
 
   ngOnInit(): void {
     this.pageContext.setContext({
@@ -73,20 +93,23 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
       return;
     }
     this.unidade.set((event.target as HTMLSelectElement).value as Unidade | '');
-    this.limparImagem();
+    this.limparResultado();
     this.carregarFaixas();
   }
 
   definirNrorc(event: Event): void {
     this.nrorc.set((event.target as HTMLInputElement).value);
+    this.limparResultado();
   }
 
   definirSerieo(event: Event): void {
     this.serieo.set((event.target as HTMLInputElement).value);
+    this.limparResultado();
   }
 
   definirDias(event: Event): void {
     this.diasValidade.set((event.target as HTMLInputElement).value);
+    this.limparResultado();
   }
 
   abrirFaixas(): void {
@@ -109,9 +132,7 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
 
   avisoFaixas(): string {
     if (!this.unidade()) {
-      return this.podeAlterarFaixa()
-        ? 'Selecione a unidade para ver o topo e o rodapé.'
-        : 'Selecione a unidade.';
+      return '';
     }
     const faltando: string[] = [];
     if (!this.topoUrl()) {
@@ -128,57 +149,87 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
 
   enviar(event: Event): void {
     event.preventDefault();
-    void this.gerar();
+    void this.buscarTexto();
   }
 
   aoEnter(event: Event): void {
     event.preventDefault();
-    void this.gerar();
+    void this.buscarTexto();
   }
 
-  async gerar(): Promise<void> {
-    if (this.gerando()) {
+  async buscarTexto(): Promise<void> {
+    if (this.buscando()) {
       return;
     }
-    const unidade = this.unidade();
-    const nrorc = Number(this.nrorc());
-    const dias = Number(this.diasValidade());
-    if (!unidade) {
-      this.erros.show('Informe a unidade.', 'Gerar imagem');
+    const pedido = this.pedidoValido('Gerar texto');
+    if (!pedido) {
       return;
     }
-    if (!Number.isInteger(nrorc) || nrorc < 1) {
-      this.erros.show('Informe o número do orçamento.', 'Gerar imagem');
-      return;
-    }
-    if (!Number.isInteger(dias) || dias < 1 || dias > 365) {
-      this.erros.show('Informe os dias de validade, de 1 a 365.', 'Gerar imagem');
+
+    this.buscando.set(true);
+    this.limparResultado();
+    this.orcamentos.gerarImagem(pedido).subscribe({
+      next: (dados) => {
+        this.buscando.set(false);
+        this.composicao.set(dados);
+      },
+      error: (err: unknown) => {
+        this.buscando.set(false);
+        void this.mostrarErro(err, 'Não foi possível gerar o texto.');
+      },
+    });
+  }
+
+  async gerarImagem(): Promise<void> {
+    const dados = this.composicao();
+    if (!dados || this.gerando()) {
       return;
     }
     if (!this.faixasProntas()) {
       this.erros.show(this.avisoFaixas() || 'Configure o topo e o rodapé.', 'Gerar imagem');
       return;
     }
-
+    const editor = this.editorTexto()?.nativeElement;
+    const linhas = editor ? lerTextoEditado(editor) : [];
+    if (!linhas.some((linha) => linha.separador || linha.trechos.length > 0)) {
+      this.erros.show('O texto da imagem está vazio.', 'Gerar imagem');
+      return;
+    }
     this.gerando.set(true);
     this.limparImagem();
-    const serieo = this.serieo().trim();
-    this.orcamentos
-      .gerarImagem({
-        unidade,
-        nrorc,
-        diasValidade: dias,
-        ...(serieo ? { serieo } : {}),
-      })
-      .subscribe({
-        next: (dados) => {
-          void this.montarPng(dados);
-        },
-        error: (err: unknown) => {
-          this.gerando.set(false);
-          void this.mostrarErro(err, 'Não foi possível gerar a imagem.');
-        },
-      });
+    await this.montarPng(linhas);
+  }
+
+  negrito(): void {
+    this.aplicarComando('bold');
+  }
+
+  sublinhar(): void {
+    this.aplicarComando('underline');
+  }
+
+  maiuscula(): void {
+    const selecao = document.getSelection();
+    const editor = this.editorTexto()?.nativeElement;
+    if (!selecao || selecao.rangeCount === 0 || !editor || !selecao.anchorNode || !editor.contains(selecao.anchorNode)) {
+      return;
+    }
+    const faixa = selecao.getRangeAt(0);
+    const texto = faixa.toString();
+    if (!texto) {
+      return;
+    }
+    faixa.deleteContents();
+    faixa.insertNode(document.createTextNode(texto.toLocaleUpperCase('pt-BR')));
+    this.limparImagem();
+  }
+
+  fecharImagem(): void {
+    this.limparImagem();
+  }
+
+  aoEditarTexto(): void {
+    this.limparImagem();
   }
 
   async copiar(): Promise<void> {
@@ -275,7 +326,17 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
     });
   }
 
-  private async montarPng(dados: OrcamentoImagem): Promise<void> {
+  private aplicarComando(comando: 'bold' | 'underline'): void {
+    const editor = this.editorTexto()?.nativeElement;
+    if (!editor) {
+      return;
+    }
+    editor.focus();
+    document.execCommand(comando);
+    this.limparImagem();
+  }
+
+  private async montarPng(linhas: ReturnType<typeof lerTextoEditado>): Promise<void> {
     const topo = this.topoUrl();
     const rodape = this.rodapeUrl();
     if (!topo || !rodape) {
@@ -288,8 +349,9 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
         carregarImagem(topo),
         carregarImagem(rodape),
       ]);
-      this.png = await desenharOrcamentoImagem(dados, imgTopo, imgRodape);
+      this.png = await desenharLinhasOrcamentoImagem(linhas, imgTopo, imgRodape);
       this.trocarUrl(this.imagemUrl, URL.createObjectURL(this.png));
+      this.modalImagem.set(true);
     } catch (error: unknown) {
       const mensagem =
         error instanceof Error ? error.message : 'Não foi possível montar a imagem.';
@@ -310,8 +372,44 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
     link.click();
   }
 
+  private pedidoValido(titulo: string): {
+    unidade: Unidade;
+    nrorc: number;
+    diasValidade: number;
+    serieo?: string;
+  } | null {
+    const unidade = this.unidade();
+    const nrorc = Number(this.nrorc());
+    const dias = Number(this.diasValidade());
+    if (!unidade) {
+      this.erros.show('Informe a unidade.', titulo);
+      return null;
+    }
+    if (!Number.isInteger(nrorc) || nrorc < 1) {
+      this.erros.show('Informe o número do orçamento.', titulo);
+      return null;
+    }
+    if (!Number.isInteger(dias) || dias < 1 || dias > 365) {
+      this.erros.show('Informe os dias de validade, de 1 a 365.', titulo);
+      return null;
+    }
+    const serieo = this.serieo().trim();
+    return {
+      unidade,
+      nrorc,
+      diasValidade: dias,
+      ...(serieo ? { serieo } : {}),
+    };
+  }
+
+  private limparResultado(): void {
+    this.composicao.set(null);
+    this.limparImagem();
+  }
+
   private limparImagem(): void {
     this.png = null;
+    this.modalImagem.set(false);
     this.trocarUrl(this.imagemUrl, null);
   }
 

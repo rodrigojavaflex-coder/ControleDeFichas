@@ -257,12 +257,12 @@
 - Unidade obrigatória. Escopo igual à listagem de orçamentos: `usuario.unidade` e, se vazia, `vendedor.unidade`. Com vínculo, o campo fica travado. Sem vínculo, o usuário escolhe a unidade. A API recusa unidade fora do escopo.
 - Número do orçamento (`nrorc`) obrigatório. Fórmula (`serieo`) opcional: preenchida, a imagem leva só essa série; vazia, uma imagem com todas as séries ainda existentes em `FC15100` (inclusive `QTAPROV = 0`).
 - Dias de validade: inteiro de 1 a 365, digitado na tela. O rodapé usa a data de hoje em `America/Sao_Paulo`: `Orçamento gerado em: DD/MM/YYYY - Válido por N dias`. `FC15100.DTVAL` não entra.
-- A composição é lida na hora no agente da unidade (`POST /api/v1/orcamentos/composicao`), sem gravar fórmula ou componente em `orcamentos`.
+- A composição é lida na hora no agente da unidade (`POST /api/v1/orcamentos/composicao`), sem gravar fórmula ou componente em `orcamentos`. **Gerar texto** mostra essas linhas num editor. Antes de **Gerar imagem** o texto pode ser alterado, com negrito, sublinhado e maiúsculas. O PNG usa o texto editado, sem nova consulta. Alterar unidade, número, fórmula ou dias de validade limpa o texto e a imagem.
 - Paciente: `FC15000.NOMEPA`. Número impresso: somente o `nrorc`, sem o código da filial. Valor da fórmula: `FC15100.PRCOBR`. Desconto: soma de `FC15100.VRDSC` das fórmulas incluídas. Total: subtotal − desconto.
 - Ativos: `FC15110` com `TPCMP = 'C'`, `INDELICMP <> 'S'`, `INDQSP <> 'S'` e `INDVEICULO <> 'S'`, ordem `ITEMID`. Nome: `DESCR`, senão `FC03000.DESCR`, senão `DESCRPRD`. Linha: `DESCR - QUANT UNIDA`.
-- Embalagem usa `QTFOR`. Se `UNICONT` começa com `CAP` e `QTCONT > 0`: `Quant: {VOLUME} doses ({QTCONT} cap/dose) = {VOLUME × QTCONT} caps`. Se `UNIVOL` é `CAP` ou `CPS`: `Quant: {VOLUME} caps`. Nos demais casos: `Quant: {VOLUME} {UNIVOL}`.
+- Embalagem usa `QTFOR`. Se `UNICONT` começa com `CAP`, ou `UNIVOL` é `CAP` ou `CPS`, e `QTCONT > 0`: `Quant: {VOLUME} doses ({QTCONT} cap/dose) = {VOLUME × QTCONT} caps`. Se `UNIVOL` é `CAP` ou `CPS` e `QTCONT` é 0: `Quant: {VOLUME} caps`. Nos demais casos: `Quant: {VOLUME} {UNIVOL}`.
 - Topo e rodapé ficam em `orcamento_imagem_unidade`, um PNG por unidade e tipo (`TOPO`, `RODAPE`), `bytea`. Quem tem `orcamento-imagem:update` abre as prévias num modal, em coluna (topo e depois rodapé), pelo botão na linha dos filtros. Quem só gera não vê esse botão; a geração continua usando as faixas gravadas. Sem as duas faixas, a geração não segue.
-- **Copiar imagem** grava o PNG na área de transferência. Se o navegador recusar, o mesmo fluxo baixa o arquivo. A imagem não fica salva no banco.
+- **Gerar imagem** abre o PNG num modal. **Copiar imagem** fica nesse modal e grava o PNG na área de transferência. Se o navegador recusar, o mesmo fluxo baixa o arquivo. A imagem não fica salva no banco. O modal fecha no X ou em Fechar.
 - `GET /orcamentos/imagem-faixa` exige `orcamento-imagem:gerar`. `PUT /orcamentos/imagem-faixa` exige `orcamento-imagem:update`. `POST /orcamentos/imagem` exige `orcamento-imagem:gerar`. O mascaramento de `orcamento:view-valores` não se aplica.
 
 ---

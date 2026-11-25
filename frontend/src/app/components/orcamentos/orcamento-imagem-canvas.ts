@@ -12,40 +12,76 @@ interface LinhaDesenho {
   altura: number;
 }
 
+export interface TrechoTextoImagem {
+  texto: string;
+  peso: '400' | '700';
+  sublinhado: boolean;
+}
+
+export interface LinhaEditadaImagem {
+  trechos: TrechoTextoImagem[];
+  separador: boolean;
+  tamanho: number;
+  altura: number;
+}
+
+export function htmlTextoOrcamentoImagem(dados: OrcamentoImagem): string {
+  return linhasTextoOrcamentoImagem(dados)
+    .map((linha) => {
+      if (linha.separador) {
+        return '<hr>';
+      }
+      const marca = linha.peso === '700' ? 'strong' : 'span';
+      return `<p data-tamanho="${linha.tamanho}" data-altura="${linha.altura}"><${marca}>${escaparHtml(linha.texto)}</${marca}></p>`;
+    })
+    .join('');
+}
+
+export function lerTextoEditado(raiz: HTMLElement): LinhaEditadaImagem[] {
+  const linhas: LinhaEditadaImagem[] = [];
+  for (const node of Array.from(raiz.childNodes)) {
+    if (!(node instanceof HTMLElement)) {
+      const solto = (node.textContent ?? '').replace(/\u00a0/g, ' ');
+      if (solto.trim()) {
+        linhas.push(linhaSimples(solto));
+      }
+      continue;
+    }
+    if (node.tagName === 'HR') {
+      linhas.push({ trechos: [], separador: true, tamanho: 16, altura: 22 });
+      continue;
+    }
+    linhas.push(...linhasDoBloco(node));
+  }
+  return linhas.filter((linha) => linha.separador || linha.trechos.some((trecho) => trecho.texto.trim()));
+}
+
 export async function desenharOrcamentoImagem(
   dados: OrcamentoImagem,
   topo: HTMLImageElement,
   rodape: HTMLImageElement,
 ): Promise<Blob> {
-  const linhas = montarLinhas(dados);
+  return desenharLinhasOrcamentoImagem(linhasDeDados(dados), topo, rodape);
+}
+
+export async function desenharLinhasOrcamentoImagem(
+  linhas: LinhaEditadaImagem[],
+  topo: HTMLImageElement,
+  rodape: HTMLImageElement,
+): Promise<Blob> {
   const medida = document.createElement('canvas').getContext('2d');
   if (!medida) {
     throw new Error('Não foi possível montar a imagem.');
   }
 
   const larguraTexto = LARGURA - PADDING * 2;
-  const quebradas: LinhaDesenho[] = [];
+  const quebradas: LinhaEditadaImagem[] = [];
   for (const linha of linhas) {
-    if (linha.tipo === 'traco') {
+    if (linha.separador) {
       quebradas.push(linha);
       continue;
     }
-    const partes = quebrarTexto(
-      medida,
-      linha.texto ?? '',
-      larguraTexto,
-      linha.peso ?? '400',
-      linha.tamanho ?? 16,
-    );
-    for (const parte of partes) {
-      quebradas.push({
-        tipo: 'texto',
-        texto: parte,
-        peso: linha.peso,
-        tamanho: linha.tamanho,
-        altura: linha.altura,
-      });
-    }
+    quebradas.push(...quebrarLinhaEditada(medida, linha, larguraTexto));
   }
 
   const alturaTopo = alturaProporcional(topo);
@@ -71,8 +107,9 @@ export async function desenharOrcamentoImagem(
   let y = alturaTopo + 24;
   ctx.fillStyle = '#111111';
   ctx.textBaseline = 'top';
+  ctx.strokeStyle = '#111111';
   for (const linha of quebradas) {
-    if (linha.tipo === 'traco') {
+    if (linha.separador) {
       ctx.save();
       ctx.strokeStyle = '#9aa0a6';
       ctx.setLineDash([4, 4]);
@@ -84,13 +121,54 @@ export async function desenharOrcamentoImagem(
       y += linha.altura;
       continue;
     }
-    ctx.font = `${linha.peso ?? '400'} ${linha.tamanho ?? 16}px "Segoe UI", Arial, sans-serif`;
-    ctx.fillText(linha.texto ?? '', PADDING, y);
+    let x = PADDING;
+    for (const trecho of linha.trechos) {
+      ctx.font = `${trecho.peso} ${linha.tamanho}px "Segoe UI", Arial, sans-serif`;
+      ctx.fillStyle = '#111111';
+      ctx.fillText(trecho.texto, x, y);
+      const largura = ctx.measureText(trecho.texto).width;
+      if (trecho.sublinhado && trecho.texto.trim()) {
+        const base = y + linha.tamanho + 1;
+        ctx.beginPath();
+        ctx.strokeStyle = '#111111';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        ctx.moveTo(x, base);
+        ctx.lineTo(x + largura, base);
+        ctx.stroke();
+      }
+      x += largura;
+    }
     y += linha.altura;
   }
 
   ctx.drawImage(rodape, 0, alturaTopo + alturaMiolo, LARGURA, alturaRodape);
   return canvasParaPng(canvas);
+}
+
+export interface LinhaTextoOrcamentoImagem {
+  texto: string;
+  peso: '400' | '700';
+  separador: boolean;
+  tamanho: number;
+  altura: number;
+}
+
+/** Mesmas linhas desenhadas no PNG, para conferir o texto antes da imagem. */
+export function linhasTextoOrcamentoImagem(
+  dados: OrcamentoImagem,
+): LinhaTextoOrcamentoImagem[] {
+  return montarLinhas(dados).map((linha) =>
+    linha.tipo === 'traco'
+      ? { texto: '', peso: '400' as const, separador: true, tamanho: 16, altura: linha.altura }
+      : {
+          texto: linha.texto ?? '',
+          peso: linha.peso ?? '400',
+          separador: false,
+          tamanho: linha.tamanho ?? 16,
+          altura: linha.altura,
+        },
+  );
 }
 
 function montarLinhas(dados: OrcamentoImagem): LinhaDesenho[] {
@@ -140,32 +218,121 @@ function texto(
   return { tipo: 'texto', texto: conteudo, peso, tamanho, altura };
 }
 
-function quebrarTexto(
+function linhasDeDados(dados: OrcamentoImagem): LinhaEditadaImagem[] {
+  return montarLinhas(dados).map((linha) =>
+    linha.tipo === 'traco'
+      ? { trechos: [], separador: true, tamanho: 16, altura: linha.altura }
+      : {
+          trechos: [
+            {
+              texto: linha.texto ?? '',
+              peso: linha.peso ?? '400',
+              sublinhado: false,
+            },
+          ],
+          separador: false,
+          tamanho: linha.tamanho ?? 16,
+          altura: linha.altura,
+        },
+  );
+}
+
+function linhaSimples(texto: string): LinhaEditadaImagem {
+  return {
+    trechos: [{ texto, peso: '400', sublinhado: false }],
+    separador: false,
+    tamanho: 16,
+    altura: 24,
+  };
+}
+
+function linhasDoBloco(el: HTMLElement): LinhaEditadaImagem[] {
+  const tamanho = Number(el.dataset['tamanho']) || 16;
+  const altura = Number(el.dataset['altura']) || tamanho + 8;
+  const grupos: TrechoTextoImagem[][] = [[]];
+  const andar = (node: Node, negrito: boolean, sublinhado: boolean): void => {
+    if (node instanceof HTMLBRElement) {
+      grupos.push([]);
+      return;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      const texto = (node.textContent ?? '').replace(/\u00a0/g, ' ');
+      if (texto) {
+        grupos[grupos.length - 1].push({
+          texto,
+          peso: negrito ? '700' : '400',
+          sublinhado,
+        });
+      }
+      return;
+    }
+    if (!(node instanceof HTMLElement) || node.tagName === 'HR') {
+      return;
+    }
+    const forte = negrito || node.tagName === 'B' || node.tagName === 'STRONG';
+    const risco = sublinhado || node.tagName === 'U';
+    if (node.tagName === 'DIV' || node.tagName === 'P') {
+      if (grupos[grupos.length - 1].length > 0) {
+        grupos.push([]);
+      }
+    }
+    for (const filho of Array.from(node.childNodes)) {
+      andar(filho, forte, risco);
+    }
+  };
+  andar(el, false, false);
+  return grupos.map((trechos) => ({ trechos, separador: false, tamanho, altura }));
+}
+
+function quebrarLinhaEditada(
   ctx: CanvasRenderingContext2D,
-  conteudo: string,
+  linha: LinhaEditadaImagem,
   largura: number,
-  peso: '400' | '700',
-  tamanho: number,
-): string[] {
-  ctx.font = `${peso} ${tamanho}px "Segoe UI", Arial, sans-serif`;
-  const palavras = conteudo.split(' ');
-  const linhas: string[] = [];
-  let atual = '';
-  for (const palavra of palavras) {
-    const candidato = atual ? `${atual} ${palavra}` : palavra;
-    if (ctx.measureText(candidato).width <= largura) {
-      atual = candidato;
-      continue;
+): LinhaEditadaImagem[] {
+  const palavras: TrechoTextoImagem[] = [];
+  for (const trecho of linha.trechos) {
+    const partes = trecho.texto.split(/(\s+)/);
+    for (const parte of partes) {
+      if (!parte) {
+        continue;
+      }
+      palavras.push({ ...trecho, texto: parte });
     }
-    if (atual) {
-      linhas.push(atual);
-    }
-    atual = palavra;
   }
-  if (atual) {
+  const linhas: TrechoTextoImagem[][] = [];
+  let atual: TrechoTextoImagem[] = [];
+  let larguraAtual = 0;
+  const medir = (trecho: TrechoTextoImagem): number => {
+    ctx.font = `${trecho.peso} ${linha.tamanho}px "Segoe UI", Arial, sans-serif`;
+    return ctx.measureText(trecho.texto).width;
+  };
+  for (const palavra of palavras) {
+    const larguraPalavra = medir(palavra);
+    if (larguraAtual + larguraPalavra > largura && atual.some((item) => item.texto.trim())) {
+      linhas.push(atual);
+      atual = [];
+      larguraAtual = 0;
+      if (!palavra.texto.trim()) {
+        continue;
+      }
+    }
+    atual.push(palavra);
+    larguraAtual += larguraPalavra;
+  }
+  if (atual.length > 0) {
     linhas.push(atual);
   }
-  return linhas.length > 0 ? linhas : [''];
+  if (linhas.length === 0) {
+    return [{ ...linha, trechos: [] }];
+  }
+  return linhas.map((trechos) => ({ ...linha, trechos }));
+}
+
+function escaparHtml(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function alturaProporcional(imagem: HTMLImageElement): number {
