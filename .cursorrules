@@ -2,6 +2,7 @@
 - **Precedência:** instruções explícitas do usuário na conversa → este `.cursorrules` → regras em `.cursor/rules/*.mdc`.
 - **Segurança:** não commitar segredos, credenciais ou arquivos `.env`; usar variáveis de ambiente e mecanismos do CI/ambiente.
 - **Respostas:** indicar o que mudou, arquivos impactados, validações realizadas ou recomendadas e riscos residuais.
+- **Git e deploy:** commit, rebase e push sem branch nomeada vão para a `master`. O Render só publica essa branch (`.github/workflows/deploy-render.yml`). Não commitar em branch já aberta no checkout. Push de feature branch não dispara deploy. Detalhe em `.cursor/rules/regras-git.mdc`.
 
 # Comportamento Geral
 - Responda sempre em Português do Brasil.

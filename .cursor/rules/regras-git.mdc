@@ -1,0 +1,30 @@
+---
+description: Commit, rebase e push vão para a master; só ela dispara o deploy no Render
+alwaysApply: true
+---
+
+# Git — commit, rebase e push
+
+O Render publica somente a `master`. O workflow `.github/workflows/deploy-render.yml` dispara no push dessa branch. Push de outra branch não atualiza o ambiente.
+
+## Antes de commitar
+
+- Rodar `git status -sb` e `git branch --show-current`. Informar a branch na resposta.
+- Pedido de commit, rebase e push sem nome de branch tem destino `master`.
+- Não commitar trabalho novo numa branch que já estava aberta no checkout (ex.: `chore/nest-12-audit`). Se o checkout não for `master`, trocar para `master` antes de commitar.
+- Commit feito na branch errada só entra em produção depois de fast-forward dessa branch na `master`.
+
+## Rebase
+
+- `git fetch origin` e `git rebase origin/master` na branch que tem os commits.
+- Rebase alinha com o remoto. Não escolhe o destino do push.
+
+## Push
+
+- Produção: `git push origin master`. É o único push que dispara o deploy.
+- `git push origin HEAD` numa feature branch não atualiza o Render.
+- Sem `--force` na `master`.
+
+## Resposta
+
+- Informar a branch, o hash de `origin/master` e que o próximo deploy precisa fazer checkout desse commit.
