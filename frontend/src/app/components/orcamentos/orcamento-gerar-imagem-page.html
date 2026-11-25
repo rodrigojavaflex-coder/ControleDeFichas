@@ -4,19 +4,20 @@
       <label class="orcamento-imagem-campo orcamento-imagem-campo--dobro">
         <span class="orcamento-imagem-rotulo">Unidade</span>
         <span class="orcamento-imagem-medida" aria-hidden="true">Unidade</span>
-        <select
-          class="form-control"
-          [value]="unidade()"
-          [disabled]="unidadeTravada()"
-          (change)="definirUnidade($event)"
-          (keydown.enter)="aoEnter($event)">
-          @if (!unidadeTravada()) {
+        @if (unidadeTravada()) {
+          <input class="form-control" [value]="unidade()" disabled readonly />
+        } @else {
+          <select
+            class="form-control"
+            [value]="unidade()"
+            (change)="definirUnidade($event)"
+            (keydown.enter)="aoEnter($event)">
             <option value="">Selecione</option>
-          }
-          @for (item of unidades; track item) {
-            <option [value]="item">{{ item }}</option>
-          }
-        </select>
+            @for (item of unidades; track item) {
+              <option [value]="item">{{ item }}</option>
+            }
+          </select>
+        }
       </label>
 
       <label class="orcamento-imagem-campo orcamento-imagem-campo--dobro">
