@@ -1,6 +1,6 @@
 <div class="orcamento-imagem-page">
   <section class="orcamento-imagem-card">
-    <div class="orcamento-imagem-filtros">
+    <form class="orcamento-imagem-filtros" (submit)="enviar($event)">
       <label class="orcamento-imagem-campo orcamento-imagem-campo--dobro">
         <span class="orcamento-imagem-rotulo">Unidade</span>
         <span class="orcamento-imagem-medida" aria-hidden="true">Unidade</span>
@@ -8,7 +8,8 @@
           class="form-control"
           [value]="unidade()"
           [disabled]="unidadeTravada()"
-          (change)="definirUnidade($event)">
+          (change)="definirUnidade($event)"
+          (keydown.enter)="aoEnter($event)">
           @if (!unidadeTravada()) {
             <option value="">Selecione</option>
           }
@@ -27,7 +28,8 @@
           min="1"
           inputmode="numeric"
           [value]="nrorc()"
-          (input)="definirNrorc($event)" />
+          (input)="definirNrorc($event)"
+          (keydown.enter)="aoEnter($event)" />
       </label>
 
       <label class="orcamento-imagem-campo">
@@ -38,7 +40,8 @@
           maxlength="10"
           placeholder="Todas"
           [value]="serieo()"
-          (input)="definirSerieo($event)" />
+          (input)="definirSerieo($event)"
+          (keydown.enter)="aoEnter($event)" />
       </label>
 
       <label class="orcamento-imagem-campo">
@@ -49,15 +52,15 @@
           min="1"
           max="365"
           [value]="diasValidade()"
-          (input)="definirDias($event)" />
+          (input)="definirDias($event)"
+          (keydown.enter)="aoEnter($event)" />
       </label>
 
       <div class="orcamento-imagem-acoes">
         <button
-          type="button"
+          type="submit"
           class="btn btn-salvar"
-          [disabled]="gerando() || !faixasProntas()"
-          (click)="gerar()">
+          [disabled]="gerando() || !faixasProntas()">
           {{ gerando() ? 'Gerando...' : 'Gerar' }}
         </button>
         @if (podeAlterarFaixa()) {
@@ -71,7 +74,7 @@
           </button>
         }
       </div>
-    </div>
+    </form>
 
     @if (avisoFaixas()) {
       <p class="orcamento-imagem-aviso">{{ avisoFaixas() }}</p>

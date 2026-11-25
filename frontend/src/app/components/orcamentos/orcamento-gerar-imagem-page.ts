@@ -126,7 +126,20 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
     return `Falta o ${faltando.join(' e o ')} desta unidade.`;
   }
 
+  enviar(event: Event): void {
+    event.preventDefault();
+    void this.gerar();
+  }
+
+  aoEnter(event: Event): void {
+    event.preventDefault();
+    void this.gerar();
+  }
+
   async gerar(): Promise<void> {
+    if (this.gerando()) {
+      return;
+    }
     const unidade = this.unidade();
     const nrorc = Number(this.nrorc());
     const dias = Number(this.diasValidade());
