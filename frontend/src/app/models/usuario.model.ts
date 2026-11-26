@@ -94,6 +94,8 @@ export enum Permission {
   FOLHA_FUNCIONARIO_READ = 'folha-funcionario:read',
   FOLHA_FUNCIONARIO_UPDATE = 'folha-funcionario:update',
   FOLHA_FUNCIONARIO_DELETE = 'folha-funcionario:delete',
+  FOLHA_FUNCIONARIO_UPDATE_CONTA_BANCARIA = 'folha-funcionario:update-conta-bancaria',
+  FOLHA_FUNCIONARIO_UPDATE_INTEGRACAO_ERP = 'folha-funcionario:update-integracao-erp',
 
   FOLHA_CARGO_CREATE = 'folha-cargo:create',
   FOLHA_CARGO_READ = 'folha-cargo:read',

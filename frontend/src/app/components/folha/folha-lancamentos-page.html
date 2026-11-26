@@ -74,7 +74,7 @@
           class="btn btn-success folha-lancamentos-btn-relatorios"
           [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
           (click)="abrirModalRelatorios()"
-          title="Relatórios da competência (exige unidade e tipo de folha)"
+          title="Relatórios da competência (exige tipo de folha; usa a unidade da tela)"
         >
           <i class="fas fa-print" aria-hidden="true"></i>
           Relatórios
@@ -883,6 +883,8 @@
             Competência <strong>{{ referenciaCompetencia }}</strong>
             @if (unidadeApi(); as un) {
               · <strong>{{ un }}</strong>
+            } @else {
+              · <strong>Todas as unidades</strong>
             }
           </p>
           <div class="folha-hub-relatorios-lista" role="group" aria-label="Opções de relatório">
@@ -960,6 +962,51 @@
             class="btn btn-salvar"
             [disabled]="gerandoRelatorioFolhaGeral"
             (click)="confirmarGerarFolhaGeral()"
+          >
+            {{ gerandoRelatorioFolhaGeral ? 'Gerando…' : 'Gerar' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (showModalOpcoesPreviaPagBank) {
+    <div class="folha-lancamentos-item-modal-backdrop" role="presentation">
+      <div
+        class="folha-lancamentos-item-modal folha-opcoes-folha-geral-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lac-opcoes-previa-pagbank-title"
+      >
+        <header class="folha-lancamentos-item-modal-head">
+          <h2 id="lac-opcoes-previa-pagbank-title" class="folha-lancamentos-item-modal-title">
+            Prévia PagBank — opções
+          </h2>
+        </header>
+        <div class="folha-lancamentos-item-modal-body">
+          <fieldset class="folha-opcoes-folha-geral-fieldset">
+            <legend>Exibição</legend>
+            <label class="folha-opcoes-folha-geral-radio">
+              <input type="radio" name="previaPagBankModo" [(ngModel)]="previaPagBankModo" [value]="'todos'" />
+              Mostrar todos (válidos e alertas)
+            </label>
+            <label class="folha-opcoes-folha-geral-radio">
+              <input type="radio" name="previaPagBankModo" [(ngModel)]="previaPagBankModo" [value]="'somenteAlertas'" />
+              Somente alertas (não entram no PagBank)
+            </label>
+            <label class="folha-opcoes-folha-geral-check">
+              <input type="checkbox" [(ngModel)]="previaPagBankOcultarLiquidoAlertas" />
+              Não mostrar líquido nos alertas
+            </label>
+          </fieldset>
+        </div>
+        <footer class="folha-lancamentos-item-modal-actions">
+          <button type="button" class="btn btn-cancelar" (click)="fecharModalOpcoesPreviaPagBank()">Fechar</button>
+          <button
+            type="button"
+            class="btn btn-salvar"
+            [disabled]="gerandoRelatorioFolhaGeral"
+            (click)="confirmarGerarPreviaPagBank()"
           >
             {{ gerandoRelatorioFolhaGeral ? 'Gerando…' : 'Gerar' }}
           </button>

@@ -310,13 +310,10 @@
         aria-labelledby="ff-h-integracao-erp"
       >
         <h3 id="ff-h-integracao-erp" class="folha-form-block-title">Integração ERP</h3>
-        <p class="form-help folha-form-block-intro">
-          Códigos usados para cruzar o cadastro com sistemas legados (produção e painel médico de visitação).
-        </p>
 
         <div class="form-row form-row-2">
           <div class="form-group">
-            <label class="form-label" for="ff-cod-erp">Código usuário ERP (cdusu)</label>
+            <label class="form-label" for="ff-cod-erp">Código usuário ERP</label>
             <input
               id="ff-cod-erp"
               type="number"
@@ -332,7 +329,7 @@
             }
           </div>
           <div class="form-group">
-            <label class="form-label" for="ff-cod-func-erp">Código funcionário ERP (cdfun)</label>
+            <label class="form-label" for="ff-cod-func-erp">Código funcionário ERP</label>
             <input
               id="ff-cod-func-erp"
               type="number"
@@ -342,7 +339,7 @@
               formControlName="codigoFuncionarioErp"
               placeholder="Ex.: 33"
             />
-            <div class="form-help">Fallback PCP quando cdusu não vier no movimento (FC08000).</div>
+            <div class="form-help">Usado na produtividade quando o código de usuário não estiver no movimento.</div>
             @if (form.get('codigoFuncionarioErp')?.invalid && form.get('codigoFuncionarioErp')?.touched) {
               <div class="error-message">Informe um código inteiro maior que zero.</div>
             }
@@ -351,7 +348,7 @@
 
         <div class="form-row form-row-2">
           <div class="form-group">
-            <label class="form-label" for="ff-cod-vendedor-erp">Código vendedor ERP (cdfun)</label>
+            <label class="form-label" for="ff-cod-vendedor-erp">Código vendedor ERP</label>
             <input
               id="ff-cod-vendedor-erp"
               type="number"
@@ -370,7 +367,7 @@
 
         <div class="form-row form-row-2">
           <div class="form-group">
-            <label class="form-label" for="ff-painel-contrato">Filial do painel (cdcon)</label>
+            <label class="form-label" for="ff-painel-contrato">Filial do painel</label>
             <input
               id="ff-painel-contrato"
               type="number"
@@ -380,10 +377,10 @@
               formControlName="painelContratoRepresentante"
               placeholder="Ex.: 9999"
             />
-            <div class="form-help">Contrato/filial do painel médico — informe junto com o código do representante.</div>
+            <div class="form-help">Filial do painel médico — informe junto com o código do representante.</div>
           </div>
           <div class="form-group">
-            <label class="form-label" for="ff-painel-rep">Código representante painel (cdfun)</label>
+            <label class="form-label" for="ff-painel-rep">Código representante painel</label>
             <input
               id="ff-painel-rep"
               type="number"

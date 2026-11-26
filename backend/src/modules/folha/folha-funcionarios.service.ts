@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
@@ -34,6 +35,8 @@ import {
 } from './utils/folha-competencia.util';
 import { Unidade } from '../../common/enums/unidade.enum';
 import { TipoChavePixFolha } from '../../common/enums/tipo-chave-pix-folha.enum';
+import { Permission } from '../../common/enums/permission.enum';
+import { getUsuarioPermissoes } from '../../common/utils/usuario-permissoes.util';
 
 const EMAIL_CHAVE_PIX =
   /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
@@ -365,8 +368,46 @@ export class FolhaFuncionariosService {
       setorId: patchSetorId,
       eventosFixos: patchEventosFixos,
       dataDemissao: patchDataDemissao,
+      bancoNumero: patchBancoNumero,
+      contaBancaria: patchContaBancaria,
+      digitoConta: patchDigitoConta,
+      codigoUsuarioErp: patchCodigoUsuarioErp,
+      codigoFuncionarioErp: patchCodigoFuncionarioErp,
+      codigoVendedorErp: patchCodigoVendedorErp,
+      painelContratoRepresentante: patchPainelContrato,
+      painelCodigoRepresentante: patchPainelCodigo,
       ...restPatch
     } = dto;
+
+    const permissoes = getUsuarioPermissoes(usuario);
+    const podeContaBancaria = permissoes.includes(
+      Permission.FOLHA_FUNCIONARIO_UPDATE_CONTA_BANCARIA,
+    );
+    const podeIntegracaoErp = permissoes.includes(
+      Permission.FOLHA_FUNCIONARIO_UPDATE_INTEGRACAO_ERP,
+    );
+
+    const enviouContaBancaria =
+      patchBancoNumero !== undefined ||
+      patchContaBancaria !== undefined ||
+      patchDigitoConta !== undefined;
+    if (enviouContaBancaria && !podeContaBancaria) {
+      throw new ForbiddenException(
+        'Sem permissão para alterar conta bancária (banco, conta e dígito).',
+      );
+    }
+
+    const enviouIntegracaoErp =
+      patchCodigoUsuarioErp !== undefined ||
+      patchCodigoFuncionarioErp !== undefined ||
+      patchCodigoVendedorErp !== undefined ||
+      patchPainelContrato !== undefined ||
+      patchPainelCodigo !== undefined;
+    if (enviouIntegracaoErp && !podeIntegracaoErp) {
+      throw new ForbiddenException(
+        'Sem permissão para alterar os campos de Integração ERP.',
+      );
+    }
 
     Object.assign(entity, restPatch);
 
@@ -389,45 +430,45 @@ export class FolhaFuncionariosService {
     if (dto.cpf !== undefined) {
       entity.cpf = dto.cpf?.trim() ? dto.cpf.trim() : null;
     }
-    if (dto.codigoUsuarioErp !== undefined) {
+    if (patchCodigoUsuarioErp !== undefined) {
       const unidadeAlvo = dto.unidade ?? entity.unidade;
       await this.assertCodigoUsuarioErpUnico(
         unidadeAlvo,
-        dto.codigoUsuarioErp ?? null,
+        patchCodigoUsuarioErp ?? null,
         id,
       );
-      entity.codigoUsuarioErp = dto.codigoUsuarioErp ?? null;
+      entity.codigoUsuarioErp = patchCodigoUsuarioErp ?? null;
     }
-    if (dto.codigoFuncionarioErp !== undefined) {
+    if (patchCodigoFuncionarioErp !== undefined) {
       const unidadeAlvo = dto.unidade ?? entity.unidade;
       await this.assertCodigoFuncionarioErpCdfunUnico(
         unidadeAlvo,
-        dto.codigoFuncionarioErp ?? null,
+        patchCodigoFuncionarioErp ?? null,
         id,
       );
-      entity.codigoFuncionarioErp = dto.codigoFuncionarioErp ?? null;
+      entity.codigoFuncionarioErp = patchCodigoFuncionarioErp ?? null;
     }
-    if (dto.codigoVendedorErp !== undefined) {
+    if (patchCodigoVendedorErp !== undefined) {
       const unidadeAlvo = dto.unidade ?? entity.unidade;
       await this.assertCodigoVendedorErpUnico(
         unidadeAlvo,
-        dto.codigoVendedorErp ?? null,
+        patchCodigoVendedorErp ?? null,
         id,
       );
-      entity.codigoVendedorErp = dto.codigoVendedorErp ?? null;
+      entity.codigoVendedorErp = patchCodigoVendedorErp ?? null;
     }
 
     const painelContrato =
-      dto.painelContratoRepresentante !== undefined
-        ? dto.painelContratoRepresentante
+      patchPainelContrato !== undefined
+        ? patchPainelContrato
         : entity.painelContratoRepresentante;
     const painelCodigo =
-      dto.painelCodigoRepresentante !== undefined
-        ? dto.painelCodigoRepresentante
+      patchPainelCodigo !== undefined
+        ? patchPainelCodigo
         : entity.painelCodigoRepresentante;
     if (
-      dto.painelContratoRepresentante !== undefined ||
-      dto.painelCodigoRepresentante !== undefined
+      patchPainelContrato !== undefined ||
+      patchPainelCodigo !== undefined
     ) {
       this.assertPainelRepresentantePar(painelContrato, painelCodigo);
       const unidadeAlvo = dto.unidade ?? entity.unidade;
@@ -456,19 +497,19 @@ export class FolhaFuncionariosService {
     if (dto.chavePix !== undefined) {
       entity.chavePix = dto.chavePix?.trim() ? dto.chavePix.trim() : null;
     }
-    if (dto.bancoNumero !== undefined) {
-      entity.bancoNumero = dto.bancoNumero?.trim()
-        ? dto.bancoNumero.trim()
+    if (patchBancoNumero !== undefined) {
+      entity.bancoNumero = patchBancoNumero?.trim()
+        ? patchBancoNumero.trim()
         : null;
     }
-    if (dto.contaBancaria !== undefined) {
-      entity.contaBancaria = dto.contaBancaria?.trim()
-        ? dto.contaBancaria.trim()
+    if (patchContaBancaria !== undefined) {
+      entity.contaBancaria = patchContaBancaria?.trim()
+        ? patchContaBancaria.trim()
         : null;
     }
-    if (dto.digitoConta !== undefined) {
-      entity.digitoConta = dto.digitoConta?.trim()
-        ? dto.digitoConta.trim()
+    if (patchDigitoConta !== undefined) {
+      entity.digitoConta = patchDigitoConta?.trim()
+        ? patchDigitoConta.trim()
         : null;
     }
     this.assertFuncionarioCamposObrigatorios(entity);

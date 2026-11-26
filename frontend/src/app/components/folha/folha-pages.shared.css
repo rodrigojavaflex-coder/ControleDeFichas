@@ -2292,6 +2292,13 @@ body.theme-dark .folha-opcoes-folha-geral-fieldset {
   line-height: 1.4;
 }
 
+.folha-opcoes-folha-geral-unidade-label {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-primary, #0f172a);
+}
+
 /* Modal — filtros do relatório Folha por Evento */
 .folha-relatorio-evento-filtro-modal {
   width: min(520px, calc(100vw - 2rem));

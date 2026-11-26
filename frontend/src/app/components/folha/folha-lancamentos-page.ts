@@ -1,6 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { FolhaService } from '../../services/folha.service';
 import { AuthService } from '../../services/auth.service';
 import { PageContextService } from '../../services/page-context.service';
@@ -118,11 +120,16 @@ export class FolhaLancamentosPage implements OnInit {
   showModalRelatorios = false;
   /** Opções de impressão da Folha geral. */
   showModalOpcoesFolhaGeral = false;
+  showModalOpcoesPreviaPagBank = false;
   folhaGeralFormato: 'analitico' | 'sintetico' = 'analitico';
   folhaGeralQuebraSetor = false;
   folhaGeralQuebraComissao = false;
   /** Somente no analítico: lista eventos (verbas) de cada funcionário. */
   folhaGeralVerEventos = false;
+  /** Prévia PagBank: todos os funcionários ou só os com alerta. */
+  previaPagBankModo: 'todos' | 'somenteAlertas' = 'todos';
+  /** Prévia PagBank: ocultar coluna Líquido na seção de alertas. */
+  previaPagBankOcultarLiquidoAlertas = false;
 
   showRemoverItemModal = false;
   itemIdParaRemover: string | null = null;
@@ -236,16 +243,127 @@ export class FolhaLancamentosPage implements OnInit {
     return this.pode().c;
   }
 
-  /** Unidade específica e tipo de folha escolhidos (competência sempre definida pelo mês/ano da tela). */
+  /** Tipo de folha escolhido (competência sempre definida pelo mês/ano da tela). Unidade é escolhida no modal do relatório. */
   relatoriosFolhaGeralFiltrosPreenchidos(): boolean {
-    return (
-      !this.precisaEscolherUnidadeParaLancar() && !!this.tipoId?.trim()
-    );
+    return !!this.tipoId?.trim();
   }
 
-  /** Botões sempre visíveis com leitura: desabilita sem unidade específica ou tipo de folha. */
+  /** Botão Relatórios: exige tipo de folha (unidade vem do filtro da tela). */
   desabilitarBotoesRelatoriosFolhaGeralTopo(): boolean {
     return !this.relatoriosFolhaGeralFiltrosPreenchidos();
+  }
+
+  /**
+   * Escopo de unidade na API (RN-007): `usuario.unidade` ou, se vazio, `vendedor.unidade`.
+   * Usuário sem vínculo pode consultar qualquer unidade.
+   */
+  private unidadeEscopoApiUsuario(): Unidade | null {
+    const u = this.auth.getCurrentUser();
+    const cadastro = u?.unidade?.trim();
+    if (cadastro) return cadastro as Unidade;
+    const vend = u?.vendedor?.unidade?.trim();
+    if (vend) return vend as Unidade;
+    return null;
+  }
+
+  /**
+   * Unidades a consultar na API: filtro da tela de lançamento.
+   * Unidade específica → só ela; “Todas” → todas que o usuário pode acessar.
+   */
+  unidadesEscopoRelatorio(): Unidade[] {
+    const unTela = this.unidadeApi();
+    if (unTela) return [unTela];
+    const escopoApi = this.unidadeEscopoApiUsuario();
+    if (escopoApi) return [escopoApi];
+    return [...this.unidadesVisiveisParaSelect];
+  }
+
+  /** Rótulo de cabeçalho: unidade da tela ou “Todas as unidades”. */
+  rotuloUnidadeRelatorioCabecalho(): string {
+    const un = this.unidadeApi();
+    if (un) return String(un);
+    const unidades = this.unidadesEscopoRelatorio();
+    if (unidades.length === 1) return String(unidades[0]);
+    return 'Todas as unidades';
+  }
+
+  /** Tela em “Todas” e mais de uma unidade no escopo → quebra master (com quebra de página). */
+  relatorioQuebraUnidadeMaster(): boolean {
+    return this.unidadeApi() == null && this.unidadesEscopoRelatorio().length > 1;
+  }
+
+  private descricaoUnidadeParaRelatorio(row: FolhaCapaDetalheResponse): string {
+    const u = row.capa.funcionario?.unidade;
+    return u && String(u).trim() !== '' ? String(u) : 'Sem unidade';
+  }
+
+  /**
+   * Carrega capas com detalhe das unidades informadas (ou do escopo atual).
+   * Não engole 403/erro por unidade: se todas falharem, propaga; se parcial, junta as ok.
+   */
+  private carregarCapasComDetalheRelatorio(
+    unidadesExplicitas?: Unidade[],
+  ): Observable<FolhaCapaDetalheResponse[]> {
+    const unidades =
+      unidadesExplicitas && unidadesExplicitas.length > 0
+        ? [...unidadesExplicitas]
+        : this.unidadesEscopoRelatorio();
+    if (!unidades.length || !this.tipoId?.trim()) {
+      return of([]);
+    }
+    return forkJoin(
+      unidades.map((unidade) =>
+        this.folha
+          .listarCapasComDetalhe({
+            unidade,
+            ano: this.ano,
+            mes: this.mes,
+            folhaTipoId: this.tipoId,
+          })
+          .pipe(
+            map((rows) => ({ unidade, rows, ok: true as const })),
+            catchError((err: { error?: { message?: string }; message?: string }) =>
+              of({
+                unidade,
+                rows: [] as FolhaCapaDetalheResponse[],
+                ok: false as const,
+                erro:
+                  err?.error?.message ||
+                  err?.message ||
+                  `Falha ao carregar ${unidade}`,
+              }),
+            ),
+          ),
+      ),
+    ).pipe(
+      map((resultados) => {
+        const ok = resultados.filter((r) => r.ok);
+        const falhas = resultados.filter((r) => !r.ok);
+        if (ok.length === 0 && falhas.length > 0) {
+          throw new Error(
+            falhas
+              .map((f) => `${f.unidade}: ${'erro' in f ? f.erro : 'erro'}`)
+              .join(' · '),
+          );
+        }
+        /** Garante unidade na capa para a quebra master (agrupamento / páginas). */
+        return ok.flatMap((r) =>
+          r.rows.map((row) => {
+            const f = row.capa?.funcionario;
+            if (f && (!f.unidade || String(f.unidade).trim() === '')) {
+              return {
+                ...row,
+                capa: {
+                  ...row.capa,
+                  funcionario: { ...f, unidade: r.unidade },
+                },
+              };
+            }
+            return row;
+          }),
+        );
+      }),
+    );
   }
 
   pode(): {
@@ -478,20 +596,27 @@ export class FolhaLancamentosPage implements OnInit {
   confirmarGerarFolhaGeral(): void {
     if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
     if (this.gerandoRelatorioFolhaGeral) return;
-    const un = this.unidadeApi();
-    if (!un) return;
+    const unidades = this.unidadesEscopoRelatorio();
+    if (!unidades.length) {
+      this.errors.show('Nenhuma unidade disponível para o relatório.', 'Relatório');
+      return;
+    }
     const opcoes = {
       formato: this.folhaGeralFormato,
       quebraSetor: this.folhaGeralQuebraSetor,
       quebraComissao: this.folhaGeralQuebraComissao,
       verEventos:
         this.folhaGeralFormato === 'analitico' && this.folhaGeralVerEventos,
+      quebraUnidadeMaster: this.relatorioQuebraUnidadeMaster(),
     };
+    const rotuloUnidade = this.rotuloUnidadeRelatorioCabecalho();
     this.fecharModalOpcoesFolhaGeral();
     this.gerandoRelatorioFolhaGeral = true;
     this.configuracaoService.getConfiguracao().subscribe({
-      next: (cfg) => this.executarRelatorioFolhaGeral(un, cfg ?? null, opcoes),
-      error: () => this.executarRelatorioFolhaGeral(un, null, opcoes),
+      next: (cfg) =>
+        this.executarRelatorioFolhaGeral(cfg ?? null, opcoes, unidades, rotuloUnidade),
+      error: () =>
+        this.executarRelatorioFolhaGeral(null, opcoes, unidades, rotuloUnidade),
     });
   }
 
@@ -502,12 +627,64 @@ export class FolhaLancamentosPage implements OnInit {
 
   abrirReciboGeralDoHub(): void {
     this.fecharModalRelatorios();
-    this.imprimirReciboGeralTodasCapas();
+    if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
+    if (this.gerandoRelatorioFolhaGeral) return;
+    const unidades = this.unidadesEscopoRelatorio();
+    if (!unidades.length) {
+      this.errors.show('Nenhuma unidade disponível para o relatório.', 'Relatório');
+      return;
+    }
+    this.gerandoRelatorioFolhaGeral = true;
+    this.executarReciboGeralCompetencia(
+      unidades,
+      this.rotuloUnidadeRelatorioCabecalho(),
+      this.relatorioQuebraUnidadeMaster(),
+    );
   }
 
   abrirPreviaPagBankDoHub(): void {
     this.fecharModalRelatorios();
-    this.imprimirPreviaPagBank();
+    this.previaPagBankModo = 'todos';
+    this.previaPagBankOcultarLiquidoAlertas = false;
+    this.showModalOpcoesPreviaPagBank = true;
+  }
+
+  fecharModalOpcoesPreviaPagBank(): void {
+    this.showModalOpcoesPreviaPagBank = false;
+  }
+
+  confirmarGerarPreviaPagBank(): void {
+    if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
+    if (this.gerandoRelatorioFolhaGeral) return;
+    const unidades = this.unidadesEscopoRelatorio();
+    if (!unidades.length) {
+      this.errors.show('Nenhuma unidade disponível para o relatório.', 'Relatório');
+      return;
+    }
+    const rotuloUnidade = this.rotuloUnidadeRelatorioCabecalho();
+    const quebra = this.relatorioQuebraUnidadeMaster();
+    const somenteAlertas = this.previaPagBankModo === 'somenteAlertas';
+    const ocultarLiquidoAlertas = this.previaPagBankOcultarLiquidoAlertas;
+    this.fecharModalOpcoesPreviaPagBank();
+    this.gerandoRelatorioFolhaGeral = true;
+    this.configuracaoService.getConfiguracao().subscribe({
+      next: (cfg) =>
+        this.executarPreviaPagBank(cfg ?? null, {
+          unidades,
+          rotuloUnidade,
+          quebraUnidadeMaster: quebra,
+          somenteAlertas,
+          ocultarLiquidoAlertas,
+        }),
+      error: () =>
+        this.executarPreviaPagBank(null, {
+          unidades,
+          rotuloUnidade,
+          quebraUnidadeMaster: quebra,
+          somenteAlertas,
+          ocultarLiquidoAlertas,
+        }),
+    });
   }
 
   abrirModalFiltroRelatorioPorEvento(): void {
@@ -605,165 +782,157 @@ export class FolhaLancamentosPage implements OnInit {
       return;
     }
     if (this.gerandoRelatorioFolhaGeral) return;
-    const un = this.unidadeApi();
-    if (!un) return;
+    const unidades = this.unidadesEscopoRelatorio();
+    if (!unidades.length) {
+      this.errors.show('Nenhuma unidade disponível para o relatório.', 'Relatório');
+      return;
+    }
+    const rotuloUnidade = this.rotuloUnidadeRelatorioCabecalho();
+    const quebra = this.relatorioQuebraUnidadeMaster();
     this.fecharModalFiltroRelatorioPorEvento();
     this.gerandoRelatorioFolhaGeral = true;
     this.configuracaoService.getConfiguracao().subscribe({
-      next: (cfg) => this.executarRelatorioFolhaPorEvento(un, cfg ?? null, ids),
-      error: () => this.executarRelatorioFolhaPorEvento(un, null, ids),
+      next: (cfg) =>
+        this.executarRelatorioFolhaPorEvento(cfg ?? null, ids, unidades, rotuloUnidade, quebra),
+      error: () =>
+        this.executarRelatorioFolhaPorEvento(null, ids, unidades, rotuloUnidade, quebra),
     });
   }
 
-  imprimirReciboGeralTodasCapas(): void {
-    if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
-    if (this.gerandoRelatorioFolhaGeral) return;
-    const un = this.unidadeApi();
-    if (!un) return;
-    this.gerandoRelatorioFolhaGeral = true;
-    this.configuracaoService.getConfiguracao().subscribe({
-      next: () => this.executarReciboGeralCompetencia(un),
-      error: () => this.executarReciboGeralCompetencia(un),
-    });
-  }
-
-  private executarReciboGeralCompetencia(un: Unidade): void {
-    this.folha
-      .listarCapasComDetalhe({
-        unidade: un,
-        ano: this.ano,
-        mes: this.mes,
-        folhaTipoId: this.tipoId,
-      })
-      .subscribe({
-        next: (rows) => {
-          const html = this.montarHtmlReciboGeralMultiplasPaginas(un, rows);
-          this.abrirPopupRelatorioHtml(html, 'recibo-geral');
-          this.gerandoRelatorioFolhaGeral = false;
-        },
-        error: () => {
-          this.errors.show(
+  private executarReciboGeralCompetencia(
+    unidades: Unidade[],
+    rotuloUnidade: string,
+    quebraUnidadeMaster: boolean,
+  ): void {
+    this.carregarCapasComDetalheRelatorio(unidades).subscribe({
+      next: (rows) => {
+        const html = this.montarHtmlReciboGeralMultiplasPaginas(
+          rotuloUnidade,
+          rows,
+          quebraUnidadeMaster,
+        );
+        this.abrirPopupRelatorioHtml(html, 'recibo-geral');
+        this.gerandoRelatorioFolhaGeral = false;
+      },
+      error: (err: { message?: string }) => {
+        this.errors.show(
+          err?.message ||
             'Não foi possível carregar as folhas para o recibo geral. Tente novamente.',
-            'Folha',
-          );
-          this.gerandoRelatorioFolhaGeral = false;
-        },
-      });
+          'Folha',
+        );
+        this.gerandoRelatorioFolhaGeral = false;
+      },
+    });
   }
 
   private executarRelatorioFolhaGeral(
-    un: Unidade,
     cfg: Configuracao | null,
     opcoes: {
       formato: 'analitico' | 'sintetico';
       quebraSetor: boolean;
       quebraComissao: boolean;
       verEventos?: boolean;
+      quebraUnidadeMaster?: boolean;
     },
+    unidades: Unidade[],
+    rotuloUnidade: string,
   ): void {
-    this.folha
-      .listarCapasComDetalhe({
-        unidade: un,
-        ano: this.ano,
-        mes: this.mes,
-        folhaTipoId: this.tipoId,
-      })
-      .subscribe({
-        next: (rows) => {
-          const tipoDesc =
-            this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
-          const html = this.montarHtmlRelatorioFolhaGeralDocumento(
-            rows,
-            cfg,
-            un,
-            tipoDesc,
-            opcoes,
-          );
-          this.abrirPopupRelatorioHtml(html, 'folha-geral');
-          this.gerandoRelatorioFolhaGeral = false;
-        },
-        error: () => {
-          this.errors.show(
+    this.carregarCapasComDetalheRelatorio(unidades).subscribe({
+      next: (rows) => {
+        const tipoDesc =
+          this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
+        const html = this.montarHtmlRelatorioFolhaGeralDocumento(
+          rows,
+          cfg,
+          rotuloUnidade,
+          tipoDesc,
+          opcoes,
+          unidades,
+        );
+        this.abrirPopupRelatorioHtml(html, 'folha-geral');
+        this.gerandoRelatorioFolhaGeral = false;
+      },
+      error: (err: { message?: string }) => {
+        this.errors.show(
+          err?.message ||
             'Não foi possível carregar as folhas para o relatório. Tente novamente.',
-            'Folha',
-          );
-          this.gerandoRelatorioFolhaGeral = false;
-        },
-      });
-  }
-
-  imprimirPreviaPagBank(): void {
-    if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
-    if (this.gerandoRelatorioFolhaGeral) return;
-    const un = this.unidadeApi();
-    if (!un) return;
-    this.gerandoRelatorioFolhaGeral = true;
-    this.configuracaoService.getConfiguracao().subscribe({
-      next: (cfg) => this.executarPreviaPagBank(un, cfg ?? null),
-      error: () => this.executarPreviaPagBank(un, null),
+          'Folha',
+        );
+        this.gerandoRelatorioFolhaGeral = false;
+      },
     });
   }
 
-  private executarPreviaPagBank(un: Unidade, cfg: Configuracao | null): void {
-    this.folha
-      .listarCapasComDetalhe({
-        unidade: un,
-        ano: this.ano,
-        mes: this.mes,
-        folhaTipoId: this.tipoId,
-      })
-      .subscribe({
-        next: (rows) => {
-          const tipoDesc =
-            this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
-          const html = this.montarHtmlPreviaPagBankDocumento(rows, cfg, un, tipoDesc);
-          this.abrirPopupRelatorioHtml(html, 'previa-pagbank');
-          this.gerandoRelatorioFolhaGeral = false;
-        },
-        error: () => {
-          this.errors.show(
+  private executarPreviaPagBank(
+    cfg: Configuracao | null,
+    opts: {
+      unidades: Unidade[];
+      rotuloUnidade: string;
+      quebraUnidadeMaster: boolean;
+      somenteAlertas: boolean;
+      ocultarLiquidoAlertas: boolean;
+    },
+  ): void {
+    this.carregarCapasComDetalheRelatorio(opts.unidades).subscribe({
+      next: (rows) => {
+        const tipoDesc =
+          this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
+        const html = this.montarHtmlPreviaPagBankDocumento(
+          rows,
+          cfg,
+          opts.rotuloUnidade,
+          tipoDesc,
+          {
+            somenteAlertas: opts.somenteAlertas,
+            ocultarLiquidoAlertas: opts.ocultarLiquidoAlertas,
+            quebraUnidadeMaster: opts.quebraUnidadeMaster,
+          },
+        );
+        this.abrirPopupRelatorioHtml(html, 'previa-pagbank');
+        this.gerandoRelatorioFolhaGeral = false;
+      },
+      error: (err: { message?: string }) => {
+        this.errors.show(
+          err?.message ||
             'Não foi possível carregar as folhas para a prévia PagBank. Tente novamente.',
-            'Folha',
-          );
-          this.gerandoRelatorioFolhaGeral = false;
-        },
-      });
+          'Folha',
+        );
+        this.gerandoRelatorioFolhaGeral = false;
+      },
+    });
   }
 
   private executarRelatorioFolhaPorEvento(
-    un: Unidade,
     cfg: Configuracao | null,
     verbaIdsIncluir: ReadonlySet<string>,
+    unidades: Unidade[],
+    rotuloUnidade: string,
+    quebraUnidadeMaster: boolean,
   ): void {
-    this.folha
-      .listarCapasComDetalhe({
-        unidade: un,
-        ano: this.ano,
-        mes: this.mes,
-        folhaTipoId: this.tipoId,
-      })
-      .subscribe({
-        next: (rows) => {
-          const tipoDesc =
-            this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
-          const html = this.montarHtmlRelatorioFolhaPorEventoDocumento(
-            rows,
-            cfg,
-            un,
-            tipoDesc,
-            verbaIdsIncluir,
-          );
-          this.abrirPopupRelatorioHtml(html, 'folha-por-evento');
-          this.gerandoRelatorioFolhaGeral = false;
-        },
-        error: () => {
-          this.errors.show(
+    this.carregarCapasComDetalheRelatorio(unidades).subscribe({
+      next: (rows) => {
+        const tipoDesc =
+          this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
+        const html = this.montarHtmlRelatorioFolhaPorEventoDocumento(
+          rows,
+          cfg,
+          rotuloUnidade,
+          tipoDesc,
+          verbaIdsIncluir,
+          quebraUnidadeMaster,
+        );
+        this.abrirPopupRelatorioHtml(html, 'folha-por-evento');
+        this.gerandoRelatorioFolhaGeral = false;
+      },
+      error: (err: { message?: string }) => {
+        this.errors.show(
+          err?.message ||
             'Não foi possível carregar as folhas para o relatório. Tente novamente.',
-            'Folha',
-          );
-          this.gerandoRelatorioFolhaGeral = false;
-        },
-      });
+          'Folha',
+        );
+        this.gerandoRelatorioFolhaGeral = false;
+      },
+    });
   }
 
   private abrirPopupRelatorioHtml(html: string, slugDoc: string): void {
@@ -896,17 +1065,20 @@ export class FolhaLancamentosPage implements OnInit {
   private montarHtmlRelatorioFolhaGeralDocumento(
     rows: FolhaCapaDetalheResponse[],
     config: Configuracao | null,
-    unidade: Unidade,
+    rotuloUnidade: string,
     tipoFolhaDescricao: string,
     opcoes: {
       formato: 'analitico' | 'sintetico';
       quebraSetor: boolean;
       quebraComissao: boolean;
       verEventos?: boolean;
+      quebraUnidadeMaster?: boolean;
     },
+    unidadesEscopo: Unidade[] = [],
   ): string {
     const comp = `${this.nomeMesPt(this.mes)} / ${this.ano}`;
     const quebras: string[] = [];
+    if (opcoes.quebraUnidadeMaster) quebras.push('Unidade');
     if (opcoes.quebraSetor) quebras.push('Setor');
     if (opcoes.quebraComissao) quebras.push('Comissão');
     const subTitulo = [
@@ -916,10 +1088,9 @@ export class FolhaLancamentosPage implements OnInit {
     ]
       .filter(Boolean)
       .join(' · ');
-    const linCab: string[] = [String(unidade), comp, tipoFolhaDescricao, subTitulo];
-
     type Linha = {
       nome: string;
+      unidade: string;
       setor: string;
       comissao: number;
       naoComissaoReceitas: number;
@@ -934,21 +1105,74 @@ export class FolhaLancamentosPage implements OnInit {
       const t = this.totaisComissaoDaCapa(r);
       return {
         nome: (r.capa.funcionario?.nome ?? '—').trim() || '—',
+        unidade: this.descricaoUnidadeParaRelatorio(r),
         setor: this.descricaoSetorParaRelatorio(r),
         itens: r.capa.itens ?? [],
         ...t,
       };
     });
 
+    const opcoesSemQuebraUnidade = { ...opcoes, quebraUnidadeMaster: false };
+    const quebrasInternas = [
+      opcoes.quebraSetor ? 'Setor' : null,
+      opcoes.quebraComissao ? 'Comissão' : null,
+    ].filter(Boolean) as string[];
+    const subTituloPagina = [
+      opcoes.formato === 'sintetico' ? 'Sintético' : 'Analítico',
+      opcoes.verEventos ? 'Com eventos' : null,
+      quebrasInternas.length
+        ? `Quebra: ${quebrasInternas.join(' → ')}`
+        : 'Sem quebra',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    if (opcoes.quebraUnidadeMaster && unidadesEscopo.length > 1) {
+      const paginas = unidadesEscopo.map((u) => {
+        const nomeUn = String(u);
+        const linhasUn = linhas.filter((ln) => ln.unidade === nomeUn);
+        const corpoUn =
+          linhasUn.length === 0
+            ? '<p class="vazio-relatorio-evento">Nenhuma folha nesta unidade para os filtros.</p>'
+            : this.montarCorpoFolhaGeralComOpcoes(
+                linhasUn,
+                opcoesSemQuebraUnidade,
+                [],
+              );
+        return {
+          linhasCabecalhoCentral: [
+            nomeUn,
+            comp,
+            tipoFolhaDescricao,
+            subTituloPagina,
+          ],
+          corpo: corpoUn,
+        };
+      });
+      return this.montarHtmlDocumentoPadraoFicha({
+        documentTitle: 'relatorio-folha-geral',
+        tituloPrincipal: 'RELATÓRIO DE FOLHA GERAL',
+        linhasCabecalhoCentral: [],
+        corpo: '',
+        config,
+        paginas,
+      });
+    }
+
     const corpo =
       linhas.length === 0
         ? '<p class="vazio-relatorio-evento">Nenhuma folha encontrada para os filtros.</p>'
-        : this.montarCorpoFolhaGeralComOpcoes(linhas, opcoes);
+        : this.montarCorpoFolhaGeralComOpcoes(linhas, opcoesSemQuebraUnidade, []);
 
     return this.montarHtmlDocumentoPadraoFicha({
       documentTitle: 'relatorio-folha-geral',
       tituloPrincipal: 'RELATÓRIO DE FOLHA GERAL',
-      linhasCabecalhoCentral: linCab,
+      linhasCabecalhoCentral: [
+        rotuloUnidade,
+        comp,
+        tipoFolhaDescricao,
+        subTitulo,
+      ],
       corpo,
       config,
     });
@@ -957,6 +1181,7 @@ export class FolhaLancamentosPage implements OnInit {
   private montarCorpoFolhaGeralComOpcoes(
     linhas: Array<{
       nome: string;
+      unidade: string;
       setor: string;
       comissao: number;
       naoComissaoReceitas: number;
@@ -971,14 +1196,57 @@ export class FolhaLancamentosPage implements OnInit {
       quebraSetor: boolean;
       quebraComissao: boolean;
       verEventos?: boolean;
+      quebraUnidadeMaster?: boolean;
     },
+    unidadesEscopo: Unidade[] = [],
   ): string {
     const analitico = opcoes.formato === 'analitico';
     const verEventos = analitico && opcoes.verEventos === true;
+    const quebraUnidade = opcoes.quebraUnidadeMaster === true;
 
-    const agruparPorSetor = (): Map<string, typeof linhas> => {
+    const ordenarChavesUnidade = (keys: string[]): string[] =>
+      [...keys].sort((a, b) => {
+        if (a === 'Sem unidade') return 1;
+        if (b === 'Sem unidade') return -1;
+        return a.localeCompare(b, 'pt-BR');
+      });
+
+    const agruparPorUnidade = (): Map<string, typeof linhas> => {
       const map = new Map<string, typeof linhas>();
       for (const ln of linhas) {
+        const key = quebraUnidade ? ln.unidade : 'Todos';
+        const arr = map.get(key) ?? [];
+        arr.push(ln);
+        map.set(key, arr);
+      }
+      /** Com “Todas”, garante uma seção por unidade do escopo (mesmo sem folhas). */
+      if (quebraUnidade && unidadesEscopo.length > 0) {
+        for (const u of unidadesEscopo) {
+          const k = String(u);
+          if (!map.has(k)) map.set(k, []);
+        }
+      }
+      const ordered = new Map<string, typeof linhas>();
+      const keysPreferidas =
+        quebraUnidade && unidadesEscopo.length > 0
+          ? [
+              ...unidadesEscopo.map((u) => String(u)),
+              ...ordenarChavesUnidade(
+                [...map.keys()].filter(
+                  (k) => !unidadesEscopo.some((u) => String(u) === k),
+                ),
+              ),
+            ]
+          : ordenarChavesUnidade([...map.keys()]);
+      for (const k of keysPreferidas) {
+        if (map.has(k)) ordered.set(k, map.get(k)!);
+      }
+      return ordered;
+    };
+
+    const agruparPorSetor = (linhasEscopo: typeof linhas): Map<string, typeof linhas> => {
+      const map = new Map<string, typeof linhas>();
+      for (const ln of linhasEscopo) {
         const key = opcoes.quebraSetor ? ln.setor : 'Todos';
         const arr = map.get(key) ?? [];
         arr.push(ln);
@@ -1114,19 +1382,41 @@ export class FolhaLancamentosPage implements OnInit {
         </tr></tfoot></table>`;
     };
 
-    const porSetor = agruparPorSetor();
     const partes: string[] = [];
-    const resumoSetores: Array<{
-      nome: string;
-      qtd: number;
-      comissao: number;
-      naoComissaoLiquido: number;
-      receitas: number;
-      despesas: number;
-      liquido: number;
-    }> = [];
+    const porUnidade = agruparPorUnidade();
+    const entradasUnidade = [...porUnidade.entries()];
 
-    for (const [setorNome, arr] of porSetor) {
+    for (let idxUn = 0; idxUn < entradasUnidade.length; idxUn++) {
+      const [unidadeNome, linhasUnidade] = entradasUnidade[idxUn];
+      const ultimaUnidade = idxUn === entradasUnidade.length - 1;
+      if (quebraUnidade) {
+        const clsUltima = ultimaUnidade ? ' unidade-rep-block--last' : '';
+        partes.push(`<div class="section unidade-rep-block${clsUltima}">
+          <div class="secao-macro-titulo">${this.escapeHtml(unidadeNome)}</div>`);
+      }
+
+      if (quebraUnidade && linhasUnidade.length === 0) {
+        partes.push(
+          `<p class="vazio-relatorio-evento">Nenhuma folha nesta unidade para os filtros.</p>`,
+        );
+        if (quebraUnidade) {
+          partes.push('</div>');
+        }
+        continue;
+      }
+
+      const porSetor = agruparPorSetor(linhasUnidade);
+      const resumoSetores: Array<{
+        nome: string;
+        qtd: number;
+        comissao: number;
+        naoComissaoLiquido: number;
+        receitas: number;
+        despesas: number;
+        liquido: number;
+      }> = [];
+
+      for (const [setorNome, arr] of porSetor) {
       const s = soma(arr);
       resumoSetores.push({
         nome: setorNome,
@@ -1140,7 +1430,9 @@ export class FolhaLancamentosPage implements OnInit {
 
       if (opcoes.quebraSetor) {
         partes.push(`<div class="section setor-rep-block">
-          <div class="secao-macro-titulo">${this.escapeHtml(setorNome)}</div>`);
+          <div class="secao-macro-titulo">${this.escapeHtml(
+            quebraUnidade ? `${unidadeNome} · ${setorNome}` : setorNome,
+          )}</div>`);
       }
 
       if (opcoes.quebraComissao && analitico) {
@@ -1328,7 +1620,9 @@ export class FolhaLancamentosPage implements OnInit {
         },
       );
       partes.push(`<div class="section setor-resumo-final">
-        <div class="secao-macro-titulo">Resumo por setor</div>
+        <div class="secao-macro-titulo">${this.escapeHtml(
+          quebraUnidade ? `Resumo por setor — ${unidadeNome}` : 'Resumo por setor',
+        )}</div>
         <table class="tbl-rep"><thead><tr>
           <th>Setor</th><th class="num">Qtd</th>
           ${
@@ -1350,6 +1644,14 @@ export class FolhaLancamentosPage implements OnInit {
                  <td class="num">${this.escapeHtml(this.moedaListaCapa(tot.liquido))}</td>`
           }
         </tr></tfoot></table></div>`);
+      }
+
+      if (quebraUnidade) {
+        const totUn = soma(linhasUnidade);
+        partes.push(
+          `<p style="font-weight:700;margin:8px 0 18px">Total da unidade ${this.escapeHtml(unidadeNome)}: ${this.escapeHtml(this.moedaListaCapa(totUn.liquido))} (${totUn.qtd})</p></div>`,
+        );
+      }
     }
 
     return partes.join('');
@@ -1380,51 +1682,74 @@ export class FolhaLancamentosPage implements OnInit {
   private montarHtmlPreviaPagBankDocumento(
     rows: FolhaCapaDetalheResponse[],
     config: Configuracao | null,
-    unidade: Unidade,
+    rotuloUnidade: string,
     tipoFolhaDescricao: string,
+    opcoes: {
+      somenteAlertas: boolean;
+      ocultarLiquidoAlertas: boolean;
+      quebraUnidadeMaster: boolean;
+    },
   ): string {
     const comp = `${this.nomeMesPt(this.mes)} / ${this.ano}`;
-    const validos: Array<{ nome: string; liquido: number }> = [];
-    const invalidos: Array<{ nome: string; liquido: number; motivos: string }> = [];
-    for (const row of rows) {
+    type LinhaPrev = {
+      nome: string;
+      unidade: string;
+      liquido: number;
+      ok: boolean;
+      motivos: string;
+    };
+    const linhas: LinhaPrev[] = rows.map((row) => {
       const av = this.avaliarCapaParaPagBank(row);
-      if (av.ok) validos.push({ nome: av.nome, liquido: av.liquido });
-      else {
-        invalidos.push({
-          nome: av.nome,
-          liquido: av.liquido,
-          motivos: av.problemas.join('; '),
-        });
-      }
-    }
-    validos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    invalidos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    const totLiq = validos.reduce((s, v) => s + v.liquido, 0);
+      return {
+        nome: av.nome,
+        unidade: this.descricaoUnidadeParaRelatorio(row),
+        liquido: av.liquido,
+        ok: av.ok,
+        motivos: av.problemas.join('; '),
+      };
+    });
 
-    const trOk = validos
-      .map(
-        (v) => `<tr>
+    const montarBloco = (escopo: LinhaPrev[], tituloUnidade?: string): string => {
+      const validos = escopo
+        .filter((l) => l.ok)
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      const invalidos = escopo
+        .filter((l) => !l.ok)
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      const totLiq = validos.reduce((s, v) => s + v.liquido, 0);
+      const ocultarLiqAlertas = opcoes.ocultarLiquidoAlertas;
+      const trOk = validos
+        .map(
+          (v) => `<tr>
         <td>${this.escapeHtml(v.nome)}</td>
         <td class="num">${this.escapeHtml(this.moedaListaCapa(v.liquido))}</td>
       </tr>`,
-      )
-      .join('');
-    const trNo = invalidos
-      .map(
-        (v) => `<tr>
+        )
+        .join('');
+      const trNo = invalidos
+        .map((v) =>
+          ocultarLiqAlertas
+            ? `<tr>
+        <td>${this.escapeHtml(v.nome)}</td>
+        <td>${this.escapeHtml(v.motivos)}</td>
+      </tr>`
+            : `<tr>
         <td>${this.escapeHtml(v.nome)}</td>
         <td class="num">${this.escapeHtml(this.moedaListaCapa(v.liquido))}</td>
         <td>${this.escapeHtml(v.motivos)}</td>
       </tr>`,
-      )
-      .join('');
-
-    const corpo = `
-      <p><strong>Válidos para o arquivo:</strong> ${validos.length}
+        )
+        .join('');
+      const cab = tituloUnidade
+        ? `<div class="secao-macro-titulo">${this.escapeHtml(tituloUnidade)}</div>`
+        : '';
+      const resumo = `<p><strong>Válidos:</strong> ${validos.length}
       &nbsp;|&nbsp; <strong>Inválidos:</strong> ${invalidos.length}
-      &nbsp;|&nbsp; <strong>Soma líquidos válidos:</strong> ${this.escapeHtml(this.moedaListaCapa(totLiq))}</p>
-      <div class="section">
-        <div class="secao-macro-titulo">Entram no PagBank (${validos.length})</div>
+      &nbsp;|&nbsp; <strong>Soma líquidos válidos:</strong> ${this.escapeHtml(this.moedaListaCapa(totLiq))}</p>`;
+      const secOk = opcoes.somenteAlertas
+        ? ''
+        : `<div class="section">
+        <div class="evento-det-titulo">Entram no PagBank (${validos.length})</div>
         <table class="tbl-rep"><thead><tr>
           <th>Funcionário</th><th class="num">Líquido</th>
         </tr></thead>
@@ -1432,21 +1757,63 @@ export class FolhaLancamentosPage implements OnInit {
         <tfoot><tr class="totais"><td>Total</td>
           <td class="num">${this.escapeHtml(this.moedaListaCapa(totLiq))}</td>
         </tr></tfoot></table>
-      </div>
-      <div class="section">
-        <div class="secao-macro-titulo">Não entram (${invalidos.length})</div>
+      </div>`;
+      const theadAlertas = ocultarLiqAlertas
+        ? '<th>Funcionário</th><th>Motivo</th>'
+        : '<th>Funcionário</th><th class="num">Líquido</th><th>Motivo</th>';
+      const colspanVazio = ocultarLiqAlertas ? '2' : '3';
+      const secNo = `<div class="section">
+        <div class="evento-det-titulo">${
+          opcoes.somenteAlertas ? 'Alertas' : 'Não entram'
+        } (${invalidos.length})</div>
         <table class="tbl-rep"><thead><tr>
-          <th>Funcionário</th><th class="num">Líquido</th><th>Motivo</th>
+          ${theadAlertas}
         </tr></thead>
-        <tbody>${trNo || '<tr><td colspan="3" style="text-align:center;color:#666">Nenhum inválido</td></tr>'}</tbody>
+        <tbody>${trNo || `<tr><td colspan="${colspanVazio}" style="text-align:center;color:#666">Nenhum alerta</td></tr>`}</tbody>
       </table>
       </div>`;
+      return `${cab}${resumo}${secOk}${secNo}`;
+    };
+
+    const subModo = [
+      opcoes.somenteAlertas ? 'Somente alertas' : 'Todos',
+      opcoes.ocultarLiquidoAlertas ? 'Sem líquido nos alertas' : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    const unidadesEscopo = this.unidadesEscopoRelatorio();
+    if (opcoes.quebraUnidadeMaster && unidadesEscopo.length > 1) {
+      const map = new Map<string, LinhaPrev[]>();
+      for (const ln of linhas) {
+        const arr = map.get(ln.unidade) ?? [];
+        arr.push(ln);
+        map.set(ln.unidade, arr);
+      }
+      const paginas = unidadesEscopo.map((u) => {
+        const k = String(u);
+        return {
+          linhasCabecalhoCentral: [k, comp, tipoFolhaDescricao, subModo],
+          corpo: montarBloco(map.get(k) ?? [], undefined),
+        };
+      });
+      return this.montarHtmlDocumentoPadraoFicha({
+        documentTitle: 'previa-pagbank',
+        tituloPrincipal: 'PRÉVIA PAGBANK',
+        linhasCabecalhoCentral: [],
+        corpo: '',
+        config,
+        paginas,
+      });
+    }
 
     return this.montarHtmlDocumentoPadraoFicha({
       documentTitle: 'previa-pagbank',
       tituloPrincipal: 'PRÉVIA PAGBANK',
-      linhasCabecalhoCentral: [String(unidade), comp, tipoFolhaDescricao],
-      corpo,
+      linhasCabecalhoCentral: [rotuloUnidade, comp, tipoFolhaDescricao, subModo],
+      corpo:
+        montarBloco(linhas) ||
+        '<p class="vazio-relatorio-evento">Nenhuma folha encontrada para os filtros.</p>',
       config,
     });
   }
@@ -1455,12 +1822,10 @@ export class FolhaLancamentosPage implements OnInit {
     return tipo === FolhaMovimentoTipo.RECEITA ? 'Receita' : 'Despesa';
   }
 
-  private montarHtmlRelatorioFolhaPorEventoDocumento(
+  private montarCorpoFolhaPorEventoDeRows(
     rows: FolhaCapaDetalheResponse[],
-    config: Configuracao | null,
-    unidade: Unidade,
-    tipoFolhaDescricao: string,
     verbaIdsIncluir: ReadonlySet<string>,
+    prefixoTitulo?: string,
   ): string {
     type LinhaFunc = {
       funcionarioNome: string;
@@ -1553,35 +1918,80 @@ export class FolhaLancamentosPage implements OnInit {
       blocos: BlocoPorVerba[],
     ): string => {
       if (!blocos.length) return '';
+      const titulo = prefixoTitulo
+        ? `${prefixoTitulo} · ${tituloMacro}`
+        : tituloMacro;
       return `<div class="section">
-          <div class="secao-macro-titulo">${this.escapeHtml(tituloMacro)}</div>
+          <div class="secao-macro-titulo">${this.escapeHtml(titulo)}</div>
           ${blocos.map((b) => htmlBlocoVerba(b)).join('')}
         </div>`;
     };
-
-    const comp = `${this.nomeMesPt(this.mes)} / ${this.ano}`;
-    const linCabEvt: string[] = [String(unidade), comp, tipoFolhaDescricao];
 
     const partesCorpo = [
       montarSecaoTipo('RECEITAS', receitas),
       montarSecaoTipo('DESPESAS', despesas),
     ].filter((p) => p.length > 0);
+    return partesCorpo.join('');
+  }
+
+  private montarHtmlRelatorioFolhaPorEventoDocumento(
+    rows: FolhaCapaDetalheResponse[],
+    config: Configuracao | null,
+    rotuloUnidade: string,
+    tipoFolhaDescricao: string,
+    verbaIdsIncluir: ReadonlySet<string>,
+    quebraUnidadeMaster: boolean,
+  ): string {
+    const comp = `${this.nomeMesPt(this.mes)} / ${this.ano}`;
+    const unidadesEscopo = this.unidadesEscopoRelatorio();
+
+    if (quebraUnidadeMaster && unidadesEscopo.length > 1) {
+      const map = new Map<string, FolhaCapaDetalheResponse[]>();
+      for (const r of rows) {
+        const key = this.descricaoUnidadeParaRelatorio(r);
+        const arr = map.get(key) ?? [];
+        arr.push(r);
+        map.set(key, arr);
+      }
+      const paginas = unidadesEscopo.map((u) => {
+        const k = String(u);
+        const rowsUn = map.get(k) ?? [];
+        const corpoUn =
+          rowsUn.length === 0
+            ? '<p class="vazio-relatorio-evento">Nenhuma folha nesta unidade para os filtros.</p>'
+            : this.montarCorpoFolhaPorEventoDeRows(rowsUn, verbaIdsIncluir) ||
+              '<p class="vazio-relatorio-evento">Nenhum lançamento para os eventos e filtros selecionados.</p>';
+        return {
+          linhasCabecalhoCentral: [k, comp, tipoFolhaDescricao],
+          corpo: corpoUn,
+        };
+      });
+      return this.montarHtmlDocumentoPadraoFicha({
+        documentTitle: 'folha-geral-por-evento',
+        tituloPrincipal: 'FOLHA GERAL POR EVENTO',
+        linhasCabecalhoCentral: [],
+        corpo: '',
+        config,
+        paginas,
+      });
+    }
+
     const corpo =
-      partesCorpo.length > 0
-        ? partesCorpo.join('')
-        : '<p class="vazio-relatorio-evento">Nenhum lançamento para os eventos e filtros selecionados.</p>';
+      this.montarCorpoFolhaPorEventoDeRows(rows, verbaIdsIncluir) ||
+      '<p class="vazio-relatorio-evento">Nenhum lançamento para os eventos e filtros selecionados.</p>';
 
     return this.montarHtmlDocumentoPadraoFicha({
       documentTitle: 'folha-geral-por-evento',
       tituloPrincipal: 'FOLHA GERAL POR EVENTO',
-      linhasCabecalhoCentral: linCabEvt,
+      linhasCabecalhoCentral: [rotuloUnidade, comp, tipoFolhaDescricao],
       corpo,
       config,
     });
   }
 
   /**
-   * Cabeçalho tipo ficha técnica (logo + título central) e rodapé com data/usuário; sem assinatura de farmacêutico.
+   * Cabeçalho tipo ficha técnica (logo + título central) e rodapé com data/usuário.
+   * Com `paginas`, cada item é uma folha completa (logo + cabeçalho + corpo + rodapé) e quebra de página.
    */
   private montarHtmlDocumentoPadraoFicha(opts: {
     documentTitle: string;
@@ -1589,16 +1999,51 @@ export class FolhaLancamentosPage implements OnInit {
     linhasCabecalhoCentral: string[];
     corpo: string;
     config: Configuracao | null;
+    paginas?: Array<{ linhasCabecalhoCentral: string[]; corpo: string }>;
   }): string {
     const user = this.auth.getCurrentUser();
     const userName = user?.nome || 'Usuário';
+    const geradoEm = new Date().toLocaleString('pt-BR');
     let logoHtml = '';
     if (opts.config?.hasLogo) {
       logoHtml = `<img src="${environment.apiUrl}/configuracao/logo" alt="Logo" style="max-height: 80px; max-width: 120px; display: block;" />`;
     }
-    const headerRow = opts.linhasCabecalhoCentral
-      .map((t) => `<div>${this.escapeHtml(t)}</div>`)
-      .join('');
+
+    const montarHeader = (linhas: string[]): string => {
+      const headerRow = linhas
+        .map((t) => `<div>${this.escapeHtml(t)}</div>`)
+        .join('');
+      return `<div class="header">
+    <div class="logo-box">${logoHtml}</div>
+    <div class="header-content">
+      <h1 class="header-title">${this.escapeHtml(opts.tituloPrincipal)}</h1>
+      <div class="header-row">${headerRow}</div>
+    </div>
+  </div>`;
+    };
+
+    const rodape = `<div class="footer-print">
+    Documento gerado em ${geradoEm} &nbsp; Impresso por: ${this.escapeHtml(userName)}
+  </div>`;
+
+    const multi = !!(opts.paginas && opts.paginas.length > 0);
+    /** Rodapé único e fixo na impressão — não entra no fluxo (não pula de página). */
+    const corpoHtml = multi
+      ? opts.paginas!
+          .map((p, i) => {
+            const last = i === opts.paginas!.length - 1;
+            const cls = last
+              ? 'relatorio-pagina relatorio-pagina--last'
+              : 'relatorio-pagina';
+            return `<div class="${cls}">
+  ${montarHeader(p.linhasCabecalhoCentral)}
+  ${p.corpo}
+</div>`;
+          })
+          .join('') + rodape
+      : `${montarHeader(opts.linhasCabecalhoCentral)}
+  ${opts.corpo}
+  ${rodape}`;
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -1626,6 +2071,15 @@ export class FolhaLancamentosPage implements OnInit {
     .evento-det-block { margin-bottom: 14px; page-break-inside: avoid; }
     .setor-rep-block { margin-bottom: 16px; page-break-inside: avoid; }
     .setor-resumo-final { margin-top: 20px; page-break-inside: avoid; }
+    .relatorio-pagina {
+      box-sizing: border-box;
+      page-break-after: always;
+      break-after: page;
+    }
+    .relatorio-pagina.relatorio-pagina--last {
+      page-break-after: auto;
+      break-after: auto;
+    }
     .tbl-rep-folha-setor { table-layout: fixed; width: 100%; }
     .tbl-rep-folha-setor col.col-funcionario { width: 42%; }
     .tbl-rep-folha-setor col.col-num { width: 19.33%; }
@@ -1639,8 +2093,9 @@ export class FolhaLancamentosPage implements OnInit {
     .folha-geral-eventos-vazio { margin: 4px 0 8px; font-size: 11px; color: #64748b; font-style: italic; }
     .tbl-rep-folha-geral-eventos { margin-bottom: 2px; }
     .evento-det-block table { margin-top: 4px; }
+    .footer-print { font-size: 9px; color: #444; margin-top: 20px; }
     @media print {
-      @page { margin: 15mm 10mm 40px 10mm; }
+      @page { margin: 15mm 10mm 18mm 10mm; }
       .footer-print {
         position: fixed;
         bottom: 0;
@@ -1649,22 +2104,13 @@ export class FolhaLancamentosPage implements OnInit {
         font-size: 9px !important;
         color: #444 !important;
         z-index: 1000;
+        margin-top: 0 !important;
       }
     }
   </style>
 </head>
-<body>
-  <div class="header">
-    <div class="logo-box">${logoHtml}</div>
-    <div class="header-content">
-      <h1 class="header-title">${this.escapeHtml(opts.tituloPrincipal)}</h1>
-      <div class="header-row">${headerRow}</div>
-    </div>
-  </div>
-  ${opts.corpo}
-  <div class="footer-print">
-    Documento gerado em ${new Date().toLocaleString('pt-BR')} &nbsp; Impresso por: ${this.escapeHtml(userName)}
-  </div>
+<body${multi ? ' class="relatorio-multipagina"' : ''}>
+  ${corpoHtml}
 </body>
 </html>`;
   }
@@ -1687,6 +2133,12 @@ export class FolhaLancamentosPage implements OnInit {
           .recibo-geral-pagina[data-last="1"] {
             page-break-after: auto;
             break-after: auto;
+          }
+          .recibo-geral-unidade-rotulo {
+            text-align: center;
+            font-size: 11px;
+            color: #64748b;
+            margin: 0 0 6px;
           }
           .recibo-geral-wrap {
             flex: 1 1 auto;
@@ -1903,23 +2355,31 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   private montarHtmlReciboGeralMultiplasPaginas(
-    un: Unidade,
+    rotuloUnidade: string,
     rows: FolhaCapaDetalheResponse[],
+    quebraUnidadeMaster: boolean,
   ): string {
     const user = this.auth.getCurrentUser();
     const userName = user?.nome || 'Usuário';
     const footer = `<div class="footer-print">
           Documento gerado em ${new Date().toLocaleString('pt-BR')} · Impresso por: ${this.escapeHtml(userName)}
         </div>`;
-    const sorted = [...rows].sort((a, b) =>
-      this.nomeParaCapa(a).localeCompare(this.nomeParaCapa(b), 'pt-BR'),
-    );
-    const slugUn = String(un)
+    const sorted = [...rows].sort((a, b) => {
+      if (quebraUnidadeMaster) {
+        const du = this.descricaoUnidadeParaRelatorio(a).localeCompare(
+          this.descricaoUnidadeParaRelatorio(b),
+          'pt-BR',
+        );
+        if (du !== 0) return du;
+      }
+      return this.nomeParaCapa(a).localeCompare(this.nomeParaCapa(b), 'pt-BR');
+    });
+    const slugUn = rotuloUnidade
       .normalize('NFD')
       .replace(/\p{M}/gu, '')
       .replace(/[^\w-]+/g, '-')
       .replace(/^-|-$/g, '')
-      .slice(0, 32);
+      .slice(0, 40);
     const nomeRelatorio = `recibo-geral-${slugUn || 'unidade'}-${this.ano}-${String(this.mes).padStart(2, '0')}`;
     const tipoDesc =
       this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
@@ -1931,21 +2391,28 @@ export class FolhaLancamentosPage implements OnInit {
           <header class="doc-cabecalho-recibo">
             <h1 class="doc-title-main">Recibo de Pagamento — Geral</h1>
             <p class="doc-ref-mensal">Folha mensal referente a ${this.escapeHtml(refComp)}</p>
-            <p class="doc-nome-func">${this.escapeHtml(String(un))} · ${this.escapeHtml(tipoDesc)}</p>
+            <p class="doc-nome-func">${this.escapeHtml(rotuloUnidade)} · ${this.escapeHtml(tipoDesc)}</p>
           </header>
           <p class="recibo-geral-vazio-msg">Não há folhas nesta competência para os filtros selecionados.</p>
           ${footer}
         </div>`
         : sorted
             .map(
-              (d, i, arr) => `<div class="recibo-geral-pagina"${
+              (d, i, arr) => {
+                const unCapa = this.descricaoUnidadeParaRelatorio(d);
+                const rotuloPagina = quebraUnidadeMaster
+                  ? `${unCapa} · ${tipoDesc}`
+                  : `${rotuloUnidade} · ${tipoDesc}`;
+                return `<div class="recibo-geral-pagina"${
                 i === arr.length - 1 ? ' data-last="1"' : ''
               }>
           <div class="recibo-geral-wrap">
+            <p class="recibo-geral-unidade-rotulo">${this.escapeHtml(rotuloPagina)}</p>
             ${this.montarCorpoHtmlReciboPagamento(d)}
           </div>
           ${footer}
-        </div>`,
+        </div>`;
+              },
             )
             .join('');
 

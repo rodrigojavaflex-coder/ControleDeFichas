@@ -77,6 +77,10 @@ export enum Permission {
   FOLHA_FUNCIONARIO_READ = 'folha-funcionario:read',
   FOLHA_FUNCIONARIO_UPDATE = 'folha-funcionario:update',
   FOLHA_FUNCIONARIO_DELETE = 'folha-funcionario:delete',
+  /** Edição de banco/conta/dígito no cadastro (inclusão livre com :create). */
+  FOLHA_FUNCIONARIO_UPDATE_CONTA_BANCARIA = 'folha-funcionario:update-conta-bancaria',
+  /** Edição dos campos do bloco Integração ERP (inclusão livre com :create). */
+  FOLHA_FUNCIONARIO_UPDATE_INTEGRACAO_ERP = 'folha-funcionario:update-integracao-erp',
 
   /** Cadastro global — cargos (vínculo no funcionário) */
   FOLHA_CARGO_CREATE = 'folha-cargo:create',
@@ -409,6 +413,14 @@ export const PERMISSION_GROUPS = {
       key: Permission.FOLHA_FUNCIONARIO_DELETE,
       label: 'Excluir funcionários (folha)',
     },
+    {
+      key: Permission.FOLHA_FUNCIONARIO_UPDATE_CONTA_BANCARIA,
+      label: 'Alterar conta bancária (banco, conta e dígito)',
+    },
+    {
+      key: Permission.FOLHA_FUNCIONARIO_UPDATE_INTEGRACAO_ERP,
+      label: 'Alterar integração ERP',
+    },
   ],
   'Folha — Cargos': [
     { key: Permission.FOLHA_CARGO_CREATE, label: 'Criar cargos (folha)' },
@@ -591,7 +603,7 @@ export const PERMISSION_GROUPS = {
     },
     {
       key: Permission.PRODUCAO_CONFIG_UPDATE_CODIGO_USUARIO_ERP,
-      label: 'Atualizar código usuário ERP (cdusu) na config de produção',
+      label: 'Atualizar código usuário ERP na config de produção',
     },
   ],
   'Produção — Produtividade': [

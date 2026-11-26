@@ -930,6 +930,8 @@ export class FolhaFuncionarioFormComponent implements OnInit {
         this.aplicarLinhasEventoFixosDaApi(f.eventosFixos);
         if (this.somenteLeitura) {
           this.form.disable({ emitEvent: false });
+        } else {
+          this.aplicarBloqueioCamposSensiveisNaEdicao();
         }
         this.loading = false;
       },
@@ -942,6 +944,46 @@ export class FolhaFuncionarioFormComponent implements OnInit {
         }
       },
     });
+  }
+
+  /** Inclusão: campos liberados. Edição: exige permissão específica. */
+  podeEditarContaBancaria(): boolean {
+    if (!this.isEditMode) return true;
+    return this.auth.hasPermission(
+      Permission.FOLHA_FUNCIONARIO_UPDATE_CONTA_BANCARIA,
+    );
+  }
+
+  /** Inclusão: campos liberados. Edição: exige permissão específica. */
+  podeEditarIntegracaoErp(): boolean {
+    if (!this.isEditMode) return true;
+    return this.auth.hasPermission(
+      Permission.FOLHA_FUNCIONARIO_UPDATE_INTEGRACAO_ERP,
+    );
+  }
+
+  private aplicarBloqueioCamposSensiveisNaEdicao(): void {
+    if (!this.isEditMode || this.somenteLeitura) return;
+    const contaCtrls = ['bancoNumero', 'contaBancaria', 'digitoConta'] as const;
+    for (const nome of contaCtrls) {
+      const c = this.form.get(nome);
+      if (!c) continue;
+      if (this.podeEditarContaBancaria()) c.enable({ emitEvent: false });
+      else c.disable({ emitEvent: false });
+    }
+    const erpCtrls = [
+      'codigoUsuarioErp',
+      'codigoFuncionarioErp',
+      'codigoVendedorErp',
+      'painelContratoRepresentante',
+      'painelCodigoRepresentante',
+    ] as const;
+    for (const nome of erpCtrls) {
+      const c = this.form.get(nome);
+      if (!c) continue;
+      if (this.podeEditarIntegracaoErp()) c.enable({ emitEvent: false });
+      else c.disable({ emitEvent: false });
+    }
   }
 
   private buildPayloadRaw(): Record<string, unknown> {
@@ -964,12 +1006,14 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       payload['tipoPix'] = null;
       payload['chavePix'] = null;
     }
-    const banco = (v.bancoNumero || '').trim();
-    payload['bancoNumero'] = banco || null;
-    const conta = (v.contaBancaria || '').trim();
-    payload['contaBancaria'] = conta || null;
-    const digito = (v.digitoConta || '').trim();
-    payload['digitoConta'] = digito || null;
+    if (this.podeEditarContaBancaria()) {
+      const banco = (v.bancoNumero || '').trim();
+      payload['bancoNumero'] = banco || null;
+      const conta = (v.contaBancaria || '').trim();
+      payload['contaBancaria'] = conta || null;
+      const digito = (v.digitoConta || '').trim();
+      payload['digitoConta'] = digito || null;
+    }
     const cpf = v.cpf.trim();
     if (cpf) payload['cpf'] = cpf;
 
@@ -989,51 +1033,54 @@ export class FolhaFuncionarioFormComponent implements OnInit {
       payload['dataDemissao'] = null;
     }
 
-    const codErp =
-      v.codigoUsuarioErp != null && v.codigoUsuarioErp !== ''
-        ? String(v.codigoUsuarioErp).trim()
-        : '';
-    if (codErp) {
-      payload['codigoUsuarioErp'] = Number(codErp);
-    } else if (this.isEditMode) {
-      payload['codigoUsuarioErp'] = null;
-    }
+    if (this.podeEditarIntegracaoErp()) {
+      const codErp =
+        v.codigoUsuarioErp != null && v.codigoUsuarioErp !== ''
+          ? String(v.codigoUsuarioErp).trim()
+          : '';
+      if (codErp) {
+        payload['codigoUsuarioErp'] = Number(codErp);
+      } else if (this.isEditMode) {
+        payload['codigoUsuarioErp'] = null;
+      }
 
-    const codFunErp =
-      v.codigoFuncionarioErp != null && v.codigoFuncionarioErp !== ''
-        ? String(v.codigoFuncionarioErp).trim()
-        : '';
-    if (codFunErp) {
-      payload['codigoFuncionarioErp'] = Number(codFunErp);
-    } else if (this.isEditMode) {
-      payload['codigoFuncionarioErp'] = null;
-    }
+      const codFunErp =
+        v.codigoFuncionarioErp != null && v.codigoFuncionarioErp !== ''
+          ? String(v.codigoFuncionarioErp).trim()
+          : '';
+      if (codFunErp) {
+        payload['codigoFuncionarioErp'] = Number(codFunErp);
+      } else if (this.isEditMode) {
+        payload['codigoFuncionarioErp'] = null;
+      }
 
-    const codVenErp =
-      v.codigoVendedorErp != null && v.codigoVendedorErp !== ''
-        ? String(v.codigoVendedorErp).trim()
-        : '';
-    if (codVenErp) {
-      payload['codigoVendedorErp'] = Number(codVenErp);
-    } else if (this.isEditMode) {
-      payload['codigoVendedorErp'] = null;
-    }
+      const codVenErp =
+        v.codigoVendedorErp != null && v.codigoVendedorErp !== ''
+          ? String(v.codigoVendedorErp).trim()
+          : '';
+      if (codVenErp) {
+        payload['codigoVendedorErp'] = Number(codVenErp);
+      } else if (this.isEditMode) {
+        payload['codigoVendedorErp'] = null;
+      }
 
-    const painelContrato =
-      v.painelContratoRepresentante != null &&
-      v.painelContratoRepresentante !== ''
-        ? String(v.painelContratoRepresentante).trim()
-        : '';
-    const painelCodigo =
-      v.painelCodigoRepresentante != null && v.painelCodigoRepresentante !== ''
-        ? String(v.painelCodigoRepresentante).trim()
-        : '';
-    if (painelContrato && painelCodigo) {
-      payload['painelContratoRepresentante'] = Number(painelContrato);
-      payload['painelCodigoRepresentante'] = Number(painelCodigo);
-    } else if (this.isEditMode) {
-      payload['painelContratoRepresentante'] = null;
-      payload['painelCodigoRepresentante'] = null;
+      const painelContrato =
+        v.painelContratoRepresentante != null &&
+        v.painelContratoRepresentante !== ''
+          ? String(v.painelContratoRepresentante).trim()
+          : '';
+      const painelCodigo =
+        v.painelCodigoRepresentante != null &&
+        v.painelCodigoRepresentante !== ''
+          ? String(v.painelCodigoRepresentante).trim()
+          : '';
+      if (painelContrato && painelCodigo) {
+        payload['painelContratoRepresentante'] = Number(painelContrato);
+        payload['painelCodigoRepresentante'] = Number(painelCodigo);
+      } else if (this.isEditMode) {
+        payload['painelContratoRepresentante'] = null;
+        payload['painelCodigoRepresentante'] = null;
+      }
     }
 
     const cid = v.cargoId != null ? String(v.cargoId).trim() : '';

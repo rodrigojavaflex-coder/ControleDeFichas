@@ -33,7 +33,9 @@
 - **`tipoPix`** e **`chavePix`** são **opcionais**. Se um for informado, o outro também deve ser (**coerência** na API e na UI).
 - **`tipoPix`** aceita apenas valores estáveis da API: **`CPF`**, **`TELEFONE`**, **`EMAIL`**, **`CHAVE_ALEATORIA`** (enum `TipoChavePixFolha`).
 - **`chavePix`:** string (até 200 caracteres na persistência); com **tipo** definido, o backend valida **formato conforme o tipo** (CPF com 11 dígitos; telefone com 10–13 dígitos numéricos; e-mail com formato válido; chave aleatória com **32 caracteres hexadecimais**, aceitando UUID com ou sem hífens após normalização).
-- **Mensagens ao usuário:** erros de validação retornados pela API (400) e feedback por campo na UI do formulário.
+- **Conta bancária** (`bancoNumero`, `contaBancaria`, `digitoConta`): na **inclusão** (`POST` / `folha-funcionario:create`) podem ser informados livremente; na **edição** (`PATCH`) exigem **`folha-funcionario:update-conta-bancaria`** (UI desabilita e API rejeita sem a permissão).
+- **Integração ERP** (`codigoUsuarioErp`, `codigoFuncionarioErp`, `codigoVendedorErp`, `painelContratoRepresentante`, `painelCodigoRepresentante`): idem — livres na inclusão; na edição exigem **`folha-funcionario:update-integracao-erp`**.
+- **Mensagens ao usuário:** erros de validação retornados pela API (400) e feedback por campo na UI do formulário; falta das permissões acima na edição retorna **403**.
 
 ### RN-002 — Unicidade de verba na capa
 
@@ -58,7 +60,7 @@
 - O campo **`folhaMensal`** em **`folha_tipo`** pode permanecer no cadastro como **metadado**; **não** restringe mais o uso de **`carregar-competencia`** na API.
 - **`POST …/folha/capas`** com um **`funcionarioId`** segue disponível para **obter ou criar** a capa de **um** funcionário, sujeito às mesmas validações de elegibilidade e de lote (RN-005, RN-006).
 - **UI:** após Carregar, exibe-se uma **lista** de capas (funcionário + totais resumidos, **banco/conta/dígito**) com **checkbox** (cabeçalho seleciona todos; clique no checkbox seleciona a linha para o arquivo PagBank). No **rodapé da lista**, exibe-se **quantidade de funcionários** e a **soma** das colunas Receitas, Despesas e Líquido. Com permissão **`folha-funcionario:read`**, botão ao lado do nome abre o **cadastro do funcionário em modal** (`nao-clicavel`); com **`folha-funcionario:update`** permite editar; ao fechar, a lista de capas é **recarregada**. **Clique na linha** abre a folha em **modal** (`nao-clicavel`) com receitas/despesas e ações da capa — **edição** somente com lote aberto; com lote fechado, **somente leitura** e ações de **recibo** (RN-015).
-- **Relatórios:** botão **Relatórios** (perm. **`folha-lancamento:read`**, com unidade e tipo preenchidos) abre hub modal (`nao-clicavel`) com **Folha geral**, **Folha por Evento**, **Recibo Geral** e **Prévia PagBank** (RN-018 / RN-017). Não há mais relatório dedicado **Folha por Setor** (quebra de setor entra nas opções da Folha geral).
+- **Relatórios:** botão **Relatórios** (perm. **`folha-lancamento:read`**, com **tipo** preenchido) abre hub modal (`nao-clicavel`) com **Folha geral**, **Folha por Evento**, **Recibo Geral** e **Prévia PagBank** (RN-018 / RN-017). A **unidade** é a do filtro da tela (RN-018). Não há mais relatório dedicado **Folha por Setor**.
 
 ### RN-003 — Exclusão de verba no cadastro
 
@@ -119,7 +121,7 @@
 - Na tela **Controle das competências**, o filtro de unidade segue o mesmo critério da lista de **Vendas**: fica **fixo e bloqueado** somente quando **`usuario.unidade`** existe e não é string vazia; perfis sem essa coluna preenchida mantêm o seletor liberado (incluindo opção “Todas”), alinhado ao comportamento da API para o escopo efetivo de quem tem só `vendedor.unidade`.
 - **`GET …/folha/funcionarios` (lista paginada):** query **`unidade`** opcional — omitir lista **todas** as unidades do escopo (RN-007); com **`todos=true`** retorna lista completa (impressão); **`comEventosFixos=true`** inclui eventos fixos.
 - **`POST …/folha/capas`:** aceita **`funcionarioId`**; a unidade do body deve **coincidir** com `funcionarios.unidade` desse funcionário (e com o escopo do usuário).
-- Permissões do épico (atribuir via perfil): `folha-funcionario:create|read|update|delete`; `folha-cargo:create|read|update|delete|audit`; `folha-setor:create|read|update|delete|audit`; `folha-verba:create|read|update|delete|audit`; `folha-tipo:create|read|update|delete`; `folha-lancamento:create|read|update|delete|delete-capa|congelar-capa|liberar-capa|enviar-recibo-whatsapp|gerar-arquivo-pagamento`; `folha-fechamento:read`; `folha-fechamento:registrar-abertura`; `folha-fechamento:fechar`; `folha-fechamento:reabrir`; `folha-fechamento:enviar-recibos-whatsapp`. Leituras auxiliares (ex.: listar tipos/verbas/cargos/setores/lista para lançamento) combinam permissões definidas na API.
+- Permissões do épico (atribuir via perfil): `folha-funcionario:create|read|update|delete|update-conta-bancaria|update-integracao-erp`; `folha-cargo:create|read|update|delete|audit`; `folha-setor:create|read|update|delete|audit`; `folha-verba:create|read|update|delete|audit`; `folha-tipo:create|read|update|delete`; `folha-lancamento:create|read|update|delete|delete-capa|congelar-capa|liberar-capa|enviar-recibo-whatsapp|gerar-arquivo-pagamento`; `folha-fechamento:read`; `folha-fechamento:registrar-abertura`; `folha-fechamento:fechar`; `folha-fechamento:reabrir`; `folha-fechamento:enviar-recibos-whatsapp`. Leituras auxiliares (ex.: listar tipos/verbas/cargos/setores/lista para lançamento) combinam permissões definidas na API.
 
 ### RN-008 — Usuário com múltiplos perfis
 
@@ -171,15 +173,16 @@
 - Cadastro do funcionário: **`bancoNumero`**, **`contaBancaria`**, **`digitoConta`** (abaixo do Pix); obrigatórios na geração para cada linha incluída. Nome no arquivo é sanitizado (apenas letras/espaços); CPF só dígitos; valor = **líquido** da capa (receitas − despesas).
 - **UI (Lançamento):** checkbox por funcionário + “selecionar todos” no cabeçalho; colunas **banco/conta/dígito** na grade; botão **Arquivo PagBank** exige permissão **`folha-lancamento:gerar-arquivo-pagamento`**, lote fechado e ao menos um selecionado.
 - **Avisos em modal:** funcionários selecionados **sem conta completa** (banco/conta/dígito) e/ou com **líquido ≤ 0** (e sem CPF) são listados; se houver válidos, o usuário pode **Gerar apenas válidos**; se nenhum válido, apenas **Fechar**.
-- **Prévia PagBank** (hub **Relatórios**, RN-018): imprime conferência de **todas** as capas da competência com seções **Entram no PagBank** / **Não entram**, usando os mesmos critérios de validade (banco/conta/dígito, CPF e líquido &gt; 0). Não gera o arquivo XLSX.
+- **Prévia PagBank** (hub **Relatórios**, RN-018): modal com modo **Mostrar todos** ou **Somente alertas**, e opção **Não mostrar líquido nos alertas**; usa a unidade da tela; imprime conferência das capas com seções **Entram no PagBank** / **Não entram** (ou só alertas), pelos critérios de validade (banco/conta/dígito, CPF e líquido &gt; 0). Não gera o arquivo XLSX.
 - **API:** `POST …/folha/capas/gerar-arquivo-pagamento` com `{ unidade, capaIds[] }`; responde o arquivo binário; rejeita se o lote não estiver fechado ou se algum `capaId` enviado for inválido para o arquivo.
 
 ### RN-018 — Relatórios da competência (hub no Lançamento)
 
-- **Hub Relatórios** (modal `nao-clicavel`): **Folha geral**, **Folha por Evento**, **Recibo Geral**, **Prévia PagBank**. Exige unidade + tipo de folha e permissão de leitura do lançamento.
-- **Folha geral:** modal de opções com **formato** (**analítico** = detalhe por funcionário; **sintético** = totais com as quebras), opção **Ver eventos** (somente no analítico: lista receitas/despesas de cada funcionário) e **níveis de quebra** combináveis na hierarquia **Setor → Comissão**. Sem quebras, lista única da competência.
+- **Hub Relatórios** (modal `nao-clicavel`): **Folha geral**, **Folha por Evento**, **Recibo Geral**, **Prévia PagBank**. Exige **tipo de folha** e permissão de leitura do lançamento.
+- **Unidade do relatório:** a mesma do **filtro da tela** de lançamento (fixa se `usuario.unidade` estiver preenchida; senão a escolhida no combo, inclusive **Todas**). Com **Todas**, a UI consulta cada unidade acessível (se o usuário tiver vínculo de unidade/`vendedor.unidade`, só essa) e a **Unidade** é a **quebra master**: cada unidade é uma **página completa** com **logo**, cabeçalho (unidade + competência + tipo) e **rodapé** (data/hora + usuário), no mesmo padrão dos demais relatórios. Unidades sem folha ainda aparecem. Não há seletor de unidade nos modais de emissão.
+- **Folha geral:** modal com **formato** (**analítico** / **sintético**), **Ver eventos** (só analítico) e quebras **Setor → Comissão**.
 - **Quebra Comissão:** receitas com **`folha_verba.ehComissao = true`** formam o bloco/coluna **Comissão**; demais receitas e **todas** as despesas formam **Não comissão** (despesas abatem **somente** o líquido de não comissão). Líquido total = comissão + (receitas não comissão − despesas).
-- **Folha por Evento** e **Recibo Geral** mantêm os fluxos já existentes (filtro de eventos / recibos em lote). **Folha por Setor** como relatório separado foi **removida**.
+- **Folha por Evento** e **Recibo Geral:** usam a unidade da tela (quebra master quando Todas). **Prévia PagBank:** **todos** ou **somente alertas** (+ ocultar líquido nos alertas). **Folha por Setor** como relatório separado foi **removida**.
 
 ### RN-016 — Atendimento WhatsApp (webhook + inbox)
 
@@ -463,7 +466,7 @@
 ### RN-VIS-006 — Integração ERP no cadastro de funcionário
 
 - Seção **Integração ERP** agrupa: `codigoUsuarioErp`, `codigoFuncionarioErp`, `codigoVendedorErp`, `painelContratoRepresentante`, `painelCodigoRepresentante`.
-- Alteração via `POST/PATCH …/folha/funcionarios` com as mesmas validações de par e unicidade do painel (**RN-VIS-005**).
+- Alteração via `POST/PATCH …/folha/funcionarios` com as mesmas validações de par e unicidade do painel (**RN-VIS-005**). Na **edição**, exige **`folha-funcionario:update-integracao-erp`** (**RN-010**).
 
 ### RN-VIS-007 — Acesso ao acompanhamento (visitação)
 
