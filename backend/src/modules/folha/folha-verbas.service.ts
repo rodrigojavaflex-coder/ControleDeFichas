@@ -9,6 +9,7 @@ import { FolhaVerba } from './entities/folha-verba.entity';
 import { FolhaItem } from './entities/folha-item.entity';
 import { CreateFolhaVerbaDto } from './dto/create-folha-verba.dto';
 import { UpdateFolhaVerbaDto } from './dto/update-folha-verba.dto';
+import { FolhaMovimentoTipo } from '../../common/enums/folha-movimento-tipo.enum';
 
 @Injectable()
 export class FolhaVerbasService {
@@ -19,11 +20,22 @@ export class FolhaVerbasService {
     private readonly itemRepo: Repository<FolhaItem>,
   ) {}
 
+  private normalizarEhComissao(
+    tipoMovimento: FolhaMovimentoTipo,
+    ehComissao?: boolean,
+  ): boolean {
+    if (tipoMovimento === FolhaMovimentoTipo.DESPESA) {
+      return false;
+    }
+    return ehComissao === true;
+  }
+
   async create(dto: CreateFolhaVerbaDto): Promise<FolhaVerba> {
     const entity = this.verbaRepo.create({
       descricao: dto.descricao,
       tipoMovimento: dto.tipoMovimento,
       ativo: dto.ativo ?? true,
+      ehComissao: this.normalizarEhComissao(dto.tipoMovimento, dto.ehComissao),
     });
     return this.verbaRepo.save(entity);
   }
@@ -40,7 +52,13 @@ export class FolhaVerbasService {
 
   async update(id: string, dto: UpdateFolhaVerbaDto): Promise<FolhaVerba> {
     const entity = await this.findOne(id);
-    Object.assign(entity, dto);
+    if (dto.descricao !== undefined) entity.descricao = dto.descricao;
+    if (dto.tipoMovimento !== undefined) entity.tipoMovimento = dto.tipoMovimento;
+    if (dto.ativo !== undefined) entity.ativo = dto.ativo;
+    const tipoFinal = entity.tipoMovimento;
+    const ehInformado =
+      dto.ehComissao !== undefined ? dto.ehComissao : entity.ehComissao;
+    entity.ehComissao = this.normalizarEhComissao(tipoFinal, ehInformado);
     return this.verbaRepo.save(entity);
   }
 

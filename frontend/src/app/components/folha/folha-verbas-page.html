@@ -17,6 +17,7 @@
             <tr>
               <th>Descrição</th>
               <th>Tipo</th>
+              <th>Comissão</th>
               <th>Ativo</th>
               <th>Criado em</th>
               @if (pode().u || pode().d || pode().a) {
@@ -35,6 +36,11 @@
                   >
                     {{ v.tipoMovimento === TiposMov.RECEITA ? 'Receita' : 'Despesa' }}
                   </span>
+                </td>
+                <td>
+                  <span class="folha-badge-ativo" [class.sim]="v.ehComissao" [class.nao]="!v.ehComissao">{{
+                    v.ehComissao ? 'Sim' : 'Não'
+                  }}</span>
                 </td>
                 <td>
                   <span class="folha-badge-ativo" [class.sim]="v.ativo" [class.nao]="!v.ativo">{{
@@ -67,7 +73,7 @@
             }
             @if (lista.length === 0) {
               <tr class="no-data">
-                <td [attr.colspan]="pode().u || pode().d || pode().a ? 5 : 4">Nenhum evento cadastrado.</td>
+                <td [attr.colspan]="pode().u || pode().d || pode().a ? 6 : 5">Nenhum evento cadastrado.</td>
               </tr>
             }
           </tbody>

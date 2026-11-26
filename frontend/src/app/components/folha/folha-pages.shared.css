@@ -2224,6 +2224,74 @@ body.theme-dark .folha-lancamentos-item-modal-title {
   gap: 0.85rem;
 }
 
+.folha-hub-relatorios-modal {
+  width: min(28rem, calc(100vw - 2rem));
+}
+
+.folha-hub-relatorios-intro {
+  margin: 0 0 0.85rem;
+  color: var(--text-secondary, #64748b);
+  font-size: 0.9rem;
+}
+
+.folha-hub-relatorios-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.folha-hub-relatorios-item {
+  width: 100%;
+  justify-content: center;
+}
+
+.folha-opcoes-folha-geral-modal {
+  width: min(32rem, calc(100vw - 2rem));
+}
+
+.folha-opcoes-folha-geral-fieldset {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .folha-opcoes-folha-geral-fieldset,
+body.theme-dark .folha-opcoes-folha-geral-fieldset {
+  border-color: var(--border-color, #334155);
+}
+
+.folha-opcoes-folha-geral-fieldset legend {
+  padding: 0 0.35rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-primary, #0f172a);
+}
+
+.folha-opcoes-folha-geral-radio,
+.folha-opcoes-folha-geral-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.45rem 0;
+  cursor: pointer;
+  color: var(--text-primary, #0f172a);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.folha-opcoes-folha-geral-check-indent {
+  margin-left: 1.35rem;
+  margin-top: 0.15rem;
+}
+
+.folha-opcoes-folha-geral-ajuda {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.4;
+}
+
 /* Modal — filtros do relatório Folha por Evento */
 .folha-relatorio-evento-filtro-modal {
   width: min(520px, calc(100vw - 2rem));

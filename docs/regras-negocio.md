@@ -58,12 +58,14 @@
 - O campo **`folhaMensal`** em **`folha_tipo`** pode permanecer no cadastro como **metadado**; **não** restringe mais o uso de **`carregar-competencia`** na API.
 - **`POST …/folha/capas`** com um **`funcionarioId`** segue disponível para **obter ou criar** a capa de **um** funcionário, sujeito às mesmas validações de elegibilidade e de lote (RN-005, RN-006).
 - **UI:** após Carregar, exibe-se uma **lista** de capas (funcionário + totais resumidos, **banco/conta/dígito**) com **checkbox** (cabeçalho seleciona todos; clique no checkbox seleciona a linha para o arquivo PagBank). No **rodapé da lista**, exibe-se **quantidade de funcionários** e a **soma** das colunas Receitas, Despesas e Líquido. Com permissão **`folha-funcionario:read`**, botão ao lado do nome abre o **cadastro do funcionário em modal** (`nao-clicavel`); com **`folha-funcionario:update`** permite editar; ao fechar, a lista de capas é **recarregada**. **Clique na linha** abre a folha em **modal** (`nao-clicavel`) com receitas/despesas e ações da capa — **edição** somente com lote aberto; com lote fechado, **somente leitura** e ações de **recibo** (RN-015).
+- **Relatórios:** botão **Relatórios** (perm. **`folha-lancamento:read`**, com unidade e tipo preenchidos) abre hub modal (`nao-clicavel`) com **Folha geral**, **Folha por Evento**, **Recibo Geral** e **Prévia PagBank** (RN-018 / RN-017). Não há mais relatório dedicado **Folha por Setor** (quebra de setor entra nas opções da Folha geral).
 
 ### RN-003 — Exclusão de verba no cadastro
 
 - **Não** é permitido excluir `folha_verba` se existir **qualquer** `folha_item` que a referencie (histórico de uso).
 - **Tratamento preferencial:** inativar a verba (`ativo = false`); exclusão física apenas sem uso.
 - **Mensagem ao usuário:** orientar a inativar em vez de excluir.
+- Campo **`ehComissao`** (boolean, default **false**): marca receita usada como **comissão** nos relatórios (RN-018). Em **`tipoMovimento = DESPESA`**, a API e a UI **forçam `false`**.
 
 ### RN-004 — Exclusão de item na folha do funcionário
 
@@ -169,7 +171,15 @@
 - Cadastro do funcionário: **`bancoNumero`**, **`contaBancaria`**, **`digitoConta`** (abaixo do Pix); obrigatórios na geração para cada linha incluída. Nome no arquivo é sanitizado (apenas letras/espaços); CPF só dígitos; valor = **líquido** da capa (receitas − despesas).
 - **UI (Lançamento):** checkbox por funcionário + “selecionar todos” no cabeçalho; colunas **banco/conta/dígito** na grade; botão **Arquivo PagBank** exige permissão **`folha-lancamento:gerar-arquivo-pagamento`**, lote fechado e ao menos um selecionado.
 - **Avisos em modal:** funcionários selecionados **sem conta completa** (banco/conta/dígito) e/ou com **líquido ≤ 0** (e sem CPF) são listados; se houver válidos, o usuário pode **Gerar apenas válidos**; se nenhum válido, apenas **Fechar**.
+- **Prévia PagBank** (hub **Relatórios**, RN-018): imprime conferência de **todas** as capas da competência com seções **Entram no PagBank** / **Não entram**, usando os mesmos critérios de validade (banco/conta/dígito, CPF e líquido &gt; 0). Não gera o arquivo XLSX.
 - **API:** `POST …/folha/capas/gerar-arquivo-pagamento` com `{ unidade, capaIds[] }`; responde o arquivo binário; rejeita se o lote não estiver fechado ou se algum `capaId` enviado for inválido para o arquivo.
+
+### RN-018 — Relatórios da competência (hub no Lançamento)
+
+- **Hub Relatórios** (modal `nao-clicavel`): **Folha geral**, **Folha por Evento**, **Recibo Geral**, **Prévia PagBank**. Exige unidade + tipo de folha e permissão de leitura do lançamento.
+- **Folha geral:** modal de opções com **formato** (**analítico** = detalhe por funcionário; **sintético** = totais com as quebras), opção **Ver eventos** (somente no analítico: lista receitas/despesas de cada funcionário) e **níveis de quebra** combináveis na hierarquia **Setor → Comissão**. Sem quebras, lista única da competência.
+- **Quebra Comissão:** receitas com **`folha_verba.ehComissao = true`** formam o bloco/coluna **Comissão**; demais receitas e **todas** as despesas formam **Não comissão** (despesas abatem **somente** o líquido de não comissão). Líquido total = comissão + (receitas não comissão − despesas).
+- **Folha por Evento** e **Recibo Geral** mantêm os fluxos já existentes (filtro de eventos / recibos em lote). **Folha por Setor** como relatório separado foi **removida**.
 
 ### RN-016 — Atendimento WhatsApp (webhook + inbox)
 

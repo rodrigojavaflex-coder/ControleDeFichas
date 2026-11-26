@@ -114,6 +114,16 @@ export class FolhaLancamentosPage implements OnInit {
   /** verbaId → incluir no relatório (padrão: todos true ao abrir o modal). */
   relatorioEventoVerbaSelecionada: Record<string, boolean> = {};
 
+  /** Hub de relatórios (Folha / Evento / Recibo / Prévia PagBank). */
+  showModalRelatorios = false;
+  /** Opções de impressão da Folha geral. */
+  showModalOpcoesFolhaGeral = false;
+  folhaGeralFormato: 'analitico' | 'sintetico' = 'analitico';
+  folhaGeralQuebraSetor = false;
+  folhaGeralQuebraComissao = false;
+  /** Somente no analítico: lista eventos (verbas) de cada funcionário. */
+  folhaGeralVerEventos = false;
+
   showRemoverItemModal = false;
   itemIdParaRemover: string | null = null;
   removerItemModalMensagem = '';
@@ -154,7 +164,7 @@ export class FolhaLancamentosPage implements OnInit {
   }
 
   /** Unidade enviada à API; ausente quando o filtro está em "Todas" (não lança neste estado). */
-  private unidadeApi(): Unidade | null {
+  unidadeApi(): Unidade | null {
     return this.unidadeFiltro === '' ? null : this.unidadeFiltro;
   }
 
@@ -443,28 +453,61 @@ export class FolhaLancamentosPage implements OnInit {
     globalThis.window.setTimeout(() => win.print(), 150);
   }
 
-  imprimirRelatorioFolhaGeralConsolidado(): void {
+  abrirModalRelatorios(): void {
+    if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
+    this.showModalRelatorios = true;
+  }
+
+  fecharModalRelatorios(): void {
+    this.showModalRelatorios = false;
+  }
+
+  abrirOpcoesFolhaGeralDoHub(): void {
+    this.fecharModalRelatorios();
+    this.folhaGeralFormato = 'analitico';
+    this.folhaGeralQuebraSetor = false;
+    this.folhaGeralQuebraComissao = false;
+    this.folhaGeralVerEventos = false;
+    this.showModalOpcoesFolhaGeral = true;
+  }
+
+  fecharModalOpcoesFolhaGeral(): void {
+    this.showModalOpcoesFolhaGeral = false;
+  }
+
+  confirmarGerarFolhaGeral(): void {
     if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
     if (this.gerandoRelatorioFolhaGeral) return;
     const un = this.unidadeApi();
     if (!un) return;
+    const opcoes = {
+      formato: this.folhaGeralFormato,
+      quebraSetor: this.folhaGeralQuebraSetor,
+      quebraComissao: this.folhaGeralQuebraComissao,
+      verEventos:
+        this.folhaGeralFormato === 'analitico' && this.folhaGeralVerEventos,
+    };
+    this.fecharModalOpcoesFolhaGeral();
     this.gerandoRelatorioFolhaGeral = true;
     this.configuracaoService.getConfiguracao().subscribe({
-      next: (cfg) => this.executarRelatorioFolhaGeral(un, cfg ?? null),
-      error: () => this.executarRelatorioFolhaGeral(un, null),
+      next: (cfg) => this.executarRelatorioFolhaGeral(un, cfg ?? null, opcoes),
+      error: () => this.executarRelatorioFolhaGeral(un, null, opcoes),
     });
   }
 
-  imprimirRelatorioFolhaPorSetor(): void {
-    if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
-    if (this.gerandoRelatorioFolhaGeral) return;
-    const un = this.unidadeApi();
-    if (!un) return;
-    this.gerandoRelatorioFolhaGeral = true;
-    this.configuracaoService.getConfiguracao().subscribe({
-      next: (cfg) => this.executarRelatorioFolhaPorSetor(un, cfg ?? null),
-      error: () => this.executarRelatorioFolhaPorSetor(un, null),
-    });
+  abrirFolhaPorEventoDoHub(): void {
+    this.fecharModalRelatorios();
+    this.abrirModalFiltroRelatorioPorEvento();
+  }
+
+  abrirReciboGeralDoHub(): void {
+    this.fecharModalRelatorios();
+    this.imprimirReciboGeralTodasCapas();
+  }
+
+  abrirPreviaPagBankDoHub(): void {
+    this.fecharModalRelatorios();
+    this.imprimirPreviaPagBank();
   }
 
   abrirModalFiltroRelatorioPorEvento(): void {
@@ -608,7 +651,16 @@ export class FolhaLancamentosPage implements OnInit {
       });
   }
 
-  private executarRelatorioFolhaGeral(un: Unidade, cfg: Configuracao | null): void {
+  private executarRelatorioFolhaGeral(
+    un: Unidade,
+    cfg: Configuracao | null,
+    opcoes: {
+      formato: 'analitico' | 'sintetico';
+      quebraSetor: boolean;
+      quebraComissao: boolean;
+      verEventos?: boolean;
+    },
+  ): void {
     this.folha
       .listarCapasComDetalhe({
         unidade: un,
@@ -620,7 +672,13 @@ export class FolhaLancamentosPage implements OnInit {
         next: (rows) => {
           const tipoDesc =
             this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
-          const html = this.montarHtmlRelatorioFolhaGeralDocumento(rows, cfg, un, tipoDesc);
+          const html = this.montarHtmlRelatorioFolhaGeralDocumento(
+            rows,
+            cfg,
+            un,
+            tipoDesc,
+            opcoes,
+          );
           this.abrirPopupRelatorioHtml(html, 'folha-geral');
           this.gerandoRelatorioFolhaGeral = false;
         },
@@ -634,7 +692,19 @@ export class FolhaLancamentosPage implements OnInit {
       });
   }
 
-  private executarRelatorioFolhaPorSetor(un: Unidade, cfg: Configuracao | null): void {
+  imprimirPreviaPagBank(): void {
+    if (!this.pode().r || !this.relatoriosFolhaGeralFiltrosPreenchidos()) return;
+    if (this.gerandoRelatorioFolhaGeral) return;
+    const un = this.unidadeApi();
+    if (!un) return;
+    this.gerandoRelatorioFolhaGeral = true;
+    this.configuracaoService.getConfiguracao().subscribe({
+      next: (cfg) => this.executarPreviaPagBank(un, cfg ?? null),
+      error: () => this.executarPreviaPagBank(un, null),
+    });
+  }
+
+  private executarPreviaPagBank(un: Unidade, cfg: Configuracao | null): void {
     this.folha
       .listarCapasComDetalhe({
         unidade: un,
@@ -646,13 +716,13 @@ export class FolhaLancamentosPage implements OnInit {
         next: (rows) => {
           const tipoDesc =
             this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
-          const html = this.montarHtmlRelatorioFolhaPorSetorDocumento(rows, cfg, un, tipoDesc);
-          this.abrirPopupRelatorioHtml(html, 'folha-por-setor');
+          const html = this.montarHtmlPreviaPagBankDocumento(rows, cfg, un, tipoDesc);
+          this.abrirPopupRelatorioHtml(html, 'previa-pagbank');
           this.gerandoRelatorioFolhaGeral = false;
         },
         error: () => {
           this.errors.show(
-            'Não foi possível carregar as folhas para o relatório por setor. Tente novamente.',
+            'Não foi possível carregar as folhas para a prévia PagBank. Tente novamente.',
             'Folha',
           );
           this.gerandoRelatorioFolhaGeral = false;
@@ -709,50 +779,171 @@ export class FolhaLancamentosPage implements OnInit {
     globalThis.window.setTimeout(() => win.print(), 150);
   }
 
+  private descricaoSetorParaRelatorio(row: FolhaCapaDetalheResponse): string {
+    return (row.capa.funcionario?.setor?.descricao ?? '').trim() || 'Sem setor';
+  }
+
+  /**
+   * Comissão = receitas com ehComissao; despesas abatem só em Não comissão.
+   */
+  private totaisComissaoDaCapa(row: FolhaCapaDetalheResponse): {
+    comissao: number;
+    naoComissaoReceitas: number;
+    despesas: number;
+    naoComissaoLiquido: number;
+    receitas: number;
+    liquido: number;
+  } {
+    const itens = row.capa.itens ?? [];
+    let comissao = 0;
+    let naoComissaoReceitas = 0;
+    let despesas = 0;
+    for (const it of itens) {
+      const valor = FolhaLancamentosPage.parseDecimalFinanceiro(it.valor) || 0;
+      if (it.folhaVerba?.tipoMovimento === FolhaMovimentoTipo.DESPESA) {
+        despesas += valor;
+      } else if (it.folhaVerba?.ehComissao === true) {
+        comissao += valor;
+      } else {
+        naoComissaoReceitas += valor;
+      }
+    }
+    if (itens.length === 0) {
+      const r = FolhaLancamentosPage.parseDecimalFinanceiro(row.totalReceitas) || 0;
+      const d = FolhaLancamentosPage.parseDecimalFinanceiro(row.totalDespesas) || 0;
+      return {
+        comissao: 0,
+        naoComissaoReceitas: r,
+        despesas: d,
+        naoComissaoLiquido: r - d,
+        receitas: r,
+        liquido: r - d,
+      };
+    }
+    return {
+      comissao,
+      naoComissaoReceitas,
+      despesas,
+      naoComissaoLiquido: naoComissaoReceitas - despesas,
+      receitas: comissao + naoComissaoReceitas,
+      liquido: comissao + naoComissaoReceitas - despesas,
+    };
+  }
+
+  private filtrarItensFolhaGeral(
+    itens: FolhaItem[] | undefined,
+    filtro: 'comissao' | 'naoComissao' | 'todos',
+  ): FolhaItem[] {
+    const lista = [...(itens ?? [])].filter((it) => {
+      const tipo = it.folhaVerba?.tipoMovimento;
+      const ehCom = it.folhaVerba?.ehComissao === true;
+      if (filtro === 'comissao') {
+        return tipo === FolhaMovimentoTipo.RECEITA && ehCom;
+      }
+      if (filtro === 'naoComissao') {
+        return (
+          tipo === FolhaMovimentoTipo.DESPESA ||
+          (tipo === FolhaMovimentoTipo.RECEITA && !ehCom)
+        );
+      }
+      return true;
+    });
+    lista.sort((a, b) => {
+      const ordemTipo = (t: FolhaMovimentoTipo | undefined) =>
+        t === FolhaMovimentoTipo.RECEITA ? 0 : 1;
+      const d =
+        ordemTipo(a.folhaVerba?.tipoMovimento) -
+        ordemTipo(b.folhaVerba?.tipoMovimento);
+      if (d !== 0) return d;
+      return (a.folhaVerba?.descricao ?? '').localeCompare(
+        b.folhaVerba?.descricao ?? '',
+        'pt-BR',
+      );
+    });
+    return lista;
+  }
+
+  /** Tabela de eventos de uma capa (analítico + Ver eventos). */
+  private htmlTabelaEventosFolhaGeral(
+    itens: FolhaItem[],
+    rotuloTotal: string,
+    totalValor: number,
+  ): string {
+    if (!itens.length) {
+      return `<p class="folha-geral-eventos-vazio">Nenhum evento neste bloco.</p>`;
+    }
+    const trs = itens
+      .map((it) => {
+        const tipo =
+          it.folhaVerba?.tipoMovimento === FolhaMovimentoTipo.DESPESA
+            ? 'Despesa'
+            : 'Receita';
+        return `<tr>
+          <td>${this.escapeHtml(it.folhaVerba?.descricao ?? '—')}</td>
+          <td>${this.escapeHtml(tipo)}</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(it.valor))}</td>
+        </tr>`;
+      })
+      .join('');
+    return `<table class="tbl-rep tbl-rep-folha-geral-eventos"><thead><tr>
+      <th>Evento</th><th>Tipo</th><th class="num">Valor</th>
+    </tr></thead><tbody>${trs}</tbody>
+    <tfoot><tr class="totais"><td colspan="2">${this.escapeHtml(rotuloTotal)}</td>
+      <td class="num">${this.escapeHtml(this.moedaListaCapa(totalValor))}</td>
+    </tr></tfoot></table>`;
+  }
+
   private montarHtmlRelatorioFolhaGeralDocumento(
     rows: FolhaCapaDetalheResponse[],
     config: Configuracao | null,
     unidade: Unidade,
     tipoFolhaDescricao: string,
+    opcoes: {
+      formato: 'analitico' | 'sintetico';
+      quebraSetor: boolean;
+      quebraComissao: boolean;
+      verEventos?: boolean;
+    },
   ): string {
     const comp = `${this.nomeMesPt(this.mes)} / ${this.ano}`;
-    let totR = 0;
-    let totD = 0;
-    let totL = 0;
-    const linhas = rows
-      .map((r) => {
-        totR += Number(r.totalReceitas) || 0;
-        totD += Number(r.totalDespesas) || 0;
-        totL += Number(r.liquido) || 0;
-        const nome = (r.capa.funcionario?.nome ?? '—').trim() || '—';
-        return `<tr>
-          <td>${this.escapeHtml(nome)}</td>
-          <td class="num">${this.escapeHtml(this.moedaListaCapa(r.totalReceitas))}</td>
-          <td class="num">${this.escapeHtml(this.moedaListaCapa(r.totalDespesas))}</td>
-          <td class="num">${this.escapeHtml(this.moedaListaCapa(r.liquido))}</td>
-        </tr>`;
-      })
-      .join('');
-    const corpoTabela =
-      rows.length === 0
-        ? `<tbody><tr><td colspan="4" style="text-align:center;color:#666">Nenhuma folha encontrada para os filtros.</td></tr></tbody>`
-        : `<thead><tr>
-            <th>Funcionário</th>
-            <th class="num">Receitas</th>
-            <th class="num">Despesas</th>
-            <th class="num">Líquido</th>
-          </tr></thead>
-          <tbody>${linhas}</tbody>
-          <tfoot><tr class="totais">
-            <td>Totais</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totR))}</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totD))}</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totL))}</td>
-          </tr></tfoot>`;
+    const quebras: string[] = [];
+    if (opcoes.quebraSetor) quebras.push('Setor');
+    if (opcoes.quebraComissao) quebras.push('Comissão');
+    const subTitulo = [
+      opcoes.formato === 'sintetico' ? 'Sintético' : 'Analítico',
+      opcoes.verEventos ? 'Com eventos' : null,
+      quebras.length ? `Quebra: ${quebras.join(' → ')}` : 'Sem quebra',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    const linCab: string[] = [String(unidade), comp, tipoFolhaDescricao, subTitulo];
 
-    const linCab: string[] = [String(unidade), comp, tipoFolhaDescricao];
+    type Linha = {
+      nome: string;
+      setor: string;
+      comissao: number;
+      naoComissaoReceitas: number;
+      despesas: number;
+      naoComissaoLiquido: number;
+      receitas: number;
+      liquido: number;
+      itens: FolhaItem[];
+    };
 
-    const corpo = `<table class="tbl-rep" aria-label="Folhas por funcionário">${corpoTabela}</table>`;
+    const linhas: Linha[] = rows.map((r) => {
+      const t = this.totaisComissaoDaCapa(r);
+      return {
+        nome: (r.capa.funcionario?.nome ?? '—').trim() || '—',
+        setor: this.descricaoSetorParaRelatorio(r),
+        itens: r.capa.itens ?? [],
+        ...t,
+      };
+    });
+
+    const corpo =
+      linhas.length === 0
+        ? '<p class="vazio-relatorio-evento">Nenhuma folha encontrada para os filtros.</p>'
+        : this.montarCorpoFolhaGeralComOpcoes(linhas, opcoes);
 
     return this.montarHtmlDocumentoPadraoFicha({
       documentTitle: 'relatorio-folha-geral',
@@ -763,182 +954,498 @@ export class FolhaLancamentosPage implements OnInit {
     });
   }
 
-  private descricaoSetorParaRelatorio(
-    row: FolhaCapaDetalheResponse,
-  ): string {
-    return (row.capa.funcionario?.setor?.descricao ?? '').trim() || 'Sem setor';
-  }
-
-  private montarHtmlRelatorioFolhaPorSetorDocumento(
-    rows: FolhaCapaDetalheResponse[],
-    config: Configuracao | null,
-    unidade: Unidade,
-    tipoFolhaDescricao: string,
-  ): string {
-    type LinhaFuncionario = {
+  private montarCorpoFolhaGeralComOpcoes(
+    linhas: Array<{
       nome: string;
-      receitas: number;
+      setor: string;
+      comissao: number;
+      naoComissaoReceitas: number;
       despesas: number;
+      naoComissaoLiquido: number;
+      receitas: number;
       liquido: number;
-    };
-    type BlocoSetor = {
-      setorNome: string;
-      linhas: LinhaFuncionario[];
-    };
+      itens: FolhaItem[];
+    }>,
+    opcoes: {
+      formato: 'analitico' | 'sintetico';
+      quebraSetor: boolean;
+      quebraComissao: boolean;
+      verEventos?: boolean;
+    },
+  ): string {
+    const analitico = opcoes.formato === 'analitico';
+    const verEventos = analitico && opcoes.verEventos === true;
 
-    const map = new Map<string, BlocoSetor>();
-
-    for (const row of rows) {
-      const setorNome = this.descricaoSetorParaRelatorio(row);
-      let bloco = map.get(setorNome);
-      if (!bloco) {
-        bloco = { setorNome, linhas: [] };
-        map.set(setorNome, bloco);
+    const agruparPorSetor = (): Map<string, typeof linhas> => {
+      const map = new Map<string, typeof linhas>();
+      for (const ln of linhas) {
+        const key = opcoes.quebraSetor ? ln.setor : 'Todos';
+        const arr = map.get(key) ?? [];
+        arr.push(ln);
+        map.set(key, arr);
       }
-      bloco.linhas.push({
-        nome: (row.capa.funcionario?.nome ?? '—').trim() || '—',
-        receitas: Number(row.totalReceitas) || 0,
-        despesas: Number(row.totalDespesas) || 0,
-        liquido: Number(row.liquido) || 0,
+      const ordered = new Map<string, typeof linhas>();
+      const keys = [...map.keys()].sort((a, b) => {
+        if (a === 'Sem setor') return 1;
+        if (b === 'Sem setor') return -1;
+        if (a === 'Todos') return -1;
+        if (b === 'Todos') return 1;
+        return a.localeCompare(b, 'pt-BR');
       });
-    }
-
-    const blocos = [...map.values()].sort((a, b) => {
-      if (a.setorNome === 'Sem setor') return 1;
-      if (b.setorNome === 'Sem setor') return -1;
-      return a.setorNome.localeCompare(b.setorNome, 'pt-BR');
-    });
-
-    type ResumoSetor = {
-      setorNome: string;
-      qtdFuncionarios: number;
-      receitas: number;
-      despesas: number;
-      liquido: number;
+      for (const k of keys) ordered.set(k, map.get(k)!);
+      return ordered;
     };
 
-    const resumosSetor: ResumoSetor[] = [];
-    let totGeralQtd = 0;
-    let totGeralR = 0;
-    let totGeralD = 0;
-    let totGeralL = 0;
-
-    const colGroupDetalheSetor = `<colgroup>
-      <col class="col-funcionario" />
-      <col class="col-num" />
-      <col class="col-num" />
-      <col class="col-num" />
-    </colgroup>`;
-
-    const htmlBlocoSetor = (bloco: BlocoSetor): string => {
-      const linOrd = [...bloco.linhas].sort((a, b) =>
-        a.nome.localeCompare(b.nome, 'pt-BR'),
+    const soma = (arr: typeof linhas) =>
+      arr.reduce(
+        (acc, ln) => {
+          acc.comissao += ln.comissao;
+          acc.naoComissaoReceitas += ln.naoComissaoReceitas;
+          acc.despesas += ln.despesas;
+          acc.naoComissaoLiquido += ln.naoComissaoLiquido;
+          acc.receitas += ln.receitas;
+          acc.liquido += ln.liquido;
+          acc.qtd += 1;
+          return acc;
+        },
+        {
+          comissao: 0,
+          naoComissaoReceitas: 0,
+          despesas: 0,
+          naoComissaoLiquido: 0,
+          receitas: 0,
+          liquido: 0,
+          qtd: 0,
+        },
       );
-      let totR = 0;
-      let totD = 0;
-      let totL = 0;
-      const trs = linOrd
-        .map((ln) => {
-          totR += ln.receitas;
-          totD += ln.despesas;
-          totL += ln.liquido;
-          return `<tr>
-            <td class="col-funcionario">${this.escapeHtml(ln.nome)}</td>
+
+    const tabelaPadrao = (
+      arr: typeof linhas,
+      rotuloTotal: string,
+      incluirFuncionario: boolean,
+    ): string => {
+      const s = soma(arr);
+      if (opcoes.quebraComissao) {
+        const thead = `<thead><tr>
+          ${incluirFuncionario ? '<th>Funcionário</th>' : '<th>Grupo</th>'}
+          <th class="num">Comissão</th>
+          <th class="num">Receitas (não comissão)</th>
+          <th class="num">Despesas</th>
+          <th class="num">Líquido (não comissão)</th>
+          <th class="num">Líquido total</th>
+        </tr></thead>`;
+        let body = '';
+        if (incluirFuncionario) {
+          body = [...arr]
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+            .map(
+              (ln) => `<tr>
+              <td>${this.escapeHtml(ln.nome)}</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.comissao))}</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.naoComissaoReceitas))}</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.despesas))}</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.naoComissaoLiquido))}</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.liquido))}</td>
+            </tr>`,
+            )
+            .join('');
+        } else {
+          body = `<tr>
+            <td>Comissão</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.comissao))}</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">—</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.comissao))}</td>
+          </tr>
+          <tr>
+            <td>Não comissão</td>
+            <td class="num">—</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.naoComissaoReceitas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.despesas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.naoComissaoLiquido))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.naoComissaoLiquido))}</td>
+          </tr>`;
+        }
+        return `<table class="tbl-rep">${thead}<tbody>${body}</tbody>
+          <tfoot><tr class="totais">
+            <td>${this.escapeHtml(rotuloTotal)} (${s.qtd})</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.comissao))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.naoComissaoReceitas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.despesas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.naoComissaoLiquido))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(s.liquido))}</td>
+          </tr></tfoot></table>`;
+      }
+
+      const thead = `<thead><tr>
+        ${incluirFuncionario ? '<th>Funcionário</th>' : '<th></th>'}
+        <th class="num">Receitas</th>
+        <th class="num">Despesas</th>
+        <th class="num">Líquido</th>
+      </tr></thead>`;
+      let body = '';
+      if (incluirFuncionario) {
+        body = [...arr]
+          .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+          .map(
+            (ln) => `<tr>
+            <td>${this.escapeHtml(ln.nome)}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.receitas))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.despesas))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.liquido))}</td>
-          </tr>`;
-        })
-        .join('');
-
-      const qtd = linOrd.length;
-      resumosSetor.push({
-        setorNome: bloco.setorNome,
-        qtdFuncionarios: qtd,
-        receitas: totR,
-        despesas: totD,
-        liquido: totL,
-      });
-      totGeralQtd += qtd;
-      totGeralR += totR;
-      totGeralD += totD;
-      totGeralL += totL;
-
-      return `<div class="section setor-rep-block">
-        <div class="secao-macro-titulo">${this.escapeHtml(bloco.setorNome)}</div>
-        <table class="tbl-rep tbl-rep-folha-setor" aria-label="${this.escapeHtml(bloco.setorNome)}">
-          ${colGroupDetalheSetor}
-          <thead><tr>
-            <th class="col-funcionario">Funcionário</th>
-            <th class="num">Receitas</th>
-            <th class="num">Despesas</th>
-            <th class="num">Líquido</th>
-          </tr></thead>
-          <tbody>${trs}</tbody>
-          <tfoot><tr class="totais">
-            <td class="col-funcionario">Total do setor</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totR))}</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totD))}</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totL))}</td>
-          </tr></tfoot>
-        </table>
-      </div>`;
+          </tr>`,
+          )
+          .join('');
+      } else {
+        body = `<tr>
+          <td>Total</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.receitas))}</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.despesas))}</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.liquido))}</td>
+        </tr>`;
+      }
+      return `<table class="tbl-rep">${thead}<tbody>${body}</tbody>
+        <tfoot><tr class="totais">
+          <td>${this.escapeHtml(rotuloTotal)} (${s.qtd})</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.receitas))}</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.despesas))}</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.liquido))}</td>
+        </tr></tfoot></table>`;
     };
 
-    const montarResumoPorSetor = (): string => {
-      const linhasResumo = resumosSetor
-        .map(
-          (r) => `<tr>
-            <td class="col-funcionario">${this.escapeHtml(r.setorNome)}</td>
-            <td class="num">${this.escapeHtml(String(r.qtdFuncionarios))}</td>
+    const porSetor = agruparPorSetor();
+    const partes: string[] = [];
+    const resumoSetores: Array<{
+      nome: string;
+      qtd: number;
+      comissao: number;
+      naoComissaoLiquido: number;
+      receitas: number;
+      despesas: number;
+      liquido: number;
+    }> = [];
+
+    for (const [setorNome, arr] of porSetor) {
+      const s = soma(arr);
+      resumoSetores.push({
+        nome: setorNome,
+        qtd: s.qtd,
+        comissao: s.comissao,
+        naoComissaoLiquido: s.naoComissaoLiquido,
+        receitas: s.receitas,
+        despesas: s.despesas,
+        liquido: s.liquido,
+      });
+
+      if (opcoes.quebraSetor) {
+        partes.push(`<div class="section setor-rep-block">
+          <div class="secao-macro-titulo">${this.escapeHtml(setorNome)}</div>`);
+      }
+
+      if (opcoes.quebraComissao && analitico) {
+        partes.push(`<div class="evento-det-titulo">Comissão</div>`);
+        if (verEventos) {
+          const soCom = [...arr]
+            .filter((l) => l.comissao !== 0)
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+          if (soCom.length === 0) {
+            partes.push(
+              `<p class="folha-geral-eventos-vazio">Sem valores de comissão.</p>`,
+            );
+          } else {
+            for (const ln of soCom) {
+              partes.push(
+                `<div class="folha-geral-func-bloco"><div class="folha-geral-func-nome">${this.escapeHtml(ln.nome)}</div>`,
+              );
+              partes.push(
+                this.htmlTabelaEventosFolhaGeral(
+                  this.filtrarItensFolhaGeral(ln.itens, 'comissao'),
+                  'Total comissão',
+                  ln.comissao,
+                ),
+              );
+              partes.push('</div>');
+            }
+          }
+          partes.push(
+            `<p style="font-weight:700;margin:6px 0 12px">Total comissão: ${this.escapeHtml(this.moedaListaCapa(s.comissao))}</p>`,
+          );
+        } else {
+          const soCom = [...arr]
+            .filter((l) => l.comissao !== 0)
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+          const trCom =
+            soCom.length === 0
+              ? '<tr><td colspan="2" style="text-align:center;color:#666">Sem valores de comissão</td></tr>'
+              : soCom
+                  .map(
+                    (ln) => `<tr>
+              <td>${this.escapeHtml(ln.nome)}</td>
+              <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.comissao))}</td>
+            </tr>`,
+                  )
+                  .join('');
+          partes.push(`<table class="tbl-rep"><thead><tr>
+          <th>Funcionário</th><th class="num">Comissão</th>
+        </tr></thead><tbody>${trCom}</tbody>
+        <tfoot><tr class="totais"><td>Total comissão</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.comissao))}</td>
+        </tr></tfoot></table>`);
+        }
+
+        partes.push(`<div class="evento-det-titulo">Não comissão</div>`);
+        if (verEventos) {
+          const ordenados = [...arr].sort((a, b) =>
+            a.nome.localeCompare(b.nome, 'pt-BR'),
+          );
+          for (const ln of ordenados) {
+            partes.push(
+              `<div class="folha-geral-func-bloco"><div class="folha-geral-func-nome">${this.escapeHtml(ln.nome)}</div>`,
+            );
+            partes.push(
+              this.htmlTabelaEventosFolhaGeral(
+                this.filtrarItensFolhaGeral(ln.itens, 'naoComissao'),
+                'Líquido não comissão',
+                ln.naoComissaoLiquido,
+              ),
+            );
+            partes.push(
+              `<p class="folha-geral-func-totais">Receitas (não comissão): ${this.escapeHtml(this.moedaListaCapa(ln.naoComissaoReceitas))}
+              &nbsp;·&nbsp; Despesas: ${this.escapeHtml(this.moedaListaCapa(ln.despesas))}
+              &nbsp;·&nbsp; Líquido: ${this.escapeHtml(this.moedaListaCapa(ln.naoComissaoLiquido))}</p></div>`,
+            );
+          }
+          partes.push(
+            `<p style="font-weight:700;margin:6px 0 8px">Total não comissão: ${this.escapeHtml(this.moedaListaCapa(s.naoComissaoLiquido))}</p>`,
+          );
+        } else {
+          const trNao = [...arr]
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+            .map(
+              (ln) => `<tr>
+            <td>${this.escapeHtml(ln.nome)}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.naoComissaoReceitas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.despesas))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(ln.naoComissaoLiquido))}</td>
+          </tr>`,
+            )
+            .join('');
+          partes.push(`<table class="tbl-rep"><thead><tr>
+          <th>Funcionário</th>
+          <th class="num">Receitas (não comissão)</th>
+          <th class="num">Despesas</th>
+          <th class="num">Líquido</th>
+        </tr></thead><tbody>${trNao}</tbody>
+        <tfoot><tr class="totais"><td>Total não comissão</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.naoComissaoReceitas))}</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.despesas))}</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(s.naoComissaoLiquido))}</td>
+        </tr></tfoot></table>`);
+        }
+        partes.push(`<p style="font-weight:700;margin:8px 0 16px">Total do ${
+          opcoes.quebraSetor ? 'setor' : 'grupo'
+        }: ${this.escapeHtml(this.moedaListaCapa(s.liquido))}</p>`);
+      } else if (verEventos) {
+        const ordenados = [...arr].sort((a, b) =>
+          a.nome.localeCompare(b.nome, 'pt-BR'),
+        );
+        for (const ln of ordenados) {
+          partes.push(
+            `<div class="folha-geral-func-bloco"><div class="folha-geral-func-nome">${this.escapeHtml(ln.nome)}</div>`,
+          );
+          partes.push(
+            this.htmlTabelaEventosFolhaGeral(
+              this.filtrarItensFolhaGeral(ln.itens, 'todos'),
+              'Líquido',
+              ln.liquido,
+            ),
+          );
+          partes.push(
+            `<p class="folha-geral-func-totais">Receitas: ${this.escapeHtml(this.moedaListaCapa(ln.receitas))}
+            &nbsp;·&nbsp; Despesas: ${this.escapeHtml(this.moedaListaCapa(ln.despesas))}
+            &nbsp;·&nbsp; Líquido: ${this.escapeHtml(this.moedaListaCapa(ln.liquido))}</p></div>`,
+          );
+        }
+        partes.push(
+          `<p style="font-weight:700;margin:8px 0 16px">${
+            opcoes.quebraSetor ? 'Total do setor' : 'Totais'
+          }: ${this.escapeHtml(this.moedaListaCapa(s.liquido))} (${s.qtd})</p>`,
+        );
+      } else {
+        partes.push(
+          tabelaPadrao(
+            arr,
+            opcoes.quebraSetor ? 'Total do setor' : 'Totais',
+            analitico,
+          ),
+        );
+      }
+
+      if (opcoes.quebraSetor) {
+        partes.push('</div>');
+      }
+    }
+
+    if (opcoes.quebraSetor && resumoSetores.length > 1) {
+      const usaCom = opcoes.quebraComissao;
+      const trs = resumoSetores
+        .map((r) =>
+          usaCom
+            ? `<tr>
+            <td>${this.escapeHtml(r.nome)}</td>
+            <td class="num">${this.escapeHtml(String(r.qtd))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(r.comissao))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(r.naoComissaoLiquido))}</td>
+            <td class="num">${this.escapeHtml(this.moedaListaCapa(r.liquido))}</td>
+          </tr>`
+            : `<tr>
+            <td>${this.escapeHtml(r.nome)}</td>
+            <td class="num">${this.escapeHtml(String(r.qtd))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(r.receitas))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(r.despesas))}</td>
             <td class="num">${this.escapeHtml(this.moedaListaCapa(r.liquido))}</td>
           </tr>`,
         )
         .join('');
-
-      return `<div class="section setor-resumo-final">
+      const tot = resumoSetores.reduce(
+        (a, r) => {
+          a.qtd += r.qtd;
+          a.comissao += r.comissao;
+          a.naoComissaoLiquido += r.naoComissaoLiquido;
+          a.receitas += r.receitas;
+          a.despesas += r.despesas;
+          a.liquido += r.liquido;
+          return a;
+        },
+        {
+          qtd: 0,
+          comissao: 0,
+          naoComissaoLiquido: 0,
+          receitas: 0,
+          despesas: 0,
+          liquido: 0,
+        },
+      );
+      partes.push(`<div class="section setor-resumo-final">
         <div class="secao-macro-titulo">Resumo por setor</div>
-        <table class="tbl-rep tbl-rep-folha-setor tbl-rep-resumo-setor" aria-label="Resumo por setor">
-          <colgroup>
-            <col class="col-funcionario" />
-            <col class="col-num" />
-            <col class="col-num" />
-            <col class="col-num" />
-            <col class="col-num" />
-          </colgroup>
-          <thead><tr>
-            <th class="col-funcionario">Setor</th>
-            <th class="num">Qtd. funcionários</th>
-            <th class="num">Receitas</th>
-            <th class="num">Despesas</th>
-            <th class="num">Líquido</th>
-          </tr></thead>
-          <tbody>${linhasResumo}</tbody>
-          <tfoot><tr class="totais">
-            <td class="col-funcionario">Total geral</td>
-            <td class="num">${this.escapeHtml(String(totGeralQtd))}</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralR))}</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralD))}</td>
-            <td class="num">${this.escapeHtml(this.moedaListaCapa(totGeralL))}</td>
-          </tr></tfoot>
-        </table>
-      </div>`;
-    };
+        <table class="tbl-rep"><thead><tr>
+          <th>Setor</th><th class="num">Qtd</th>
+          ${
+            usaCom
+              ? '<th class="num">Comissão</th><th class="num">Líq. não comissão</th><th class="num">Líquido</th>'
+              : '<th class="num">Receitas</th><th class="num">Despesas</th><th class="num">Líquido</th>'
+          }
+        </tr></thead><tbody>${trs}</tbody>
+        <tfoot><tr class="totais">
+          <td>Total geral</td>
+          <td class="num">${this.escapeHtml(String(tot.qtd))}</td>
+          ${
+            usaCom
+              ? `<td class="num">${this.escapeHtml(this.moedaListaCapa(tot.comissao))}</td>
+                 <td class="num">${this.escapeHtml(this.moedaListaCapa(tot.naoComissaoLiquido))}</td>
+                 <td class="num">${this.escapeHtml(this.moedaListaCapa(tot.liquido))}</td>`
+              : `<td class="num">${this.escapeHtml(this.moedaListaCapa(tot.receitas))}</td>
+                 <td class="num">${this.escapeHtml(this.moedaListaCapa(tot.despesas))}</td>
+                 <td class="num">${this.escapeHtml(this.moedaListaCapa(tot.liquido))}</td>`
+          }
+        </tr></tfoot></table></div>`);
+    }
 
+    return partes.join('');
+  }
+
+  private avaliarCapaParaPagBank(row: FolhaCapaDetalheResponse): {
+    ok: boolean;
+    nome: string;
+    liquido: number;
+    problemas: string[];
+  } {
+    const f = row.capa.funcionario;
+    const nome = f?.nome?.trim() || '—';
+    const problemas: string[] = [];
+    const banco = String(f?.bancoNumero ?? '').replace(/\D/g, '');
+    const conta = String(f?.contaBancaria ?? '').replace(/\D/g, '');
+    const digito = String(f?.digitoConta ?? '').replace(/\D/g, '');
+    if (!banco || !conta || !digito) {
+      problemas.push('sem dados bancários (banco, conta e dígito)');
+    }
+    const cpf = String(f?.cpf ?? '').replace(/\D/g, '');
+    if (!cpf) problemas.push('sem CPF');
+    const liquido = FolhaLancamentosPage.parseDecimalFinanceiro(row.liquido) || 0;
+    if (!(liquido > 0)) problemas.push('líquido ≤ 0');
+    return { ok: problemas.length === 0, nome, liquido, problemas };
+  }
+
+  private montarHtmlPreviaPagBankDocumento(
+    rows: FolhaCapaDetalheResponse[],
+    config: Configuracao | null,
+    unidade: Unidade,
+    tipoFolhaDescricao: string,
+  ): string {
     const comp = `${this.nomeMesPt(this.mes)} / ${this.ano}`;
-    const linCab: string[] = [String(unidade), comp, tipoFolhaDescricao];
+    const validos: Array<{ nome: string; liquido: number }> = [];
+    const invalidos: Array<{ nome: string; liquido: number; motivos: string }> = [];
+    for (const row of rows) {
+      const av = this.avaliarCapaParaPagBank(row);
+      if (av.ok) validos.push({ nome: av.nome, liquido: av.liquido });
+      else {
+        invalidos.push({
+          nome: av.nome,
+          liquido: av.liquido,
+          motivos: av.problemas.join('; '),
+        });
+      }
+    }
+    validos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    invalidos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const totLiq = validos.reduce((s, v) => s + v.liquido, 0);
 
-    const corpo =
-      blocos.length === 0
-        ? '<p class="vazio-relatorio-evento">Nenhuma folha encontrada para os filtros.</p>'
-        : `${blocos.map((b) => htmlBlocoSetor(b)).join('')}${montarResumoPorSetor()}`;
+    const trOk = validos
+      .map(
+        (v) => `<tr>
+        <td>${this.escapeHtml(v.nome)}</td>
+        <td class="num">${this.escapeHtml(this.moedaListaCapa(v.liquido))}</td>
+      </tr>`,
+      )
+      .join('');
+    const trNo = invalidos
+      .map(
+        (v) => `<tr>
+        <td>${this.escapeHtml(v.nome)}</td>
+        <td class="num">${this.escapeHtml(this.moedaListaCapa(v.liquido))}</td>
+        <td>${this.escapeHtml(v.motivos)}</td>
+      </tr>`,
+      )
+      .join('');
+
+    const corpo = `
+      <p><strong>Válidos para o arquivo:</strong> ${validos.length}
+      &nbsp;|&nbsp; <strong>Inválidos:</strong> ${invalidos.length}
+      &nbsp;|&nbsp; <strong>Soma líquidos válidos:</strong> ${this.escapeHtml(this.moedaListaCapa(totLiq))}</p>
+      <div class="section">
+        <div class="secao-macro-titulo">Entram no PagBank (${validos.length})</div>
+        <table class="tbl-rep"><thead><tr>
+          <th>Funcionário</th><th class="num">Líquido</th>
+        </tr></thead>
+        <tbody>${trOk || '<tr><td colspan="2" style="text-align:center;color:#666">Nenhum válido</td></tr>'}</tbody>
+        <tfoot><tr class="totais"><td>Total</td>
+          <td class="num">${this.escapeHtml(this.moedaListaCapa(totLiq))}</td>
+        </tr></tfoot></table>
+      </div>
+      <div class="section">
+        <div class="secao-macro-titulo">Não entram (${invalidos.length})</div>
+        <table class="tbl-rep"><thead><tr>
+          <th>Funcionário</th><th class="num">Líquido</th><th>Motivo</th>
+        </tr></thead>
+        <tbody>${trNo || '<tr><td colspan="3" style="text-align:center;color:#666">Nenhum inválido</td></tr>'}</tbody>
+      </table>
+      </div>`;
 
     return this.montarHtmlDocumentoPadraoFicha({
-      documentTitle: 'relatorio-folha-por-setor',
-      tituloPrincipal: 'RELATÓRIO DE FOLHA POR SETOR',
-      linhasCabecalhoCentral: linCab,
+      documentTitle: 'previa-pagbank',
+      tituloPrincipal: 'PRÉVIA PAGBANK',
+      linhasCabecalhoCentral: [String(unidade), comp, tipoFolhaDescricao],
       corpo,
       config,
     });
@@ -1126,6 +1633,11 @@ export class FolhaLancamentosPage implements OnInit {
     .tbl-rep-resumo-setor col.col-funcionario { width: 42%; }
     .tbl-rep-resumo-setor col.col-num { width: 14.5%; }
     .evento-det-titulo { font-weight: 700; font-size: 12px; margin: 10px 0 6px; color: #1e293b; }
+    .folha-geral-func-bloco { margin: 0 0 12px; page-break-inside: avoid; }
+    .folha-geral-func-nome { font-weight: 700; font-size: 11.5px; margin: 0 0 4px; color: #0f172a; }
+    .folha-geral-func-totais { margin: 4px 0 0; font-size: 10.5px; color: #334155; }
+    .folha-geral-eventos-vazio { margin: 4px 0 8px; font-size: 11px; color: #64748b; font-style: italic; }
+    .tbl-rep-folha-geral-eventos { margin-bottom: 2px; }
     .evento-det-block table { margin-top: 4px; }
     @media print {
       @page { margin: 15mm 10mm 40px 10mm; }

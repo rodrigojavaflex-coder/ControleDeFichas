@@ -22,6 +22,14 @@ export class FolhaVerba extends BaseEntity {
   @Column({ default: true })
   ativo: boolean;
 
+  /**
+   * Evento de receita classificado como comissão (relatórios Folha geral).
+   * Sempre false quando tipoMovimento = DESPESA.
+   */
+  @ApiProperty({ default: false })
+  @Column({ default: false })
+  ehComissao: boolean;
+
   @OneToMany(() => FolhaItem, (i) => i.folhaVerba)
   itens?: FolhaItem[];
 }

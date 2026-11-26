@@ -20,4 +20,12 @@ export class CreateFolhaVerbaDto {
   @IsOptional()
   @IsBoolean()
   ativo?: boolean = true;
+
+  /**
+   * Somente para RECEITA. Em DESPESA a API força false.
+   */
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  ehComissao?: boolean = false;
 }

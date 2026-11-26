@@ -71,39 +71,13 @@
         </div>
         <button
           type="button"
-          class="btn btn-success folha-lancamentos-btn-relatorio-geral"
+          class="btn btn-success folha-lancamentos-btn-relatorios"
           [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
-          (click)="imprimirRelatorioFolhaGeralConsolidado()"
-          title="Relatório de Folha Geral — impressão ou PDF (exige unidade e tipo de folha)"
+          (click)="abrirModalRelatorios()"
+          title="Relatórios da competência (exige unidade e tipo de folha)"
         >
-          Folha
-        </button>
-        <button
-          type="button"
-          class="btn btn-success folha-lancamentos-btn-relatorio-evento"
-          [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
-          (click)="abrirModalFiltroRelatorioPorEvento()"
-          title="Folha Geral por evento — escolha os eventos e gere impressão ou PDF"
-        >
-          Folha por Evento
-        </button>
-        <button
-          type="button"
-          class="btn btn-success folha-lancamentos-btn-relatorio-setor"
-          [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
-          (click)="imprimirRelatorioFolhaPorSetor()"
-          title="Relatório de Folha por Setor — impressão ou PDF (exige unidade e tipo de folha)"
-        >
-          Folha por Setor
-        </button>
-        <button
-          type="button"
-          class="btn btn-success folha-lancamentos-btn-recibo-geral"
-          [disabled]="desabilitarBotoesRelatoriosFolhaGeralTopo()"
-          (click)="imprimirReciboGeralTodasCapas()"
-          title="Recibo geral — um recibo por funcionário, ordenado por nome (exige unidade e tipo de folha)"
-        >
-          Recibo Geral
+          <i class="fas fa-print" aria-hidden="true"></i>
+          Relatórios
         </button>
         @if (podeGerarArquivoPagamento()) {
           <button
@@ -891,6 +865,107 @@
       [showModal]="true"
       (modalClosed)="fecharAuditoriaFolhaItem()"
     />
+  }
+
+  @if (showModalRelatorios) {
+    <div class="folha-lancamentos-item-modal-backdrop" role="presentation">
+      <div
+        class="folha-lancamentos-item-modal folha-hub-relatorios-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lac-hub-relatorios-title"
+      >
+        <header class="folha-lancamentos-item-modal-head">
+          <h2 id="lac-hub-relatorios-title" class="folha-lancamentos-item-modal-title">Relatórios</h2>
+        </header>
+        <div class="folha-lancamentos-item-modal-body">
+          <p class="folha-hub-relatorios-intro">
+            Competência <strong>{{ referenciaCompetencia }}</strong>
+            @if (unidadeApi(); as un) {
+              · <strong>{{ un }}</strong>
+            }
+          </p>
+          <div class="folha-hub-relatorios-lista" role="group" aria-label="Opções de relatório">
+            <button type="button" class="btn btn-success folha-hub-relatorios-item" (click)="abrirOpcoesFolhaGeralDoHub()">
+              Folha geral
+            </button>
+            <button type="button" class="btn btn-success folha-hub-relatorios-item" (click)="abrirFolhaPorEventoDoHub()">
+              Folha por Evento
+            </button>
+            <button type="button" class="btn btn-success folha-hub-relatorios-item" (click)="abrirReciboGeralDoHub()">
+              Recibo Geral
+            </button>
+            <button type="button" class="btn btn-success folha-hub-relatorios-item" (click)="abrirPreviaPagBankDoHub()">
+              Prévia PagBank
+            </button>
+          </div>
+        </div>
+        <footer class="folha-lancamentos-item-modal-actions">
+          <button type="button" class="btn btn-cancelar" (click)="fecharModalRelatorios()">Fechar</button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (showModalOpcoesFolhaGeral) {
+    <div class="folha-lancamentos-item-modal-backdrop" role="presentation">
+      <div
+        class="folha-lancamentos-item-modal folha-opcoes-folha-geral-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lac-opcoes-folha-geral-title"
+      >
+        <header class="folha-lancamentos-item-modal-head">
+          <h2 id="lac-opcoes-folha-geral-title" class="folha-lancamentos-item-modal-title">
+            Folha geral — opções de impressão
+          </h2>
+        </header>
+        <div class="folha-lancamentos-item-modal-body">
+          <fieldset class="folha-opcoes-folha-geral-fieldset">
+            <legend>Formato</legend>
+            <label class="folha-opcoes-folha-geral-radio">
+              <input type="radio" name="folhaGeralFormato" [(ngModel)]="folhaGeralFormato" [value]="'analitico'" />
+              Analítico — detalhe por funcionário
+            </label>
+            <label class="folha-opcoes-folha-geral-radio">
+              <input type="radio" name="folhaGeralFormato" [(ngModel)]="folhaGeralFormato" [value]="'sintetico'" />
+              Sintético — totais (com as quebras marcadas)
+            </label>
+            @if (folhaGeralFormato === 'analitico') {
+              <label class="folha-opcoes-folha-geral-check folha-opcoes-folha-geral-check-indent">
+                <input type="checkbox" [(ngModel)]="folhaGeralVerEventos" />
+                Ver eventos — lista receitas e despesas de cada funcionário
+              </label>
+            }
+          </fieldset>
+          <fieldset class="folha-opcoes-folha-geral-fieldset">
+            <legend>Níveis de quebra (hierarquia Setor → Comissão)</legend>
+            <label class="folha-opcoes-folha-geral-check">
+              <input type="checkbox" [(ngModel)]="folhaGeralQuebraSetor" />
+              Setor
+            </label>
+            <label class="folha-opcoes-folha-geral-check">
+              <input type="checkbox" [(ngModel)]="folhaGeralQuebraComissao" />
+              Comissão
+            </label>
+            <p class="folha-opcoes-folha-geral-ajuda">
+              Comissão soma receitas marcadas como comissão. Despesas abatem apenas em Não comissão.
+            </p>
+          </fieldset>
+        </div>
+        <footer class="folha-lancamentos-item-modal-actions">
+          <button type="button" class="btn btn-cancelar" (click)="fecharModalOpcoesFolhaGeral()">Fechar</button>
+          <button
+            type="button"
+            class="btn btn-salvar"
+            [disabled]="gerandoRelatorioFolhaGeral"
+            (click)="confirmarGerarFolhaGeral()"
+          >
+            {{ gerandoRelatorioFolhaGeral ? 'Gerando…' : 'Gerar' }}
+          </button>
+        </footer>
+      </div>
+    </div>
   }
 
   @if (showFiltroRelatorioEventoModal) {

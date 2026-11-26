@@ -64,6 +64,8 @@ export interface FolhaVerba {
   descricao: string;
   tipoMovimento: FolhaMovimentoTipo;
   ativo: boolean;
+  /** Receita classificada como comissão (quebra Folha geral). Sempre false em despesa. */
+  ehComissao?: boolean;
   criadoEm: string;
   atualizadoEm: string;
 }

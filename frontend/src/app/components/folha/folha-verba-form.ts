@@ -45,6 +45,7 @@ export class FolhaVerbaFormComponent implements OnInit {
     this.form = this.fb.group({
       descricao: ['', [Validators.required, Validators.maxLength(200)]],
       tipoMovimento: [FolhaMovimentoTipo.RECEITA, Validators.required],
+      ehComissao: [false],
       ativo: [true],
     });
   }
@@ -68,11 +69,34 @@ export class FolhaVerbaFormComponent implements OnInit {
       return;
     }
 
+    this.form.get('tipoMovimento')?.valueChanges.subscribe((tipo) => {
+      this.aplicarRegraEhComissaoPorTipo(tipo as FolhaMovimentoTipo);
+    });
+    this.aplicarRegraEhComissaoPorTipo(
+      this.form.get('tipoMovimento')?.value as FolhaMovimentoTipo,
+    );
+
     this.pageCtx.setContext({
       title: this.isEditMode ? 'Editar evento' : 'Novo evento',
       description:
         'Eventos de receita ou despesa usados nos lançamentos.',
     });
+  }
+
+  /** Despesa nunca é comissão; receita pode marcar. */
+  private aplicarRegraEhComissaoPorTipo(tipo: FolhaMovimentoTipo): void {
+    const ctrl = this.form.get('ehComissao');
+    if (!ctrl) return;
+    if (tipo === FolhaMovimentoTipo.DESPESA) {
+      ctrl.setValue(false, { emitEvent: false });
+      ctrl.disable({ emitEvent: false });
+    } else {
+      ctrl.enable({ emitEvent: false });
+    }
+  }
+
+  get ehComissaoDesabilitado(): boolean {
+    return this.form.get('tipoMovimento')?.value === FolhaMovimentoTipo.DESPESA;
   }
 
   private erroRedirect(acao: string): void {
@@ -93,8 +117,10 @@ export class FolhaVerbaFormComponent implements OnInit {
         this.form.patchValue({
           descricao: v.descricao,
           tipoMovimento: v.tipoMovimento,
+          ehComissao: v.ehComissao === true,
           ativo: v.ativo,
         });
+        this.aplicarRegraEhComissaoPorTipo(v.tipoMovimento);
         this.loading = false;
       },
       error: () => {
@@ -113,11 +139,16 @@ export class FolhaVerbaFormComponent implements OnInit {
     const raw = this.form.getRawValue() as {
       descricao: string;
       tipoMovimento: FolhaMovimentoTipo;
+      ehComissao: boolean;
       ativo: boolean;
     };
     const body = {
       descricao: raw.descricao.trim(),
       tipoMovimento: raw.tipoMovimento,
+      ehComissao:
+        raw.tipoMovimento === FolhaMovimentoTipo.DESPESA
+          ? false
+          : raw.ehComissao === true,
       ativo: raw.ativo !== false,
     };
 
