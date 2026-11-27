@@ -1,4 +1,4 @@
-import { OrcamentoImagem } from '../../models/orcamento-imagem.model';
+﻿import { OrcamentoImagem } from '../../models/orcamento-imagem.model';
 
 const LARGURA = 800;
 const PADDING = 28;
@@ -344,7 +344,10 @@ function alturaProporcional(imagem: HTMLImageElement): number {
 
 function dinheiro(valor: number): string {
   const numero = Number.isFinite(valor) ? valor : 0;
-  return `R$ ${numero.toFixed(2)}`;
+  return `R$ ${numero.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function canvasParaPng(canvas: HTMLCanvasElement): Promise<Blob> {

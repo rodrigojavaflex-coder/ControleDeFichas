@@ -208,22 +208,6 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
     this.aplicarComando('underline');
   }
 
-  maiuscula(): void {
-    const selecao = document.getSelection();
-    const editor = this.editorTexto()?.nativeElement;
-    if (!selecao || selecao.rangeCount === 0 || !editor || !selecao.anchorNode || !editor.contains(selecao.anchorNode)) {
-      return;
-    }
-    const faixa = selecao.getRangeAt(0);
-    const texto = faixa.toString();
-    if (!texto) {
-      return;
-    }
-    faixa.deleteContents();
-    faixa.insertNode(document.createTextNode(texto.toLocaleUpperCase('pt-BR')));
-    this.limparImagem();
-  }
-
   fecharImagem(): void {
     this.limparImagem();
   }
@@ -361,17 +345,6 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
     }
   }
 
-  private baixarPng(): void {
-    if (!this.png || !this.imagemUrl()) {
-      return;
-    }
-    const link = document.createElement('a');
-    link.href = this.imagemUrl()!;
-    const numero = this.nrorc().trim() || 'orcamento';
-    link.download = `orcamento-${numero}.png`;
-    link.click();
-  }
-
   private pedidoValido(titulo: string): {
     unidade: Unidade;
     nrorc: number;
@@ -405,6 +378,21 @@ export class OrcamentoGerarImagemPage implements OnInit, OnDestroy {
   private limparResultado(): void {
     this.composicao.set(null);
     this.limparImagem();
+  }
+
+  baixar(): void {
+    this.baixarPng();
+  }
+
+  private baixarPng(): void {
+    if (!this.png || !this.imagemUrl()) {
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = this.imagemUrl()!;
+    const numero = this.nrorc().trim() || 'orcamento';
+    link.download = `orcamento-${numero}.png`;
+    link.click();
   }
 
   private limparImagem(): void {

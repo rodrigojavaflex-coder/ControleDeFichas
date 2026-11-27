@@ -94,7 +94,6 @@
           <div class="orcamento-imagem-editor-formatos">
             <button type="button" (mousedown)="$event.preventDefault()" (click)="negrito()">Negrito</button>
             <button type="button" (mousedown)="$event.preventDefault()" (click)="sublinhar()">Sublinhar</button>
-            <button type="button" (mousedown)="$event.preventDefault()" (click)="maiuscula()">Maiúscula</button>
           </div>
           <button
             type="button"
@@ -124,9 +123,16 @@
           <img [src]="url" alt="Imagem do orçamento gerada" />
         </figure>
       </div>
-      <div class="modal-rodape">
+      <div class="modal-rodape orcamento-imagem-modal-acoes">
         <button type="button" class="btn btn-cancelar" (click)="fecharImagem()">Fechar</button>
-        <button type="button" class="btn btn-imprimir" (click)="copiar()">Copiar imagem</button>
+        <button type="button" class="btn orcamento-imagem-btn-baixar" (click)="baixar()">
+          <i class="fas fa-download" aria-hidden="true"></i>
+          Baixar imagem
+        </button>
+        <button type="button" class="btn btn-imprimir orcamento-imagem-btn-copiar" (click)="copiar()">
+          <i class="fas fa-copy" aria-hidden="true"></i>
+          Copiar imagem
+        </button>
       </div>
     </div>
   </div>

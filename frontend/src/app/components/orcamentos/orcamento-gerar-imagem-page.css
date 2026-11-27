@@ -82,11 +82,21 @@
   min-width: 0;
 }
 
-.orcamento-imagem-faixas img,
-.orcamento-imagem-preview img {
+.orcamento-imagem-faixas img {
   display: block;
   width: 100%;
   height: auto;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* Não ampliar além dos 800 px nativos — width:100% no modal deixa o texto borrado. */
+.orcamento-imagem-preview img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  image-rendering: auto;
   border-radius: 6px;
   background: #fff;
 }
@@ -216,6 +226,40 @@
   max-width: 800px;
 }
 
+.orcamento-imagem-modal-acoes {
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.orcamento-imagem-modal-acoes .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 1rem;
+}
+
+.orcamento-imagem-btn-baixar {
+  background: var(--cor-sucesso, #16a34a) !important;
+  border-color: var(--cor-sucesso, #16a34a) !important;
+  color: #fff !important;
+}
+
+.orcamento-imagem-btn-baixar:hover,
+.orcamento-imagem-btn-baixar:focus-visible {
+  background: color-mix(in srgb, var(--cor-sucesso, #16a34a) 85%, #000) !important;
+  border-color: color-mix(in srgb, var(--cor-sucesso, #16a34a) 85%, #000) !important;
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 2px;
+}
+
+.orcamento-imagem-btn-copiar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 @media (max-width: 720px) {
   .orcamento-imagem-campo,
   .orcamento-imagem-campo .form-control,
@@ -228,5 +272,9 @@
   .orcamento-imagem-campo {
     display: flex;
     flex-direction: column;
+  }
+
+  .orcamento-imagem-modal-acoes .btn {
+    width: 100%;
   }
 }
