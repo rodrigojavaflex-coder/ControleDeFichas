@@ -71,7 +71,9 @@ export class FolhaReciboImagemService {
   ): Buffer {
     const capa = detalhe.capa;
     const funcionario = (capa.funcionario?.nome ?? '').trim() || '—';
-    const refMensal = `${this.nomeMesPt(capa.mes)}/${capa.ano}`;
+    const tipoDesc = (capa.folhaTipo?.descricao ?? '').trim() || '—';
+    const refCompetencia = `${this.nomeMesPt(capa.mes)}/${capa.ano}`;
+    const refTipoLinha = `Folha ${tipoDesc} referente a ${refCompetencia}`;
     const itensReceitas = this.itensPorTipo(
       capa.itens,
       FolhaMovimentoTipo.RECEITA,
@@ -113,7 +115,7 @@ export class FolhaReciboImagemService {
     );
     y += 28;
     parts.push(
-      `<text x="${cx}" y="${y}" font-family="${font}" font-size="18" font-weight="600" fill="#111" text-anchor="middle">Folha mensal referente a ${this.escapeXml(refMensal)}</text>`,
+      `<text x="${cx}" y="${y}" font-family="${font}" font-size="18" font-weight="600" fill="#111" text-anchor="middle">${this.escapeXml(refTipoLinha)}</text>`,
     );
     y += 26;
     parts.push(

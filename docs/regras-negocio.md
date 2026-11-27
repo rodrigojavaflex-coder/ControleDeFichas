@@ -160,7 +160,7 @@
 
 - Envio permitido **somente** com **lote fechado** para a competência (unidade + ano + mês + tipo de folha) — alinhado à **RN-006**.
 - **Individual:** uma `folha_capa` (tela Lançamento de folha); **em massa:** todas as capas da linha em Controle (unidade + competência + tipo), lote **FECHADA**.
-- Mensagem: **um template utilitário** com cabeçalho **Imagem** (PNG do recibo) e corpo com nome, saudação e contato de dúvidas (4 variáveis).
+- Mensagem: **um template utilitário** com cabeçalho **Imagem** (PNG do recibo) e corpo com nome, saudação e contato de dúvidas (4 variáveis). No cabeçalho do recibo (impressão e PNG), a linha de referência usa a **descrição do tipo de folha** da capa (ex.: `Folha Mensal referente a …` / `Folha 13 Salário referente a …`), **não** o texto fixo “mensal”.
 - Exige `funcionario.telefone` normalizado (E.164). Cadastro: **`naoReceberReciboWhatsapp`** (padrão `false`); quando `true`, **individual** e **em massa** não enviam (LGPD/opt-out).
 - Permissões: **`folha-lancamento:enviar-recibo-whatsapp`** (botão **Enviar recibo** no Lançamento, individual); **`folha-fechamento:enviar-recibos-whatsapp`** (botão **Enviar recibos** no Controle, em massa).
 - Cada tentativa gera **auditoria** (usuário, capa, sucesso/erro, telefone mascarado, **wamid** quando enviado).

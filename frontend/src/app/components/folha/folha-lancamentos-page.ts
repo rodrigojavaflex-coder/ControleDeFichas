@@ -2245,10 +2245,24 @@ export class FolhaLancamentosPage implements OnInit {
         `;
   }
 
+  /** Ex.: "Folha Mensal referente a Novembro/2026" / "Folha 13 Salário referente a …". */
+  private rotuloReferenciaReciboFolha(opts: {
+    tipoDescricao: string | null | undefined;
+    mes: number;
+    ano: number;
+  }): string {
+    const tipo = (opts.tipoDescricao ?? '').trim() || '—';
+    return `Folha ${tipo} referente a ${this.nomeMesPt(opts.mes)}/${opts.ano}`;
+  }
+
   private montarCorpoHtmlReciboPagamento(d: FolhaCapaDetalheResponse): string {
     const capa = d.capa;
     const f = capa.funcionario;
-    const refMensalTitulo = `${this.nomeMesPt(capa.mes)}/${capa.ano}`;
+    const refTipoTitulo = this.rotuloReferenciaReciboFolha({
+      tipoDescricao: capa.folhaTipo?.descricao,
+      mes: capa.mes,
+      ano: capa.ano,
+    });
 
     const ordenarPorDescricao = <
       U extends {
@@ -2316,7 +2330,7 @@ export class FolhaLancamentosPage implements OnInit {
 
     return `<header class="doc-cabecalho-recibo">
           <h1 class="doc-title-main">Recibo de Pagamento</h1>
-          <p class="doc-ref-mensal">Folha mensal referente a ${this.escapeHtml(refMensalTitulo)}</p>
+          <p class="doc-ref-mensal">${this.escapeHtml(refTipoTitulo)}</p>
           <p class="doc-nome-func">${this.escapeHtml((f.nome || '').trim() || '—')}</p>
         </header>
 
@@ -2383,14 +2397,18 @@ export class FolhaLancamentosPage implements OnInit {
     const nomeRelatorio = `recibo-geral-${slugUn || 'unidade'}-${this.ano}-${String(this.mes).padStart(2, '0')}`;
     const tipoDesc =
       this.tipos.find((t) => t.id === this.tipoId)?.descricao ?? '—';
-    const refComp = `${this.nomeMesPt(this.mes)}/${this.ano}`;
+    const refTipoComp = this.rotuloReferenciaReciboFolha({
+      tipoDescricao: tipoDesc,
+      mes: this.mes,
+      ano: this.ano,
+    });
 
     const paginas =
       sorted.length === 0
         ? `<div class="recibo-geral-pagina recibo-geral-vazio" data-last="1">
           <header class="doc-cabecalho-recibo">
             <h1 class="doc-title-main">Recibo de Pagamento — Geral</h1>
-            <p class="doc-ref-mensal">Folha mensal referente a ${this.escapeHtml(refComp)}</p>
+            <p class="doc-ref-mensal">${this.escapeHtml(refTipoComp)}</p>
             <p class="doc-nome-func">${this.escapeHtml(rotuloUnidade)} · ${this.escapeHtml(tipoDesc)}</p>
           </header>
           <p class="recibo-geral-vazio-msg">Não há folhas nesta competência para os filtros selecionados.</p>
